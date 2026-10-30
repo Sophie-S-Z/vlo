@@ -375,3 +375,34 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
   translate: calc(var(--tilt-x, 0) * 10px) calc(var(--tilt-y, 0) * 8px);
   transition: translate 0.2s linear;
 }
+
+/* Magnetic button fill: it grows from the pointer's entry point and sits under the label. */
+[data-magnetic-fill] {
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--vlo-bg) 22%, transparent);
+  pointer-events: none;
+  transform: scale(0);
+}
+[data-magnetic] {
+  isolation: isolate;
+}
+
+/* Copy-link check and footer wordmark wave (spec 18.3). */
+[data-copy-check] {
+  animation: check-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes check-bounce {
+  from {
+    scale: 0;
+  }
+}
+[data-ascii]:hover [data-wave-letter] {
+  animation: letter-wave 0.6s var(--vlo-ease) calc(var(--i) * 90ms);
+}
+@keyframes letter-wave {
+  40% {
+    translate: 0 -0.5rem;
+  }
+}

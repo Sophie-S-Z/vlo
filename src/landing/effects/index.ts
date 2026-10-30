@@ -2,7 +2,7 @@ import { gsap, ScrollTrigger } from "@/motion/gsap";
 import { inkLine, navHide, navHover, pageCounter } from "./chrome";
 import { field } from "./field";
 import { startLenis } from "./lenis";
-import { cursor, magnetic, tilt } from "./pointer";
+import { cursor, keyWeight, magnetic, tilt } from "./pointer";
 import { hero, manifesto, marquees, velocitySkew } from "./text";
 import type { Effect, Teardown } from "./types";
 
@@ -25,6 +25,7 @@ const LATER: (() => Promise<Effect>)[] = [
   now(navHover),
   now(cursor),
   now(magnetic),
+  now(keyWeight),
   // The pin next: ScrollTriggers below a pin must be created after it to count its spacer.
   () => forms().then((m) => m.formsTrack),
   now(manifesto),

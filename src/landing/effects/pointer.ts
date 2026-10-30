@@ -80,6 +80,40 @@ export function magnetic(root: HTMLElement): Teardown {
       stops.push(restore);
     }
     if (finePointer()) {
+      // A soft fill grows from the point where the pointer enters and leaves.
+      const fill = document.createElement("span");
+      fill.setAttribute("aria-hidden", "true");
+      fill.dataset.magneticFill = "";
+      const position = button.style.position;
+      if (getComputedStyle(button).position === "static") button.style.position = "relative";
+      button.style.overflow = "hidden";
+      button.append(fill);
+      const at = (event: PointerEvent) => {
+        const box = button.getBoundingClientRect();
+        const size = Math.hypot(box.width, box.height) * 2;
+        gsap.set(fill, {
+          left: event.clientX - box.left - size / 2,
+          top: event.clientY - box.top - size / 2,
+          width: size,
+          height: size,
+        });
+      };
+      stops.push(
+        listen(button, "pointerenter", (event) => {
+          at(event);
+          gsap.fromTo(fill, { scale: 0 }, { scale: 1, duration: 0.5, ease: "vlo" });
+        }),
+        listen(button, "pointerleave", (event) => {
+          at(event);
+          gsap.to(fill, { scale: 0, duration: 0.4, ease: "vlo" });
+        }),
+        () => {
+          gsap.killTweensOf(fill);
+          fill.remove();
+          button.style.position = position;
+          button.style.removeProperty("overflow");
+        },
+      );
       const x = gsap.quickTo(button, "x", { duration: 0.4, ease: "power3" });
       const y = gsap.quickTo(button, "y", { duration: 0.4, ease: "power3" });
       stops.push(
@@ -105,6 +139,36 @@ export function magnetic(root: HTMLElement): Teardown {
     );
   }
   return () => stops.forEach((stop) => stop());
+}
+
+/** Key words in the Manifesto grow heavier as the pointer comes near (Fraunces wght axis). */
+export function keyWeight(root: HTMLElement): Teardown | void {
+  if (!finePointer()) return;
+  const words = Array.from(root.querySelectorAll<HTMLElement>("[data-key-word]"));
+  if (words.length === 0) return;
+  let frame = 0;
+  let pointer = { x: -1e4, y: -1e4 };
+  const update = () => {
+    frame = 0;
+    for (const word of words) {
+      const box = word.getBoundingClientRect();
+      const distance = Math.hypot(
+        pointer.x - (box.left + box.width / 2),
+        pointer.y - (box.top + box.height / 2),
+      );
+      const near = Math.max(0, 1 - distance / 260);
+      word.style.fontWeight = String(Math.round(300 + near * 500));
+    }
+  };
+  const stop = listen(window, "pointermove", (event) => {
+    pointer = { x: event.clientX, y: event.clientY };
+    frame ||= requestAnimationFrame(update);
+  });
+  return () => {
+    stop();
+    cancelAnimationFrame(frame);
+    for (const word of words) word.style.removeProperty("font-weight");
+  };
 }
 
 /** AI cards lean toward the pointer (spec 18.3 p.06). */

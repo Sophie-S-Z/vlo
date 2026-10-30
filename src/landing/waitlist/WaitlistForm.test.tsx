@@ -220,4 +220,15 @@ describe("WaitlistForm (US16, US17)", () => {
     await screen.findByText("You're writer #42 on the Vlo list.");
     expect(document.querySelector("[data-ticket] [data-check]")).toBeInTheDocument();
   });
+
+  it("shows a check when the invite link is copied", async () => {
+    const { user } = setup();
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    await user.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    await user.click(await screen.findByRole("button", { name: "Copy your invite link" }));
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/\?ref=abc123$/));
+    expect(document.querySelector("[data-copy-check]")).toBeInTheDocument();
+  });
 });

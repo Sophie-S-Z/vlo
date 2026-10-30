@@ -137,8 +137,25 @@ export function WaitlistForm({
           onClick={() => {
             void navigator.clipboard?.writeText(invite).then(() => setCopied(true));
           }}
-          className="mt-6 min-h-11 rounded-full border border-rule px-5 font-mono text-xs uppercase"
+          className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full border border-rule px-5 font-mono text-xs uppercase"
         >
+          {copied && (
+            <svg
+              data-copy-check
+              viewBox="0 0 16 16"
+              className="size-4 text-accent"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 8.5 L6.5 12 L13 4.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
           {copied ? "Copied" : "Copy your invite link"}
         </button>
         <p className="mt-3 font-mono text-xs break-all text-muted">{invite}</p>

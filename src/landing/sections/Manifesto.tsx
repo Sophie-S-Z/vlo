@@ -14,7 +14,7 @@ export function Manifesto() {
         className="font-display text-[clamp(1.75rem,4.5vw,3.5rem)] leading-[1.15] font-light"
       >
         {MANIFESTO.body.split(" ").map((word, i) => (
-          <span key={i} data-word className={key.has(word) ? "key-word" : undefined}>
+          <span key={i} data-word data-key-word={key.has(word) || undefined}>
             {word}{" "}
           </span>
         ))}

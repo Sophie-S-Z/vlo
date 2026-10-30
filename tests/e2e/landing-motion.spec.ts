@@ -114,6 +114,36 @@ test.describe("Landing demos (spec 18.3, M1a)", () => {
   });
 });
 
+test.describe("Pointer polish (M1d)", () => {
+  test("key words grow heavier near the pointer; buttons fill from the entry point", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile === true, "Fine pointers only");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await effectsRunning(page);
+
+    const cta = page.locator("#top [data-magnetic]");
+    await cta.hover();
+    await expect(cta.locator("[data-magnetic-fill]")).toHaveCount(1);
+    await expect(cta).toHaveAccessibleName("Join the waitlist");
+
+    const word = page.locator("[data-key-word]").first();
+    await word.scrollIntoViewIfNeeded();
+    const box = (await word.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await expect
+      .poll(() => word.evaluate((el) => Number(getComputedStyle(el).fontWeight)))
+      .toBeGreaterThan(600);
+
+    await page.getByRole("banner").getByRole("switch", { name: "Calm" }).focus();
+    await page.keyboard.press("Space");
+    await expect(word).not.toHaveAttribute("style", /font-weight/);
+    await expect(page.locator("[data-magnetic-fill]")).toHaveCount(0);
+  });
+});
+
 test.describe("Hold to sign (US16)", () => {
   const notConfigured = "The waitlist opens soon";
 

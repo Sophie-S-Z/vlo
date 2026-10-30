@@ -13,6 +13,17 @@ const ASCII = String.raw`
     \__/    |_|  \___/
 `;
 
+/** Column where each letter of the ASCII wordmark starts: V, l, o. */
+const LETTER_COLUMNS = [0, 12, 17];
+const LINES = ASCII.split("\n").filter(Boolean);
+const WIDTH = Math.max(...LINES.map((line) => line.length));
+
+/** The wordmark cut into one block per letter, for the hover wave (spec 18.3 footer). */
+const ASCII_LETTERS = LETTER_COLUMNS.map((start, i) => {
+  const end = LETTER_COLUMNS[i + 1] ?? WIDTH;
+  return LINES.map((line) => line.padEnd(WIDTH).slice(start, end)).join("\n");
+});
+
 export function Footer() {
   return (
     <footer className="border-t border-rule px-4 pt-16 pb-24 sm:px-8">
@@ -31,7 +42,16 @@ export function Footer() {
             aria-hidden="true"
             className="font-mono text-xs leading-tight text-accent-text"
           >
-            {ASCII}
+            {ASCII_LETTERS.map((letter, i) => (
+              <span
+                key={i}
+                data-wave-letter
+                className="inline-block"
+                style={{ "--i": i } as React.CSSProperties}
+              >
+                {letter}
+              </span>
+            ))}
           </pre>
           <p className="sr-only">Vlo</p>
           <p className="mt-4 font-mono text-xs text-muted">
