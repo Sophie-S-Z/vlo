@@ -70,6 +70,28 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 | Code review                                                        | Done; findings fixed or recorded (ADR 0007) |
 | Visual QA                                                          | `docs/qa/screens/m1a-effects-*`             |
 
+## M1e: Lovable merge (2026-10-30)
+
+Praneel's answers: 1B 2A 3A 4A 5A 6a,b,c,d. Plan: `docs/plans/M1e.md`. ADRs 0011, 0012, 0013.
+
+| Task                                                                            | Status |
+| ------------------------------------------------------------------------------- | ------ |
+| Dynamic motion by default; gentle mode for reduced-motion devices; Calm offer   | Done   |
+| Entry opens by itself in about 1.5 s; sound on by default after the first click | Done   |
+| Spring hero word, AI dialog and "I write" marker                                | Done   |
+| Pinned "book opens" story with the particle book and Ink-to-Paper iris          | Done   |
+| Visitor's first line forms the particles (memory only)                          | Done   |
+| Page-turn wipes and cursor ink trail                                            | Done   |
+| Speed pass: split hydration, lazy drag set-up, no final refresh                 | Done   |
+
+| Check            | Result                                           |
+| ---------------- | ------------------------------------------------ |
+| Unit tests       | Pass: 206 tests                                  |
+| E2E with axe     | Pass: 149 tests, desktop and 360 px              |
+| Lighthouse       | LCP 1.66 s, TBT median 138 ms, accessibility 1.0 |
+| Bundle guardrail | Pass: initial JS 123 KB gzipped                  |
+| Code review      | See the M1e review notes below                   |
+
 ## Gate status (M0)
 
 | Check                               | Status                                                                           |
@@ -95,11 +117,11 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 ## Open issues
 
 - Waitlist has no server-side rate limit (ADR 0007).
-- Total blocking time is still over the 200 ms warn budget after the M1d split. The largest tasks now are hydration (about 150 ms under 4x throttle) and the first effects task (gsap core, SplitText on the headline, the WebGL check). Local runs vary a lot with machine load. Next idea: start the effects at idle time after the load event.
+- Total blocking time: fixed in M1e (ADR 0013). Lighthouse median 138 ms (88 to 292 ms over five local runs), under the 200 ms budget. Runs still vary with machine load.
 
 - Trademark check for "Vlo" not done (section 24 item 2).
 - `npm audit` advisories in the dev-only `@lhci/cli` tree (ADR 0001).
 
 ## Next step
 
-M1a to M1d done. The M1 gate needs two things from the human: the Supabase project URL for a real test sign-up, and approval of the look on desktop and phone (preview URL on PR #2).
+M1a to M1e done. The M1 gate needs two things from the human: the Supabase project URL for a real test sign-up, and approval of the look on desktop and phone (preview URL on PR #2).

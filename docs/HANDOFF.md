@@ -6,6 +6,7 @@ Updated: 2026-10-30.
 
 - M0 complete; PR #1 merged.
 - M1a to M1d are done on `claude/project-thread-mnsg2f`, draft PR #2. Details and gate tables: `docs/PROGRESS.md`.
+- M1e (merge with Praneel's Lovable landing page) is done on the same branch. Plan `docs/plans/M1e.md`; ADRs 0011 to 0013.
 
 ## In progress
 
@@ -39,4 +40,8 @@ CHROME_PATH=/opt/pw-browsers/chromium npm run lhci
 - Section demos load through `import()` from `src/landing/effects/index.ts`. Plugins that only they use (Draggable, Inertia, Flip, DrawSVG) register in `src/motion/gsapPlus.ts`; import them from there.
 - First-load motion (sign-up flight, shake, route wipe, grain) uses the Web Animations API or CSS, never gsap (ADR 0010).
 - `playwright.config.ts` sets `vlo:entered=1` so the entry curtain stays away; `tests/e2e/entry.spec.ts` clears it.
-- Run axe on a still page (reduced motion) when the subject is not the motion itself; a scroll fade caught halfway fails color contrast.
+- Run axe on a still page (Calm, through `startInCalm` in `tests/e2e/calm.ts`) when the subject is not the motion itself; a scroll fade caught halfway fails color contrast.
+- ADR 0011: `prefers-reduced-motion` no longer stops the effects. It gives gentle mode (`html[data-motion=gentle]`, `gentleMotion()` in effects). Only Calm (`reduced`) stops them. `emulateMedia({ reducedMotion: "reduce" })` in a test now means gentle mode.
+- ADR 0013: the effects wait for all five `Deferred` Suspense boundaries to hydrate. A new section below the hero goes inside one of them. Pins start first in `LATER`; an effect that changes a section's height starts right after the pins.
+- `lenis.resize()` runs after each ScrollTrigger refresh and before each glide; without it, glides stop short after the pins add spacers.
+- Never `pkill -f "vite preview"`: it kills the shell that runs it.
