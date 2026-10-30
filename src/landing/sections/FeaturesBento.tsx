@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { FEATURES } from "../copy";
 import { Eyebrow, Page } from "./Page";
 
 const t = FEATURES.tiles;
 
 export function FeaturesBento() {
+  const [version, setVersion] = useState(5);
   return (
     <Page n={7} id="features" titleId="features-title" className="mx-auto max-w-6xl">
       <Eyebrow n={7}>Features</Eyebrow>
@@ -20,13 +22,14 @@ export function FeaturesBento() {
             type="range"
             min={1}
             max={5}
-            defaultValue={5}
+            value={version}
+            onChange={(event) => setVersion(Number(event.target.value))}
             aria-label="Snapshot version"
             data-snapshot-slider
             className="w-full accent-[var(--vlo-accent)]"
           />
           <p className="mt-2 font-mono text-xs text-muted">
-            Version <span data-snapshot-value>5</span> of 5
+            Version <span data-snapshot-value>{version}</span> of 5
           </p>
         </Tile>
         <Tile title={t.formats}>

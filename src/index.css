@@ -100,9 +100,36 @@ html.has-custom-cursor summary,
 html.has-custom-cursor label {
   cursor: none;
 }
+/* A modal sits in the top layer above the custom cursor, so the native cursor returns. */
+html.has-custom-cursor:has(dialog[open]) [data-cursor] {
+  display: none;
+}
+html.has-custom-cursor:has(dialog[open]) dialog,
+html.has-custom-cursor:has(dialog[open]) dialog * {
+  cursor: auto;
+}
+html.has-custom-cursor:has(dialog[open]) dialog button {
+  cursor: pointer;
+}
 
 /* Manifesto scroll fill (spec 18.3 p.02). The effects tween --fill from 0 to 1. Unread words
    use the muted color, which still meets text contrast; without the effects, --fill is 1. */
 [data-word] {
   color: color-mix(in srgb, var(--vlo-text) calc(var(--fill, 1) * 100%), var(--vlo-muted));
+}
+
+/* FAQ height animation (spec 18.3 p.09). Native details; browsers without
+   ::details-content or interpolate-size open at once. Reduced motion stops the transition. */
+:root {
+  interpolate-size: allow-keywords;
+}
+details[data-faq]::details-content {
+  block-size: 0;
+  overflow: clip;
+  transition:
+    block-size 0.45s var(--vlo-ease),
+    content-visibility 0.45s allow-discrete;
+}
+details[data-faq][open]::details-content {
+  block-size: auto;
 }

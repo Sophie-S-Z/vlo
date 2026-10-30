@@ -63,3 +63,52 @@ test.describe("Landing effects (spec 18.1, M1a)", () => {
     await expect(page.locator("#faq")).toBeInViewport();
   });
 });
+
+test.describe("Landing demos (spec 18.3, M1a)", () => {
+  test("FAQ answers open and close with the keyboard", async ({ page }) => {
+    await page.goto("/");
+    const question = page.locator("#faq summary").first();
+    await question.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#faq details").first()).toHaveAttribute("open", "");
+    await expect(page.locator("#faq details").first().locator("p")).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#faq details").first()).not.toHaveAttribute("open", "");
+  });
+
+  for (const reducedMotion of ["no-preference", "reduce"] as const) {
+    test(`an AI card opens a modal that keeps focus and closes on Escape (${reducedMotion})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.goto("/");
+      if (reducedMotion === "no-preference") await effectsRunning(page);
+      const card = page.locator("#ai [data-tilt]").first();
+      await card.focus();
+      await page.keyboard.press("Enter");
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Close" })).toBeFocused();
+      await page.keyboard.press("Tab");
+      // A modal dialog makes the page behind it inert. Tab may leave for the browser's own UI,
+      // but it never reaches page content outside the dialog.
+      expect(
+        await dialog.evaluate(
+          (d) => d.contains(document.activeElement) || document.activeElement === document.body,
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(card).toBeFocused();
+    });
+  }
+
+  test("reduced motion shows the final demo states", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    const bento = page.locator("[data-bento]");
+    await expect(bento.getByText("$0")).toBeVisible();
+    await expect(bento.getByText("Version 5 of 5")).toBeVisible();
+    await expect(bento.locator("[data-format-cycle]")).toHaveText("DOCX");
+  });
+});
