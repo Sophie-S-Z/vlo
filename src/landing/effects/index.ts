@@ -79,7 +79,6 @@ export function startLandingEffects(root: HTMLElement): Teardown {
   const context = gsap.context(() => {}, root);
   let timer = 0;
   let stopped = false;
-  let stopLayoutWatch: Teardown | undefined;
   const run = (effect: Effect) =>
     context.add(() => {
       const teardown = effect(root);
@@ -88,7 +87,6 @@ export function startLandingEffects(root: HTMLElement): Teardown {
   const teardownAll = () => {
     stopped = true;
     clearTimeout(timer);
-    stopLayoutWatch?.();
     delete document.documentElement.dataset.effects;
     context.revert();
     for (const teardown of teardowns.reverse()) teardown();
@@ -105,8 +103,8 @@ export function startLandingEffects(root: HTMLElement): Teardown {
   }
 
   // Layout changes from here on (fonts, an effect, an open FAQ answer) refresh the triggers,
-  // once, after a pause.
-  stopLayoutWatch = watchLayout();
+  // once, after a pause. teardownAll stops the watch in the same task, before any callback.
+  teardowns.push(watchLayout());
   const queue = [...LATER];
   const next = () => {
     const load = queue.shift();
