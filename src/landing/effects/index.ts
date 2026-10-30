@@ -18,7 +18,14 @@ const demos = () => import("./demos");
  * (Lighthouse TBT). The section demos load in their own chunks, so the parse is split too.
  */
 const LATER: (() => Promise<Effect>)[] = [
-  // Nav and pointer effects first, one per task.
+  // The pins first, top to bottom: a ScrollTrigger below a pin must be created after it to
+  // count its spacer. Every later trigger then measures the final layout when it starts, so
+  // the page needs no full refresh at the end.
+  () => import("./book").then((m) => m.bookStory),
+  () => forms().then((m) => m.formsTrack),
+  // The first-lines canvas changes its section's height, so it starts before the triggers below.
+  () => import("./firstLines").then((m) => m.firstLines),
+  // Nav and pointer effects next, one per task.
   now(inkLine),
   now(pageCounter),
   now(navHide),
@@ -26,10 +33,6 @@ const LATER: (() => Promise<Effect>)[] = [
   now(cursor),
   now(magnetic),
   now(keyWeight),
-  // The pins next, top to bottom: ScrollTriggers below a pin must be created after it to count
-  // its spacer.
-  () => import("./book").then((m) => m.bookStory),
-  () => forms().then((m) => m.formsTrack),
   now(manifesto),
   now(velocitySkew),
   now(marquees),
@@ -38,12 +41,32 @@ const LATER: (() => Promise<Effect>)[] = [
   () => forms().then((m) => m.memoirNames),
   () => forms().then((m) => m.magnets),
   () => import("./privacy").then((m) => m.privacy),
-  () => import("./firstLines").then((m) => m.firstLines),
   () => demos().then((m) => m.bento),
   () => demos().then((m) => m.cardToDialog),
   () => import("./turns").then((m) => m.inkTrail),
   () => import("./turns").then((m) => m.pageTurns),
 ];
+
+/** Refreshes every ScrollTrigger when the page height changes, at most once per pause. */
+function watchLayout(): Teardown {
+  let height = document.body.offsetHeight;
+  let timer = 0;
+  const observer = new ResizeObserver(() => {
+    const next = document.body.offsetHeight;
+    if (next === height) return;
+    height = next;
+    clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      ScrollTrigger.refresh();
+      height = document.body.offsetHeight;
+    }, 200);
+  });
+  observer.observe(document.body);
+  return () => {
+    observer.disconnect();
+    clearTimeout(timer);
+  };
+}
 
 /**
  * Starts the landing page's HTML-level effects (spec 18.1). Load this module only through
@@ -56,6 +79,7 @@ export function startLandingEffects(root: HTMLElement): Teardown {
   const context = gsap.context(() => {}, root);
   let timer = 0;
   let stopped = false;
+  let stopLayoutWatch: Teardown | undefined;
   const run = (effect: Effect) =>
     context.add(() => {
       const teardown = effect(root);
@@ -64,6 +88,7 @@ export function startLandingEffects(root: HTMLElement): Teardown {
   const teardownAll = () => {
     stopped = true;
     clearTimeout(timer);
+    stopLayoutWatch?.();
     delete document.documentElement.dataset.effects;
     context.revert();
     for (const teardown of teardowns.reverse()) teardown();
@@ -79,13 +104,15 @@ export function startLandingEffects(root: HTMLElement): Teardown {
     throw error;
   }
 
+  // Layout changes from here on (fonts, an effect, an open FAQ answer) refresh the triggers,
+  // once, after a pause.
+  stopLayoutWatch = watchLayout();
   const queue = [...LATER];
   const next = () => {
     const load = queue.shift();
     if (stopped) return;
     if (!load) {
       ScrollTrigger.sort();
-      ScrollTrigger.refresh();
       // Tests and tools wait for this before they use the section demos.
       document.documentElement.dataset.effects = "ready";
       return;

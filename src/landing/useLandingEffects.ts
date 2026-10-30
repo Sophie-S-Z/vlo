@@ -5,11 +5,12 @@ import { useMotionPreferences } from "@/motion/MotionPreferences";
  * Loads the effects chunk after hydration unless Calm is on, and tears it down when Calm turns
  * on. A change between full and gentle motion restarts the effects (ADR 0011).
  */
-export function useLandingEffects(root: RefObject<HTMLElement | null>) {
+export function useLandingEffects(root: RefObject<HTMLElement | null>, hydrated = true) {
   const { reduced, gentle } = useMotionPreferences();
   useEffect(() => {
     const element = root.current;
-    if (reduced || !element) return;
+    // Effects change section DOM, so they wait until every section has hydrated.
+    if (reduced || !hydrated || !element) return;
     let teardown: (() => void) | undefined;
     let cancelled = false;
     // Wait one frame. Hydration renders once with the server's "full motion" snapshot and
@@ -30,5 +31,5 @@ export function useLandingEffects(root: RefObject<HTMLElement | null>) {
       teardown?.();
     };
     // The effects read gentle mode from html[data-motion]; listing it here restarts them.
-  }, [reduced, gentle, root]);
+  }, [reduced, gentle, hydrated, root]);
 }

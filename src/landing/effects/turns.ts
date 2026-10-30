@@ -14,15 +14,20 @@ const TURNING = ["02", "05", "06", "07", "08", "09", "10"];
  */
 export function pageTurns(root: HTMLElement): Teardown | void {
   if (gentleMotion()) return;
-  const sheets: HTMLElement[] = [];
+  const pages: [HTMLElement, HTMLElement][] = [];
   for (const n of TURNING) {
     const page = root.querySelector<HTMLElement>(`[data-page="${n}"]`);
     if (!page) continue;
     const sheet = document.createElement("div");
     sheet.dataset.turn = "";
     sheet.setAttribute("aria-hidden", "true");
-    page.prepend(sheet);
-    sheets.push(sheet);
+    pages.push([page, sheet]);
+  }
+  // All writes first, then all reads, so the page lays out once.
+  for (const [page, sheet] of pages) page.prepend(sheet);
+  const sheets = pages.map(([, sheet]) => sheet);
+  for (const sheet of sheets) gsap.getProperty(sheet, "x");
+  for (const [page, sheet] of pages) {
     gsap.fromTo(
       sheet,
       { rotationY: 0, transformPerspective: 2000, transformOrigin: "0% 50%" },

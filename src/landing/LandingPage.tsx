@@ -2,6 +2,8 @@ import { useRef } from "react";
 import { Link } from "react-router";
 import { CalmOffer } from "@/motion/CalmOffer";
 import { SkipLink } from "@/ui/layouts";
+import { Deferred } from "./Deferred";
+import { useHydrationGate } from "./hydrationGate";
 import { Entry } from "./Entry";
 import { Grain } from "./Grain";
 import { InkLab } from "./lab/InkLab";
@@ -19,10 +21,14 @@ import { ThreeForms } from "./sections/ThreeForms";
 import { WaitlistSection } from "./sections/WaitlistSection";
 import { useLandingEffects } from "./useLandingEffects";
 
+/** Suspense boundaries below the hero; see Deferred.tsx. */
+const DEFERRED_SECTIONS = 5;
+
 /** The landing page (spec 18). Complete as static HTML; effects attach after hydration. */
 export function LandingPage({ appEnabled }: { appEnabled: boolean }) {
   const root = useRef<HTMLDivElement>(null);
-  useLandingEffects(root);
+  const { hydrated, mark } = useHydrationGate(DEFERRED_SECTIONS);
+  useLandingEffects(root, hydrated);
   return (
     <div ref={root}>
       <title>Vlo · Write in flow</title>
@@ -42,17 +48,27 @@ export function LandingPage({ appEnabled }: { appEnabled: boolean }) {
             </Link>
           </p>
         )}
-        <Manifesto />
-        <BookOpens />
-        <ThreeForms />
-        <PrivacySection />
-        <AiSection />
-        <FeaturesBento />
-        <FirstLines />
-        <Faq />
-        <WaitlistSection />
+        <Deferred mark={mark}>
+          <Manifesto />
+          <BookOpens />
+          <ThreeForms />
+        </Deferred>
+        <Deferred mark={mark}>
+          <PrivacySection />
+          <AiSection />
+        </Deferred>
+        <Deferred mark={mark}>
+          <FeaturesBento />
+          <FirstLines />
+        </Deferred>
+        <Deferred mark={mark}>
+          <Faq />
+          <WaitlistSection />
+        </Deferred>
       </main>
-      <Footer />
+      <Deferred mark={mark}>
+        <Footer />
+      </Deferred>
       <InkLab />
       <CalmOffer />
       <Grain />

@@ -7,6 +7,11 @@ const inView = (trigger: Element) => ({ trigger, start: "top 85%", once: true })
 /** Small looping or one-shot demos in the feature tiles (spec 18.3 p.07). */
 export function bento(root: HTMLElement): Teardown {
   const stops: Teardown[] = [];
+  // Read every animated element's transform before any tween writes one. Reads after writes
+  // would force one style recalculation per element (a long task on slow phones).
+  for (const element of root.querySelectorAll("[data-theme-flip] > *, [data-mosaic] > *")) {
+    gsap.getProperty(element, "x");
+  }
 
   const format = root.querySelector<HTMLElement>("[data-format-cycle]");
   const formats = format?.dataset.formatCycle?.split("|") ?? [];

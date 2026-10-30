@@ -229,21 +229,33 @@ export function novelBoard(root: HTMLElement): Teardown | void {
     );
   };
 
-  const draggables = Draggable.create(cards, {
-    bounds: board,
-    inertia: true,
-    zIndexBoost: true,
-    onDrag: updateThreads,
-    onThrowUpdate: updateThreads,
-  });
+  // Draggable measures every card and its bounds when it starts, which blocks the main thread
+  // for a long task during page load. The cards become draggable on the first press instead.
+  let draggables: Draggable[] = [];
   const syncEnabled = () => {
     const on = list.dataset.layout === "board";
+    // Draggable would set this itself; a touch on a card must not start a page pan first.
+    for (const card of cards) card.style.touchAction = on ? "none" : "";
     for (const draggable of draggables) {
       if (on) draggable.enable();
       else draggable.disable();
     }
   };
   syncEnabled();
+  const stopPress = listen(list, "pointerdown", (event) => {
+    if (draggables.length > 0 || list.dataset.layout !== "board") return;
+    const card = (event.target as Element | null)?.closest<HTMLElement>("[data-drag-card]");
+    if (!card) return;
+    draggables = Draggable.create(cards, {
+      bounds: board,
+      inertia: true,
+      zIndexBoost: true,
+      onDrag: updateThreads,
+      onThrowUpdate: updateThreads,
+    });
+    syncEnabled();
+    draggables[cards.indexOf(card)]?.startDrag(event);
+  });
   updateThreads();
 
   // The click handler reads the layout before React changes it; the observer animates after.
@@ -283,13 +295,14 @@ export function novelBoard(root: HTMLElement): Teardown | void {
     watch.disconnect();
     sizeWatch.disconnect();
     stopClick();
+    stopPress();
     // Finishing the Flip removes its inline position and size before the cleanup below.
     flip?.progress(1).kill();
     for (const draggable of draggables) draggable.kill();
     gsap.killTweensOf(cards);
     gsap.set(cards, { clearProps: "transform,translate,rotate,scale,zIndex" });
     for (const card of cards) {
-      for (const name of ["transform", "translate", "rotate", "scale", "z-index"]) {
+      for (const name of ["transform", "translate", "rotate", "scale", "z-index", "touch-action"]) {
         card.style.removeProperty(name);
       }
     }
