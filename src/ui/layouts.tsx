@@ -1,4 +1,5 @@
 import { Link, Outlet } from "react-router";
+import { RouteWipe } from "@/motion/RouteWipe";
 import { SiteControls } from "@/ui/SiteControls";
 import { ThemeProvider, type ThemeScope } from "@/ui/theme/ThemeProvider";
 
@@ -18,6 +19,7 @@ export function SkipLink() {
 function Scope({ scope }: { scope: ThemeScope }) {
   return (
     <ThemeProvider scope={scope}>
+      <RouteWipe />
       <Outlet />
     </ThemeProvider>
   );

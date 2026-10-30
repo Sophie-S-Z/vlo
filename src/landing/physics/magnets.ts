@@ -13,7 +13,7 @@ export interface Magnets {
 }
 
 /**
- * Word tiles under Matter.js (spec 18.3 p.04). Each tile starts where the page laid it out and
+ * Tiles under Matter.js: the word tiles (spec 18.3 p.04) and the 404 letters. Each tile starts where the page laid it out and
  * moves by transform only, so React keeps its nodes. Pointer drag pulls a tile with a spring,
  * and the release keeps its speed, so a quick drag throws it.
  */
@@ -62,8 +62,7 @@ export function createMagnets(box: HTMLElement, tiles: HTMLElement[]): Magnets {
     return { x: event.clientX - r.left, y: event.clientY - r.top };
   };
   const onDown = (event: PointerEvent) => {
-    const tile = (event.target as Element).closest<HTMLElement>("[data-magnet]");
-    const entry = tile && bodies.find((b) => b.tile === tile);
+    const entry = bodies.find((b) => b.tile.contains(event.target as Node));
     if (!entry || grab) return;
     const point = local(event);
     const constraint = Constraint.create({

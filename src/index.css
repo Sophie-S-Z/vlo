@@ -306,3 +306,35 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
     stroke-dashoffset: 1;
   }
 }
+
+/* Route wipe (spec 18.3): five bars grow from the left, then shrink toward the right. */
+[data-wipe-bar] {
+  transform: scaleX(0);
+  animation: route-wipe 0.8s var(--vlo-ease) calc(var(--i) * 45ms) both;
+}
+@keyframes route-wipe {
+  0% {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  45%,
+  50% {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  55% {
+    transform: scaleX(1);
+    transform-origin: right;
+  }
+  100% {
+    transform: scaleX(0);
+    transform-origin: right;
+  }
+}
+
+/* 404 letters: grab and throw once physics runs. */
+[data-physics="on"] [data-letter] {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
