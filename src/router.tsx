@@ -1,0 +1,40 @@
+import type { RouteObject } from "react-router";
+import { LandingPage } from "@/landing/LandingPage";
+import { AppLayout, LandingLayout } from "@/ui/layouts";
+
+type PageModule = { default: React.ComponentType };
+
+const lazyPage = (load: () => Promise<PageModule>) => async () => ({
+  Component: (await load()).default,
+});
+
+export interface RouteOptions {
+  /** Loads the writing app. Null hides /app and the landing link (VITE_APP_ENABLED off). */
+  loadApp: (() => Promise<PageModule>) | null;
+}
+
+export function createRoutes({ loadApp }: RouteOptions): RouteObject[] {
+  const appEnabled = loadApp !== null;
+  const notFound: RouteObject = {
+    path: "*",
+    lazy: lazyPage(() => import("@/ui/pages/NotFoundPage")),
+  };
+  return [
+    {
+      Component: LandingLayout,
+      children: [
+        { index: true, element: <LandingPage appEnabled={appEnabled} /> },
+        { path: "privacy", lazy: lazyPage(() => import("@/ui/pages/PrivacyPage")) },
+        { path: "ai-policy", lazy: lazyPage(() => import("@/ui/pages/AiPolicyPage")) },
+        notFound,
+      ],
+    },
+    {
+      Component: AppLayout,
+      children: [
+        { path: "share/:id", lazy: lazyPage(() => import("@/share/ShareRoute")) },
+        ...(loadApp ? [{ path: "app/*", lazy: lazyPage(loadApp) }] : []),
+      ],
+    },
+  ];
+}

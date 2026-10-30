@@ -1,0 +1,30 @@
+# 0005. Theme and motion preferences
+
+Date: 2026-10-30. Status: accepted.
+
+## Context
+
+Section 16 defines four themes and section 5 requires a static fallback for every effect. Later effect code (GSAP, Lenis, WebGL, Web Audio) needs one source of truth for "may this move?".
+
+## Decision
+
+- `MotionPreferencesProvider` (`src/motion/`) combines the Calm switch (stored as `vlo:calm`) and `prefers-reduced-motion`. It exposes `reduced` and writes `data-motion="reduced|full"` and `data-calm` on `<html>`. CSS under `[data-motion="reduced"]` stops all CSS animation and transition. Effect code must check `useMotionPreferences().reduced` before it starts.
+- `ThemeProvider` takes a scope. The landing scope (`/`, `/privacy`, `/ai-policy`, 404) defaults to Ink. The app scope (`/app`, `/share`) defaults to Paper. Each scope stores its own choice (`vlo:theme:<scope>`). The provider writes `data-theme` on `<html>`.
+- The theme change uses a View Transition with a clip-path circle from the toggle. It changes at once when View Transitions are missing or motion is reduced.
+- The spec gives only background, text and accent for Paper, Night and Sepia. Muted, surface and rule colors for those themes are derived and checked with axe for WCAG AA contrast.
+- Storage access never throws. Blocked storage falls back to defaults.
+- CSP: `style-src` allows `'unsafe-inline'` because motion libraries and React set inline styles. `script-src` stays `'self'`. Vite must never inline fonts as `data:` URIs (`assetsInlineLimit`), because `font-src` is `'self'`.
+
+## Consequences
+
+- A writer who turns on Calm on the landing page also has Calm in the app (one key).
+- New effects must read `reduced`; reviewers check this.
+
+## Amendment (M0 review)
+
+- Paper's accent #C8452D gives 4.3:1 on #F5F1E8, under the WCAG AA 4.5:1 minimum for body text. Each theme gets `--vlo-accent-text` (Tailwind `text-accent-text`). Paper uses #B03A24 (5.4:1); the other themes reuse their accent, which already passes. Keep `--vlo-accent` for fills, borders and large display text.
+- A `prefers-reduced-motion` media query in `index.css` stops CSS motion at the first paint, before the provider sets `data-motion`.
+
+## Amendment (M0 CI): fonts load after the first paint
+
+Lighthouse CI on GitHub runners measured LCP at 3.0 s in 3 of 5 runs. In those runs the first paint waited for all four web fonts (about 250 KB). `src/main.tsx` now imports `src/ui/fonts.ts` in a `requestAnimationFrame` callback, so the prerendered headline paints in the fallback serif first and swaps once the fonts arrive. Local result: LCP 1.5 s in 7 of 7 runs, CLS 0.016. Repeat visits load the fonts from cache, so the swap is short. Revisit with metric-matched fallback fonts (`size-adjust`) in M1 if the swap looks rough.

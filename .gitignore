@@ -1,0 +1,11 @@
+node_modules
+dist
+.lighthouseci
+playwright-report
+test-results
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+build-meta

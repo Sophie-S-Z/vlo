@@ -1,0 +1,9 @@
+dist
+node_modules
+package-lock.json
+.lighthouseci
+playwright-report
+test-results
+docs/BUILD_PROMPT.md
+build-meta
+.lighthouseci
