@@ -29,18 +29,25 @@ const EFFECTS: Effect[] = [
  */
 export function startLandingEffects(root: HTMLElement): Teardown {
   const teardowns: Teardown[] = [];
-  const context = gsap.context(() => {
-    for (const effect of EFFECTS) {
-      const teardown = effect(root);
-      if (teardown) teardowns.push(teardown);
-    }
-  }, root);
-  const stopLenis = startLenis(root);
-  ScrollTrigger.refresh();
-
-  return () => {
-    stopLenis();
+  const context = gsap.context(() => {}, root);
+  const teardownAll = () => {
     context.revert();
     for (const teardown of teardowns.reverse()) teardown();
+    teardowns.length = 0;
   };
+  try {
+    context.add(() => {
+      for (const effect of EFFECTS) {
+        const teardown = effect(root);
+        if (teardown) teardowns.push(teardown);
+      }
+    });
+    teardowns.unshift(startLenis(root));
+    ScrollTrigger.refresh();
+  } catch (error) {
+    // Undo whatever already started, so a failed start never leaves effects Calm cannot stop.
+    teardownAll();
+    throw error;
+  }
+  return teardownAll;
 }

@@ -31,6 +31,25 @@ describe("WaitlistForm (US16, US17)", () => {
     expect(screen.getByText(/\?ref=abc123$/)).toBeInTheDocument();
   });
 
+  it("moves focus to the ticket after a sign-up, so keyboard users keep their place", async () => {
+    const { user } = setup();
+    await user.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    const ticket = await screen.findByText("You're writer #42 on the Vlo list.");
+    expect(ticket).toHaveFocus();
+  });
+
+  it("links the error message to the email field", async () => {
+    const join = vi.fn(async () => {
+      throw new WaitlistError("invalid_email");
+    });
+    const { user } = setup(join);
+    await user.type(screen.getByLabelText("Email"), "ada@example{Enter}");
+    const field = screen.getByLabelText("Email");
+    expect(await screen.findByText("Please check the email address.")).toBeInTheDocument();
+    expect(field).toHaveAccessibleDescription(/Please check the email address\./);
+    expect(field).toHaveAttribute("aria-invalid", "true");
+  });
+
   it("submits on Enter from the email field", async () => {
     const { join, user } = setup();
     await user.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");

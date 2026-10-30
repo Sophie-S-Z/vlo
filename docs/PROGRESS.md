@@ -52,6 +52,8 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 
 ## Open issues
 
+- Waitlist has no server-side rate limit (ADR 0007).
+
 - Trademark check for "Vlo" not done (section 24 item 2).
 - `npm audit` advisories in the dev-only `@lhci/cli` tree (ADR 0001).
 

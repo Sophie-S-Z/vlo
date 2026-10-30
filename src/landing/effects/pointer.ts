@@ -1,5 +1,5 @@
 import { gsap } from "@/motion/gsap";
-import { finePointer, listen, type Teardown } from "./types";
+import { finePointer, keepChildren, listen, type Teardown } from "./types";
 
 const LABELS: [selector: string, label: string][] = [
   ["[data-drag-card]", "Drag"],
@@ -18,7 +18,6 @@ export function cursor(): Teardown | void {
     <div data-cursor-ring class="absolute top-0 left-0 -mt-5 -ml-5 grid size-10 place-items-center rounded-full border border-fg font-mono text-[10px] tracking-widest text-fg uppercase opacity-0"></div>
     <div data-cursor-dot class="absolute top-0 left-0 -mt-1 -ml-1 size-2 rounded-full bg-fg opacity-0"></div>`;
   document.body.append(layer);
-  document.documentElement.classList.add("has-custom-cursor");
 
   const ring = layer.querySelector<HTMLElement>("[data-cursor-ring]")!;
   const dot = layer.querySelector<HTMLElement>("[data-cursor-dot]")!;
@@ -27,10 +26,16 @@ export function cursor(): Teardown | void {
   const ringX = gsap.quickTo(ring, "x", { duration: 0.45, ease: "power3" });
   const ringY = gsap.quickTo(ring, "y", { duration: 0.45, ease: "power3" });
   let label = "";
+  let visible = false;
 
   const stopMove = listen(window, "pointermove", (event) => {
-    if (event.pointerType !== "mouse") return;
-    gsap.set([dot, ring], { opacity: 1 });
+    if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
+    if (!visible) {
+      // Hide the native cursor only once the custom one follows a real pointer.
+      visible = true;
+      document.documentElement.classList.add("has-custom-cursor");
+      gsap.set([dot, ring], { opacity: 1 });
+    }
     dotX(event.clientX);
     dotY(event.clientY);
     ringX(event.clientX);
@@ -43,7 +48,11 @@ export function cursor(): Teardown | void {
       gsap.to(ring, { scale: label ? 2 : 1, duration: 0.3, ease: "vlo" });
     }
   });
-  const stopLeave = listen(document, "pointerleave", () => gsap.set([dot, ring], { opacity: 0 }));
+  const stopLeave = listen(document, "pointerleave", () => {
+    visible = false;
+    document.documentElement.classList.remove("has-custom-cursor");
+    gsap.set([dot, ring], { opacity: 0 });
+  });
 
   return () => {
     stopMove();
@@ -60,7 +69,7 @@ export function magnetic(root: HTMLElement): Teardown {
   for (const button of root.querySelectorAll<HTMLElement>("[data-magnetic]")) {
     let roll: gsap.core.Tween | undefined;
     if (button.hasAttribute("data-roll")) {
-      const original = button.innerHTML;
+      const restore = keepChildren(button);
       const text = button.textContent ?? "";
       const label = document.createElement("span");
       label.className = "relative block overflow-hidden";
@@ -68,9 +77,7 @@ export function magnetic(root: HTMLElement): Teardown {
       label.querySelectorAll("span").forEach((part) => (part.textContent = text));
       button.replaceChildren(label);
       roll = gsap.to(label.children, { yPercent: -100, duration: 0.45, ease: "vlo", paused: true });
-      stops.push(() => {
-        button.innerHTML = original;
-      });
+      stops.push(restore);
     }
     if (finePointer()) {
       const x = gsap.quickTo(button, "x", { duration: 0.4, ease: "power3" });
@@ -91,6 +98,10 @@ export function magnetic(root: HTMLElement): Teardown {
       }),
       listen(button, "pointerdown", () => gsap.to(button, { scale: 0.97, duration: 0.12 })),
       listen(button, "pointerup", () => gsap.to(button, { scale: 1, duration: 0.3, ease: "vlo" })),
+      () => {
+        gsap.killTweensOf(button);
+        gsap.set(button, { clearProps: "transform" });
+      },
     );
   }
   return () => stops.forEach((stop) => stop());
@@ -114,6 +125,10 @@ export function tilt(root: HTMLElement): Teardown | void {
         rx(0);
         ry(0);
       }),
+      () => {
+        gsap.killTweensOf(card);
+        gsap.set(card, { clearProps: "transform" });
+      },
     );
   }
   return () => stops.forEach((stop) => stop());

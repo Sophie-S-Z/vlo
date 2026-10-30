@@ -13,7 +13,7 @@ export function Nav() {
   return (
     <header
       data-nav
-      className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-bg/85 backdrop-blur-sm transition-transform duration-500 ease-vlo"
+      className="fixed inset-x-0 top-0 z-40 border-b border-rule bg-bg/85 backdrop-blur-sm"
     >
       <div className="flex items-center justify-between gap-2 px-4 py-2 sm:px-8">
         <a

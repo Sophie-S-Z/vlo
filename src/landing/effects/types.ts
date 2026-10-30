@@ -17,3 +17,19 @@ export function listen<K extends keyof HTMLElementEventMap>(
 export function finePointer(): boolean {
   return typeof matchMedia === "function" && matchMedia("(pointer: fine)").matches;
 }
+
+/**
+ * Keeps an element's current child nodes (React owns them) and returns a function that puts
+ * the same nodes back. Effects that rewrite text call it in their teardown.
+ */
+export function keepChildren(element: Element): Teardown {
+  const nodes = Array.from(element.childNodes);
+  return () => element.replaceChildren(...nodes);
+}
+
+/** Sets the text of an element's first text node, so React keeps its own node. */
+export function setText(element: Element, text: string): void {
+  const node = element.firstChild;
+  if (node?.nodeType === Node.TEXT_NODE) node.nodeValue = text;
+  else element.textContent = text;
+}

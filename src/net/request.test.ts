@@ -35,9 +35,14 @@ describe("netRequest (spec section 7: one network module with a visible log)", (
       vi.fn(async () => Promise.reject(new TypeError("offline"))),
     );
     await expect(
-      netRequest({ purpose: "waitlist-count", url: "https://abc.supabase.co/x" }),
+      netRequest({
+        purpose: "waitlist",
+        url: "https://abc.supabase.co/x",
+        init: { method: "POST", body: "12345" },
+      }),
     ).rejects.toThrow("offline");
-    expect(getNetLog()[0]).toMatchObject({ purpose: "waitlist-count", status: 0, bytesSent: 0 });
+    // The body may have reached the server before the failure, so the log keeps its size.
+    expect(getNetLog()[0]).toMatchObject({ purpose: "waitlist", status: 0, bytesSent: 5 });
   });
 
   it("never stores request content in the log", async () => {

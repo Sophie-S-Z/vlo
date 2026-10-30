@@ -20,3 +20,5 @@ Spec section 19 gives the waitlist SQL. Section 15 requires row level security w
 
 - US17 has a known privacy edge: anyone who submits an email that is on the list sees its place and invite code. The code only tracks invites, so the risk is low. Revisit if invite codes ever unlock anything.
 - The human applies the migration in the Supabase SQL editor or with the Supabase CLI. Claude never holds the service key.
+- The honeypot and the 2-second check run only in the browser, and the function has no rate limit. A script with the public anon key can add rows. Add a per-IP limit (for example a Supabase edge function or a Cloudflare rule) if spam shows up. Recorded as an open issue in `docs/PROGRESS.md`.
+- Two sign-ups that commit at the same moment can each see a place that leaves out the other row, so two writers can see the same number. The order in the table stays correct. The place is for display only, so this is accepted.

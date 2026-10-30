@@ -1,5 +1,5 @@
 import { gsap, ScrollTrigger } from "@/motion/gsap";
-import { listen, type Teardown } from "./types";
+import { keepChildren, listen, setText, type Teardown } from "./types";
 
 /** Ink line under the nav fills with page progress (spec 18.1 item 2). */
 export function inkLine(root: HTMLElement): void {
@@ -20,17 +20,20 @@ export function inkLine(root: HTMLElement): void {
 export function pageCounter(root: HTMLElement): Teardown | void {
   const counter = root.querySelector<HTMLElement>("[data-page-counter]");
   if (!counter) return;
-  const original = counter.innerHTML;
+  const nodes = Array.from(counter.childNodes);
+  const current = counter.querySelector<HTMLElement>("[data-page-current]");
+  const first = current?.textContent ?? "";
   const pages = Array.from(root.querySelectorAll<HTMLElement>("[data-page]"));
   const last = pages.at(-1)?.dataset.page;
 
   const show = (page: string) => {
-    if (page === last) counter.textContent = "Last page";
-    else counter.innerHTML = original;
-    const current = counter.querySelector<HTMLElement>("[data-page-current]");
-    if (current) current.textContent = page;
+    if (page === last) counter.replaceChildren("Last page");
+    else {
+      counter.replaceChildren(...nodes);
+      if (current) setText(current, page);
+    }
     gsap.fromTo(
-      current ?? counter,
+      page === last || !current ? counter : current,
       { yPercent: 60, opacity: 0 },
       { yPercent: 0, opacity: 1, duration: 0.45, ease: "vlo", display: "inline-block" },
     );
@@ -47,7 +50,10 @@ export function pageCounter(root: HTMLElement): Teardown | void {
     });
   }
   return () => {
-    counter.innerHTML = original;
+    gsap.killTweensOf([counter, current]);
+    gsap.set([counter, current], { clearProps: "all" });
+    counter.replaceChildren(...nodes);
+    if (current) setText(current, first);
   };
 }
 
@@ -84,6 +90,7 @@ export function navHover(root: HTMLElement): Teardown {
   }
   for (const link of root.querySelectorAll<HTMLElement>("[data-scramble]")) {
     const text = link.textContent ?? "";
+    const restore = keepChildren(link);
     const hadLabel = link.hasAttribute("aria-label");
     if (!hadLabel) link.setAttribute("aria-label", text);
     stops.push(
@@ -95,7 +102,8 @@ export function navHover(root: HTMLElement): Teardown {
         });
       }),
       () => {
-        link.textContent = text;
+        gsap.killTweensOf(link);
+        restore();
         if (!hadLabel) link.removeAttribute("aria-label");
       },
     );

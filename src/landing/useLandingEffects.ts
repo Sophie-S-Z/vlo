@@ -15,9 +15,14 @@ export function useLandingEffects(root: RefObject<HTMLElement | null>) {
     // Wait one frame. Hydration renders once with the server's "full motion" snapshot and
     // then re-renders with the real preference; the wait lets that cleanup cancel the import.
     const frame = requestAnimationFrame(() => {
-      void import("./effects").then(({ startLandingEffects }) => {
-        if (!cancelled) teardown = startLandingEffects(element);
-      });
+      import("./effects")
+        .then(({ startLandingEffects }) => {
+          if (!cancelled) teardown = startLandingEffects(element);
+        })
+        .catch((error: unknown) => {
+          // The page is complete without effects; report and carry on.
+          console.warn("Landing effects did not start.", error);
+        });
     });
     return () => {
       cancelled = true;

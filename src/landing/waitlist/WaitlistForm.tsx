@@ -41,10 +41,16 @@ export function WaitlistForm({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<JoinResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const ticketRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     startedAt.current = now();
   }, [now]);
+
+  // The form, with the focused button, is gone after a sign-up; keep keyboard users in place.
+  useEffect(() => {
+    if (result) ticketRef.current?.focus();
+  }, [result]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,7 +83,9 @@ export function WaitlistForm({
     const invite = `${window.location.origin}/?ref=${result.refCode}`;
     return (
       <div data-ticket role="status" className="rounded-card border border-accent bg-surface p-8">
-        <p className="font-display text-3xl">You&apos;re writer #{result.place} on the Vlo list.</p>
+        <p ref={ticketRef} tabIndex={-1} className="font-display text-3xl outline-none">
+          You&apos;re writer #{result.place} on the Vlo list.
+        </p>
         <button
           type="button"
           onClick={() => {
@@ -105,6 +113,7 @@ export function WaitlistForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-invalid={error === ERROR_TEXT.invalid_email || undefined}
+          aria-describedby={error ? `${ids}-error` : undefined}
           className="peer min-h-14 w-full rounded-card border border-rule bg-surface px-4 pt-5 pb-2 font-serif text-xl text-fg outline-none focus:border-accent"
         />
         <label
@@ -187,7 +196,7 @@ export function WaitlistForm({
         </p>
       </div>
 
-      <p role="alert" className="min-h-6 font-serif text-lg text-accent-text">
+      <p id={`${ids}-error`} role="alert" className="min-h-6 font-serif text-lg text-accent-text">
         {error}
       </p>
     </form>

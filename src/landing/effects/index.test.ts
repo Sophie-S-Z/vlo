@@ -3,11 +3,6 @@ import { mockMatchMedia } from "@/test/matchMedia";
 
 // gsap reads matchMedia when its plugins register, so stub it before the import.
 mockMatchMedia({ "(pointer: fine)": true });
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
 window.scrollTo = () => {};
 const { ScrollTrigger } = await import("gsap/ScrollTrigger");
 const { startLandingEffects } = await import("./index");
@@ -54,6 +49,21 @@ describe("startLandingEffects", () => {
     expect(document.documentElement.classList.contains("lenis")).toBe(false);
     expect(document.querySelector("[data-cursor]")).toBeNull();
     expect(root.querySelector("h1")?.textContent).toBe("Write the book only you can write.");
+    expect(root.querySelector("h1")?.children).toHaveLength(0);
+  });
+
+  it("undoes every started effect when a later step throws", () => {
+    const root = mountPage();
+    const saved = globalThis.ResizeObserver;
+    // @ts-expect-error: simulate a browser without ResizeObserver, so Lenis throws.
+    delete globalThis.ResizeObserver;
+    try {
+      expect(() => startLandingEffects(root)).toThrow();
+    } finally {
+      globalThis.ResizeObserver = saved;
+    }
+    expect(ScrollTrigger.getAll()).toHaveLength(0);
+    expect(document.querySelector("[data-cursor]")).toBeNull();
     expect(root.querySelector("h1")?.children).toHaveLength(0);
   });
 

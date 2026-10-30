@@ -1,5 +1,5 @@
 import { gsap, ScrollTrigger, SplitText } from "@/motion/gsap";
-import type { Teardown } from "./types";
+import { setText, type Teardown } from "./types";
 
 /** Hero headline rises in by line; rotating word; spinning badge (spec 18.3 p.01). */
 export function hero(root: HTMLElement): Teardown {
@@ -14,15 +14,13 @@ export function hero(root: HTMLElement): Teardown {
   const rotator = root.querySelector<HTMLElement>("[data-rotate]");
   const words = rotator?.dataset.rotate?.split("|") ?? [];
   if (rotator && words.length > 1) {
-    const first = rotator.textContent;
+    const first = rotator.textContent ?? "";
     const timeline = gsap.timeline({ repeat: -1 });
     words.forEach((_, i) => {
       const next = words[(i + 1) % words.length]!;
       timeline
         .to(rotator, { yPercent: -40, opacity: 0, duration: 0.35, ease: "vlo", delay: 2.2 })
-        .call(() => {
-          rotator.textContent = next;
-        })
+        .call(() => setText(rotator, next))
         .fromTo(
           rotator,
           { yPercent: 40 },
@@ -30,9 +28,7 @@ export function hero(root: HTMLElement): Teardown {
         );
     });
     gsap.set(rotator, { display: "inline-block" });
-    stops.push(() => {
-      rotator.textContent = first;
-    });
+    stops.push(() => setText(rotator, first));
   }
 
   for (const badge of root.querySelectorAll("[data-spin]")) {
@@ -81,7 +77,7 @@ export function manifesto(root: HTMLElement): void {
 }
 
 /** Large section titles lean with scroll speed (spec 18.1 item 9). */
-export function velocitySkew(root: HTMLElement): void {
+export function velocitySkew(root: HTMLElement): Teardown | void {
   const titles = root.querySelectorAll("[data-page] h2:not(.sr-only)");
   if (titles.length === 0) return;
   const proxy = { skew: 0 };
@@ -102,6 +98,10 @@ export function velocitySkew(root: HTMLElement): void {
       }
     },
   });
+  return () => {
+    gsap.killTweensOf(proxy);
+    gsap.set(titles, { clearProps: "transform" });
+  };
 }
 
 /** Looping word rows and the footer ticker; they pause off screen. */

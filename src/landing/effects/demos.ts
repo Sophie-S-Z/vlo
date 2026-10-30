@@ -1,5 +1,5 @@
 import { gsap } from "@/motion/gsap";
-import { listen, type Teardown } from "./types";
+import { keepChildren, listen, setText, type Teardown } from "./types";
 
 const inView = (trigger: Element) => ({ trigger, start: "top 85%", once: true });
 
@@ -10,7 +10,7 @@ export function bento(root: HTMLElement): Teardown {
   const format = root.querySelector<HTMLElement>("[data-format-cycle]");
   const formats = format?.dataset.formatCycle?.split("|") ?? [];
   if (format && formats.length > 1) {
-    const first = format.textContent;
+    const restore = keepChildren(format);
     const timeline = gsap.timeline({
       repeat: -1,
       scrollTrigger: { trigger: format, toggleActions: "play pause resume pause" },
@@ -27,7 +27,8 @@ export function bento(root: HTMLElement): Teardown {
       });
     });
     stops.push(() => {
-      format.textContent = first;
+      gsap.killTweensOf(format);
+      restore();
     });
   }
 
@@ -73,7 +74,7 @@ export function bento(root: HTMLElement): Teardown {
   }
 
   for (const price of root.querySelectorAll<HTMLElement>("[data-count-to]")) {
-    const final = price.textContent;
+    const final = price.textContent ?? "";
     const counter = { value: 120 };
     gsap.to(counter, {
       value: Number(price.dataset.countTo ?? 0),
@@ -81,12 +82,10 @@ export function bento(root: HTMLElement): Teardown {
       ease: "power3.out",
       scrollTrigger: inView(price),
       onUpdate: () => {
-        price.textContent = `$${Math.round(counter.value)}`;
+        setText(price, `$${Math.round(counter.value)}`);
       },
     });
-    stops.push(() => {
-      price.textContent = final;
-    });
+    stops.push(() => setText(price, final));
   }
 
   return () => stops.forEach((stop) => stop());
@@ -96,7 +95,7 @@ export function bento(root: HTMLElement): Teardown {
 export function cardToDialog(root: HTMLElement): Teardown | void {
   const dialog = root.querySelector<HTMLDialogElement>("#ai dialog");
   if (!dialog) return;
-  return listen(root, "click", (event) => {
+  const stop = listen(root, "click", (event) => {
     const card = (event.target as Element | null)?.closest<HTMLElement>("#ai [data-tilt]");
     if (!card) return;
     const from = card.getBoundingClientRect();
@@ -115,4 +114,9 @@ export function cardToDialog(root: HTMLElement): Teardown | void {
       });
     });
   });
+  return () => {
+    stop();
+    gsap.killTweensOf(dialog);
+    gsap.set(dialog, { clearProps: "transform,opacity" });
+  };
 }

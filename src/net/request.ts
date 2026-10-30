@@ -28,7 +28,8 @@ export async function netRequest({ purpose, url, init }: NetRequest): Promise<Re
     addNetLogEntry({ ...entry, status: response.status });
     return response;
   } catch (error) {
-    addNetLogEntry({ ...entry, bytesSent: 0, status: 0 });
+    // The body may have left the device before the failure, so keep its size in the log.
+    addNetLogEntry({ ...entry, status: 0 });
     throw error;
   }
 }
