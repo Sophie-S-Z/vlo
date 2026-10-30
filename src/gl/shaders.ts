@@ -46,7 +46,10 @@ void main() {
   float segment = clamp(floor(uProgress), 0.0, 5.0);
   float t = clamp(uProgress - segment, 0.0, 1.0);
   float local = smoothstep(aDelay * 0.45, aDelay * 0.45 + 0.55, t);
-  vec3 target = mix(shapeAt(segment), shapeAt(segment + 1.0), local);
+  vec3 to = shapeAt(segment + 1.0);
+  // Shape 7 is the wordmark drawn through an ASCII pass: glyphs snap to a character grid.
+  if (segment > 4.5) to = vec3(floor(to.xy / vec2(0.022, 0.04) + 0.5) * vec2(0.022, 0.04), 0.0);
+  vec3 target = mix(shapeAt(segment), to, local);
   float transit = sin(3.14159 * local);
   target += curl(target * 2.0 + aSeed * 10.0) * 0.12 * transit;
   target += vec3(sin(uTime * 0.6 + aSeed * 40.0), cos(uTime * 0.5 + aSeed * 30.0), 0.0) * 0.004;

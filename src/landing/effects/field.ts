@@ -35,7 +35,8 @@ function frameFor(root: HTMLElement, progress: number): Frame {
   const element = art ? root.querySelector(art) : null;
   if (element) {
     const box = element.getBoundingClientRect();
-    if (box.width > 0) {
+    // Art that is off screen does not pull the shape away; the shape waits in the middle.
+    if (box.width > 0 && box.bottom > 0 && box.top < height) {
       return {
         x: box.left + box.width / 2,
         y: box.top + box.height / 2,
@@ -76,7 +77,10 @@ function readAnchors(root: HTMLElement): Anchor[] {
     const element = root.querySelector<HTMLElement>(selector);
     if (!element) continue;
     const top = element.getBoundingClientRect().top + window.scrollY;
-    anchors.push({ top: top + Math.min(element.offsetHeight, window.innerHeight) * 0.3, value });
+    // The last anchors must stay reachable: the middle of the screen stops at maxMiddle.
+    const maxMiddle = document.documentElement.scrollHeight - window.innerHeight / 2;
+    const at = top + Math.min(element.offsetHeight, window.innerHeight) * 0.3;
+    anchors.push({ top: Math.min(at, maxMiddle - (PAGE_SHAPES.length - anchors.length)), value });
   }
   return anchors.sort((a, b) => a.top - b.top);
 }

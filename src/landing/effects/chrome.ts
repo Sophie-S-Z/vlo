@@ -39,16 +39,24 @@ export function pageCounter(root: HTMLElement): Teardown | void {
     );
   };
 
-  for (const page of pages) {
-    ScrollTrigger.create({
-      trigger: page,
-      start: "top center",
-      end: "bottom center",
-      onToggle: (self) => {
-        if (self.isActive && page.dataset.page) show(page.dataset.page);
-      },
-    });
-  }
+  // The current page is the last one whose top has passed the middle of the screen. One
+  // trigger reads it on every update, so a jump (anchor link, End key) lands on the right page.
+  let shown = pages[0]?.dataset.page;
+  ScrollTrigger.create({
+    start: 0,
+    end: "max",
+    onUpdate: () => {
+      const middle = window.innerHeight / 2;
+      let page = pages[0]?.dataset.page;
+      for (const element of pages) {
+        if (element.getBoundingClientRect().top <= middle) page = element.dataset.page;
+      }
+      if (page && page !== shown) {
+        shown = page;
+        show(page);
+      }
+    },
+  });
   return () => {
     gsap.killTweensOf([counter, current]);
     gsap.set([counter, current], { clearProps: "all" });
