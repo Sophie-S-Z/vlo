@@ -279,6 +279,41 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
   opacity: 0;
 }
 
+/* "The book opens" pinned story (ADR 0012). The effect sets data-story; Calm keeps the list. */
+[data-story] {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+[data-story] [data-book-steps] {
+  position: relative;
+  min-height: 9rem;
+}
+[data-story] [data-book-steps] > li {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  margin: 0;
+  visibility: hidden;
+}
+[data-story] [data-book-steps] > li[data-active] {
+  visibility: visible;
+}
+[data-story] [data-book-steps] > li p {
+  font-size: clamp(1.75rem, 3.6vw, 3rem);
+}
+[data-book-iris] {
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  z-index: 5;
+  background: var(--vlo-text);
+  clip-path: circle(0% at 50% 50%);
+  pointer-events: none;
+}
+
 /* "I write" marker (ADR 0012): it glides behind the picked option, which keeps its text color. */
 [data-writer-marker] {
   transition:

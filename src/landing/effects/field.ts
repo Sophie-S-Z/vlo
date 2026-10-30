@@ -4,6 +4,7 @@ import { createFrameGuard, placeAnchor, type Anchor } from "@/gl/progress";
 import { labSettings, subscribeLab } from "@/landing/lab/settings";
 import { readTilt, subscribeTilt, tiltOn } from "@/landing/lab/tilt";
 import { readStorage } from "@/ui/lib/storage";
+import { bookOpen } from "./bookState";
 import { finePointer, gentleMotion, listen, type Teardown } from "./types";
 
 /** Frame-rate guard: a slow average over this many frames switches the field off. */
@@ -87,15 +88,23 @@ function readAnchors(root: HTMLElement): Anchor[] {
   for (const [selector, value] of PAGE_SHAPES) {
     const element = root.querySelector<HTMLElement>(selector);
     if (!element) continue;
+    // A pinned page is fixed while pinned; its spacer keeps the page's place in the document.
+    const parent = element.parentElement;
+    const spacer = parent?.classList.contains("pin-spacer") ? parent : null;
     const page = {
-      top: element.getBoundingClientRect().top + window.scrollY,
+      top: (spacer ?? element).getBoundingClientRect().top + window.scrollY,
       height: element.offsetHeight,
     };
     const view = {
       viewport: window.innerHeight,
       scrollHeight: document.documentElement.scrollHeight,
     };
-    anchors.push({ top: placeAnchor(page, anchors.length, PAGE_SHAPES.length, view), value });
+    const top = placeAnchor(page, anchors.length, PAGE_SHAPES.length, view);
+    anchors.push({ top, value });
+    // A pinned page holds its shape for most of the pin, then morphs on to the next one.
+    if (spacer) {
+      anchors.push({ top: top + (spacer.offsetHeight - page.height) * 0.75, value });
+    }
   }
   return anchors.sort((a, b) => a.top - b.top);
 }
@@ -192,6 +201,7 @@ export function field(root: HTMLElement): Teardown | void {
       let eased = false;
       const tick = (time: number) => {
         if (!instance) return;
+        instance.setExplode(bookOpen());
         instance.render(time, frameFor(root, instance.progress()));
         const now = performance.now();
         if (!eased && strained(now) && !forced && !document.hidden) {

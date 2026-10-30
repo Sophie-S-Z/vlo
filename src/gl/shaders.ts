@@ -18,6 +18,7 @@ uniform float uWorld;
 uniform vec3 uOffset;
 uniform float uColumns;
 uniform float uRows;
+uniform float uExplode;
 
 varying vec2 vUv;
 varying float vAccent;
@@ -50,6 +51,12 @@ void main() {
   // Shape 7 is the wordmark drawn through an ASCII pass: glyphs snap to a character grid.
   if (segment > 4.5) to = vec3(floor(to.xy / vec2(0.022, 0.04) + 0.5) * vec2(0.022, 0.04), 0.0);
   vec3 target = mix(shapeAt(segment), to, local);
+  // The pinned book story (ADR 0012): the book turns and its pages lift apart with scroll.
+  float bookNear = clamp(1.0 - abs(uProgress - 2.0) * 2.0, 0.0, 1.0);
+  float open = uExplode * bookNear;
+  float turn = open * 0.6;
+  target.xz = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * target.xz;
+  target += vec3(sign(target.x) * 0.12, (aSeed - 0.5) * 0.5, aDelay * 0.8 - 0.2) * open;
   float transit = sin(3.14159 * local);
   target += curl(target * 2.0 + aSeed * 10.0) * 0.12 * transit;
   target += vec3(sin(uTime * 0.6 + aSeed * 40.0), cos(uTime * 0.5 + aSeed * 30.0), 0.0) * 0.004;

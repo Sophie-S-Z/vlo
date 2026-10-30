@@ -26,7 +26,9 @@ const LATER: (() => Promise<Effect>)[] = [
   now(cursor),
   now(magnetic),
   now(keyWeight),
-  // The pin next: ScrollTriggers below a pin must be created after it to count its spacer.
+  // The pins next, top to bottom: ScrollTriggers below a pin must be created after it to count
+  // its spacer.
+  () => import("./book").then((m) => m.bookStory),
   () => forms().then((m) => m.formsTrack),
   now(manifesto),
   now(velocitySkew),

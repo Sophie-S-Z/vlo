@@ -299,3 +299,54 @@ test.describe("M1c teardown and keyboard (review)", () => {
     await expect(grid).toBeInViewport();
   });
 });
+
+test.describe("The book opens (spec 18.3 p.03, ADR 0012)", () => {
+  const spacerTop = (page: Page) =>
+    page.locator("#book").evaluate((el) => {
+      const box = el.parentElement?.classList.contains("pin-spacer") ? el.parentElement : el;
+      return box.getBoundingClientRect().top + window.scrollY;
+    });
+  const activeCaption = (page: Page) => page.locator("#book [data-book-steps] > li[data-active] p");
+
+  test("the section pins, steps through the captions and closes with the iris", async ({
+    page,
+  }) => {
+    await startEffects(page);
+    const section = page.locator("#book");
+    await expect(section).toHaveAttribute("data-story", "");
+    await expect(page.locator(".pin-spacer > #book")).toHaveCount(1);
+    const top = await spacerTop(page);
+    const screen = await page.evaluate(() => window.innerHeight);
+    const pin =
+      (await page.locator(".pin-spacer:has(> #book)").evaluate((el) => el.offsetHeight)) -
+      (await section.evaluate((el) => el.offsetHeight));
+
+    await page.evaluate((y) => window.scrollTo(0, y + 10), top);
+    await expect(activeCaption(page)).toHaveText("Every book starts as loose pages.");
+    await page.evaluate((y) => window.scrollTo(0, y), top + pin * 0.6);
+    await expect(activeCaption(page)).toHaveText("Memoirs get a timeline of your life.");
+    // The section stays on screen while pinned.
+    expect(Math.abs((await section.boundingBox())!.y)).toBeLessThan(2);
+    await page.evaluate((y) => window.scrollTo(0, y), top + pin * 0.97);
+    await expect
+      .poll(() =>
+        page
+          .locator("[data-book-iris]")
+          .evaluate((el) => parseFloat(el.style.clipPath.replace(/[^\d.]/g, ""))),
+      )
+      .toBeGreaterThan(50);
+    expect(screen).toBeGreaterThan(0);
+  });
+
+  test("Calm unpins the story and shows every caption", async ({ page }) => {
+    await startEffects(page);
+    await expect(page.locator(".pin-spacer > #book")).toHaveCount(1);
+    await calm(page);
+    await expect(page.locator(".pin-spacer > #book")).toHaveCount(0);
+    await expect(page.locator("#book")).not.toHaveAttribute("data-story", /.*/);
+    await expect(page.locator("[data-book-iris]")).toHaveCount(0);
+    for (const li of await page.locator("#book [data-book-steps] > li").all()) {
+      await expect(li).toBeVisible();
+    }
+  });
+});

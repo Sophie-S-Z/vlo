@@ -59,6 +59,8 @@ export interface Field {
   /** Draws this share of the particles, from 0.1 to 1 (Ink lab and the frame-rate guard). */
   setDensity: (share: number) => void;
   setBloom: (intensity: number) => void;
+  /** How far the pinned book story has opened the book, from 0 to 1 (ADR 0012). */
+  setExplode: (amount: number) => void;
   /** Stops the hero ink simulation for good (frame-rate guard, spec 18.4). */
   stopInk: () => void;
   dispose: () => void;
@@ -143,6 +145,7 @@ function buildField(
       uColor: { value: new Color() },
       uAccent: { value: new Color() },
       uOpacity: { value: 0.4 },
+      uExplode: { value: 0 },
     },
   });
   const mesh = new Mesh(geometry, material);
@@ -283,6 +286,11 @@ function buildField(
     },
     setBloom(intensity) {
       bloom.intensity = intensity;
+    },
+    setExplode(amount) {
+      const uniform = material.uniforms.uExplode!;
+      // Ease toward the scroll value, so a fast scroll still opens the book smoothly.
+      uniform.value += (amount - (uniform.value as number)) * 0.15;
     },
     stopInk() {
       fluid?.dispose();
