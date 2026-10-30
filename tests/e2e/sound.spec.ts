@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { startInCalm } from "./calm";
 
 test.describe("Sound (spec 18.1 item 10, M1d)", () => {
   test.beforeEach(async ({ page }) => {
@@ -35,7 +36,7 @@ test.describe("Sound (spec 18.1 item 10, M1d)", () => {
   });
 
   test("Calm keeps the sound switch off", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await startInCalm(page);
     await page.goto("/");
     const sound = page.getByRole("contentinfo").getByRole("switch", { name: "Sound" });
     await expect(sound).toBeDisabled();

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { expectNoSeriousA11yViolations } from "./a11y";
+import { startInCalm } from "./calm";
 
 const transforms = (page: Page) =>
   page
@@ -14,7 +15,7 @@ test.describe("Route wipes and 404 physics (spec 18.3, M1d)", () => {
     await page.getByRole("banner").getByRole("link", { name: "Vlo" }).click();
     await expect(page.locator("[data-wipe-bar]")).toHaveCount(5);
 
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await startInCalm(page);
     await page.goto("/privacy");
     await page.getByRole("banner").getByRole("link", { name: "Vlo" }).click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Write the book");
@@ -37,8 +38,8 @@ test.describe("Route wipes and 404 physics (spec 18.3, M1d)", () => {
     await expect.poll(async () => [...new Set(await transforms(page))]).toEqual(["none"]);
   });
 
-  test("reduced motion keeps the 404 letters still and loads no physics", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
+  test("Calm keeps the 404 letters still and loads no physics", async ({ page }) => {
+    await startInCalm(page);
     const matter: string[] = [];
     page.on("request", (r) => /magnets|matter/.test(r.url()) && matter.push(r.url()));
     await page.goto("/no-such-page");

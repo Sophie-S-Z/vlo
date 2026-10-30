@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { expectNoSeriousA11yViolations } from "./a11y";
+import { startInCalm } from "./calm";
 
 test.describe("Ink lab, grain and tilt (spec 18.1 items 10 to 12)", () => {
   test("~ opens the Ink lab; its grain control changes the film grain", async ({ page }) => {
@@ -38,7 +39,7 @@ test.describe("Ink lab, grain and tilt (spec 18.1 items 10 to 12)", () => {
 
   test("the footer button opens the lab and the panel passes axe", async ({ page }) => {
     // Still page: axe must not catch a scroll-driven fade halfway (the panel is the subject).
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await startInCalm(page);
     await page.goto("/");
     const button = page.getByRole("contentinfo").getByRole("button", { name: "Ink lab" });
     await button.click();
@@ -49,7 +50,7 @@ test.describe("Ink lab, grain and tilt (spec 18.1 items 10 to 12)", () => {
     await expect(button).toBeFocused();
   });
 
-  test("the grain moves with full motion and stays still with reduced motion", async ({ page }) => {
+  test("the grain moves with full motion and stays still with Calm", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.goto("/");
     const name = () =>
@@ -59,7 +60,7 @@ test.describe("Ink lab, grain and tilt (spec 18.1 items 10 to 12)", () => {
     expect(await name()).toBe("grain");
     expect(await running()).toBe(1);
 
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await startInCalm(page);
     await page.reload();
     await expect.poll(running).toBe(0);
   });

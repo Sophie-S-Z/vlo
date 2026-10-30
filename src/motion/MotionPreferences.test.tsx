@@ -23,7 +23,12 @@ describe("MotionPreferencesProvider", () => {
 
   it("starts with full motion when Calm is off and the system allows motion", () => {
     const { result } = renderHook(() => useMotionPreferences(), { wrapper });
-    expect(result.current).toMatchObject({ calm: false, systemReduced: false, reduced: false });
+    expect(result.current).toMatchObject({
+      calm: false,
+      systemReduced: false,
+      reduced: false,
+      gentle: false,
+    });
     expect(html.dataset.motion).toBe("full");
     expect(html.dataset.calm).toBe("off");
   });
@@ -40,14 +45,28 @@ describe("MotionPreferencesProvider", () => {
     expect(second.result.current.calm).toBe(true);
   });
 
-  it("follows the system reduced-motion setting, including live changes", () => {
+  it("keeps motion on, but gentle, when the system asks for reduced motion (ADR 0011)", () => {
     media.set(REDUCED_MOTION_QUERY, true);
     const { result } = renderHook(() => useMotionPreferences(), { wrapper });
-    expect(result.current).toMatchObject({ systemReduced: true, reduced: true, calm: false });
+    expect(result.current).toMatchObject({
+      systemReduced: true,
+      reduced: false,
+      gentle: true,
+      calm: false,
+    });
+    expect(html.dataset.motion).toBe("gentle");
 
     act(() => media.set(REDUCED_MOTION_QUERY, false));
-    expect(result.current.reduced).toBe(false);
+    expect(result.current.gentle).toBe(false);
     expect(html.dataset.motion).toBe("full");
+  });
+
+  it("Calm wins over gentle mode", () => {
+    media.set(REDUCED_MOTION_QUERY, true);
+    const { result } = renderHook(() => useMotionPreferences(), { wrapper });
+    act(() => result.current.setCalm(true));
+    expect(result.current).toMatchObject({ reduced: true, gentle: false });
+    expect(html.dataset.motion).toBe("reduced");
   });
 
   it("falls back to defaults when storage throws", () => {

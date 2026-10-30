@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCalm } from "./calm";
 
 async function startEffects(page: Page) {
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -132,10 +133,10 @@ test.describe("Poetry panel (spec 18.3 p.04, M1c)", () => {
     await expect.poll(() => tile.evaluate((el) => el.style.transform)).toMatch(/translate\(/);
   });
 
-  test("reduced motion never loads Matter.js", async ({ page }) => {
+  test("Calm never loads Matter.js", async ({ page }) => {
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await startInCalm(page);
     await page.goto("/");
     await page.locator("[data-magnets]").scrollIntoViewIfNeeded();
     await page.waitForLoadState("networkidle");

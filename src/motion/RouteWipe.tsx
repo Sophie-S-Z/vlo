@@ -6,12 +6,13 @@ const BARS = [0, 1, 2, 3, 4];
 
 /**
  * Five vermilion bars sweep across the screen when the route changes (spec 18.3). CSS runs the
- * sweep; each route change mounts new bars, so the animation starts again. Reduced motion and
- * Calm show no bars.
+ * sweep; each route change mounts new bars, so the animation starts again. Calm and gentle
+ * mode (ADR 0011) show no bars.
  */
 export function RouteWipe() {
   const { pathname } = useLocation();
-  const { reduced } = useMotionPreferences();
+  const { reduced: calm, gentle } = useMotionPreferences();
+  const reduced = calm || gentle;
   const [seen, setSeen] = useState(pathname);
   const [wipes, setWipes] = useState(0);
 

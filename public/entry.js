@@ -1,13 +1,20 @@
-// Runs before the first paint (spec 18.3 p.00). It marks a first visit to "/" with full motion,
-// so CSS can show the entry curtain at once. No JavaScript, a repeat visit, Calm or reduced
-// motion: no curtain.
+// Runs before the first paint (spec 18.3 p.00, ADR 0011). It writes the motion mode, so CSS
+// never flashes the wrong one, and it marks a first visit to "/" for the entry curtain.
+// No JavaScript, a repeat visit or Calm: no curtain.
 (function () {
+  const root = document.documentElement;
+  let calm = false;
   try {
-    if (location.pathname !== "/") return;
+    calm = localStorage.getItem("vlo:calm") === "on";
+  } catch {
+    // Storage blocked: Calm is off.
+  }
+  const gentle = !calm && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  root.setAttribute("data-motion", calm ? "reduced" : gentle ? "gentle" : "full");
+  try {
+    if (calm || location.pathname !== "/") return;
     if (localStorage.getItem("vlo:entered") === "1") return;
-    if (localStorage.getItem("vlo:calm") === "on") return;
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    document.documentElement.setAttribute("data-entry", "first");
+    root.setAttribute("data-entry", "first");
   } catch {
     // Storage blocked: skip the curtain.
   }

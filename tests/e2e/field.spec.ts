@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { startInCalm } from "./calm";
 
 // SwiftShader gives headless Chromium a software WebGL context, so the canvas path runs in CI.
 test.use({ launchOptions: { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] } });
@@ -42,10 +43,10 @@ test.describe("Particle field (spec 18.1 item 7, 18.2)", () => {
     await page.close();
   });
 
-  test("reduced motion never loads three.js and keeps the still art", async ({ page }) => {
+  test("Calm never loads three.js and keeps the still art", async ({ page }) => {
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await startInCalm(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     expect(requests.filter((url) => /\/assets\/field-/.test(url))).toEqual([]);

@@ -1,5 +1,5 @@
 import { gsap } from "@/motion/gsap";
-import { finePointer, keepChildren, listen, type Teardown } from "./types";
+import { finePointer, gentleMotion, keepChildren, listen, type Teardown } from "./types";
 
 const LABELS: [selector: string, label: string][] = [
   ["[data-drag-card]", "Drag"],
@@ -173,7 +173,7 @@ export function keyWeight(root: HTMLElement): Teardown | void {
 
 /** AI cards lean toward the pointer (spec 18.3 p.06). */
 export function tilt(root: HTMLElement): Teardown | void {
-  if (!finePointer()) return;
+  if (!finePointer() || gentleMotion()) return;
   const stops: Teardown[] = [];
   for (const card of root.querySelectorAll<HTMLElement>("[data-tilt]")) {
     gsap.set(card, { transformPerspective: 800 });

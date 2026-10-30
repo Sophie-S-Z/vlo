@@ -2,11 +2,11 @@ import { useEffect, type RefObject } from "react";
 import { useMotionPreferences } from "@/motion/MotionPreferences";
 
 /**
- * Loads the effects chunk after hydration when motion is allowed, and tears it down
- * when Calm or the system setting turns reduced motion on (ADR 0005).
+ * Loads the effects chunk after hydration unless Calm is on, and tears it down when Calm turns
+ * on. A change between full and gentle motion restarts the effects (ADR 0011).
  */
 export function useLandingEffects(root: RefObject<HTMLElement | null>) {
-  const { reduced } = useMotionPreferences();
+  const { reduced, gentle } = useMotionPreferences();
   useEffect(() => {
     const element = root.current;
     if (reduced || !element) return;
@@ -29,5 +29,6 @@ export function useLandingEffects(root: RefObject<HTMLElement | null>) {
       cancelAnimationFrame(frame);
       teardown?.();
     };
-  }, [reduced, root]);
+    // The effects read gentle mode from html[data-motion]; listing it here restarts them.
+  }, [reduced, gentle, root]);
 }

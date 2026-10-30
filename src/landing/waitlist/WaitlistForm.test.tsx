@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MotionPreferencesProvider } from "@/motion/MotionPreferences";
-import { mockMatchMedia, REDUCED_MOTION_QUERY } from "@/test/matchMedia";
+import { mockMatchMedia } from "@/test/matchMedia";
+import { CALM_STORAGE_KEY } from "@/motion/MotionPreferences";
+import { resetStoredValuesForTests, setStoredValue } from "@/ui/lib/storedValue";
 import { WaitlistError } from "./api";
 import { HOLD_MS } from "./HoldButton";
 import { WaitlistForm } from "./WaitlistForm";
@@ -30,7 +32,12 @@ async function pressSign(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => {
   vi.useRealTimers();
   mockMatchMedia({});
+  localStorage.removeItem(CALM_STORAGE_KEY);
+  resetStoredValuesForTests();
 });
+
+/** Calm is the only switch that stops motion (ADR 0011). */
+const turnOnCalm = () => setStoredValue(CALM_STORAGE_KEY, "on");
 
 describe("WaitlistForm (US16, US17)", () => {
   it("joins with the typed details and shows the ticket", async () => {
@@ -143,8 +150,8 @@ describe("WaitlistForm (US16, US17)", () => {
     expect(join).not.toHaveBeenCalled();
   });
 
-  it("with reduced motion, a plain click signs", async () => {
-    mockMatchMedia({ [REDUCED_MOTION_QUERY]: true });
+  it("with Calm on, a plain click signs", async () => {
+    turnOnCalm();
     const { join, user } = setup();
     await user.type(screen.getByLabelText("Email"), "ada@example.com");
     await user.click(signButton());
@@ -178,8 +185,8 @@ describe("WaitlistForm (US16, US17)", () => {
     expect(await screen.findByText("You're writer #8 on the Vlo list.")).toBeInTheDocument();
   });
 
-  it("skips the flight and the shake with reduced motion", async () => {
-    mockMatchMedia({ [REDUCED_MOTION_QUERY]: true });
+  it("skips the flight and the shake with Calm on", async () => {
+    turnOnCalm();
     const fly = vi.fn(async () => {});
     const shake = vi.fn();
     let clock = 0;
@@ -233,7 +240,6 @@ describe("WaitlistForm (US16, US17)", () => {
   });
 
   it("does not shake again when Calm turns off after an error", async () => {
-    const media = mockMatchMedia();
     const shake = vi.fn();
     let clock = 0;
     renderWithMotion(
@@ -246,8 +252,8 @@ describe("WaitlistForm (US16, US17)", () => {
     clock = 5_000;
     await userEvent.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
     await vi.waitFor(() => expect(shake).toHaveBeenCalledOnce());
-    act(() => media.set(REDUCED_MOTION_QUERY, true));
-    act(() => media.set(REDUCED_MOTION_QUERY, false));
+    act(() => setStoredValue(CALM_STORAGE_KEY, "on"));
+    act(() => setStoredValue(CALM_STORAGE_KEY, "off"));
     expect(shake).toHaveBeenCalledOnce();
   });
 });

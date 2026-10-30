@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCalm, turnOnCalmNow } from "./calm";
 
 const html = (page: Page) => page.locator("html");
 const headline = "Write the book only you can write.";
@@ -39,10 +40,10 @@ test.describe("Landing effects (spec 18.1, M1a)", () => {
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
   });
 
-  test("reduced motion never downloads the effects chunk", async ({ page }) => {
+  test("Calm never downloads the effects chunk", async ({ page }) => {
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await startInCalm(page);
     await page.goto("/");
     await expect(html(page)).toHaveAttribute("data-motion", "reduced");
     await page.waitForLoadState("networkidle");
@@ -77,13 +78,14 @@ test.describe("Landing demos (spec 18.3, M1a)", () => {
     await expect(page.locator("#faq details").first()).not.toHaveAttribute("open", "");
   });
 
-  for (const reducedMotion of ["no-preference", "reduce"] as const) {
-    test(`an AI card opens a modal that keeps focus and closes on Escape (${reducedMotion})`, async ({
+  for (const mode of ["full", "calm"] as const) {
+    test(`an AI card opens a modal that keeps focus and closes on Escape (${mode})`, async ({
       page,
     }) => {
-      await page.emulateMedia({ reducedMotion });
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      if (mode === "calm") await startInCalm(page);
       await page.goto("/");
-      if (reducedMotion === "no-preference") await effectsRunning(page);
+      if (mode === "full") await effectsRunning(page);
       const card = page.locator("#ai [data-tilt]").first();
       await card.focus();
       await page.keyboard.press("Enter");
@@ -104,8 +106,8 @@ test.describe("Landing demos (spec 18.3, M1a)", () => {
     });
   }
 
-  test("reduced motion shows the final demo states", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
+  test("Calm shows the final demo states", async ({ page }) => {
+    await startInCalm(page);
     await page.goto("/");
     const bento = page.locator("[data-bento]");
     await expect(bento.getByText("$0")).toBeVisible();
@@ -195,7 +197,7 @@ test.describe("Hold to sign (US16)", () => {
     await expect(page.locator("#waitlist [role=alert]")).toContainText(notConfigured);
     await expect.poll(formAnimations).toBe(1);
 
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await turnOnCalmNow(page);
     await page.getByLabel("Email").press("Enter");
     await page.waitForTimeout(300);
     expect(await formAnimations()).toBe(1);

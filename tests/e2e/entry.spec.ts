@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { expectNoSeriousA11yViolations } from "./a11y";
+import { startInCalm } from "./calm";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -33,8 +34,8 @@ test.describe("Entry curtain (spec 18.3 p.00, M1d)", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
-  test("reduced motion and other routes never show the curtain", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
+  test("Calm and other routes never show the curtain", async ({ page }) => {
+    await startInCalm(page);
     await page.goto("/");
     await expect(page.locator("html")).not.toHaveAttribute("data-entry", /.*/);
     await page.emulateMedia({ reducedMotion: "no-preference" });

@@ -58,7 +58,7 @@ describe("RouteWipe (spec 18.3 route wipes)", () => {
     expect(bars()).toHaveLength(0);
   });
 
-  it("does not wipe with reduced motion", async () => {
+  it("does not wipe in gentle mode (system reduced motion)", async () => {
     mockMatchMedia({ [REDUCED_MOTION_QUERY]: true });
     const router = setup();
     await act(() => router.navigate("/privacy"));

@@ -4,7 +4,7 @@ import { createFrameGuard, placeAnchor, type Anchor } from "@/gl/progress";
 import { labSettings, subscribeLab } from "@/landing/lab/settings";
 import { readTilt, subscribeTilt, tiltOn } from "@/landing/lab/tilt";
 import { readStorage } from "@/ui/lib/storage";
-import { finePointer, listen, type Teardown } from "./types";
+import { finePointer, gentleMotion, listen, type Teardown } from "./types";
 
 /** Frame-rate guard: a slow average over this many frames switches the field off. */
 const GUARD_FRAMES = 90;
@@ -208,14 +208,16 @@ export function field(root: HTMLElement): Teardown | void {
       // Fonts, images and open FAQ answers move the pages; the anchors follow them.
       const layoutWatch = new ResizeObserver(() => instance?.refreshAnchors());
       layoutWatch.observe(document.body);
-      const stopPointer = finePointer()
-        ? listen(window, "pointermove", (event) => {
-            instance?.pointer(
-              (event.clientX / window.innerWidth) * 2 - 1,
-              -((event.clientY / window.innerHeight) * 2 - 1),
-            );
-          })
-        : () => {};
+      // Camera parallax and ink follow a fine pointer; gentle mode keeps the camera still.
+      const stopPointer =
+        finePointer() && !gentleMotion()
+          ? listen(window, "pointermove", (event) => {
+              instance?.pointer(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -((event.clientY / window.innerHeight) * 2 - 1),
+              );
+            })
+          : () => {};
       stops.push(
         () => gsap.ticker.remove(tick),
         stopLab,

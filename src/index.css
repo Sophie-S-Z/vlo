@@ -43,18 +43,9 @@
   }
 }
 
-/* Reduced motion: Calm mode or the system setting. Decorative motion stops everywhere.
-   The media query covers the first paint, before the provider sets data-motion. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+/* Calm stops decorative CSS motion everywhere. public/entry.js sets data-motion before the
+   first paint. A system reduced-motion setting alone gives "gentle", which keeps CSS motion
+   (ADR 0011). */
 [data-motion="reduced"] *,
 [data-motion="reduced"] *::before,
 [data-motion="reduced"] *::after {

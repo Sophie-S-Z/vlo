@@ -14,6 +14,14 @@ export function listen<K extends keyof HTMLElementEventMap>(
   return () => target.removeEventListener(type, fn, options);
 }
 
+/**
+ * True in gentle mode: the system asks for reduced motion and Calm is off (ADR 0011). Effects
+ * that skew, tilt, turn or trail the page stay off. The landing restarts effects on a change.
+ */
+export function gentleMotion(): boolean {
+  return document.documentElement.dataset.motion === "gentle";
+}
+
 export function finePointer(): boolean {
   return typeof matchMedia === "function" && matchMedia("(pointer: fine)").matches;
 }

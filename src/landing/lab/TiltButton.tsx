@@ -6,10 +6,12 @@ const never = () => () => {};
 
 /**
  * "Enable motion" (spec 18.1 item 11). CSS shows it on touch screens only. It needs a device
- * with an orientation sensor and full motion; Calm turns the tilt off.
+ * with an orientation sensor and full motion; Calm and gentle mode turn the tilt off.
  */
 export function TiltButton() {
-  const { reduced } = useMotionPreferences();
+  const { reduced: calm, gentle } = useMotionPreferences();
+  // Gyroscope parallax is strong motion: Calm and gentle mode keep it off (ADR 0011).
+  const reduced = calm || gentle;
   const supported = useSyncExternalStore(never, tiltSupported, () => false);
   const on = useSyncExternalStore(subscribeTilt, tiltOn, () => false);
 

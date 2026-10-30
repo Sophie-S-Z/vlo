@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Link } from "react-router";
+import { CalmOffer } from "@/motion/CalmOffer";
 import { SkipLink } from "@/ui/layouts";
 import { Entry } from "./Entry";
 import { Grain } from "./Grain";
@@ -53,6 +54,7 @@ export function LandingPage({ appEnabled }: { appEnabled: boolean }) {
       </main>
       <Footer />
       <InkLab />
+      <CalmOffer />
       <Grain />
     </div>
   );

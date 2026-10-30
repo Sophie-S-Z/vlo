@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MotionPreferencesProvider } from "@/motion/MotionPreferences";
-import { mockMatchMedia, REDUCED_MOTION_QUERY } from "@/test/matchMedia";
+import { mockMatchMedia } from "@/test/matchMedia";
+import { CALM_STORAGE_KEY } from "@/motion/MotionPreferences";
 import { THEMES, ThemeProvider, themeStorageKey, useTheme, type ThemeScope } from "./ThemeProvider";
 import { ThemeSwitch } from "./ThemeSwitch";
 
@@ -20,9 +21,8 @@ function wrapperFor(scope: ThemeScope) {
 }
 
 describe("ThemeProvider", () => {
-  let media: ReturnType<typeof mockMatchMedia>;
   beforeEach(() => {
-    media = mockMatchMedia();
+    mockMatchMedia();
   });
   afterEach(() => {
     delete doc.startViewTransition;
@@ -80,8 +80,8 @@ describe("ThemeProvider", () => {
     expect(html.dataset.theme).toBe("night");
   });
 
-  it("skips the View Transition under reduced motion", () => {
-    media.set(REDUCED_MOTION_QUERY, true);
+  it("skips the View Transition with Calm on", () => {
+    localStorage.setItem(CALM_STORAGE_KEY, "on");
     const start = vi.fn<StartViewTransition>();
     doc.startViewTransition = start;
     const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor("app") });

@@ -17,8 +17,10 @@ export interface MotionPreferences {
   calm: boolean;
   /** The operating system asks for reduced motion. */
   systemReduced: boolean;
-  /** True when decorative motion, sound and WebGL must stay off. */
+  /** True when decorative motion, sound and WebGL must stay off: Calm is on (ADR 0011). */
   reduced: boolean;
+  /** The system asks for reduced motion and Calm is off: effects run without the strong ones. */
+  gentle: boolean;
   setCalm: (calm: boolean) => void;
 }
 
@@ -41,7 +43,9 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
   // The server snapshot (Calm off) keeps prerendered HTML and hydration in agreement.
   const calm = useSyncExternalStore(subscribeStoredValues, getCalm, () => false);
   const systemReduced = useSyncExternalStore(subscribeReducedMotion, getSystemReduced, () => false);
-  const reduced = calm || systemReduced;
+  // Only Calm stops the effects; a system setting softens them (ADR 0011).
+  const reduced = calm;
+  const gentle = systemReduced && !calm;
 
   const setCalm = useCallback((next: boolean) => {
     setStoredValue(CALM_STORAGE_KEY, next ? "on" : "off");
@@ -49,13 +53,13 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
 
   useEffect(() => {
     const root = document.documentElement;
-    root.dataset.motion = reduced ? "reduced" : "full";
+    root.dataset.motion = reduced ? "reduced" : gentle ? "gentle" : "full";
     root.dataset.calm = calm ? "on" : "off";
-  }, [calm, reduced]);
+  }, [calm, reduced, gentle]);
 
   const value = useMemo(
-    () => ({ calm, systemReduced, reduced, setCalm }),
-    [calm, systemReduced, reduced, setCalm],
+    () => ({ calm, systemReduced, reduced, gentle, setCalm }),
+    [calm, systemReduced, reduced, gentle, setCalm],
   );
 
   return (

@@ -1,5 +1,5 @@
 import { gsap, ScrollTrigger, SplitText } from "@/motion/gsap";
-import { setText, type Teardown } from "./types";
+import { gentleMotion, setText, type Teardown } from "./types";
 
 /** Hero headline rises in by line; rotating word; spinning badge (spec 18.3 p.01). */
 export function hero(root: HTMLElement): Teardown {
@@ -92,6 +92,7 @@ export function manifesto(root: HTMLElement): void {
 
 /** Large section titles lean with scroll speed (spec 18.1 item 9). */
 export function velocitySkew(root: HTMLElement): Teardown | void {
+  if (gentleMotion()) return;
   const titles = root.querySelectorAll("[data-page] h2:not(.sr-only)");
   if (titles.length === 0) return;
   const proxy = { skew: 0 };
