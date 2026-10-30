@@ -72,7 +72,7 @@ function rotateWords(rotator: HTMLElement, words: string[]): Teardown {
   return () => {
     window.clearTimeout(timer);
     running?.cancel();
-    rotator.style.removeProperty("display");
+    for (const name of ["display", "translate", "clip-path"]) rotator.style.removeProperty(name);
     setText(rotator, first);
   };
 }

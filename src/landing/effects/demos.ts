@@ -105,11 +105,13 @@ export function cardToDialog(root: HTMLElement): Teardown | void {
   const dialog = root.querySelector<HTMLDialogElement>("#ai dialog");
   if (!dialog) return;
   let running: { cancel: () => void } | null = null;
+  let frame = 0;
   const stop = listen(root, "click", (event) => {
     const card = (event.target as Element | null)?.closest<HTMLElement>("#ai [data-tilt]");
     if (!card) return;
     const from = card.getBoundingClientRect();
-    requestAnimationFrame(() => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
       if (!dialog.open) return;
       const to = dialog.getBoundingClientRect();
       const x = from.left + from.width / 2 - (to.left + to.width / 2);
@@ -125,6 +127,9 @@ export function cardToDialog(root: HTMLElement): Teardown | void {
   });
   return () => {
     stop();
+    cancelAnimationFrame(frame);
     running?.cancel();
+    // A finished spring leaves its last keyframe inline.
+    for (const name of ["translate", "scale", "opacity"]) dialog.style.removeProperty(name);
   };
 }

@@ -20,9 +20,18 @@ export function bookStory(root: HTMLElement): Teardown | void {
   if (!section || steps.length === 0) return;
 
   section.dataset.story = "";
-  // Only the active caption shows; screen readers hear each one as it arrives.
+  // Only the active caption shows. Screen readers get every caption at once from a hidden
+  // copy, because the stacked captions never scroll into place by reading alone.
   const list = steps[0]!.parentElement!;
-  list.setAttribute("aria-live", "polite");
+  list.setAttribute("aria-hidden", "true");
+  const readable = document.createElement("ol");
+  readable.className = "sr-only";
+  for (const step of steps) {
+    const item = document.createElement("li");
+    item.textContent = step.querySelector("p")?.textContent ?? step.textContent;
+    readable.append(item);
+  }
+  list.after(readable);
   const iris = document.createElement("div");
   iris.dataset.bookIris = "";
   iris.setAttribute("aria-hidden", "true");
@@ -68,7 +77,12 @@ export function bookStory(root: HTMLElement): Teardown | void {
     setBookOpen(0);
     iris.remove();
     delete section.dataset.story;
-    list.removeAttribute("aria-live");
-    for (const step of steps) delete step.dataset.active;
+    list.removeAttribute("aria-hidden");
+    for (const step of steps) {
+      delete step.dataset.active;
+      step.style.removeProperty("translate");
+      step.style.removeProperty("clip-path");
+    }
+    readable.remove();
   };
 }

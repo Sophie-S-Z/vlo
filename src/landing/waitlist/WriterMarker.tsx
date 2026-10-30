@@ -36,7 +36,12 @@ export function WriterMarker({
     place(shown.current);
     shown.current = true;
     if (typeof ResizeObserver !== "function") return;
-    const observer = new ResizeObserver(() => place(false));
+    // ResizeObserver reports once on observe; that first report must not cut the glide short.
+    let first = true;
+    const observer = new ResizeObserver(() => {
+      if (first) first = false;
+      else place(false);
+    });
     observer.observe(box);
     return () => observer.disconnect();
   }, [value, container]);

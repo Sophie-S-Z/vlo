@@ -37,7 +37,8 @@ export function pageTurns(root: HTMLElement): Teardown | void {
         scrollTrigger: {
           trigger: page,
           start: "top 95%",
-          end: "top 40%",
+          // clamp(): the last page finishes turning even when it cannot reach 40%.
+          end: "clamp(top 40%)",
           scrub: 0.4,
           // A finished sheet leaves the layout tree, so it costs nothing while the page is read.
           onLeave: () => (sheet.style.visibility = "hidden"),

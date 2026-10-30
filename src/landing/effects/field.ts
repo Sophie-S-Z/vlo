@@ -86,6 +86,11 @@ function detectWebgl(): boolean {
 
 function readAnchors(root: HTMLElement): Anchor[] {
   const anchors: Anchor[] = [];
+  // Each pinned page adds a second anchor; the clamp in placeAnchor must count it.
+  const pinned = PAGE_SHAPES.filter(([selector]) =>
+    root.querySelector(selector)?.parentElement?.classList.contains("pin-spacer"),
+  ).length;
+  const total = PAGE_SHAPES.length + pinned;
   for (const [selector, value] of PAGE_SHAPES) {
     const element = root.querySelector<HTMLElement>(selector);
     if (!element) continue;
@@ -100,7 +105,7 @@ function readAnchors(root: HTMLElement): Anchor[] {
       viewport: window.innerHeight,
       scrollHeight: document.documentElement.scrollHeight,
     };
-    const top = placeAnchor(page, anchors.length, PAGE_SHAPES.length, view);
+    const top = placeAnchor(page, anchors.length, total, view);
     anchors.push({ top, value });
     // A pinned page holds its shape for most of the pin, then morphs on to the next one.
     if (spacer) {

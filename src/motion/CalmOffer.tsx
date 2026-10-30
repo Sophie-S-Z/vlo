@@ -19,11 +19,14 @@ export function CalmOffer() {
   const close = (calm: boolean) => {
     setStoredValue(CALM_OFFER_KEY, "seen");
     if (calm) setCalm(true);
+    // The offer disappears with the focused button; focus returns to the page.
+    document.getElementById("main")?.focus({ preventScroll: true });
   };
 
   return (
     <section
       aria-label="Motion"
+      data-calm-control
       className="fixed bottom-4 left-4 z-40 max-w-xs rounded-card border border-rule bg-surface p-4 text-sm shadow-lg"
     >
       <p className="font-serif text-base">

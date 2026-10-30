@@ -315,6 +315,9 @@ test.describe("The book opens (spec 18.3 p.03, ADR 0012)", () => {
     const section = page.locator("#book");
     await expect(section).toHaveAttribute("data-story", "");
     await expect(page.locator(".pin-spacer > #book")).toHaveCount(1);
+    // Screen readers get all five captions at once.
+    await expect(section.locator("[data-book-steps]")).toHaveAttribute("aria-hidden", "true");
+    await expect(section.locator("ol.sr-only > li")).toHaveCount(5);
     const top = await spacerTop(page);
     const screen = await page.evaluate(() => window.innerHeight);
     const pin =

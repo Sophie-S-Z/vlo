@@ -238,6 +238,8 @@ test.describe("Lovable merge springs (ADR 0012)", () => {
     const first = await marker.boundingBox();
     await form.getByText("Poetry", { exact: true }).click();
     await expect(marker).toHaveAttribute("data-on", "poetry");
+    // It glides: a CSS transition runs instead of a jump.
+    expect(await marker.evaluate((el) => el.getAnimations().length)).toBeGreaterThan(0);
     const target = await form.locator('[data-writer-option="poetry"]').boundingBox();
     await expect
       .poll(async () => Math.round((await marker.boundingBox())!.x))

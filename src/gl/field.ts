@@ -304,8 +304,17 @@ function buildField(
     },
     setLine(text) {
       const shape0 = geometry.getAttribute("aShape0") as InstancedBufferAttribute;
-      // The morph starts from where the particles are drawn now.
-      prev0.array.set(shape0.array);
+      // The morph starts from where the particles are drawn now: mid-morph, that is the shader's
+      // mix of the last start and target, with the same per-particle delay.
+      const morph = material.uniforms.uMorph!.value as number;
+      const from = prev0.array as Float32Array;
+      const to = shape0.array as Float32Array;
+      for (let i = 0; i < count; i++) {
+        const edge = delay[i]! * 0.4;
+        const t = Math.min(1, Math.max(0, (morph - edge) / 0.6));
+        const local = t * t * (3 - 2 * t);
+        for (let k = i * 3; k < i * 3 + 3; k++) from[k] = from[k]! + (to[k]! - from[k]!) * local;
+      }
       prev0.needsUpdate = true;
       const line = text.trim();
       const points = line

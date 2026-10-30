@@ -58,8 +58,8 @@ export function chooseSound(next: boolean): void {
   setSound(next);
 }
 
-/** Controls that make their own sound choice; a press on them does not arm sound. */
-const OWN_CHOICE = "[data-sound-switch], [data-entry-curtain]";
+/** Controls that make their own sound choice (Calm turns sound off); a press on them does not arm sound. */
+const OWN_CHOICE = "[data-sound-switch], [data-entry-curtain], [data-calm-control]";
 
 /**
  * Starts sound on the first click or key press on the page, unless the visitor turned it off.

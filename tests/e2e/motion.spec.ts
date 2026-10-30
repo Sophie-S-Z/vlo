@@ -22,6 +22,7 @@ test.describe("Calm mode and reduced motion (spec F08, M0 gate)", () => {
     const offer = page.getByRole("region", { name: "Motion" });
     await offer.getByRole("button", { name: "Turn on Calm" }).click();
     await expect(html(page)).toHaveAttribute("data-motion", "reduced");
+    await expect(page.locator("#main")).toBeFocused();
     await expect(offer).toBeHidden();
     await page.reload();
     await expect(html(page)).toHaveAttribute("data-motion", "reduced");

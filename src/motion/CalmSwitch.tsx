@@ -16,6 +16,7 @@ export function CalmSwitch({ className }: { className?: string }) {
       <button
         type="button"
         role="switch"
+        data-calm-control
         aria-checked={calm}
         onClick={() => setCalm(!calm)}
         aria-describedby={systemReduced ? hintId : undefined}
