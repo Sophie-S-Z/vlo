@@ -142,4 +142,32 @@ test.describe("Hold to sign (US16)", () => {
     await page.getByLabel("Email").press("Enter");
     await expect(page.locator("#waitlist [role=alert]")).toContainText(notConfigured);
   });
+
+  test("an error shakes the form gently, and not with reduced motion", async ({ page }) => {
+    await page.addInitScript(() => {
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function (...args) {
+        if (this instanceof HTMLFormElement) {
+          const w = window as unknown as { formAnimations?: number };
+          w.formAnimations = (w.formAnimations ?? 0) + 1;
+        }
+        return animate.apply(this, args);
+      };
+    });
+    const formAnimations = () =>
+      page.evaluate(() => (window as unknown as { formAnimations?: number }).formAnimations ?? 0);
+
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/#waitlist");
+    await page.waitForTimeout(2100);
+    await page.getByLabel("Email").fill("ada@example.com");
+    await page.getByLabel("Email").press("Enter");
+    await expect(page.locator("#waitlist [role=alert]")).toContainText(notConfigured);
+    await expect.poll(formAnimations).toBe(1);
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.getByLabel("Email").press("Enter");
+    await page.waitForTimeout(300);
+    expect(await formAnimations()).toBe(1);
+  });
 });

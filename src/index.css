@@ -59,6 +59,7 @@
 [data-motion="reduced"] *::before,
 [data-motion="reduced"] *::after {
   animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
@@ -283,4 +284,25 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
 [data-leaving] [data-entry-body],
 [data-leaving] > button {
   opacity: 0;
+}
+
+/* Sign-up ticket (spec 18.3 p.10): it slides in, then the check draws itself. */
+[data-ticket] {
+  animation: ticket-in 0.7s var(--vlo-ease) backwards;
+}
+[data-check] path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: check-draw 0.5s var(--vlo-ease) 0.5s backwards;
+}
+@keyframes ticket-in {
+  from {
+    opacity: 0;
+    translate: 0 1.5rem;
+  }
+}
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
 }

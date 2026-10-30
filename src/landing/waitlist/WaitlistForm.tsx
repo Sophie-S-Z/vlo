@@ -10,6 +10,8 @@ import {
   type WriterType,
 } from "./api";
 import { playPaper } from "@/audio/sound";
+import { useMotionPreferences } from "@/motion/MotionPreferences";
+import { canFly, fly as flyPlane, shake as shakeForm } from "./flight";
 import { HoldButton } from "./HoldButton";
 
 const ERROR_TEXT: Record<WaitlistErrorCode | "bot", string> = {
@@ -26,14 +28,25 @@ export interface WaitlistFormProps {
   now?: () => number;
   /** The reply-to address for the consent line, when the human has given one. */
   contactEmail?: string;
+  /** Injected in tests: the fold and plane flight after a sign-up. */
+  fly?: (form: HTMLFormElement, plane: HTMLElement | null) => Promise<void>;
+  /** Injected in tests: the shake after an error. */
+  shake?: (form: HTMLFormElement) => void;
 }
+
+const defaultFly = canFly() ? flyPlane : undefined;
+const defaultShake = canFly() ? shakeForm : undefined;
 
 export function WaitlistForm({
   join = joinWaitlist,
   now = Date.now,
   contactEmail,
+  fly = defaultFly,
+  shake = defaultShake,
 }: WaitlistFormProps) {
+  const { reduced } = useMotionPreferences();
   const ids = useId();
+  const formRef = useRef<HTMLFormElement>(null);
   const startedAt = useRef<number | null>(null);
   const [email, setEmail] = useState("");
   const [writerType, setWriterType] = useState<WriterType | undefined>(undefined);
@@ -41,6 +54,9 @@ export function WaitlistForm({
   const [honeypot, setHoneypot] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Counts failed submits, so the same message twice still shakes twice.
+  const [failures, setFailures] = useState(0);
+  const [flying, setFlying] = useState(false);
   const [result, setResult] = useState<JoinResult | null>(null);
   const [copied, setCopied] = useState(false);
   const ticketRef = useRef<HTMLParagraphElement>(null);
@@ -54,6 +70,15 @@ export function WaitlistForm({
     if (result) ticketRef.current?.focus();
   }, [result]);
 
+  useEffect(() => {
+    if (failures > 0 && !reduced && formRef.current) shake?.(formRef.current);
+  }, [failures, reduced, shake]);
+
+  function fail(message: string) {
+    setError(message);
+    setFailures((count) => count + 1);
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -61,7 +86,7 @@ export function WaitlistForm({
     if (
       validateSubmission({ honeypot, startedAt: startedAt.current ?? now(), now: now() }) === "bot"
     ) {
-      setError(ERROR_TEXT.bot);
+      fail(ERROR_TEXT.bot);
       return;
     }
     setBusy(true);
@@ -73,9 +98,16 @@ export function WaitlistForm({
         referredBy: parseReferral(window.location.search),
       });
       playPaper();
+      const form = formRef.current;
+      if (fly && form && !reduced) {
+        setFlying(true);
+        const plane = form.closest("section")?.querySelector<HTMLElement>("[data-still-art=plane]");
+        // The ticket matters more than the flight; a failed animation never hides it.
+        await fly(form, plane ?? null).catch(() => {});
+      }
       setResult(joined);
     } catch (caught) {
-      setError(ERROR_TEXT[caught instanceof WaitlistError ? caught.code : "unavailable"]);
+      fail(ERROR_TEXT[caught instanceof WaitlistError ? caught.code : "unavailable"]);
     } finally {
       setBusy(false);
     }
@@ -85,6 +117,18 @@ export function WaitlistForm({
     const invite = `${window.location.origin}/?ref=${result.refCode}`;
     return (
       <div data-ticket role="status" className="rounded-card border border-accent bg-surface p-8">
+        <svg data-check viewBox="0 0 48 48" className="mb-4 size-12 text-accent" aria-hidden="true">
+          <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M14 25 L21 32 L35 17"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength={1}
+          />
+        </svg>
         <p ref={ticketRef} tabIndex={-1} className="font-display text-3xl outline-none">
           You&apos;re writer #{result.place} on the Vlo list.
         </p>
@@ -103,7 +147,14 @@ export function WaitlistForm({
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate aria-describedby={`${ids}-consent`} className="space-y-8">
+    <form
+      ref={formRef}
+      onSubmit={onSubmit}
+      noValidate
+      inert={flying}
+      aria-describedby={`${ids}-consent`}
+      className="space-y-8"
+    >
       <div className="relative">
         <input
           id={`${ids}-email`}

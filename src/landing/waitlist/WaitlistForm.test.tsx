@@ -29,6 +29,7 @@ async function pressSign(user: ReturnType<typeof userEvent.setup>) {
 
 afterEach(() => {
   vi.useRealTimers();
+  mockMatchMedia({});
 });
 
 describe("WaitlistForm (US16, US17)", () => {
@@ -148,5 +149,75 @@ describe("WaitlistForm (US16, US17)", () => {
     await user.type(screen.getByLabelText("Email"), "ada@example.com");
     await user.click(signButton());
     expect(join).toHaveBeenCalledOnce();
+  });
+
+  it("flies the folded form before the ticket shows, when motion is on", async () => {
+    let land: () => void = () => {};
+    const fly = vi.fn(() => new Promise<void>((resolve) => (land = resolve)));
+    let clock = 0;
+    renderWithMotion(
+      <WaitlistForm join={async () => ({ place: 7, refCode: "z" })} now={() => clock} fly={fly} />,
+    );
+    clock = 5_000;
+    await userEvent.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    await vi.waitFor(() => expect(fly).toHaveBeenCalledOnce());
+    expect(fly).toHaveBeenCalledWith(expect.any(HTMLFormElement), null);
+    expect(screen.queryByText(/writer #7/)).not.toBeInTheDocument();
+    land();
+    expect(await screen.findByText("You're writer #7 on the Vlo list.")).toBeInTheDocument();
+  });
+
+  it("shows the ticket even when the flight fails", async () => {
+    const fly = vi.fn(async () => Promise.reject(new Error("no animation")));
+    let clock = 0;
+    renderWithMotion(
+      <WaitlistForm join={async () => ({ place: 8, refCode: "z" })} now={() => clock} fly={fly} />,
+    );
+    clock = 5_000;
+    await userEvent.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    expect(await screen.findByText("You're writer #8 on the Vlo list.")).toBeInTheDocument();
+  });
+
+  it("skips the flight and the shake with reduced motion", async () => {
+    mockMatchMedia({ [REDUCED_MOTION_QUERY]: true });
+    const fly = vi.fn(async () => {});
+    const shake = vi.fn();
+    let clock = 0;
+    renderWithMotion(
+      <WaitlistForm
+        join={async () => ({ place: 9, refCode: "z" })}
+        now={() => clock}
+        fly={fly}
+        shake={shake}
+      />,
+    );
+    clock = 5_000;
+    await userEvent.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    expect(await screen.findByText("You're writer #9 on the Vlo list.")).toBeInTheDocument();
+    expect(fly).not.toHaveBeenCalled();
+  });
+
+  it("shakes the form gently on each error", async () => {
+    const shake = vi.fn();
+    let clock = 0;
+    renderWithMotion(
+      <WaitlistForm
+        join={async () => Promise.reject(new WaitlistError("unavailable"))}
+        now={() => clock}
+        shake={shake}
+      />,
+    );
+    clock = 5_000;
+    await userEvent.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    await vi.waitFor(() => expect(shake).toHaveBeenCalledOnce());
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(() => expect(shake).toHaveBeenCalledTimes(2));
+  });
+
+  it("draws a check on the ticket", async () => {
+    const { user } = setup();
+    await user.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    await screen.findByText("You're writer #42 on the Vlo list.");
+    expect(document.querySelector("[data-ticket] [data-check]")).toBeInTheDocument();
   });
 });
