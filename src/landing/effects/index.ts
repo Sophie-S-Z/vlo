@@ -1,36 +1,43 @@
 import { gsap, ScrollTrigger } from "@/motion/gsap";
 import { inkLine, navHide, navHover, pageCounter } from "./chrome";
-import { bento, cardToDialog } from "./demos";
 import { field } from "./field";
-import { firstLines } from "./firstLines";
-import { formsTrack, magnets, memoirNames, novelBoard } from "./forms";
 import { startLenis } from "./lenis";
-import { privacy } from "./privacy";
 import { cursor, magnetic, tilt } from "./pointer";
 import { hero, manifesto, marquees, velocitySkew } from "./text";
 import type { Effect, Teardown } from "./types";
 
-/** Effects for the nav and the first screen start at once. */
-const FIRST: Effect[] = [inkLine, pageCounter, navHide, navHover, cursor, magnetic, hero, field];
+/** The first screen's headline starts at once; the canvas loads its own chunk. */
+const FIRST: Effect[] = [hero, field];
+
+const now = (effect: Effect) => async () => effect;
+const forms = () => import("./forms");
+const demos = () => import("./demos");
 
 /**
- * Section demos below the fold start one per task, so no single long task blocks input while
- * they set up (Lighthouse TBT).
+ * The other effects start one per task, so no single long task blocks input while they set up
+ * (Lighthouse TBT). The section demos load in their own chunks, so the parse is split too.
  */
-const LATER: Effect[] = [
-  // The pin first: ScrollTriggers below a pin must be created after it to count its spacer.
-  formsTrack,
-  manifesto,
-  velocitySkew,
-  marquees,
-  tilt,
-  novelBoard,
-  memoirNames,
-  magnets,
-  privacy,
-  firstLines,
-  bento,
-  cardToDialog,
+const LATER: (() => Promise<Effect>)[] = [
+  // Nav and pointer effects first, one per task.
+  now(inkLine),
+  now(pageCounter),
+  now(navHide),
+  now(navHover),
+  now(cursor),
+  now(magnetic),
+  // The pin next: ScrollTriggers below a pin must be created after it to count its spacer.
+  () => forms().then((m) => m.formsTrack),
+  now(manifesto),
+  now(velocitySkew),
+  now(marquees),
+  now(tilt),
+  () => forms().then((m) => m.novelBoard),
+  () => forms().then((m) => m.memoirNames),
+  () => forms().then((m) => m.magnets),
+  () => import("./privacy").then((m) => m.privacy),
+  () => import("./firstLines").then((m) => m.firstLines),
+  () => demos().then((m) => m.bento),
+  () => demos().then((m) => m.cardToDialog),
 ];
 
 /**
@@ -58,9 +65,23 @@ export function startLandingEffects(root: HTMLElement): Teardown {
     teardowns.length = 0;
   };
   try {
-    for (const effect of FIRST) run(effect);
+    const t0 = performance.now();
+    for (const effect of FIRST) {
+      const a = performance.now();
+      run(effect);
+      console.log("T", effect.name, (performance.now() - a).toFixed(1));
+    }
+    const b = performance.now();
     teardowns.unshift(startLenis(root));
+    console.log("T lenis", (performance.now() - b).toFixed(1));
+    const c = performance.now();
     ScrollTrigger.refresh();
+    console.log(
+      "T refresh",
+      (performance.now() - c).toFixed(1),
+      "total",
+      (performance.now() - t0).toFixed(1),
+    );
   } catch (error) {
     // Undo whatever already started, so a failed start never leaves effects Calm cannot stop.
     teardownAll();
@@ -69,22 +90,27 @@ export function startLandingEffects(root: HTMLElement): Teardown {
 
   const queue = [...LATER];
   const next = () => {
-    const effect = queue.shift();
+    const load = queue.shift();
     if (stopped) return;
-    if (!effect) {
+    if (!load) {
       ScrollTrigger.sort();
       ScrollTrigger.refresh();
       // Tests and tools wait for this before they use the section demos.
       document.documentElement.dataset.effects = "ready";
       return;
     }
-    try {
-      run(effect);
-    } catch (error) {
-      // One failed demo keeps its static markup; the rest still start.
-      console.warn("A landing effect did not start.", error);
-    }
-    timer = window.setTimeout(next, 0);
+    load()
+      .then((effect) => {
+        if (stopped) return;
+        run(effect);
+      })
+      .catch((error: unknown) => {
+        // One failed demo keeps its static markup; the rest still start.
+        console.warn("A landing effect did not start.", error);
+      })
+      .finally(() => {
+        if (!stopped) timer = window.setTimeout(next, 0);
+      });
   };
   timer = window.setTimeout(next, 0);
   return teardownAll;

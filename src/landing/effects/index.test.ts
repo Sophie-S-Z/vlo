@@ -36,12 +36,13 @@ afterEach(() => {
 });
 
 describe("startLandingEffects", () => {
-  it("creates scroll triggers, smooth scroll and a cursor, then removes all of them", () => {
+  it("creates scroll triggers, smooth scroll and a cursor, then removes all of them", async () => {
     const root = mountPage();
     const teardown = startLandingEffects(root);
 
-    expect(ScrollTrigger.getAll().length).toBeGreaterThan(0);
     expect(document.documentElement.classList.contains("lenis")).toBe(true);
+    await vi.waitFor(() => expect(document.documentElement.dataset.effects).toBe("ready"));
+    expect(ScrollTrigger.getAll().length).toBeGreaterThan(0);
     expect(document.querySelector("[data-cursor]")).not.toBeNull();
 
     teardown();

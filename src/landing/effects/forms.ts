@@ -1,5 +1,5 @@
 import { readTilt, tiltOn } from "@/landing/lab/tilt";
-import { Draggable, Flip, gsap } from "@/motion/gsap";
+import { Draggable, Flip, gsap } from "@/motion/gsapPlus";
 import { glideTo } from "./lenis";
 import { scrambleText } from "./scramble";
 import { listen, setText, type Teardown } from "./types";

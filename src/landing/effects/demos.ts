@@ -1,4 +1,4 @@
-import { gsap } from "@/motion/gsap";
+import { gsap } from "@/motion/gsapPlus";
 import { keepChildren, listen, setText, type Teardown } from "./types";
 
 const inView = (trigger: Element) => ({ trigger, start: "top 85%", once: true });

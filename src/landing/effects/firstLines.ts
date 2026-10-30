@@ -1,4 +1,5 @@
-import { Draggable, gsap, ScrollTrigger } from "@/motion/gsap";
+import { ScrollTrigger } from "@/motion/gsap";
+import { Draggable, gsap } from "@/motion/gsapPlus";
 import { glideTo } from "./lenis";
 import { finePointer, listen, type Teardown } from "./types";
 
