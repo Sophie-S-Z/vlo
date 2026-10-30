@@ -19,3 +19,8 @@ Section 16 defines four themes and section 5 requires a static fallback for ever
 
 - A writer who turns on Calm on the landing page also has Calm in the app (one key).
 - New effects must read `reduced`; reviewers check this.
+
+## Amendment (M0 review)
+
+- Paper's accent #C8452D gives 4.3:1 on #F5F1E8, under the WCAG AA 4.5:1 minimum for body text. Each theme gets `--vlo-accent-text` (Tailwind `text-accent-text`). Paper uses #B03A24 (5.4:1); the other themes reuse their accent, which already passes. Keep `--vlo-accent` for fills, borders and large display text.
+- A `prefers-reduced-motion` media query in `index.css` stops CSS motion at the first paint, before the provider sets `data-motion`.

@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkBundle, FORBIDDEN_IN_INITIAL } from "./check-bundle.mjs";
+import { checkBundle, FORBIDDEN_IN_INITIAL, HIDDEN_APP_MODULES } from "./check-bundle.mjs";
 
 type Chunk = { isEntry: boolean; imports: string[]; dynamicImports: string[]; modules: string[] };
 
@@ -69,7 +69,32 @@ describe("checkBundle (spec section 21, guardrail 5)", () => {
     expect(result.violations.join()).toMatch(/budget/);
   });
 
-  it("forbids the AI, 3D, physics and dev-tool packages", () => {
-    expect(FORBIDDEN_IN_INITIAL.map(String)).toHaveLength(5);
+  it("fails when the module map has no entry chunk", () => {
+    const paths = fixture({ "assets/a.js": chunk(["/src/main.tsx"]) });
+    const result = checkBundle({ ...paths, maxGzipKb: 250 });
+    expect(result.ok).toBe(false);
+    expect(result.violations.join()).toMatch(/no entry chunk/);
+  });
+
+  it("fails when hidden app code is built at all, even in a lazy chunk", () => {
+    const paths = fixture({
+      "assets/index.js": chunk(["/src/main.tsx", "/home/u/vlo/src/app/flags.ts"], {
+        isEntry: true,
+      }),
+      "assets/AppShell.js": chunk(["/home/u/vlo/src/app/AppShell.tsx"]),
+    });
+    const result = checkBundle({ ...paths, maxGzipKb: 250, forbiddenAnywhere: HIDDEN_APP_MODULES });
+    expect(result.ok).toBe(false);
+    expect(result.violations).toEqual([
+      "/home/u/vlo/src/app/AppShell.tsx ships in assets/AppShell.js but must not be built",
+    ]);
+  });
+
+  it.each([
+    ["/node_modules/three/src/Three.js", true],
+    ["/node_modules/react/index.js", false],
+    ["/home/u/vlo/src/ai-helpers/x.ts", false],
+  ])("FORBIDDEN_IN_INITIAL matches %s: %s", (moduleId, expected) => {
+    expect(FORBIDDEN_IN_INITIAL.some((pattern) => pattern.test(moduleId))).toBe(expected);
   });
 });

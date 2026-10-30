@@ -1,9 +1,11 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
-import { APP_ENABLED } from "@/app/flags";
 import { MotionPreferencesProvider } from "@/motion/MotionPreferences";
 import { createRoutes } from "@/router";
 
-const router = createBrowserRouter(createRoutes({ appEnabled: APP_ENABLED }));
+// Compare inline so the build drops the app chunk entirely when the flag is off (ADR 0003).
+const loadApp = import.meta.env.VITE_APP_ENABLED === "true" ? () => import("@/app/AppShell") : null;
+
+const router = createBrowserRouter(createRoutes({ loadApp }));
 
 export function App() {
   return (

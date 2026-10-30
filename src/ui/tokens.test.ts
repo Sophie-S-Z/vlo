@@ -27,6 +27,10 @@ describe("design tokens (spec section 16)", () => {
     }
   });
 
+  it("keeps accent text at WCAG AA contrast on Paper", () => {
+    expect(value('[data-theme="paper"]', "--vlo-accent-text")).toBe("#B03A24");
+  });
+
   it("defines the ink-effect accent and the vlo ease on :root", () => {
     expect(value(":root", "--vlo-ink")).toBe("#5B6CFF");
     expect(value(":root", "--vlo-ease")).toBe("CUBIC-BEZIER(0.65, 0, 0.35, 1)");

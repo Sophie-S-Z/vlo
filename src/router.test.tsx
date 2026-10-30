@@ -1,12 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MotionPreferencesProvider } from "@/motion/MotionPreferences";
 import { mockMatchMedia } from "@/test/matchMedia";
 import { createRoutes } from "./router";
 
 function renderAt(path: string, appEnabled = false) {
-  const router = createMemoryRouter(createRoutes({ appEnabled }), { initialEntries: [path] });
+  const loadApp = appEnabled ? () => import("@/app/AppShell") : null;
+  const router = createMemoryRouter(createRoutes({ loadApp }), { initialEntries: [path] });
   render(
     <MotionPreferencesProvider>
       <RouterProvider router={router} />
@@ -53,9 +54,25 @@ describe("routes (spec section 7)", () => {
     );
   });
 
-  it("uses Ink on landing routes and Paper in the app", async () => {
+  it("uses Ink on landing routes", async () => {
     renderAt("/");
     await screen.findAllByRole("heading", { level: 1 });
     expect(document.documentElement.dataset.theme).toBe("ink");
+  });
+
+  it("uses Paper in the app", async () => {
+    renderAt("/app", true);
+    await screen.findByRole("heading", { level: 1, name: "Library" });
+    expect(document.documentElement.dataset.theme).toBe("paper");
+  });
+
+  it.each([
+    ["/", "Vlo · Write in flow"],
+    ["/privacy", "Privacy · Vlo"],
+    ["/no-such-page", "Page not found · Vlo"],
+  ])("%s sets the document title", async (path, title) => {
+    renderAt(path);
+    await screen.findAllByRole("heading", { level: 1 });
+    await vi.waitFor(() => expect(document.title).toBe(title));
   });
 });

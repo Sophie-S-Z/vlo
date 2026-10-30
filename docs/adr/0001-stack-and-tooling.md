@@ -20,3 +20,7 @@ Section 7 fixes the stack. Several tools had new majors in October 2026, and not
 
 - `npm audit` reports high advisories in the `@lhci/cli` dependency tree (puppeteer, zod, uuid). They are dev-only and never ship to users. Recheck when `@lhci/cli` updates.
 - Move to TypeScript 7 when `typescript-eslint` supports it.
+
+## Amendment (M0 review)
+
+Newsreader comes from `@fontsource-variable/newsreader` (the spec lists `@fontsource/newsreader`). The variable build gives every weight in one file and needs no per-weight imports. Same license (OFL), same self-hosting.

@@ -84,3 +84,15 @@ describe("CalmSwitch", () => {
     expect(html.dataset.motion).toBe("reduced");
   });
 });
+
+describe("CalmSwitch hint", () => {
+  it("describes the system setting to assistive technology", async () => {
+    const media = mockMatchMedia();
+    media.set(REDUCED_MOTION_QUERY, true);
+    const { CalmSwitch } = await import("./CalmSwitch");
+    render(<CalmSwitch />, { wrapper });
+    expect(screen.getByRole("switch", { name: "Calm" })).toHaveAccessibleDescription(
+      "Your system already asks for reduced motion.",
+    );
+  });
+});

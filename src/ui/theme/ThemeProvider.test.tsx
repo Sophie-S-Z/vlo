@@ -55,6 +55,19 @@ describe("ThemeProvider", () => {
     expect(result.current.theme).toBe("paper");
   });
 
+  it("falls back to the default and still switches when storage throws", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor("landing") });
+    expect(result.current.theme).toBe("ink");
+    act(() => result.current.setTheme("sepia"));
+    expect(html.dataset.theme).toBe("sepia");
+  });
+
   it("uses a View Transition when supported and motion is allowed", () => {
     const start = vi.fn<StartViewTransition>((cb) => {
       cb();
@@ -91,5 +104,18 @@ describe("ThemeSwitch", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Ink" }));
     expect(html.dataset.theme).toBe("ink");
     expect(screen.getByRole("radio", { name: "Ink" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("steps two themes on two fast arrow presses during a View Transition", async () => {
+    // The transition never runs its update, so React state stays on Paper.
+    doc.startViewTransition = () => ({
+      ready: new Promise(() => {}),
+      finished: new Promise(() => {}),
+    });
+    render(<ThemeSwitch />, { wrapper: wrapperFor("app") });
+    screen.getByRole("radio", { name: "Paper" }).focus();
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Sepia" })).toHaveFocus();
+    delete doc.startViewTransition;
   });
 });

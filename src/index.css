@@ -6,6 +6,7 @@
   --color-fg: var(--vlo-text);
   --color-muted: var(--vlo-muted);
   --color-accent: var(--vlo-accent);
+  --color-accent-text: var(--vlo-accent-text);
   --color-ink: var(--vlo-ink);
   --color-surface: var(--vlo-surface);
   --color-rule: var(--vlo-rule);
@@ -36,12 +37,23 @@
     outline-offset: 2px;
   }
   ::selection {
-    background: var(--vlo-accent);
+    background: var(--vlo-accent-text);
     color: var(--vlo-bg);
   }
 }
 
-/* Reduced motion: Calm mode or the system setting. Decorative motion stops everywhere. */
+/* Reduced motion: Calm mode or the system setting. Decorative motion stops everywhere.
+   The media query covers the first paint, before the provider sets data-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 [data-motion="reduced"] *,
 [data-motion="reduced"] *::before,
 [data-motion="reduced"] *::after {

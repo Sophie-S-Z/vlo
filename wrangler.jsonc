@@ -1,0 +1,10 @@
+// Cloudflare Workers static assets (the Workers Builds project "vlo"). No Worker script: assets only.
+{
+  "name": "vlo",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Deep links such as /privacy or /share/abc serve index.html, and the client router takes over.
+    "not_found_handling": "single-page-application",
+  },
+}

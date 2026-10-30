@@ -15,11 +15,20 @@ export const FORBIDDEN_IN_INITIAL = [
   /\/src\/ai\//,
 ];
 
+/** Writing-app code that must not ship at all while VITE_APP_ENABLED is off (spec section 7). */
+export const HIDDEN_APP_MODULES = [/\/src\/app\/(?!flags\.ts$)/];
+
 /**
- * @param {{ dist: string; moduleMap: string; maxGzipKb: number; forbidden?: RegExp[] }} options
+ * @param {{ dist: string; moduleMap: string; maxGzipKb: number; forbidden?: RegExp[]; forbiddenAnywhere?: RegExp[] }} options
  * @returns {{ ok: boolean; initialFiles: string[]; initialGzipKb: number; violations: string[] }}
  */
-export function checkBundle({ dist, moduleMap, maxGzipKb, forbidden = FORBIDDEN_IN_INITIAL }) {
+export function checkBundle({
+  dist,
+  moduleMap,
+  maxGzipKb,
+  forbidden = FORBIDDEN_IN_INITIAL,
+  forbiddenAnywhere = [],
+}) {
   /** @type {Record<string, { isEntry: boolean; imports: string[]; modules: string[] }>} */
   const chunks = JSON.parse(readFileSync(moduleMap, "utf8"));
 
@@ -33,6 +42,16 @@ export function checkBundle({ dist, moduleMap, maxGzipKb, forbidden = FORBIDDEN_
   }
 
   const violations = [];
+  if (initial.size === 0) {
+    violations.push("no entry chunk found in the module map; the guardrail cannot run");
+  }
+  for (const [file, info] of Object.entries(chunks)) {
+    for (const moduleId of info.modules) {
+      if (forbiddenAnywhere.some((pattern) => pattern.test(moduleId))) {
+        violations.push(`${moduleId} ships in ${file} but must not be built`);
+      }
+    }
+  }
   let gzipBytes = 0;
   for (const file of initial) {
     gzipBytes += gzipSync(readFileSync(join(dist, file))).length;
@@ -60,6 +79,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     dist: resolve("dist"),
     moduleMap: resolve("build-meta/modules.json"),
     maxGzipKb: 250,
+    forbiddenAnywhere: process.env.VITE_APP_ENABLED === "true" ? [] : HIDDEN_APP_MODULES,
   });
   console.log(
     `Initial JS: ${result.initialGzipKb} KB gzipped in ${result.initialFiles.length} file(s).`,

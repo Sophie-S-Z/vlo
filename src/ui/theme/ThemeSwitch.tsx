@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/ui/lib/utils";
 import { THEMES, useTheme, type ThemeName } from "./ThemeProvider";
 
@@ -19,8 +19,14 @@ const SWATCH: Record<ThemeName, string> = {
 export function ThemeSwitch({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const refs = useRef<Partial<Record<ThemeName, HTMLButtonElement | null>>>({});
+  // The theme state lags during a View Transition; fast arrow presses step from the latest choice.
+  const pending = useRef(theme);
+  useEffect(() => {
+    pending.current = theme;
+  }, [theme]);
 
   function choose(next: ThemeName, event?: MouseEvent<HTMLButtonElement>) {
+    pending.current = next;
     const rect = event?.currentTarget.getBoundingClientRect();
     setTheme(
       next,
@@ -32,7 +38,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
     if (!step) return;
     event.preventDefault();
-    const index = (THEMES.indexOf(theme) + step + THEMES.length) % THEMES.length;
+    const index = (THEMES.indexOf(pending.current) + step + THEMES.length) % THEMES.length;
     const next = THEMES[index]!;
     choose(next);
     refs.current[next]?.focus();

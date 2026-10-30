@@ -19,6 +19,7 @@
   --vlo-text: #efe8dc;
   --vlo-muted: #8c857a;
   --vlo-accent: #e0664b;
+  --vlo-accent-text: #e0664b;
   --vlo-surface: #1a1816;
   --vlo-rule: #2e2a26;
   color-scheme: dark;
@@ -29,6 +30,7 @@
   --vlo-text: #efe8dc;
   --vlo-muted: #8c857a;
   --vlo-accent: #e0664b;
+  --vlo-accent-text: #e0664b;
   --vlo-surface: #1a1816;
   --vlo-rule: #2e2a26;
   color-scheme: dark;
@@ -39,6 +41,8 @@
   --vlo-text: #1c1a17;
   --vlo-muted: #645d53;
   --vlo-accent: #c8452d;
+  /* #C8452D is 4.3:1 on Paper, under AA for body text. Text uses this darker shade (ADR 0005). */
+  --vlo-accent-text: #b03a24;
   --vlo-surface: #fbf8f2;
   --vlo-rule: #ddd6c8;
   color-scheme: light;
@@ -49,6 +53,7 @@
   --vlo-text: #e8e2d6;
   --vlo-muted: #8f887d;
   --vlo-accent: #e0664b;
+  --vlo-accent-text: #e0664b;
   --vlo-surface: #1c1a18;
   --vlo-rule: #302c28;
   color-scheme: dark;
@@ -59,6 +64,7 @@
   --vlo-text: #3a2e22;
   --vlo-muted: #6b5a47;
   --vlo-accent: #a8432a;
+  --vlo-accent-text: #a8432a;
   --vlo-surface: #f6ecd9;
   --vlo-rule: #d8c7a8;
   color-scheme: light;

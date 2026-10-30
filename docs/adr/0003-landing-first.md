@@ -15,3 +15,7 @@ Section 22 orders the landing page and waitlist (M1) before the writing app (M2)
 
 - The human turns on `VITE_APP_ENABLED` in Cloudflare Pages only at launch (M6).
 - When the flag is off, the `/app` route is absent and the 404 page answers.
+
+## Amendment (M0 review)
+
+`src/App.tsx` compares `import.meta.env.VITE_APP_ENABLED === "true"` inline, so the build drops the app chunk when the flag is off. A flag-off build must contain no `src/app/` module except `flags.ts`; `npm run check:bundle` fails otherwise.
