@@ -170,7 +170,7 @@ export const WAITLIST = {
   ],
   painLabel: "What slows you down when you write?",
   consent: "We will only email you about Vlo. Unsubscribe any time.",
-  submit: "Join the waitlist",
+  submit: "Hold to sign",
 } as const;
 
 /** An original poem for the poetry demo. Leading spaces are exact and must survive rendering. */

@@ -60,7 +60,11 @@ describe("WaitlistSection count (spec 18.4)", () => {
     [99, false],
     [100, true],
   ])("count %s shows the line: %s", (count, shown) => {
-    render(<WaitlistSection count={count} />);
+    render(
+      <MotionPreferencesProvider>
+        <WaitlistSection count={count} />
+      </MotionPreferencesProvider>,
+    );
     expect(screen.queryByText(/writers are waiting/) !== null).toBe(shown);
   });
 });

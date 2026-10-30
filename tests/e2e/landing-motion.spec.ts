@@ -112,3 +112,33 @@ test.describe("Landing demos (spec 18.3, M1a)", () => {
     await expect(bento.locator("[data-format-cycle]")).toHaveText("DOCX");
   });
 });
+
+test.describe("Hold to sign (US16)", () => {
+  const notConfigured = "The waitlist opens soon";
+
+  test("a quick click does nothing; a 1.2 s hold submits", async ({ page, isMobile }) => {
+    test.skip(isMobile === true, "Mouse hold runs on desktop");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/#waitlist");
+    await page.getByLabel("Email").fill("ada@example.com");
+    await page.waitForTimeout(2100); // the form rejects sign-ups faster than 2 s
+    const button = page.getByRole("button", { name: "Hold to sign" });
+    const alert = page.locator("#waitlist [role=alert]");
+    await button.click();
+    await expect(alert).toHaveText("");
+
+    await button.hover();
+    await page.mouse.down();
+    await page.waitForTimeout(1300);
+    await page.mouse.up();
+    await expect(alert).toContainText(notConfigured);
+  });
+
+  test("Enter in the email field submits at once", async ({ page }) => {
+    await page.goto("/#waitlist");
+    await page.waitForTimeout(2100);
+    await page.getByLabel("Email").fill("ada@example.com");
+    await page.getByLabel("Email").press("Enter");
+    await expect(page.locator("#waitlist [role=alert]")).toContainText(notConfigured);
+  });
+});

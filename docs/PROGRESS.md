@@ -11,6 +11,8 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 - All ten landing sections as prerendered static HTML with section 20 copy and still SVG art.
 - Lazy effects chunk (`src/landing/effects/`): Lenis, ink line, page counter, nav hide, logo morph, link scramble, cursor, magnetic buttons, tilt, headline reveal, manifesto fill, velocity skew, marquees. Loads one frame after hydration, only when motion is not reduced. Calm tears it all down (`tests/e2e/landing-motion.spec.ts`).
 - Demos: bento motion, FAQ height transition (CSS), AI card grows into its dialog.
+- "Hold to sign" (US16): a pointer holds 1.2 s while a ring fills; keyboard, assistive tech and reduced motion submit at once.
+- Code review done; fixes in commit "fix(landing): address M1a review findings".
 - Bundle guardrail also blocks gsap, lenis, motion and the effects code from the initial chunks. Initial JS 116.5 KB gzipped; effects chunk 71 KB gzipped.
 - Deferred to M1b polish: cursor-driven font weight, vanishing-point line in the Manifesto, magnetic fill from the entry point, copy-link check tile.
 

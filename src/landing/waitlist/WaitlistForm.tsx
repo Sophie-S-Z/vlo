@@ -9,6 +9,7 @@ import {
   type WaitlistErrorCode,
   type WriterType,
 } from "./api";
+import { HoldButton } from "./HoldButton";
 
 const ERROR_TEXT: Record<WaitlistErrorCode | "bot", string> = {
   invalid_email: "Please check the email address.",
@@ -182,14 +183,12 @@ export function WaitlistForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-6">
-        <button
-          type="submit"
-          disabled={busy}
-          data-magnetic
+        <HoldButton
+          label={WAITLIST.submit}
+          busyLabel="Saving…"
+          busy={busy}
           className="inline-flex min-h-12 items-center rounded-full bg-accent-text px-7 text-base font-medium text-bg disabled:opacity-60"
-        >
-          {busy ? "Saving…" : WAITLIST.submit}
-        </button>
+        />
         <p id={`${ids}-consent`} className="max-w-sm font-mono text-xs text-muted">
           {WAITLIST.consent}
           {contactEmail ? ` Questions: ${contactEmail}.` : ""}

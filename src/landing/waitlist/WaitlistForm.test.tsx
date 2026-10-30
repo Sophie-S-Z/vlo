@@ -1,16 +1,35 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import type { ReactElement } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { MotionPreferencesProvider } from "@/motion/MotionPreferences";
+import { mockMatchMedia, REDUCED_MOTION_QUERY } from "@/test/matchMedia";
 import { WaitlistError } from "./api";
+import { HOLD_MS } from "./HoldButton";
 import { WaitlistForm } from "./WaitlistForm";
+
+const renderWithMotion = (ui: ReactElement) =>
+  render(<MotionPreferencesProvider>{ui}</MotionPreferencesProvider>);
 
 function setup(join = vi.fn(async () => ({ place: 42, refCode: "abc123" }))) {
   let clock = 0;
   const now = () => clock;
-  render(<WaitlistForm join={join} now={now} />);
+  renderWithMotion(<WaitlistForm join={join} now={now} />);
   clock = 5_000; // the visitor took 5 seconds
   return { join, user: userEvent.setup() };
 }
+
+const signButton = () => screen.getByRole("button", { name: "Hold to sign" });
+
+/** Keyboard activation of the button: submits at once. */
+async function pressSign(user: ReturnType<typeof userEvent.setup>) {
+  signButton().focus();
+  await user.keyboard("{Enter}");
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("WaitlistForm (US16, US17)", () => {
   it("joins with the typed details and shows the ticket", async () => {
@@ -18,7 +37,7 @@ describe("WaitlistForm (US16, US17)", () => {
     await user.type(screen.getByLabelText("Email"), "ada@example.com");
     await user.click(screen.getByRole("radio", { name: "Poetry" }));
     await user.type(screen.getByLabelText(/What slows you down/), "Indents vanish.");
-    await user.click(screen.getByRole("button", { name: "Join the waitlist" }));
+    await pressSign(user);
 
     expect(join).toHaveBeenCalledWith({
       email: "ada@example.com",
@@ -64,7 +83,7 @@ describe("WaitlistForm (US16, US17)", () => {
   ] as const)("shows a clear message for %s and keeps the email", async (code, message) => {
     const { user } = setup(vi.fn(async () => Promise.reject(new WaitlistError(code))));
     await user.type(screen.getByLabelText("Email"), "ada@example.com");
-    await user.click(screen.getByRole("button", { name: "Join the waitlist" }));
+    await pressSign(user);
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(screen.getByLabelText("Email")).toHaveValue("ada@example.com");
   });
@@ -73,14 +92,14 @@ describe("WaitlistForm (US16, US17)", () => {
     const { join, user } = setup();
     await user.type(screen.getByLabelText("Email"), "ada@example.com");
     await user.type(screen.getByLabelText("Website", { selector: "input" }), "spam");
-    await user.click(screen.getByRole("button", { name: "Join the waitlist" }));
+    await pressSign(user);
     expect(join).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("Please take a moment");
   });
 
   it("blocks a submit made under 2 seconds after the form appears", async () => {
     const join = vi.fn();
-    render(<WaitlistForm join={join} now={() => 0} />);
+    renderWithMotion(<WaitlistForm join={join} now={() => 0} />);
     await userEvent.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
     expect(join).not.toHaveBeenCalled();
   });
@@ -90,12 +109,44 @@ describe("WaitlistForm (US16, US17)", () => {
     const join = vi.fn(() => new Promise<{ place: number; refCode: string }>((r) => (resolve = r)));
     const { user } = setup(join);
     await user.type(screen.getByLabelText("Email"), "ada@example.com");
-    const button = screen.getByRole("button", { name: "Join the waitlist" });
-    await user.click(button);
+    await pressSign(user);
     expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
     await user.keyboard("{Enter}");
     expect(join).toHaveBeenCalledOnce();
     resolve({ place: 1, refCode: "x" });
     expect(await screen.findByText("You're writer #1 on the Vlo list.")).toBeInTheDocument();
+  });
+
+  it("a quick click does not sign; holding for 1.2 s does", async () => {
+    const { join, user } = setup();
+    await user.type(screen.getByLabelText("Email"), "ada@example.com");
+    await user.click(signButton());
+    expect(join).not.toHaveBeenCalled();
+
+    vi.useFakeTimers();
+    fireEvent.pointerDown(signButton(), { button: 0 });
+    act(() => vi.advanceTimersByTime(HOLD_MS - 1));
+    expect(join).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(join).toHaveBeenCalledOnce();
+  });
+
+  it("an early release cancels the hold", async () => {
+    const { join, user } = setup();
+    await user.type(screen.getByLabelText("Email"), "ada@example.com");
+    vi.useFakeTimers();
+    fireEvent.pointerDown(signButton(), { button: 0 });
+    act(() => vi.advanceTimersByTime(HOLD_MS / 2));
+    fireEvent.pointerUp(signButton());
+    act(() => vi.advanceTimersByTime(HOLD_MS));
+    expect(join).not.toHaveBeenCalled();
+  });
+
+  it("with reduced motion, a plain click signs", async () => {
+    mockMatchMedia({ [REDUCED_MOTION_QUERY]: true });
+    const { join, user } = setup();
+    await user.type(screen.getByLabelText("Email"), "ada@example.com");
+    await user.click(signButton());
+    expect(join).toHaveBeenCalledOnce();
   });
 });
