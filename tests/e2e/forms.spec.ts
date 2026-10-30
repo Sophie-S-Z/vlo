@@ -298,6 +298,27 @@ test.describe("M1c teardown and keyboard (review)", () => {
     await grid.focus();
     await expect(grid).toBeInViewport();
   });
+
+  test("a layout refresh keeps keyboard focus inside a pinned section", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile === true, "The pinned row is desktop only");
+    await startEffects(page);
+    const grid = page.getByRole("button", { name: "Grid" });
+    await grid.focus();
+    await expect(grid).toBeFocused();
+    // A resize refreshes every ScrollTrigger, which moves each pin out of its spacer and back.
+    const size = page.viewportSize()!;
+    await page.setViewportSize({ width: size.width + 1, height: size.height });
+    await page.waitForTimeout(600);
+    await expect(grid).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("list", { name: "Scene cards" })).toHaveAttribute(
+      "data-layout",
+      "grid",
+    );
+  });
 });
 
 test.describe("The book opens (spec 18.3 p.03, ADR 0012)", () => {

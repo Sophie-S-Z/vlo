@@ -45,3 +45,4 @@ CHROME_PATH=/opt/pw-browsers/chromium npm run lhci
 - ADR 0013: the effects wait for all five `Deferred` Suspense boundaries to hydrate. A new section below the hero goes inside one of them. Pins start first in `LATER`; an effect that changes a section's height starts right after the pins.
 - `lenis.resize()` runs after each ScrollTrigger refresh and before each glide; without it, glides stop short after the pins add spacers.
 - Never `pkill -f "vite preview"`: it kills the shell that runs it.
+- A ScrollTrigger refresh moves each pin out of its spacer and back, which drops focus. `keepFocus()` in `src/landing/effects/index.ts` gives focus back; keep it when you add pins.

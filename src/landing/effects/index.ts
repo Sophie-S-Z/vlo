@@ -47,6 +47,34 @@ const LATER: (() => Promise<Effect>)[] = [
   () => import("./turns").then((m) => m.pageTurns),
 ];
 
+/**
+ * A refresh moves each pinned section out of its spacer and back, and the move drops keyboard
+ * focus inside it. The element that had focus gets it back after the refresh.
+ */
+function keepFocus(): Teardown {
+  let focused: Element | null = null;
+  const save = () => {
+    focused = document.activeElement;
+  };
+  const restore = () => {
+    const element = focused;
+    focused = null;
+    if (
+      element instanceof HTMLElement &&
+      element.isConnected &&
+      element !== document.activeElement
+    ) {
+      element.focus({ preventScroll: true });
+    }
+  };
+  ScrollTrigger.addEventListener("refreshInit", save);
+  ScrollTrigger.addEventListener("refresh", restore);
+  return () => {
+    ScrollTrigger.removeEventListener("refreshInit", save);
+    ScrollTrigger.removeEventListener("refresh", restore);
+  };
+}
+
 /** Refreshes every ScrollTrigger when the page height changes, at most once per pause. */
 function watchLayout(): Teardown {
   let height = document.body.offsetHeight;
@@ -92,6 +120,7 @@ export function startLandingEffects(root: HTMLElement): Teardown {
     for (const teardown of teardowns.reverse()) teardown();
     teardowns.length = 0;
   };
+  teardowns.push(keepFocus());
   try {
     for (const effect of FIRST) run(effect);
     teardowns.unshift(startLenis(root));
