@@ -6,14 +6,14 @@ The project is a Cloudflare **Workers Builds** project named `vlo`, connected to
 
 ## Build settings
 
-| Setting                              | Value                          |
-| ------------------------------------ | ------------------------------ |
-| Build command                        | `npm run build`                |
-| Deploy command                       | `npx wrangler deploy`          |
-| Non-production branch deploy command | `npx wrangler versions upload` |
-| Root directory                       | `/`                            |
-| Node version                         | from `.nvmrc` (22)             |
-| Build variable `VITE_APP_ENABLED`    | `false` until launch           |
+| Setting                              | Value                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| Build command                        | `npm run build`                                                         |
+| Deploy command                       | `npx wrangler deploy`                                                   |
+| Non-production branch deploy command | `npx wrangler preview` (needs the `previews` block in `wrangler.jsonc`) |
+| Root directory                       | `/`                                                                     |
+| Node version                         | from `.nvmrc` (22)                                                      |
+| Build variable `VITE_APP_ENABLED`    | `false` until launch                                                    |
 
 ## Files that Cloudflare reads
 

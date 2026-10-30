@@ -7,4 +7,7 @@
     // Deep links such as /privacy or /share/abc serve index.html, and the client router takes over.
     "not_found_handling": "single-page-application",
   },
+  // Non-production branches deploy with `npx wrangler preview`, which needs this block.
+  // Assets and compatibility settings stay at the top level.
+  "previews": {},
 }
