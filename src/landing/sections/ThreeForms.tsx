@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { DEMO_MEMOIR, DEMO_POEM, DEMO_SCENES, FORMS } from "../copy";
+import {
+  DEMO_MEMOIR,
+  DEMO_POEM,
+  DEMO_POEM_SYLLABLES,
+  DEMO_SCENES,
+  FORMS,
+  MAGNET_WORDS,
+} from "../copy";
 import { Eyebrow, Page } from "./Page";
 
 export function ThreeForms() {
@@ -22,12 +29,7 @@ export function ThreeForms() {
           <MemoirDemo />
         </Panel>
         <Panel title={FORMS.poetry} label="Poetry">
-          <pre
-            data-poem
-            className="overflow-x-auto font-serif text-base leading-relaxed whitespace-pre"
-          >
-            {DEMO_POEM.join("\n")}
-          </pre>
+          <PoetryDemo />
         </Panel>
       </div>
     </Page>
@@ -191,5 +193,47 @@ function AliasName({ real, alias }: { real: string; alias: string }) {
     >
       <span className="sr-only">{shown}</span>
     </button>
+  );
+}
+
+function PoetryDemo() {
+  return (
+    <div data-poetry>
+      <pre data-testid="poem-text" className="sr-only">
+        {DEMO_POEM.join("\n")}
+      </pre>
+      <div data-poem aria-hidden="true" className="font-serif text-base leading-relaxed">
+        {DEMO_POEM.map((line, i) => (
+          <div key={i} className="flex min-h-[1lh] items-baseline justify-between gap-4">
+            <span data-poem-line className="whitespace-pre">
+              {line}
+            </span>
+            <span data-syllables className="font-mono text-[0.65rem] text-muted tabular-nums">
+              {DEMO_POEM_SYLLABLES[i] ?? ""}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div>
+        <p className="mt-6 font-mono text-[0.65rem] tracking-widest text-muted uppercase">
+          Magnetic poetry
+        </p>
+        <ul
+          aria-label="Word tiles"
+          data-magnets
+          className="relative mt-2 flex h-56 flex-wrap content-start gap-1.5 overflow-hidden rounded-card border border-rule bg-bg p-2"
+        >
+          {MAGNET_WORDS.map((word) => (
+            <li
+              key={word}
+              data-magnet
+              className="h-fit rounded-sm border border-rule bg-surface px-2 py-0.5 font-serif text-sm select-none"
+            >
+              {word}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }

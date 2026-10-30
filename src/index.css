@@ -158,3 +158,18 @@ details[data-faq][open]::details-content {
 [data-alias-name]::before {
   content: attr(data-text) / "";
 }
+
+/* Magnetic poetry tiles take the pointer, so a drag on a tile never scrolls the page. */
+html.lenis [data-magnet] {
+  touch-action: none;
+  cursor: grab;
+}
+[data-forms-track][data-track="row"] [data-poetry] {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+[data-forms-track][data-track="row"] [data-poetry] > div:last-child > p {
+  margin-top: 0;
+}

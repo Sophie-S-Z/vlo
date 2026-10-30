@@ -92,3 +92,45 @@ test.describe("Memoir panel (spec 18.3 p.04, M1c)", () => {
     await expect(name).toHaveAttribute("data-text", "Grandpa Ivan");
   });
 });
+
+test.describe("Poetry panel (spec 18.3 p.04, M1c)", () => {
+  test("the poem types itself and ends with exact indents", async ({ page }) => {
+    await startEffects(page);
+    const line = page.locator("[data-poem-line]").nth(1);
+    await expect(line).toHaveText(/^ +$/);
+    await page.locator("[data-poem]").scrollIntoViewIfNeeded();
+    if (!(await page.locator("[data-forms-track][data-track=row]").count())) {
+      await expect(line).toHaveText("      keeps its one note going.", { timeout: 8000 });
+    }
+  });
+
+  test("Matter.js loads only near the word tiles, and the tiles fall", async ({ page }) => {
+    const requests: string[] = [];
+    page.on("request", (request) => requests.push(request.url()));
+    await startEffects(page);
+    const physics = () => requests.filter((url) => /\/assets\/magnets-/.test(url));
+    expect(physics()).toEqual([]);
+    const box = page.locator("[data-magnets]");
+    const top = await box.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    // In the row layout the box sits off to the right; scroll until it is on screen.
+    for (let y = top - 400; y < top + 4000; y += 400) {
+      await page.evaluate((to) => window.scrollTo(0, to), y);
+      await page.waitForTimeout(150);
+      if (await box.getAttribute("data-physics")) break;
+    }
+    await expect(box).toHaveAttribute("data-physics", "on");
+    expect(physics().length).toBeGreaterThan(0);
+    const tile = page.locator("[data-magnet]").first();
+    await expect.poll(() => tile.evaluate((el) => el.style.transform)).toMatch(/translate\(/);
+  });
+
+  test("reduced motion never loads Matter.js", async ({ page }) => {
+    const requests: string[] = [];
+    page.on("request", (request) => requests.push(request.url()));
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await page.locator("[data-magnets]").scrollIntoViewIfNeeded();
+    await page.waitForLoadState("networkidle");
+    expect(requests.filter((url) => /\/assets\/(magnets|matter)/.test(url))).toEqual([]);
+  });
+});

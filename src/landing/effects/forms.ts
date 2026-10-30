@@ -1,6 +1,6 @@
 import { Draggable, Flip, gsap } from "@/motion/gsap";
 import { scrambleText } from "./scramble";
-import { listen, type Teardown } from "./types";
+import { listen, setText, type Teardown } from "./types";
 
 const WIDE = "(min-width: 1024px)";
 
@@ -16,8 +16,7 @@ export function formsTrack(root: HTMLElement): Teardown | void {
   const mm = gsap.matchMedia();
   mm.add({ wide: WIDE, narrow: `not all and ${WIDE}` }, (context) => {
     if (!context.conditions?.wide) {
-      panelReveals(section, null);
-      return;
+      return panelReveals(section, null);
     }
     track.dataset.track = "row";
     // The row ends with its last panel at the same inset the first one started with.
@@ -35,8 +34,9 @@ export function formsTrack(root: HTMLElement): Teardown | void {
         invalidateOnRefresh: true,
       },
     });
-    panelReveals(section, tween);
+    const stopReveals = panelReveals(section, tween);
     return () => {
+      stopReveals();
       delete track.dataset.track;
     };
   });
@@ -44,7 +44,7 @@ export function formsTrack(root: HTMLElement): Teardown | void {
 }
 
 /** Scroll reveals inside the panels. In the row they ride the track as containerAnimation. */
-function panelReveals(section: HTMLElement, track: gsap.core.Tween | null) {
+function panelReveals(section: HTMLElement, track: gsap.core.Tween | null): Teardown {
   const enter = (trigger: Element): ScrollTrigger.Vars =>
     track
       ? { trigger, containerAnimation: track, start: "left 85%" }
@@ -66,6 +66,35 @@ function panelReveals(section: HTMLElement, track: gsap.core.Tween | null) {
         0.2,
       );
   }
+  return typePoem(section, enter);
+}
+
+/** The poem types itself line by line; indents show at once and counts appear per line. */
+function typePoem(section: HTMLElement, enter: (trigger: Element) => ScrollTrigger.Vars): Teardown {
+  const poem = section.querySelector("[data-poem]");
+  if (!poem) return () => {};
+  const lines = Array.from(poem.querySelectorAll<HTMLElement>("[data-poem-line]"));
+  const counts = Array.from(poem.querySelectorAll<HTMLElement>("[data-syllables]"));
+  const full = lines.map((line) => line.textContent ?? "");
+  lines.forEach((line, i) => setText(line, full[i]!.match(/^ */)![0]));
+  const typing = gsap.timeline({ scrollTrigger: enter(poem) });
+  lines.forEach((line, i) => {
+    const text = full[i]!;
+    const indent = text.match(/^ */)![0].length;
+    const state = { n: 0 };
+    typing.to(state, {
+      n: text.length - indent,
+      duration: (text.length - indent) * 0.035,
+      ease: "none",
+      onUpdate: () => setText(line, text.slice(0, indent + Math.round(state.n))),
+    });
+    const count = counts[i];
+    if (count?.textContent) {
+      typing.from(count, { clipPath: "inset(0% 0% 100% 0%)", duration: 0.2 }, "<+=0.1");
+    }
+    typing.to({}, { duration: text ? 0.15 : 0.35 });
+  });
+  return () => lines.forEach((line, i) => setText(line, full[i]!));
 }
 
 /** Memoir names scramble between the real name and the alias on hover and on change. */
@@ -245,5 +274,62 @@ export function novelBoard(root: HTMLElement): Teardown | void {
         else element.setAttribute(name, value);
       }
     }
+  };
+}
+
+/**
+ * Magnetic poetry (spec 18.3 p.04). Matter.js loads in its own chunk when the box nears the
+ * screen. The physics run only while the box is on screen; scroll speed tilts gravity a little.
+ */
+export function magnets(root: HTMLElement): Teardown | void {
+  const box = root.querySelector<HTMLElement>("[data-magnets]");
+  if (!box || typeof IntersectionObserver !== "function") return;
+  let stopped = false;
+  let visible = false;
+  let world: import("@/landing/physics/magnets").Magnets | undefined;
+  let lastScroll = window.scrollY;
+  let tilt = 0;
+  let requested = false;
+
+  const tick = () => {
+    if (!world || !visible) return;
+    const scroll = window.scrollY;
+    tilt += ((lastScroll - scroll) * 0.02 - tilt) * 0.1;
+    lastScroll = scroll;
+    world.tilt(tilt);
+    world.step();
+  };
+  const load = () => {
+    void import("@/landing/physics/magnets")
+      .then(({ createMagnets }) => {
+        if (stopped) return;
+        const tiles = Array.from(box.querySelectorAll<HTMLElement>("[data-magnet]"));
+        world = createMagnets(box, tiles);
+        box.dataset.physics = "on";
+        gsap.ticker.add(tick);
+      })
+      .catch((error: unknown) => console.warn("The word tiles did not load.", error));
+  };
+  const watch = new IntersectionObserver(
+    ([entry]) => {
+      visible = entry?.isIntersecting ?? false;
+      if (visible && !world && !requested) {
+        requested = true;
+        load();
+      }
+    },
+    { rootMargin: "300px" },
+  );
+  watch.observe(box);
+  const stopResize = listen(window, "resize", () => world?.resize());
+
+  return () => {
+    stopped = true;
+    watch.disconnect();
+    stopResize();
+    gsap.ticker.remove(tick);
+    world?.dispose();
+    world = undefined;
+    delete box.dataset.physics;
   };
 }

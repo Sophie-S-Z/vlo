@@ -185,6 +185,43 @@ export const DEMO_POEM = [
   "            as empty.",
 ] as const;
 
+/** Syllables per line of DEMO_POEM, counted by hand; null for the stanza break. */
+export const DEMO_POEM_SYLLABLES = [6, 6, 5, 7, null, 5, 5, 3] as const;
+
+/** Thirty word tiles for the magnetic poetry box (spec 18.3 p.04). */
+export const MAGNET_WORDS = [
+  "ink",
+  "morning",
+  "the",
+  "a",
+  "river",
+  "slow",
+  "light",
+  "page",
+  "and",
+  "still",
+  "kettle",
+  "I",
+  "you",
+  "write",
+  "blue",
+  "salt",
+  "remember",
+  "under",
+  "small",
+  "door",
+  "rain",
+  "is",
+  "was",
+  "open",
+  "line",
+  "quiet",
+  "home",
+  "after",
+  "breath",
+  "word",
+] as const;
+
 /** Memoir demo: marked real names and their aliases. */
 export const DEMO_MEMOIR = {
   text: [
