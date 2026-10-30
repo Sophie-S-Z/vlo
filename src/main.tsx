@@ -1,6 +1,5 @@
 import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
-import "@/ui/fonts";
 import "@/index.css";
 import { App } from "@/App";
 
@@ -18,3 +17,9 @@ if (window.location.pathname === "/" && root.hasChildNodes()) {
   root.replaceChildren();
   createRoot(root).render(app);
 }
+
+// Load web fonts after the first paint, so the prerendered headline paints with the fallback font
+// and never waits on font files (spec 18.4 LCP budget). The swap happens once fonts arrive.
+requestAnimationFrame(() => {
+  void import("@/ui/fonts");
+});

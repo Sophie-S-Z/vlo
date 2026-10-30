@@ -24,3 +24,7 @@ Section 16 defines four themes and section 5 requires a static fallback for ever
 
 - Paper's accent #C8452D gives 4.3:1 on #F5F1E8, under the WCAG AA 4.5:1 minimum for body text. Each theme gets `--vlo-accent-text` (Tailwind `text-accent-text`). Paper uses #B03A24 (5.4:1); the other themes reuse their accent, which already passes. Keep `--vlo-accent` for fills, borders and large display text.
 - A `prefers-reduced-motion` media query in `index.css` stops CSS motion at the first paint, before the provider sets `data-motion`.
+
+## Amendment (M0 CI): fonts load after the first paint
+
+Lighthouse CI on GitHub runners measured LCP at 3.0 s in 3 of 5 runs. In those runs the first paint waited for all four web fonts (about 250 KB). `src/main.tsx` now imports `src/ui/fonts.ts` in a `requestAnimationFrame` callback, so the prerendered headline paints in the fallback serif first and swaps once the fonts arrive. Local result: LCP 1.5 s in 7 of 7 runs, CLS 0.016. Repeat visits load the fonts from cache, so the swap is short. Revisit with metric-matched fallback fonts (`size-adjust`) in M1 if the swap looks rough.
