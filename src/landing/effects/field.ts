@@ -126,6 +126,7 @@ export function field(root: HTMLElement): Teardown | void {
         root.prepend(canvas);
         instance = createField(canvas, {
           count: matchMedia("(max-width: 640px), (pointer: coarse)").matches ? 3000 : 12000,
+          ink: finePointer() && window.innerWidth >= 1024,
           anchors: () => readAnchors(root),
           onLost: teardown,
         });

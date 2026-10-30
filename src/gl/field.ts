@@ -21,6 +21,7 @@ import {
   RenderPass,
   VignetteEffect,
 } from "postprocessing";
+import { createFluid, type Fluid } from "./fluid";
 import { ATLAS_COLUMNS, drawGlyphAtlas, drawWordmarkMask, GLYPHS } from "./canvas2d";
 import { progressAt, type Anchor } from "./progress";
 import { createRandom } from "./random";
@@ -39,6 +40,8 @@ export interface FieldOptions {
   count: number;
   /** Document anchors that map scroll position to shape progress. */
   anchors: () => Anchor[];
+  /** Stir ink in the hero with the cursor (desktop only). */
+  ink: boolean;
   /** Called when the GPU drops the context; the caller tears down and shows the still art. */
   onLost: () => void;
 }
@@ -124,6 +127,42 @@ export function createField(canvas: HTMLCanvasElement, options: FieldOptions): F
   mesh.frustumCulled = false;
   scene.add(mesh);
 
+  // Hero ink: a full-screen quad behind the glyphs shows the fluid's dye in the accent color.
+  const fluid: Fluid | null = options.ink
+    ? createFluid(renderer, window.innerWidth, window.innerHeight)
+    : null;
+  const inkMaterial = new ShaderMaterial({
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = position.xy * 0.5 + 0.5;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D uDye;
+      uniform vec3 uAccent;
+      uniform float uAmount;
+      varying vec2 vUv;
+      void main() {
+        float ink = clamp(texture2D(uDye, vUv).r, 0.0, 1.0);
+        gl_FragColor = vec4(uAccent, ink * 0.3 * uAmount);
+      }`,
+    uniforms: {
+      uDye: { value: null },
+      uAccent: material.uniforms.uAccent!,
+      uAmount: { value: 0 },
+    },
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const inkGeometry = new PlaneGeometry(2, 2);
+  const inkMesh = new Mesh(inkGeometry, inkMaterial);
+  inkMesh.frustumCulled = false;
+  inkMesh.renderOrder = -1;
+  inkMesh.visible = Boolean(fluid);
+  scene.add(inkMesh);
+
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   const aberration = new ChromaticAberrationEffect({
@@ -144,6 +183,7 @@ export function createField(canvas: HTMLCanvasElement, options: FieldOptions): F
   let lastScroll = window.scrollY;
   let velocity = 0;
   const target = { x: 0, y: 0 };
+  let lastTime = 0;
   let anchors = options.anchors();
   let halfHeight = 1;
   let world = -1;
@@ -154,6 +194,7 @@ export function createField(canvas: HTMLCanvasElement, options: FieldOptions): F
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.setSize(width, height, false);
     composer.setSize(width, height);
+    fluid?.resize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     halfHeight = CAMERA_Z * Math.tan((FOV * Math.PI) / 360);
@@ -196,10 +237,19 @@ export function createField(canvas: HTMLCanvasElement, options: FieldOptions): F
       camera.position.x += (target.x * 0.25 - camera.position.x) * 0.05;
       camera.position.y += (target.y * 0.15 - camera.position.y) * 0.05;
       camera.lookAt(0, 0, 0);
+      // Ink lives in the hero only; it fades as the wordmark starts to move.
+      const inkAmount = fluid ? Math.max(0, 1 - progress * 2) : 0;
+      inkMaterial.uniforms.uAmount!.value = inkAmount;
+      if (fluid && inkAmount > 0) {
+        fluid.step(Math.min(1 / 30, Math.max(0.001, time - lastTime)));
+        inkMaterial.uniforms.uDye!.value = fluid.texture();
+      }
+      lastTime = time;
       composer.render();
     },
     resize,
     pointer(x, y) {
+      fluid?.stir((x + 1) / 2, (y + 1) / 2, (x - target.x) / 2, (y - target.y) / 2);
       target.x = x;
       target.y = y;
     },
@@ -210,6 +260,9 @@ export function createField(canvas: HTMLCanvasElement, options: FieldOptions): F
     dispose() {
       canvas.removeEventListener("webglcontextlost", onLost);
       composer.dispose();
+      fluid?.dispose();
+      inkGeometry.dispose();
+      inkMaterial.dispose();
       geometry.dispose();
       material.dispose();
       atlas.dispose();
