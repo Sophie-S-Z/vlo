@@ -15,10 +15,11 @@ const engine = vi.hoisted(() => ({
 vi.mock("./engine", () => ({ createEngine: () => engine }));
 
 const { SoundSwitch } = await import("./SoundSwitch");
-const { playPaper, setSound } = await import("./sound");
+const { playPaper, setSound, SOUND_KEY } = await import("./sound");
 
 afterEach(() => {
   act(() => setSound(false));
+  localStorage.removeItem(SOUND_KEY);
   setStoredValue(CALM_STORAGE_KEY, "off");
   vi.clearAllMocks();
 });
@@ -31,7 +32,45 @@ const renderSwitch = () =>
   );
 
 describe("SoundSwitch (spec 18.1 item 10)", () => {
-  it("is off by default and starts the engine only after a click", async () => {
+  it("starts sound on the first click on the page, by default (ADR 0012)", async () => {
+    const user = userEvent.setup();
+    renderSwitch();
+    const sound = screen.getByRole("switch", { name: "Sound" });
+    expect(engine.start).not.toHaveBeenCalled();
+    await user.click(document.body);
+    expect(sound).toHaveAttribute("aria-checked", "true");
+    await vi.waitFor(() => expect(engine.start).toHaveBeenCalledOnce());
+  });
+
+  it("starts sound on the first key press too", async () => {
+    const user = userEvent.setup();
+    renderSwitch();
+    await user.keyboard("a");
+    expect(screen.getByRole("switch", { name: "Sound" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("remembers a visitor who turned sound off", async () => {
+    const user = userEvent.setup();
+    const first = renderSwitch();
+    await user.click(document.body);
+    await user.click(screen.getByRole("switch", { name: "Sound" }));
+    expect(localStorage.getItem(SOUND_KEY)).toBe("off");
+    first.unmount();
+    act(() => setSound(false));
+    renderSwitch();
+    await user.click(document.body);
+    expect(screen.getByRole("switch", { name: "Sound" })).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("does not start sound by default with Calm on", async () => {
+    const user = userEvent.setup();
+    setStoredValue(CALM_STORAGE_KEY, "on");
+    renderSwitch();
+    await user.click(document.body);
+    expect(engine.start).not.toHaveBeenCalled();
+  });
+
+  it("is off before any interaction, and its own click starts the engine", async () => {
     const user = userEvent.setup();
     renderSwitch();
     const sound = screen.getByRole("switch", { name: "Sound" });

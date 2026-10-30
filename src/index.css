@@ -226,7 +226,7 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
 [data-entry-logo] {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: entry-draw 1.2s var(--vlo-ease) 0.1s forwards;
+  animation: entry-draw 0.7s var(--vlo-ease) 0.05s forwards;
 }
 @keyframes entry-draw {
   to {
@@ -236,16 +236,17 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
 [data-entry-line] {
   clip-path: inset(0 0 100% 0);
   translate: 0 0.5em;
-  animation: entry-line 0.8s var(--vlo-ease) forwards;
+  animation: entry-line 0.45s var(--vlo-ease) forwards;
 }
+/* The whole intro plays in about 1 s; the curtain opens by itself at 1.1 s (ADR 0012). */
 [data-entry-line]:nth-child(1) {
-  animation-delay: 0.4s;
+  animation-delay: 0.1s;
 }
 [data-entry-line]:nth-child(2) {
-  animation-delay: 1s;
+  animation-delay: 0.3s;
 }
 [data-entry-line]:nth-child(3) {
-  animation-delay: 1.6s;
+  animation-delay: 0.5s;
 }
 @keyframes entry-line {
   to {
@@ -258,10 +259,10 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
 }
 [data-entry-actions][data-ready] {
   visibility: visible;
-  animation: entry-line 0.6s var(--vlo-ease) 2.2s backwards;
+  animation: entry-line 0.4s var(--vlo-ease) 0.6s backwards;
 }
 [data-entry-half] {
-  transition: translate 0.9s var(--vlo-ease);
+  transition: translate 0.5s var(--vlo-ease);
 }
 [data-leaving] [data-entry-half="top"] {
   translate: 0 -100%;

@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { setSound } from "@/audio/sound";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
+import { chooseSound } from "@/audio/sound";
 import { writeStorage } from "@/ui/lib/storage";
 import { ENTRY } from "./copy";
 
 export const ENTERED_KEY = "vlo:entered";
-const SPLIT_MS = 900;
+/** The curtain opens by itself this long after it shows, once loading ends (ADR 0012). */
+export const AUTO_OPEN_MS = 1100;
+/** On a slow load, the buttons still show this long before the curtain opens by itself. */
+const MIN_BUTTONS_MS = 900;
+const SPLIT_MS = 500;
 
 const subscribeNever = () => () => {};
 const readEntryFlag = () => document.documentElement.dataset.entry === "first";
@@ -13,7 +17,8 @@ const readEntryFlag = () => document.documentElement.dataset.entry === "first";
  * Entry curtain (spec 18.3 p.00). `public/entry.js` sets `html[data-entry=first]` before the
  * first paint on a first visit with full motion; CSS shows the curtain from that flag, so the
  * prerendered page never flashes. The percentage follows real loading: fonts, the effects
- * chunk and the window load event. Repeat visits, Calm and reduced motion get no curtain.
+ * chunk and the window load event. The curtain opens by itself after about 1.5 s unless the
+ * visitor points at the intro or focuses its buttons. Repeat visits and Calm get no curtain.
  */
 export function Entry() {
   // The server snapshot (no curtain) keeps prerendered HTML and hydration in agreement.
@@ -24,6 +29,8 @@ export function Entry() {
   const [progress, setProgress] = useState(0);
   const curtain = useRef<HTMLDivElement>(null);
   const entered = useRef(false);
+  const [held, setHeld] = useState(false);
+  const [shownAt] = useState(() => (typeof performance === "undefined" ? 0 : performance.now()));
 
   // Real progress: each finished task moves the counter.
   useEffect(() => {
@@ -62,17 +69,28 @@ export function Entry() {
     };
   }, [open]);
 
-  const enter = (withSound: boolean) => {
+  /** `sound` is the visitor's choice; null keeps the default (sound on the first click). */
+  const enter = (sound: boolean | null) => {
     if (leaving) return;
     entered.current = true;
     writeStorage(ENTERED_KEY, "1");
-    if (withSound) setSound(true);
+    if (sound !== null) chooseSound(sound);
     setLeaving(true);
     window.setTimeout(() => {
       delete document.documentElement.dataset.entry;
       setClosed(true);
     }, SPLIT_MS);
   };
+  const autoEnter = useEffectEvent(() => enter(null));
+
+  // Auto-open: once loading ends and the short intro has played, unless the visitor holds it.
+  const loaded = progress >= 100;
+  useEffect(() => {
+    if (!open || !loaded || held || leaving) return;
+    const wait = Math.max(MIN_BUTTONS_MS, AUTO_OPEN_MS - (performance.now() - shownAt));
+    const timer = window.setTimeout(autoEnter, wait);
+    return () => window.clearTimeout(timer);
+  }, [open, loaded, held, leaving, shownAt]);
 
   return (
     <div
@@ -86,7 +104,7 @@ export function Entry() {
       aria-label={open ? ENTRY.label : undefined}
       tabIndex={-1}
       onKeyDown={(event) => {
-        if (event.key === "Escape") enter(false);
+        if (event.key === "Escape") enter(null);
       }}
       className="fixed inset-0 z-[60] flex-col items-center justify-center px-6 text-center outline-none"
     >
@@ -102,12 +120,16 @@ export function Entry() {
       />
       <button
         type="button"
-        onClick={() => enter(false)}
+        onClick={() => enter(null)}
         className="absolute top-4 right-4 z-10 font-mono text-xs tracking-widest text-muted uppercase underline-offset-4 hover:underline"
       >
         {ENTRY.skip}
       </button>
-      <div data-entry-body className="relative z-10 flex flex-col items-center">
+      <div
+        data-entry-body
+        onPointerEnter={() => setHeld(true)}
+        className="relative z-10 flex flex-col items-center"
+      >
         <svg viewBox="0 0 32 32" className="size-16 text-accent" aria-hidden="true">
           <path
             data-entry-logo
@@ -137,7 +159,8 @@ export function Entry() {
         </div>
         <div
           data-entry-actions
-          data-ready={progress >= 100 ? "" : undefined}
+          data-ready={loaded ? "" : undefined}
+          onFocus={() => setHeld(true)}
           className="mt-10 flex flex-wrap justify-center gap-3"
         >
           <button

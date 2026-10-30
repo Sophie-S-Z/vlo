@@ -1,9 +1,14 @@
+import { readStorage, writeStorage } from "@/ui/lib/storage";
 import type { Engine } from "./engine";
 
 /**
- * Sound state (spec 18.1 item 10). Sound is off on every visit and starts only after the
- * visitor turns it on. The Web Audio engine loads through import() on that first choice.
+ * Sound state (spec 18.1 item 10, ADR 0012). Sound is on by default, but a browser lets audio
+ * start only after a click or key press, so `armSound` waits for the first one. A visitor who
+ * turns sound off keeps it off (`vlo:sound`). The Web Audio engine loads through import() on
+ * the first start.
  */
+export const SOUND_KEY = "vlo:sound";
+
 let on = false;
 let engine: Engine | undefined;
 let loading: Promise<Engine> | undefined;
@@ -40,6 +45,41 @@ export function setSound(next: boolean): void {
   } else {
     engine?.stop();
   }
+}
+
+/** False only when the visitor turned sound off. */
+export function soundWanted(): boolean {
+  return readStorage(SOUND_KEY) !== "off";
+}
+
+/** The visitor's own choice: it starts or stops sound and lasts across visits. */
+export function chooseSound(next: boolean): void {
+  writeStorage(SOUND_KEY, next ? "on" : "off");
+  setSound(next);
+}
+
+/** Controls that make their own sound choice; a press on them does not arm sound. */
+const OWN_CHOICE = "[data-sound-switch], [data-entry-curtain]";
+
+/**
+ * Starts sound on the first click or key press on the page, unless the visitor turned it off.
+ * Returns the function that stops waiting.
+ */
+export function armSound(): () => void {
+  if (on || !soundWanted()) return () => {};
+  const start = (event: Event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest(OWN_CHOICE)) return;
+    disarm();
+    if (soundWanted()) setSound(true);
+  };
+  const disarm = () => {
+    window.removeEventListener("pointerdown", start, true);
+    window.removeEventListener("keydown", start, true);
+  };
+  window.addEventListener("pointerdown", start, true);
+  window.addEventListener("keydown", start, true);
+  return disarm;
 }
 
 /** The audio level from 0 to 1, for the switch bars. */

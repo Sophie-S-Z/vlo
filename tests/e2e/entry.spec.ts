@@ -12,6 +12,8 @@ test.describe("Entry curtain (spec 18.3 p.00, M1d)", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText("Let's put them in order.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Skip intro" })).toBeVisible();
+    // Pointing at the intro holds the curtain, so axe and the click see it.
+    await dialog.getByText("Every book starts as a mess.").hover();
     const silence = dialog.getByRole("button", { name: "Enter in silence" });
     await expect(silence).toBeVisible({ timeout: 10_000 });
     await expectNoSeriousA11yViolations(page);
@@ -24,6 +26,17 @@ test.describe("Entry curtain (spec 18.3 p.00, M1d)", () => {
     await page.reload();
     await expect(page.locator("html")).not.toHaveAttribute("data-entry", /.*/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("the curtain opens by itself in about 1.5 s (5A)", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    const dialog = page.getByRole("dialog", { name: "Welcome to Vlo" });
+    await expect(dialog).toBeVisible();
+    const shown = Date.now();
+    await expect(dialog).toHaveCount(0, { timeout: 5_000 });
+    expect(Date.now() - shown).toBeLessThan(2_500);
+    await expect(page.locator("#main")).toBeFocused();
   });
 
   test("Escape skips the intro", async ({ page }) => {
