@@ -1,10 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { Plugin } from "vite";
-import { buildCsp } from "./csp.ts";
+import { buildCsp, type CspOptions } from "./csp.ts";
 
 /** Adds the CSP meta tag to index.html in production builds only. The dev server needs inline scripts. */
-export function cspMeta(): Plugin {
+export function cspMeta(options: CspOptions = {}): Plugin {
   return {
     name: "vlo-csp-meta",
     apply: "build",
@@ -15,7 +15,7 @@ export function cspMeta(): Plugin {
       handler: (html) => {
         const charset = /<meta charset="UTF-8" \/>/;
         if (!charset.test(html)) throw new Error("vlo-csp-meta: charset meta tag not found");
-        const meta = `<meta http-equiv="Content-Security-Policy" content="${buildCsp()}" />`;
+        const meta = `<meta http-equiv="Content-Security-Policy" content="${buildCsp(options)}" />`;
         return html.replace(charset, (tag) => `${tag}\n    ${meta}`);
       },
     },
