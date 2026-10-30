@@ -20,16 +20,15 @@ M0: Foundation. Plan: `docs/plans/M0.md`. Branch: `claude/project-thread-mnsg2f`
 
 ## Gate status (M0)
 
-| Check                               | Status                                                                               |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| CI green                            | Pass on PR #1: lint, types, unit, build, bundle, Playwright with axe, Lighthouse     |
-| Preview URL loads                   | Preview deploy succeeds; waiting for the human to turn on Preview URLs in Cloudflare |
-| Reduced motion and Calm mode toggle | Pass (`tests/e2e/motion.spec.ts`)                                                    |
+| Check                               | Status                                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| CI green                            | Pass on PR #1: lint, types, unit, build, bundle, Playwright with axe, Lighthouse |
+| Preview URL loads                   | Pass: the human confirmed `/` and `/privacy` load and Calm persists (2026-10-30) |
+| Reduced motion and Calm mode toggle | Pass (`tests/e2e/motion.spec.ts`)                                                |
 
 ## Waiting on the human
 
-- Turn on Preview URLs for the `vlo` Worker in Cloudflare, then confirm the preview loads (section 3, item 2).
-- Later: Supabase project URL and anon key (M1), waitlist reply-to email (M1), domain (M6, optional).
+- Supabase project URL and anon key (M1), waitlist reply-to email (M1), domain (M6, optional).
 
 ## Section 24 decisions (defaults in use until the human answers)
 
@@ -48,4 +47,4 @@ M0: Foundation. Plan: `docs/plans/M0.md`. Branch: `claude/project-thread-mnsg2f`
 
 ## Next step
 
-Code review of M0, then open the PR and confirm CI. After the gate passes, start M1a.
+M0 gate passed. Merge PR #1 (human). Then start M1a: plan in `docs/plans/M1.md`.
