@@ -4,14 +4,14 @@ export function HeroArt() {
   const cells = Array.from({ length: 180 }, (_, i) => {
     const x = (i * 37) % 100;
     const y = (i * 61) % 100;
-    return { x, y, g: glyphs[i % glyphs.length], o: 0.08 + ((i * 13) % 10) / 60 };
+    return { x, y, g: glyphs[i % glyphs.length], o: 0.06 + ((i * 13) % 10) / 120 };
   });
   return (
     <svg
       data-still-art="hero"
       viewBox="0 0 100 100"
       preserveAspectRatio="xMidYMid slice"
-      className="pointer-events-none absolute inset-0 size-full text-fg"
+      className="pointer-events-none absolute inset-0 size-full text-muted"
       aria-hidden="true"
     >
       {cells.map((c, i) => (

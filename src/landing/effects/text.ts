@@ -24,7 +24,8 @@ export function hero(root: HTMLElement): Teardown {
         .fromTo(
           rotator,
           { yPercent: 40 },
-          { yPercent: 0, opacity: 1, duration: 0.35, ease: "vlo" },
+          // immediateRender off: a fromTo in a timeline would otherwise shift the word at once.
+          { yPercent: 0, opacity: 1, duration: 0.35, ease: "vlo", immediateRender: false },
         );
     });
     gsap.set(rotator, { display: "inline-block" });

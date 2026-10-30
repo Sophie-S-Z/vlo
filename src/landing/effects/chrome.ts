@@ -35,7 +35,7 @@ export function pageCounter(root: HTMLElement): Teardown | void {
     gsap.fromTo(
       page === last || !current ? counter : current,
       { yPercent: 60, opacity: 0 },
-      { yPercent: 0, opacity: 1, duration: 0.45, ease: "vlo", display: "inline-block" },
+      { yPercent: 0, opacity: 1, duration: 0.45, ease: "vlo" },
     );
   };
 

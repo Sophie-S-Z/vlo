@@ -75,7 +75,11 @@ export function PageCounter() {
       data-page-counter
       className="pointer-events-none fixed right-4 bottom-4 z-30 hidden font-mono text-xs text-muted sm:block"
     >
-      p. <span data-page-current>01</span> / 10
+      p.{" "}
+      <span data-page-current className="inline-block">
+        01
+      </span>{" "}
+      / 10
     </p>
   );
 }

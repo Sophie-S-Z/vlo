@@ -30,6 +30,17 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 - GitHub Actions CI.
 - CLAUDE.md, this file, ADRs 0001 to 0006.
 
+## Gate status (M1a, internal step before the M1 gate)
+
+| Check                                                              | Status                                      |
+| ------------------------------------------------------------------ | ------------------------------------------- |
+| Unit tests                                                         | Pass: 114 tests                             |
+| E2E with axe, desktop and 360 px, all themes, Calm, reduced motion | Pass: 60 tests                              |
+| Lighthouse                                                         | Pass: median LCP 1.55 s, accessibility 1.0  |
+| Bundle guardrail                                                   | Pass: initial JS 117 KB gzipped             |
+| Code review                                                        | Done; findings fixed or recorded (ADR 0007) |
+| Visual QA                                                          | `docs/qa/screens/m1a-effects-*`             |
+
 ## Gate status (M0)
 
 | Check                               | Status                                                                           |
@@ -61,4 +72,4 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 
 ## Next step
 
-PR #1 merged. M1a: code review, then the M1a gate check in `docs/plans/M1.md` Task 8. Then M1b.
+M1a done. Next: M1b (WebGL particle field) from `docs/plans/M1.md`. The M1 gate also needs the Supabase URL from the human for a real test sign-up.
