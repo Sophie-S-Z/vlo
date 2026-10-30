@@ -1,5 +1,6 @@
 import { HERO } from "../copy";
 import { HeroArt } from "../art/HeroArt";
+import { TiltButton } from "../lab/TiltButton";
 
 export function Hero() {
   return (
@@ -46,6 +47,7 @@ export function Hero() {
             {HERO.button}
           </a>
           <Badge />
+          <TiltButton />
         </div>
       </div>
     </section>

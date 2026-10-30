@@ -1,3 +1,4 @@
+import { readTilt, tiltOn } from "@/landing/lab/tilt";
 import { Draggable, Flip, gsap } from "@/motion/gsap";
 import { glideTo } from "./lenis";
 import { scrambleText } from "./scramble";
@@ -305,7 +306,8 @@ export function novelBoard(root: HTMLElement): Teardown | void {
 
 /**
  * Magnetic poetry (spec 18.3 p.04). Matter.js loads in its own chunk when the box nears the
- * screen. The physics run only while the box is on screen; scroll speed tilts gravity a little.
+ * screen. The physics run only while the box is on screen; scroll speed, or the phone's tilt,
+ * tilts gravity a little.
  */
 export function magnets(root: HTMLElement): Teardown | void {
   const box = root.querySelector<HTMLElement>("[data-magnets]");
@@ -323,7 +325,8 @@ export function magnets(root: HTMLElement): Teardown | void {
     const scroll = window.scrollY;
     tilt += ((lastScroll - scroll) * 0.02 - tilt) * 0.1;
     lastScroll = scroll;
-    world.tilt(tilt);
+    // On a phone with "Enable motion" on, the device tilt leads.
+    world.tilt(tiltOn() ? readTilt().x : tilt);
     world.step(deltaMs);
   };
   const load = () => {

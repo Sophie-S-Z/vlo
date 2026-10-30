@@ -1,12 +1,17 @@
 import { gsap } from "@/motion/gsap";
 import type { Frame } from "@/gl/field";
 import { createFrameGuard, placeAnchor, type Anchor } from "@/gl/progress";
+import { labSettings, subscribeLab } from "@/landing/lab/settings";
+import { readTilt, subscribeTilt, tiltOn } from "@/landing/lab/tilt";
 import { readStorage } from "@/ui/lib/storage";
 import { finePointer, listen, type Teardown } from "./types";
 
 /** Frame-rate guard: a slow average over this many frames switches the field off. */
 const GUARD_FRAMES = 90;
 const GUARD_MAX_MS = 45;
+/** Spec 18.4: under 40 fps for about 2 s halves the particles and stops the hero ink. */
+const EASE_FRAMES = 80;
+const EASE_MAX_MS = 1000 / 40;
 
 /** Which page shows which shape (spec 18.2 order). Pages in between hold the last shape. */
 const PAGE_SHAPES: [selector: string, value: number][] = [
@@ -153,8 +158,27 @@ export function field(root: HTMLElement): Teardown | void {
       const field = instance;
       for (const still of stills) still.style.visibility = "hidden";
 
-      const applyColors = () => field.setColors(...themeColors());
+      const applyColors = () => {
+        const [text, accent] = themeColors();
+        field.setColors(text, labSettings().ink || accent);
+      };
       applyColors();
+      // Ink lab changes; the frame-rate guard can lower the density ceiling.
+      let ceiling = 1;
+      const applyLab = () => {
+        const lab = labSettings();
+        field.setDensity(Math.min(lab.particles, ceiling));
+        field.setBloom(lab.bloom);
+        applyColors();
+      };
+      applyLab();
+      const stopLab = subscribeLab(applyLab);
+      // Gyroscope parallax: the tilt moves the camera as the pointer does on desktop.
+      const stopTilt = subscribeTilt(() => {
+        if (!tiltOn()) return;
+        const { x, y } = readTilt();
+        field.pointer(x, -y);
+      });
       const themeWatch = new MutationObserver(applyColors);
       themeWatch.observe(document.documentElement, {
         attributes: true,
@@ -164,10 +188,20 @@ export function field(root: HTMLElement): Teardown | void {
       const forced = readStorage(FIELD_FORCE_KEY) === "1";
       // A device that cannot hold about 22 fps gets the still art back.
       const slow = createFrameGuard({ frames: GUARD_FRAMES, maxMs: GUARD_MAX_MS });
+      const strained = createFrameGuard({ frames: EASE_FRAMES, maxMs: EASE_MAX_MS });
+      let eased = false;
       const tick = (time: number) => {
         if (!instance) return;
         instance.render(time, frameFor(root, instance.progress()));
-        if (slow(performance.now()) && !forced && !document.hidden) teardown();
+        const now = performance.now();
+        if (!eased && strained(now) && !forced && !document.hidden) {
+          eased = true;
+          ceiling = 0.5;
+          instance.stopInk();
+          applyLab();
+          root.dataset.fieldEased = "";
+        }
+        if (slow(now) && !forced && !document.hidden) teardown();
       };
       gsap.ticker.add(tick);
       const stopResize = listen(window, "resize", () => instance?.resize());
@@ -184,6 +218,9 @@ export function field(root: HTMLElement): Teardown | void {
         : () => {};
       stops.push(
         () => gsap.ticker.remove(tick),
+        stopLab,
+        stopTilt,
+        () => delete root.dataset.fieldEased,
         stopResize,
         stopPointer,
         () => themeWatch.disconnect(),

@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { SoundSwitch } from "@/audio/SoundSwitch";
 import { CalmSwitch } from "@/motion/CalmSwitch";
 import { ThemeSwitch } from "@/ui/theme/ThemeSwitch";
+import { setInkLabOpen } from "../lab/settings";
 import { TAGLINE } from "../copy";
 
 const ASCII = String.raw`
@@ -48,6 +49,16 @@ export function Footer() {
               <Link to="/ai-policy" className="underline-offset-4 hover:underline">
                 AI policy
               </Link>
+            </li>
+            <li>
+              <button
+                type="button"
+                data-ink-lab-button
+                onClick={() => setInkLabOpen(true)}
+                className="inline-flex min-h-11 items-center uppercase underline-offset-4 hover:underline"
+              >
+                Ink lab
+              </button>
             </li>
             <li>
               <ThemeSwitch />

@@ -34,7 +34,7 @@ test.describe("Route wipes and 404 physics (spec 18.3, M1d)", () => {
 
     await page.getByRole("banner").getByRole("switch", { name: "Calm" }).click();
     await expect(page.locator("[data-letter-box]")).not.toHaveAttribute("data-physics", "on");
-    expect(new Set(await transforms(page))).toEqual(new Set(["none"]));
+    await expect.poll(async () => [...new Set(await transforms(page))]).toEqual(["none"]);
   });
 
   test("reduced motion keeps the 404 letters still and loads no physics", async ({ page }) => {

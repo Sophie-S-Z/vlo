@@ -56,6 +56,11 @@ export interface Field {
   refreshAnchors: () => void;
   pointer: (x: number, y: number) => void;
   setColors: (text: string, accent: string) => void;
+  /** Draws this share of the particles, from 0.1 to 1 (Ink lab and the frame-rate guard). */
+  setDensity: (share: number) => void;
+  setBloom: (intensity: number) => void;
+  /** Stops the hero ink simulation for good (frame-rate guard, spec 18.4). */
+  stopInk: () => void;
   dispose: () => void;
 }
 
@@ -145,7 +150,7 @@ function buildField(
   scene.add(mesh);
 
   // Hero ink: a full-screen quad behind the glyphs shows the fluid's dye in the accent color.
-  const fluid: Fluid | null = options.ink
+  let fluid: Fluid | null = options.ink
     ? createFluid(renderer, window.innerWidth, window.innerHeight)
     : null;
   const inkMaterial = new ShaderMaterial({
@@ -187,13 +192,9 @@ function buildField(
     radialModulation: false,
     modulationOffset: 0.15,
   });
+  const bloom = new BloomEffect({ intensity: 0.35, luminanceThreshold: 0.3 });
   composer.addPass(
-    new EffectPass(
-      camera,
-      new BloomEffect({ intensity: 0.35, luminanceThreshold: 0.3 }),
-      aberration,
-      new VignetteEffect({ darkness: 0.35 }),
-    ),
+    new EffectPass(camera, bloom, aberration, new VignetteEffect({ darkness: 0.35 })),
   );
 
   let progress = 0;
@@ -276,6 +277,17 @@ function buildField(
     setColors(text, accent) {
       (material.uniforms.uColor!.value as Color).set(text);
       (material.uniforms.uAccent!.value as Color).set(accent);
+    },
+    setDensity(share) {
+      geometry.instanceCount = Math.max(1, Math.round(count * Math.min(1, Math.max(0.1, share))));
+    },
+    setBloom(intensity) {
+      bloom.intensity = intensity;
+    },
+    stopInk() {
+      fluid?.dispose();
+      fluid = null;
+      inkMesh.visible = false;
     },
     dispose() {
       canvas.removeEventListener("webglcontextlost", onLost);
