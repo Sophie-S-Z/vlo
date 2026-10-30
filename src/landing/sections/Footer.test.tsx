@@ -19,7 +19,12 @@ describe("Footer wordmark wave (spec 18.3)", () => {
     const letters = Array.from(document.querySelectorAll("[data-wave-letter]"));
     expect(letters).toHaveLength(3);
     const columns = letters.map((letter) => letter.textContent!.split("\n"));
-    const rows = columns[0]!.map((_, row) => columns.map((c) => c[row]).join("").trimEnd());
+    const rows = columns[0]!.map((_, row) =>
+      columns
+        .map((c) => c[row])
+        .join("")
+        .trimEnd(),
+    );
     expect(rows[1]).toBe(" \\ \\    / / | |   ___");
     expect(rows.at(-1)).toBe("    \\__/    |_|  \\___/");
   });
