@@ -1,6 +1,6 @@
 import { gsap } from "@/motion/gsap";
 import type { Frame } from "@/gl/field";
-import type { Anchor } from "@/gl/progress";
+import { createFrameGuard, placeAnchor, type Anchor } from "@/gl/progress";
 import { readStorage } from "@/ui/lib/storage";
 import { finePointer, listen, type Teardown } from "./types";
 
@@ -56,7 +56,14 @@ export const FIELD_FORCE_KEY = "vlo:field-force";
  * True when WebGL 2 runs on a GPU. A software renderer (SwiftShader, llvmpipe) would block
  * the main thread for seconds per frame, so the still art stays instead.
  */
+let available: boolean | undefined;
+
 export function webglAvailable(): boolean {
+  available ??= detectWebgl();
+  return available || readStorage(FIELD_FORCE_KEY) === "1";
+}
+
+function detectWebgl(): boolean {
   try {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl2");
@@ -64,8 +71,7 @@ export function webglAvailable(): boolean {
     const info = gl.getExtension("WEBGL_debug_renderer_info");
     const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
     gl.getExtension("WEBGL_lose_context")?.loseContext();
-    const software = /swiftshader|llvmpipe|software|basic render/i.test(renderer);
-    return !software || readStorage(FIELD_FORCE_KEY) === "1";
+    return !/swiftshader|llvmpipe|software|basic render/i.test(renderer);
   } catch {
     return false;
   }
@@ -76,11 +82,15 @@ function readAnchors(root: HTMLElement): Anchor[] {
   for (const [selector, value] of PAGE_SHAPES) {
     const element = root.querySelector<HTMLElement>(selector);
     if (!element) continue;
-    const top = element.getBoundingClientRect().top + window.scrollY;
-    // The last anchors must stay reachable: the middle of the screen stops at maxMiddle.
-    const maxMiddle = document.documentElement.scrollHeight - window.innerHeight / 2;
-    const at = top + Math.min(element.offsetHeight, window.innerHeight) * 0.3;
-    anchors.push({ top: Math.min(at, maxMiddle - (PAGE_SHAPES.length - anchors.length)), value });
+    const page = {
+      top: element.getBoundingClientRect().top + window.scrollY,
+      height: element.offsetHeight,
+    };
+    const view = {
+      viewport: window.innerHeight,
+      scrollHeight: document.documentElement.scrollHeight,
+    };
+    anchors.push({ top: placeAnchor(page, anchors.length, PAGE_SHAPES.length, view), value });
   }
   return anchors.sort((a, b) => a.top - b.top);
 }
@@ -103,8 +113,13 @@ export function field(root: HTMLElement): Teardown | void {
   let stopped = false;
   let stop: Teardown | undefined;
 
-  void import("@/gl/field")
-    .then(({ createField }) => {
+  // The glyph atlas and the wordmark mask are drawn once, so the faces must be ready first.
+  const fonts = Promise.all([
+    document.fonts?.load('48px "JetBrains Mono"'),
+    document.fonts?.load('120px "Fraunces Variable"'),
+  ]).catch(() => undefined);
+  void Promise.all([import("@/gl/field"), fonts])
+    .then(([{ createField }]) => {
       if (stopped) return;
       const canvas = document.createElement("canvas");
       canvas.dataset.field = "";
@@ -147,20 +162,18 @@ export function field(root: HTMLElement): Teardown | void {
       });
 
       const forced = readStorage(FIELD_FORCE_KEY) === "1";
-      let frames = 0;
-      let since = performance.now();
+      // A device that cannot hold about 22 fps gets the still art back.
+      const slow = createFrameGuard({ frames: GUARD_FRAMES, maxMs: GUARD_MAX_MS });
       const tick = (time: number) => {
         if (!instance) return;
         instance.render(time, frameFor(root, instance.progress()));
-        if (forced || ++frames < GUARD_FRAMES) return;
-        // A device that cannot hold about 22 fps gets the still art back.
-        const average = (performance.now() - since) / GUARD_FRAMES;
-        frames = 0;
-        since = performance.now();
-        if (average > GUARD_MAX_MS && !document.hidden) teardown();
+        if (slow(performance.now()) && !forced && !document.hidden) teardown();
       };
       gsap.ticker.add(tick);
       const stopResize = listen(window, "resize", () => instance?.resize());
+      // Fonts, images and open FAQ answers move the pages; the anchors follow them.
+      const layoutWatch = new ResizeObserver(() => instance?.refreshAnchors());
+      layoutWatch.observe(document.body);
       const stopPointer = finePointer()
         ? listen(window, "pointermove", (event) => {
             instance?.pointer(
@@ -174,6 +187,7 @@ export function field(root: HTMLElement): Teardown | void {
         stopResize,
         stopPointer,
         () => themeWatch.disconnect(),
+        () => layoutWatch.disconnect(),
       );
       stop = teardown;
     })

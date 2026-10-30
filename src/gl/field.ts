@@ -52,6 +52,8 @@ export interface Field {
   /** Shape progress from 0 to 6, after smoothing. */
   progress: () => number;
   resize: () => void;
+  /** Reads the page anchors again after the layout moves. */
+  refreshAnchors: () => void;
   pointer: (x: number, y: number) => void;
   setColors: (text: string, accent: string) => void;
   dispose: () => void;
@@ -69,6 +71,21 @@ export function createField(canvas: HTMLCanvasElement, options: FieldOptions): F
     antialias: false,
     powerPreference: "high-performance",
   });
+  try {
+    return buildField(renderer, canvas, options);
+  } catch (error) {
+    // A partial start must not keep the GPU context alive.
+    renderer.dispose();
+    renderer.forceContextLoss();
+    throw error;
+  }
+}
+
+function buildField(
+  renderer: WebGLRenderer,
+  canvas: HTMLCanvasElement,
+  options: FieldOptions,
+): Field {
   renderer.setClearColor(0x000000, 0);
   const scene = new Scene();
   const camera = new PerspectiveCamera(FOV, 1, 0.1, 20);
@@ -248,6 +265,9 @@ export function createField(canvas: HTMLCanvasElement, options: FieldOptions): F
       composer.render();
     },
     resize,
+    refreshAnchors() {
+      anchors = options.anchors();
+    },
     pointer(x, y) {
       fluid?.stir((x + 1) / 2, (y + 1) / 2, (x - target.x) / 2, (y - target.y) / 2);
       target.x = x;

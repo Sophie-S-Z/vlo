@@ -15,6 +15,7 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 - Code review done; fixes in commit "fix(landing): address M1a review findings".
 - Bundle guardrail also blocks gsap, lenis, motion and the effects code from the initial chunks. Initial JS 116.5 KB gzipped; effects chunk 71 KB gzipped.
 - M1b so far: WebGL glyph particle field (`src/gl/`, ADR 0008). Seven shapes morph with scroll and gather where each section's still art sits. Bloom, vignette, velocity aberration. The footer wordmark snaps to a character grid. On desktop the cursor stirs vermilion ink in the hero (`src/gl/fluid.ts`, MIT notice in `THIRD_PARTY_NOTICES.md`). No canvas with Calm, reduced motion, no WebGL, a software renderer, or below about 22 fps; the still art shows instead. The three.js chunk is 147 KB gzipped and loads last.
+- M1b review done. Fixed: the frame guard ignores pauses (hidden tab, shader compile); the page top rests on the wordmark; anchors follow layout changes; the atlas waits for fonts; a failed start frees the GPU context. Lighthouse (5 runs): LCP 1.54 to 1.56 s, accessibility 1.0, TBT 330 to 551 ms.
 - Deferred to M1b polish: cursor-driven font weight, vanishing-point line in the Manifesto, magnetic fill from the entry point, copy-link check tile.
 
 ## Done (M0)
@@ -73,4 +74,4 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 
 ## Next step
 
-M1a done. Next: M1b (WebGL particle field) from `docs/plans/M1.md`. The M1 gate also needs the Supabase URL from the human for a real test sign-up.
+M1a and M1b done. Next: M1c (horizontal track demos, privacy flashlight, first-lines canvas) from `docs/plans/M1.md`. The M1 gate also needs the Supabase URL from the human for a real test sign-up.
