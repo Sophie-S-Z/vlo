@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createRandom } from "../random";
-import { maskScale, SHAPE_NAMES, sampleShapes, type Mask } from "./index";
+import {
+  lineGlyphs,
+  maskScale,
+  SHAPE_NAMES,
+  sampleShapes,
+  sampleText,
+  wrapLine,
+  type Mask,
+} from "./index";
 
 /** A fake "Vlo" mask: two filled bars, so tests need no 2D canvas. */
 const mask: Mask = (() => {
@@ -70,5 +78,37 @@ describe("sampleShapes (spec 18.2)", () => {
   it("is repeatable for one seed", () => {
     const again = sampleShapes({ count, seed: 1, wordmark: mask });
     expect(Array.from(again[2]!.slice(0, 30))).toEqual(Array.from(shapes[2]!.slice(0, 30)));
+  });
+});
+
+describe("sampleText (ADR 0012: the visitor's first line)", () => {
+  it("fills every particle with a point inside the mask, in unit space", () => {
+    const points = sampleText(500, 3, mask);
+    expect(points).toHaveLength(1500);
+    for (let i = 0; i < 500; i++) {
+      expect(Math.abs(points[i * 3]!)).toBeLessThanOrEqual(1);
+      expect(Math.abs(points[i * 3 + 1]!)).toBeLessThanOrEqual(1);
+    }
+    expect(Array.from(points)).toEqual(Array.from(sampleText(500, 3, mask)));
+  });
+
+  it("puts every particle at the middle when the mask is empty", () => {
+    const empty: Mask = { width: 4, height: 2, alpha: new Uint8Array(8) };
+    const points = sampleText(10, 1, empty);
+    expect(points.every((v) => Math.abs(v) < 0.5)).toBe(true);
+  });
+});
+
+describe("wrapLine and lineGlyphs", () => {
+  it("wraps a long line into at most three lines of whole words", () => {
+    const lines = wrapLine("It was a bright cold day in April and the clocks were striking", 22);
+    expect(lines.length).toBeLessThanOrEqual(3);
+    for (const line of lines) expect(line.length).toBeLessThanOrEqual(22);
+    expect(lines.join(" ").startsWith("It was a bright cold")).toBe(true);
+  });
+
+  it("maps the typed letters to atlas glyphs and skips the rest", () => {
+    expect(lineGlyphs("Ab 1é", "abcdeé")).toEqual([0, 1, 5]);
+    expect(lineGlyphs("123", "abc")).toEqual([]);
   });
 });

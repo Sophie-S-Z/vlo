@@ -1,5 +1,12 @@
-/** Still art for the hero: the "Vlo" wordmark as a field of glyphs (fallback for the M1b particles). */
+import { useSyncExternalStore } from "react";
+import { firstLine, subscribeFirstLine } from "../firstLine";
+
+/**
+ * Still art for the hero: a field of glyphs (fallback for the M1b particles). The visitor's
+ * first line shows in it, faint and large, when the particles do not run (ADR 0012).
+ */
 export function HeroArt() {
+  const line = useSyncExternalStore(subscribeFirstLine, firstLine, () => "");
   const glyphs = "abcdefghijklmnopqrstuvwxyzéàç,.;—".split("");
   const cells = Array.from({ length: 180 }, (_, i) => {
     const x = (i * 37) % 100;
@@ -26,6 +33,19 @@ export function HeroArt() {
           {c.g}
         </text>
       ))}
+      {line && (
+        <text
+          data-still-line
+          x="50"
+          y="50"
+          textAnchor="middle"
+          fontSize={Math.min(8, 170 / line.length)}
+          className="fill-current font-display"
+          opacity="0.35"
+        >
+          {line}
+        </text>
+      )}
     </svg>
   );
 }

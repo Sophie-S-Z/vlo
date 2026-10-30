@@ -1,6 +1,7 @@
 /** Glyph particle shaders (spec 18.2). Seven target shapes; uProgress runs from 0 to 6. */
 export const particleVertex = /* glsl */ `
 attribute vec3 aShape0;
+attribute vec3 aPrev0;
 attribute vec3 aShape1;
 attribute vec3 aShape2;
 attribute vec3 aShape3;
@@ -19,13 +20,15 @@ uniform vec3 uOffset;
 uniform float uColumns;
 uniform float uRows;
 uniform float uExplode;
+uniform float uMorph;
 
 varying vec2 vUv;
 varying float vAccent;
 varying float vFade;
 
 vec3 shapeAt(float i) {
-  if (i < 0.5) return aShape0;
+  // The first shape can change to the visitor's line; it morphs from the last one (ADR 0012).
+  if (i < 0.5) return mix(aPrev0, aShape0, smoothstep(aDelay * 0.4, aDelay * 0.4 + 0.6, uMorph));
   if (i < 1.5) return aShape1;
   if (i < 2.5) return aShape2;
   if (i < 3.5) return aShape3;

@@ -43,6 +43,48 @@ function wordmark(count: number, put: Put, random: Random, mask: Mask, depth: nu
   }
 }
 
+/**
+ * The visitor's first line as particle targets (ADR 0012). It uses the wordmark sampler, so the
+ * typed words take the wordmark's place and size.
+ */
+export function sampleText(count: number, seed: number, mask: Mask): Float32Array {
+  const out = new Float32Array(count * 3);
+  if (!mask.alpha.some((a) => a > 127)) return out;
+  const put: Put = (i, x, y, z) => {
+    out[i * 3] = Math.max(-1, Math.min(1, x));
+    out[i * 3 + 1] = Math.max(-1, Math.min(1, y));
+    out[i * 3 + 2] = Math.max(-0.5, Math.min(0.5, z));
+  };
+  wordmark(count, put, createRandom(seed), mask, 0.15);
+  return out;
+}
+
+/** Wraps a line into at most three lines of whole words, each at most `width` characters. */
+export function wrapLine(text: string, width: number): string[] {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.trim().split(/\s+/).filter(Boolean)) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= width || !current) current = next.slice(0, width);
+    else {
+      lines.push(current);
+      current = word.slice(0, width);
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, 3);
+}
+
+/** Atlas indexes for the typed letters, so the particles are made of the visitor's own letters. */
+export function lineGlyphs(text: string, atlas: string): number[] {
+  const glyphs: number[] = [];
+  for (const letter of text.toLowerCase()) {
+    const index = atlas.indexOf(letter);
+    if (index >= 0) glyphs.push(index);
+  }
+  return glyphs;
+}
+
 /** Loose "words": short horizontal clusters scattered over the screen. */
 function cloud(count: number, put: Put, random: Random) {
   const words = 90;

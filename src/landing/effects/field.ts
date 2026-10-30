@@ -4,6 +4,7 @@ import { createFrameGuard, placeAnchor, type Anchor } from "@/gl/progress";
 import { labSettings, subscribeLab } from "@/landing/lab/settings";
 import { readTilt, subscribeTilt, tiltOn } from "@/landing/lab/tilt";
 import { readStorage } from "@/ui/lib/storage";
+import { firstLine, subscribeFirstLine } from "@/landing/firstLine";
 import { bookOpen } from "./bookState";
 import { finePointer, gentleMotion, listen, type Teardown } from "./types";
 
@@ -51,7 +52,7 @@ function frameFor(root: HTMLElement, progress: number): Frame {
     }
   }
   // The wordmark sits right of the hero headline on wide screens.
-  if (shape === 0 && width >= 1024) return { x: width * 0.72, y: height * 0.5, size: width * 0.42 };
+  if (shape === 0 && width >= 1024) return { x: width * 0.75, y: height * 0.5, size: width * 0.42 };
   return { x: width / 2, y: height / 2, size: Math.min(width, height) * 0.85 };
 }
 
@@ -188,6 +189,14 @@ export function field(root: HTMLElement): Teardown | void {
         const { x, y } = readTilt();
         field.pointer(x, -y);
       });
+      // The visitor's first line forms the hero shape (ADR 0012). A short wait keeps typing smooth.
+      let lineTimer = 0;
+      const applyLine = () => {
+        window.clearTimeout(lineTimer);
+        lineTimer = window.setTimeout(() => instance?.setLine(firstLine()), 160);
+      };
+      if (firstLine()) field.setLine(firstLine());
+      const stopLine = subscribeFirstLine(applyLine);
       const themeWatch = new MutationObserver(applyColors);
       themeWatch.observe(document.documentElement, {
         attributes: true,
@@ -232,6 +241,8 @@ export function field(root: HTMLElement): Teardown | void {
         () => gsap.ticker.remove(tick),
         stopLab,
         stopTilt,
+        stopLine,
+        () => window.clearTimeout(lineTimer),
         () => delete root.dataset.fieldEased,
         stopResize,
         stopPointer,

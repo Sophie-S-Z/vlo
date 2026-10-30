@@ -9,6 +9,9 @@ export const HERO = {
   rotatingWords: ["novelists", "memoirists", "poets"],
   note: "No AI unless you ask for it. Your drafts stay on your device.",
   button: "Join the waitlist",
+  firstLineLabel: "Your first line",
+  firstLinePlaceholder: "Type it. Watch it take shape.",
+  firstLineNote: "It stays in this tab. Nothing is saved or sent.",
   badge: "write in flow · write in flow · ",
   words: [
     "write",

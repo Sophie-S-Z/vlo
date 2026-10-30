@@ -22,11 +22,11 @@ import {
   VignetteEffect,
 } from "postprocessing";
 import { createFluid, type Fluid } from "./fluid";
-import { ATLAS_COLUMNS, drawGlyphAtlas, drawWordmarkMask, GLYPHS } from "./canvas2d";
+import { ATLAS_COLUMNS, drawGlyphAtlas, drawLineMask, drawWordmarkMask, GLYPHS } from "./canvas2d";
 import { progressAt, type Anchor } from "./progress";
 import { createRandom } from "./random";
 import { particleFragment, particleVertex } from "./shaders";
-import { sampleShapes } from "./shapes";
+import { lineGlyphs, sampleShapes, sampleText } from "./shapes";
 
 /** Where the current shape sits on screen, in CSS pixels. */
 export interface Frame {
@@ -59,6 +59,8 @@ export interface Field {
   /** Draws this share of the particles, from 0.1 to 1 (Ink lab and the frame-rate guard). */
   setDensity: (share: number) => void;
   setBloom: (intensity: number) => void;
+  /** Forms the visitor's first line in place of the wordmark; "" brings the wordmark back. */
+  setLine: (text: string) => void;
   /** How far the pinned book story has opened the book, from 0 to 1 (ADR 0012). */
   setExplode: (amount: number) => void;
   /** Stops the hero ink simulation for good (frame-rate guard, spec 18.4). */
@@ -115,6 +117,9 @@ function buildField(
   shapes.forEach((points, i) => {
     geometry.setAttribute(`aShape${i}`, new InstancedBufferAttribute(points, 3));
   });
+  const wordmarkPoints = shapes[0]!.slice();
+  const prev0 = new InstancedBufferAttribute(wordmarkPoints.slice(), 3);
+  geometry.setAttribute("aPrev0", prev0);
   const random = createRandom(29);
   const glyph = new Float32Array(count);
   const delay = new Float32Array(count);
@@ -124,7 +129,9 @@ function buildField(
     delay[i] = random();
     seed[i] = random();
   }
-  geometry.setAttribute("aGlyph", new InstancedBufferAttribute(glyph, 1));
+  const randomGlyphs = glyph.slice();
+  const glyphAttribute = new InstancedBufferAttribute(glyph, 1);
+  geometry.setAttribute("aGlyph", glyphAttribute);
   geometry.setAttribute("aDelay", new InstancedBufferAttribute(delay, 1));
   geometry.setAttribute("aSeed", new InstancedBufferAttribute(seed, 1));
 
@@ -146,6 +153,7 @@ function buildField(
       uAccent: { value: new Color() },
       uOpacity: { value: 0.4 },
       uExplode: { value: 0 },
+      uMorph: { value: 1 },
     },
   });
   const mesh = new Mesh(geometry, material);
@@ -208,6 +216,7 @@ function buildField(
   let anchors = options.anchors();
   let halfHeight = 1;
   let world = -1;
+  let morphFrom = -1;
 
   const resize = () => {
     const width = window.innerWidth;
@@ -253,6 +262,12 @@ function buildField(
       progress += (goal - progress) * 0.08;
       material.uniforms.uProgress!.value = progress;
       material.uniforms.uTime!.value = time;
+      if (morphFrom < 0 && material.uniforms.uMorph!.value === 0) morphFrom = time;
+      if (morphFrom >= 0) {
+        const morph = Math.min(1, (time - morphFrom) / 1.4);
+        material.uniforms.uMorph!.value = morph;
+        if (morph >= 1) morphFrom = -1;
+      }
       const shift = Math.max(-0.001, Math.min(0.001, velocity * 0.00002));
       aberration.offset.set(shift, shift * 0.5);
       camera.position.x += (target.x * 0.25 - camera.position.x) * 0.05;
@@ -286,6 +301,26 @@ function buildField(
     },
     setBloom(intensity) {
       bloom.intensity = intensity;
+    },
+    setLine(text) {
+      const shape0 = geometry.getAttribute("aShape0") as InstancedBufferAttribute;
+      // The morph starts from where the particles are drawn now.
+      prev0.array.set(shape0.array);
+      prev0.needsUpdate = true;
+      const line = text.trim();
+      const points = line
+        ? sampleText(count, 11, drawLineMask(line, '"Fraunces Variable", Georgia, serif'))
+        : wordmarkPoints;
+      shape0.array.set(points);
+      shape0.needsUpdate = true;
+      // The particles take the visitor's own letters.
+      const letters = lineGlyphs(line, GLYPHS);
+      for (let i = 0; i < count; i++) {
+        glyph[i] = letters.length > 0 ? letters[i % letters.length]! : randomGlyphs[i]!;
+      }
+      glyphAttribute.needsUpdate = true;
+      material.uniforms.uMorph!.value = 0;
+      morphFrom = -1;
     },
     setExplode(amount) {
       const uniform = material.uniforms.uExplode!;

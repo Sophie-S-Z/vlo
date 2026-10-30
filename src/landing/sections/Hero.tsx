@@ -1,6 +1,7 @@
 import { HERO } from "../copy";
 import { HeroArt } from "../art/HeroArt";
 import { TiltButton } from "../lab/TiltButton";
+import { FirstLineField } from "./FirstLineField";
 
 export function Hero() {
   return (
@@ -37,6 +38,7 @@ export function Hero() {
           .
         </p>
         <p className="mt-3 max-w-prose font-serif text-lg text-muted">{HERO.note}</p>
+        <FirstLineField />
         <div className="mt-10 flex flex-wrap items-center gap-6">
           <a
             href="#waitlist"

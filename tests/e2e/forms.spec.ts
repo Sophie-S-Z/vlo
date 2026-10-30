@@ -318,8 +318,10 @@ test.describe("The book opens (spec 18.3 p.03, ADR 0012)", () => {
     const top = await spacerTop(page);
     const screen = await page.evaluate(() => window.innerHeight);
     const pin =
-      (await page.locator(".pin-spacer:has(> #book)").evaluate((el) => el.offsetHeight)) -
-      (await section.evaluate((el) => el.offsetHeight));
+      (await page
+        .locator(".pin-spacer:has(> #book)")
+        .evaluate((el) => (el as HTMLElement).offsetHeight)) -
+      (await section.evaluate((el) => (el as HTMLElement).offsetHeight));
 
     await page.evaluate((y) => window.scrollTo(0, y + 10), top);
     await expect(activeCaption(page)).toHaveText("Every book starts as loose pages.");
