@@ -166,3 +166,45 @@ test.describe("Privacy (spec 18.3 p.05, M1c)", () => {
     await expect(light).toHaveCSS("mask-image", "none");
   });
 });
+
+test.describe("First lines (spec 18.3 p.08, M1c)", () => {
+  test("the grid drags and wraps around", async ({ page, isMobile }) => {
+    test.skip(isMobile === true, "Mouse drag runs on desktop");
+    await startEffects(page);
+    const list = page.locator("[data-first-lines]");
+    await expect(list).toHaveAttribute("data-canvas", "on");
+    await list.scrollIntoViewIfNeeded();
+    const card = page.locator("[data-line-card]").first();
+    const x = () => card.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41);
+    const before = await x();
+    const box = (await list.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 40);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 600, box.y + 40, { steps: 12 });
+    await page.mouse.up();
+    // Dragging left by 600 px moves the first card off the left edge, so it wraps to the right.
+    await expect.poll(x).not.toBeCloseTo(before - 600, -1);
+    expect(Math.abs((await x()) - before)).toBeGreaterThan(50);
+    expect(await x()).toBeGreaterThan(-400);
+  });
+
+  test("a blank card leads to the waitlist with focus in the email field", async ({ page }) => {
+    await startEffects(page);
+    const blank = page.locator("[data-blank-card]").first();
+    await blank.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByLabel("Email")).toBeFocused();
+    await expect(page.locator("#waitlist")).toBeInViewport();
+    await expect(page.locator("[data-zoom-card]")).toHaveCount(0);
+  });
+
+  test("Calm puts back the static grid", async ({ page }) => {
+    await startEffects(page);
+    const list = page.locator("[data-first-lines]");
+    await expect(list).toHaveAttribute("data-canvas", "on");
+    await page.getByRole("banner").getByRole("switch", { name: "Calm" }).click();
+    await expect(list).not.toHaveAttribute("data-canvas", "on");
+    await expect(page.locator("[data-clone]")).toHaveCount(0);
+    expect(await page.locator("[data-line-card]").first().getAttribute("style")).toBeFalsy();
+  });
+});

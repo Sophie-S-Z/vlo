@@ -179,3 +179,32 @@ html.lenis [data-magnet] {
   transition: translate 0.7s
     linear(0, 0.28 8%, 0.74 18%, 1.05 30%, 1.1 38%, 1.05 48%, 0.99 62%, 1.005 78%, 1);
 }
+
+/* First lines: the endless canvas (effects only; spec 18.3 p.08). */
+[data-first-lines][data-canvas="on"] {
+  display: block;
+  position: relative;
+  max-width: none;
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  height: min(70vh, 40rem);
+  overflow: hidden;
+  cursor: grab;
+}
+[data-first-lines][data-canvas="on"] > [data-line-card] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: min(20rem, 80vw);
+  height: 16rem;
+  overflow: hidden;
+}
+[data-first-lines][data-canvas="on"] blockquote {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+}
+[data-first-lines][data-canvas="on"] blockquote > p {
+  font-size: 1.125rem;
+}

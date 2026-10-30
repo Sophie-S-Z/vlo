@@ -4,12 +4,21 @@ import { listen, type Teardown } from "./types";
 
 const NAV_OFFSET = -72;
 
+let active: Lenis | null = null;
+
+/** Scrolls to a target through the running Lenis, or natively when Lenis is off. */
+export function glideTo(target: HTMLElement, options: { immediate?: boolean } = {}): void {
+  if (active) active.scrollTo(target, { offset: NAV_OFFSET, immediate: options.immediate });
+  else target.scrollIntoView({ behavior: options.immediate ? "instant" : "smooth" });
+}
+
 /**
  * Lenis smooth scroll synced to ScrollTrigger (spec 18.1 item 1), plus an anchor glide.
  * The glide keeps native hash behavior: it updates the URL and moves focus to the target.
  */
 export function startLenis(root: HTMLElement): Teardown {
   const lenis = new Lenis({ stopInertiaOnNavigate: true });
+  active = lenis;
   lenis.on("scroll", ScrollTrigger.update);
   const tick = (time: number) => lenis.raf(time * 1000);
   gsap.ticker.add(tick);
@@ -38,5 +47,6 @@ export function startLenis(root: HTMLElement): Teardown {
     gsap.ticker.remove(tick);
     gsap.ticker.lagSmoothing(500, 33);
     lenis.destroy();
+    if (active === lenis) active = null;
   };
 }

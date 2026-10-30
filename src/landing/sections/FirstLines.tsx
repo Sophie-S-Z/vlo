@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { FIRST_LINES, FIRST_LINES_SECTION } from "../copy";
 import { Eyebrow, Page } from "./Page";
 
@@ -14,22 +15,15 @@ export function FirstLines() {
         </h2>
       </div>
       <ul
+        aria-label="First lines"
         data-first-lines
         className="mx-auto mt-12 grid max-w-6xl gap-3 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {FIRST_LINES.slice(0, 5).map((item) => (
-          <LineCard key={item.source} {...item} />
-        ))}
-        <li>
-          <a
-            href="#waitlist"
-            className="flex h-full min-h-40 items-center justify-center rounded-card border border-dashed border-accent p-6 text-center font-display text-2xl text-accent-text italic"
-          >
-            {FIRST_LINES_SECTION.blank}
-          </a>
-        </li>
-        {FIRST_LINES.slice(5).map((item) => (
-          <LineCard key={item.source} {...item} />
+        {FIRST_LINES.map((item, i) => (
+          <Fragment key={item.source}>
+            <LineCard {...item} />
+            {i % 4 === 3 && <BlankCard />}
+          </Fragment>
         ))}
       </ul>
       <div
@@ -43,9 +37,23 @@ export function FirstLines() {
   );
 }
 
+function BlankCard() {
+  return (
+    <li data-line-card>
+      <a
+        href="#waitlist"
+        data-blank-card
+        className="flex h-full min-h-40 items-center justify-center rounded-card border border-dashed border-accent bg-bg p-6 text-center font-display text-2xl text-accent-text italic"
+      >
+        {FIRST_LINES_SECTION.blank}
+      </a>
+    </li>
+  );
+}
+
 function LineCard({ line, source }: { line: string; source: string }) {
   return (
-    <li className="rounded-card border border-rule bg-surface p-6">
+    <li data-line-card className="rounded-card border border-rule bg-surface p-6">
       <blockquote>
         <p className="font-serif text-xl leading-snug">“{line}”</p>
         <footer className="mt-4 font-mono text-xs text-muted">{source}</footer>
