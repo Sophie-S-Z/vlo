@@ -10,6 +10,16 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: `http://localhost:${PORT}`,
+    // Visitors in most tests have seen the entry curtain; tests/e2e/entry.spec.ts starts fresh.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${PORT}`,
+          localStorage: [{ name: "vlo:entered", value: "1" }],
+        },
+      ],
+    },
     trace: "retain-on-failure",
   },
   projects: [

@@ -42,6 +42,14 @@ export const BOOK = {
   ],
 } as const;
 
+export const ENTRY = {
+  label: "Welcome to Vlo",
+  lines: ["Every book starts as a mess.", "Pages everywhere.", "Let's put them in order."],
+  withSound: "Enter with sound",
+  silence: "Enter in silence",
+  skip: "Skip intro",
+} as const;
+
 export const FORMS = {
   title: "Three forms, three workspaces",
   novel: "A board that thinks in scenes.",

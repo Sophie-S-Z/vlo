@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Link } from "react-router";
 import { SkipLink } from "@/ui/layouts";
+import { Entry } from "./Entry";
 import { Nav, PageCounter } from "./Nav";
 import { AiSection } from "./sections/AiSection";
 import { BookOpens } from "./sections/BookOpens";
@@ -22,6 +23,7 @@ export function LandingPage({ appEnabled }: { appEnabled: boolean }) {
   return (
     <div ref={root}>
       <title>Vlo · Write in flow</title>
+      <Entry />
       <SkipLink />
       <Nav />
       <PageCounter />
