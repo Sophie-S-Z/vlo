@@ -245,3 +245,54 @@ test.describe("Lovable merge springs (ADR 0012)", () => {
     expect(first!.x).not.toBe(target!.x);
   });
 });
+
+test.describe("Page turns and ink trail (ADR 0012)", () => {
+  test("a page turns away as it arrives, and leaves no sheet behind", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await effectsRunning(page);
+    const sheet = page.locator("#features > [data-turn]");
+    await expect(sheet).toHaveCount(1);
+    const top = await page
+      .locator("#features")
+      .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    const screen = await page.evaluate(() => window.innerHeight);
+    const angle = () =>
+      sheet.evaluate((el) => {
+        const m = new DOMMatrix(getComputedStyle(el).transform);
+        return Math.round((Math.atan2(-m.m13, m.m11) * 180) / Math.PI);
+      });
+    await page.evaluate((y) => window.scrollTo(0, y), top - screen * 0.7);
+    await expect.poll(angle).toBeLessThan(-5);
+    await expect.poll(angle).toBeGreaterThan(-90);
+    await page.evaluate((y) => window.scrollTo(0, y), top - screen * 0.1);
+    await expect(sheet).toHaveCSS("visibility", "hidden");
+  });
+
+  test("gentle mode keeps the pages still", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await expect(html(page)).toHaveAttribute("data-effects", "ready");
+    await expect(page.locator("[data-turn]")).toHaveCount(0);
+    await expect(page.locator("[data-ink-trail]")).toHaveCount(0);
+  });
+
+  test("a short ink trail follows the mouse, then fades", async ({ page, isMobile }) => {
+    test.skip(isMobile === true, "Touch screens get no trail");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await effectsRunning(page);
+    const inked = () =>
+      page.locator("[data-ink-trail]").evaluate((canvas) => {
+        const c = canvas as HTMLCanvasElement;
+        const data = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+        let count = 0;
+        for (let i = 3; i < data.length; i += 4) if (data[i]! > 0) count++;
+        return count;
+      });
+    await page.mouse.move(200, 400);
+    await page.mouse.move(600, 420, { steps: 12 });
+    await expect.poll(inked).toBeGreaterThan(50);
+    await expect.poll(inked, { timeout: 3_000 }).toBe(0);
+  });
+});

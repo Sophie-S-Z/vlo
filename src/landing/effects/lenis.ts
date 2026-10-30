@@ -10,6 +10,7 @@ let active: Lenis | null = null;
 export function glideTo(target: HTMLElement | number, options: { immediate?: boolean } = {}): void {
   const behavior = options.immediate ? "instant" : "smooth";
   if (active) {
+    active.resize();
     active.scrollTo(target, {
       offset: typeof target === "number" ? 0 : NAV_OFFSET,
       immediate: options.immediate,
@@ -26,6 +27,10 @@ export function startLenis(root: HTMLElement): Teardown {
   const lenis = new Lenis({ stopInertiaOnNavigate: true });
   active = lenis;
   lenis.on("scroll", ScrollTrigger.update);
+  // Pins add spacers after Lenis measured the page; its scroll limit must follow each refresh,
+  // or a glide to a lower section stops short.
+  const measure = () => lenis.resize();
+  ScrollTrigger.addEventListener("refresh", measure);
   const tick = (time: number) => lenis.raf(time * 1000);
   gsap.ticker.add(tick);
   gsap.ticker.lagSmoothing(0);
@@ -38,6 +43,7 @@ export function startLenis(root: HTMLElement): Teardown {
     const target = document.getElementById(decodeURIComponent(hash.slice(1)));
     if (!target) return;
     event.preventDefault();
+    lenis.resize();
     lenis.scrollTo(target, {
       offset: hash === "#top" ? 0 : NAV_OFFSET,
       onComplete: () => {
@@ -50,6 +56,7 @@ export function startLenis(root: HTMLElement): Teardown {
 
   return () => {
     stopClicks();
+    ScrollTrigger.removeEventListener("refresh", measure);
     gsap.ticker.remove(tick);
     gsap.ticker.lagSmoothing(500, 33);
     lenis.destroy();

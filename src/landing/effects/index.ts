@@ -41,6 +41,8 @@ const LATER: (() => Promise<Effect>)[] = [
   () => import("./firstLines").then((m) => m.firstLines),
   () => demos().then((m) => m.bento),
   () => demos().then((m) => m.cardToDialog),
+  () => import("./turns").then((m) => m.inkTrail),
+  () => import("./turns").then((m) => m.pageTurns),
 ];
 
 /**

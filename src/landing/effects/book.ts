@@ -38,7 +38,11 @@ export function bookStory(root: HTMLElement): Teardown | void {
     const step = steps[index]!;
     step.dataset.active = "";
     running?.cancel();
-    running = springTo(step, { translate: ["0 1.2em", "0 0"], opacity: [0, 1] });
+    // Clip instead of fading: the caption keeps full contrast at every frame.
+    running = springTo(step, {
+      translate: ["0 1.2em", "0 0"],
+      clipPath: ["inset(0 0 100% 0)", "inset(0 0 0 0)"],
+    });
   };
   show(0);
 

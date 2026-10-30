@@ -314,6 +314,18 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
   pointer-events: none;
 }
 
+/* Page-turn sheet (ADR 0012): it covers its page and turns away from the left edge. */
+[data-turn] {
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  z-index: 4;
+  background: linear-gradient(90deg, var(--vlo-surface) 85%, var(--vlo-bg));
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+
 /* "I write" marker (ADR 0012): it glides behind the picked option, which keeps its text color. */
 [data-writer-marker] {
   transition:
