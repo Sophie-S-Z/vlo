@@ -12,7 +12,7 @@ export function CalmSwitch({ className }: { className?: string }) {
       onClick={() => setCalm(!calm)}
       title={systemReduced ? "Your system already asks for reduced motion." : undefined}
       className={cn(
-        "inline-flex min-h-11 items-center gap-2 rounded-full px-3 font-mono text-xs tracking-wide uppercase",
+        "inline-flex min-h-9 items-center gap-2 rounded-full px-2 font-mono sm:min-h-11 sm:px-3 text-xs tracking-wide uppercase",
         className,
       )}
     >

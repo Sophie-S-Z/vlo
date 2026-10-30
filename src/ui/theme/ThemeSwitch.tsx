@@ -57,7 +57,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
           aria-label={LABELS[name]}
           tabIndex={theme === name ? 0 : -1}
           onClick={(event) => choose(name, event)}
-          className="grid size-11 place-items-center rounded-full"
+          className="grid size-9 place-items-center rounded-full sm:size-11"
         >
           <span
             aria-hidden="true"
