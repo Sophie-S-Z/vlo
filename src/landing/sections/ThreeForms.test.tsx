@@ -24,3 +24,19 @@ describe("Novel panel (spec 18.3 p.04)", () => {
     expect(threads()).toHaveLength(0);
   });
 });
+
+describe("Memoir panel (spec 18.3 p.04)", () => {
+  it("a marked name switches to its alias on click and back again", async () => {
+    const user = userEvent.setup();
+    render(<ThreeForms />);
+    const name = screen.getByRole("button", { name: "Aunt Rosa" });
+    expect(name).toHaveAttribute("aria-pressed", "false");
+    expect(name).toHaveAccessibleDescription(/aliases/);
+    await user.click(name);
+    expect(name).toHaveAccessibleName("Aunt Maria");
+    expect(name).toHaveAttribute("aria-pressed", "true");
+    expect(name).toHaveAttribute("data-text", "Aunt Maria");
+    await user.click(name);
+    expect(name).toHaveAccessibleName("Aunt Rosa");
+  });
+});

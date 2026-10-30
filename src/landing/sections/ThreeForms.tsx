@@ -19,32 +19,7 @@ export function ThreeForms() {
           <NovelBoard />
         </Panel>
         <Panel title={FORMS.memoir} label="Memoir">
-          <p className="font-serif text-lg leading-relaxed">
-            {DEMO_MEMOIR.text.map((part, i) =>
-              typeof part === "string" ? (
-                <span key={i}>{part}</span>
-              ) : (
-                <span
-                  key={i}
-                  data-alias={part.alias}
-                  className="underline decoration-accent decoration-dotted underline-offset-4"
-                >
-                  {part.real}
-                </span>
-              ),
-            )}
-          </p>
-          <p className="mt-2 font-mono text-xs text-muted">
-            Marked names change to their aliases in every share and export.
-          </p>
-          <ol
-            data-timeline
-            className="mt-6 flex justify-between border-t border-rule pt-3 font-mono text-[0.65rem] text-muted uppercase"
-          >
-            {DEMO_MEMOIR.stages.map((stage) => (
-              <li key={stage}>{stage}</li>
-            ))}
-          </ol>
+          <MemoirDemo />
         </Panel>
         <Panel title={FORMS.poetry} label="Poetry">
           <pre
@@ -157,5 +132,64 @@ function NovelBoard() {
         </ul>
       </div>
     </div>
+  );
+}
+
+function MemoirDemo() {
+  return (
+    <>
+      <p className="font-serif text-lg leading-relaxed">
+        {DEMO_MEMOIR.text.map((part, i) =>
+          typeof part === "string" ? <span key={i}>{part}</span> : <AliasName key={i} {...part} />,
+        )}
+      </p>
+      <p id="memoir-note" className="mt-2 font-mono text-xs text-muted">
+        Marked names change to their aliases in every share and export.
+      </p>
+      <figure className="mt-6 rounded-card border border-rule bg-bg p-4">
+        <figcaption className="font-mono text-[0.65rem] tracking-widest text-muted uppercase">
+          In an export
+        </figcaption>
+        <p className="mt-2 font-serif text-base leading-relaxed">
+          {DEMO_MEMOIR.text.map((part) => (typeof part === "string" ? part : part.alias)).join("")}
+        </p>
+      </figure>
+      <ol
+        data-timeline
+        className="relative mt-8 flex justify-between border-t border-rule pt-3 font-mono text-[0.65rem] text-muted uppercase"
+      >
+        <span
+          aria-hidden="true"
+          data-timeline-line
+          className="absolute inset-x-0 -top-px h-px origin-left bg-accent"
+        />
+        {DEMO_MEMOIR.stages.map((stage) => (
+          <li key={stage} data-stage>
+            {stage}
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
+/** A marked real name. Click or tap shows the alias; the effect scrambles between them. */
+function AliasName({ real, alias }: { real: string; alias: string }) {
+  const [hidden, setHidden] = useState(false);
+  const shown = hidden ? alias : real;
+  return (
+    <button
+      type="button"
+      data-alias-name
+      data-real={real}
+      data-alias={alias}
+      data-text={shown}
+      aria-pressed={hidden}
+      aria-describedby="memoir-note"
+      onClick={() => setHidden((value) => !value)}
+      className="cursor-pointer underline decoration-accent decoration-dotted underline-offset-4"
+    >
+      <span className="sr-only">{shown}</span>
+    </button>
   );
 }

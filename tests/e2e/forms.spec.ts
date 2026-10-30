@@ -67,3 +67,28 @@ test.describe("Novel panel (spec 18.3 p.04, M1c)", () => {
     await expect(page.locator("[data-thread]")).toHaveCount(5);
   });
 });
+
+test.describe("Memoir panel (spec 18.3 p.04, M1c)", () => {
+  test("hover scrambles a name to its alias; a click keeps it", async ({ page, isMobile }) => {
+    test.skip(isMobile === true, "Hover runs on desktop");
+    await startEffects(page);
+    const name = page.locator('[data-real="Aunt Rosa"]');
+    await name.scrollIntoViewIfNeeded();
+    await name.hover();
+    await expect(name).toHaveAttribute("data-text", "Aunt Maria");
+    await name.click();
+    await expect(name).toHaveAccessibleName("Aunt Maria");
+    await page.mouse.move(5, 5);
+    await page.waitForTimeout(700);
+    await expect(name).toHaveAttribute("data-text", "Aunt Maria");
+  });
+
+  test("a tap switches the name and the visible text follows", async ({ page }) => {
+    await startEffects(page);
+    const name = page.locator('[data-real="Grandpa Ilya"]');
+    await name.focus();
+    await page.keyboard.press("Enter");
+    await expect(name).toHaveAccessibleName("Grandpa Ivan");
+    await expect(name).toHaveAttribute("data-text", "Grandpa Ivan");
+  });
+});

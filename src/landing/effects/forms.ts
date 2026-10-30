@@ -1,4 +1,5 @@
 import { Draggable, Flip, gsap } from "@/motion/gsap";
+import { scrambleText } from "./scramble";
 import { listen, type Teardown } from "./types";
 
 const WIDE = "(min-width: 1024px)";
@@ -6,19 +7,16 @@ const WIDE = "(min-width: 1024px)";
 /**
  * The Three forms track (spec 18.3 p.04). On wide screens the panels sit in one row and the
  * section pins while the row moves left; phones keep the vertical stack (spec 18.1 item 11).
- * `onTrack` receives the row tween, so panel effects can use it as their containerAnimation.
+ * Panel reveals start inside the same media context, so they follow the current layout.
  */
-export function formsTrack(
-  root: HTMLElement,
-  onTrack: (track: gsap.core.Tween | null) => void = () => {},
-): Teardown | void {
+export function formsTrack(root: HTMLElement): Teardown | void {
   const section = root.querySelector<HTMLElement>("#forms");
   const track = section?.querySelector<HTMLElement>("[data-forms-track]");
   if (!section || !track) return;
   const mm = gsap.matchMedia();
   mm.add({ wide: WIDE, narrow: `not all and ${WIDE}` }, (context) => {
     if (!context.conditions?.wide) {
-      onTrack(null);
+      panelReveals(section, null);
       return;
     }
     track.dataset.track = "row";
@@ -37,13 +35,96 @@ export function formsTrack(
         invalidateOnRefresh: true,
       },
     });
-    onTrack(tween);
+    panelReveals(section, tween);
     return () => {
       delete track.dataset.track;
-      onTrack(null);
     };
   });
   return () => mm.revert();
+}
+
+/** Scroll reveals inside the panels. In the row they ride the track as containerAnimation. */
+function panelReveals(section: HTMLElement, track: gsap.core.Tween | null) {
+  const enter = (trigger: Element): ScrollTrigger.Vars =>
+    track
+      ? { trigger, containerAnimation: track, start: "left 85%" }
+      : { trigger, start: "top 85%" };
+
+  const timeline = section.querySelector("[data-timeline]");
+  if (timeline) {
+    const reveal = gsap.timeline({ scrollTrigger: enter(timeline) });
+    reveal
+      .from(timeline.querySelector("[data-timeline-line]"), {
+        scaleX: 0,
+        duration: 1.2,
+        ease: "vlo",
+      })
+      // Clip instead of fading: the labels keep full contrast at every frame.
+      .from(
+        timeline.querySelectorAll("[data-stage]"),
+        { yPercent: 60, clipPath: "inset(0% 0% 100% 0%)", duration: 0.5, stagger: 0.12 },
+        0.2,
+      );
+  }
+}
+
+/** Memoir names scramble between the real name and the alias on hover and on change. */
+export function memoirNames(root: HTMLElement): Teardown | void {
+  const names = Array.from(root.querySelectorAll<HTMLElement>("[data-alias-name]"));
+  if (names.length === 0) return;
+  const current = (name: HTMLElement) =>
+    name.getAttribute("aria-pressed") === "true" ? name.dataset.alias! : name.dataset.real!;
+  const other = (name: HTMLElement) =>
+    name.getAttribute("aria-pressed") === "true" ? name.dataset.real! : name.dataset.alias!;
+  const visible = new Map(names.map((name) => [name, current(name)]));
+
+  const scramble = (name: HTMLElement, to: string) => {
+    const from = visible.get(name) ?? to;
+    const state = { progress: 0 };
+    gsap.to(state, {
+      progress: 1,
+      duration: 0.5,
+      ease: "none",
+      overwrite: true,
+      onUpdate: () => {
+        const text = scrambleText(from, to, state.progress);
+        visible.set(name, text);
+        name.dataset.text = text;
+      },
+    });
+    tweens.set(name, state);
+  };
+  const tweens = new Map<HTMLElement, object>();
+
+  const stops: Teardown[] = [];
+  for (const name of names) {
+    stops.push(
+      listen(name, "pointerenter", (event) => {
+        if (event.pointerType === "mouse") scramble(name, other(name));
+      }),
+      listen(name, "pointerleave", () => scramble(name, current(name))),
+      listen(name, "focus", () => scramble(name, current(name))),
+    );
+  }
+  // React flips aria-pressed on click or tap; the visible text then scrambles to the new name.
+  const watch = new MutationObserver((records) => {
+    for (const record of records) {
+      const name = record.target as HTMLElement;
+      name.dataset.text = visible.get(name) ?? current(name);
+      scramble(name, current(name));
+    }
+  });
+  for (const name of names) {
+    watch.observe(name, { attributes: true, attributeFilter: ["aria-pressed"] });
+  }
+  return () => {
+    watch.disconnect();
+    stops.forEach((stop) => stop());
+    for (const [name, state] of tweens) {
+      gsap.killTweensOf(state);
+      name.dataset.text = current(name);
+    }
+  };
 }
 
 /**

@@ -152,3 +152,9 @@ details[data-faq][open]::details-content {
   flex: none;
   width: min(72vw, 46rem);
 }
+
+/* Memoir names: the visible text comes from data-text, so the effect can scramble it without
+   touching React's nodes. The sr-only span carries the accessible name. */
+[data-alias-name]::before {
+  content: attr(data-text) / "";
+}
