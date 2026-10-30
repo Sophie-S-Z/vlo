@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --ssr src/entry-server.tsx --outDir build-meta/ssr && node scripts/prerender.mjs",
     "preview": "vite preview --port 4173 --strictPort",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",

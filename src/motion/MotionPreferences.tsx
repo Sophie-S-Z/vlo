@@ -4,11 +4,10 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { readStorage, writeStorage } from "@/ui/lib/storage";
+import { getStoredValue, setStoredValue, subscribeStoredValues } from "@/ui/lib/storedValue";
 
 export const CALM_STORAGE_KEY = "vlo:calm";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -36,14 +35,16 @@ function getSystemReduced(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
+const getCalm = () => getStoredValue(CALM_STORAGE_KEY) === "on";
+
 export function MotionPreferencesProvider({ children }: { children: ReactNode }) {
-  const [calm, setCalmState] = useState(() => readStorage(CALM_STORAGE_KEY) === "on");
+  // The server snapshot (Calm off) keeps prerendered HTML and hydration in agreement.
+  const calm = useSyncExternalStore(subscribeStoredValues, getCalm, () => false);
   const systemReduced = useSyncExternalStore(subscribeReducedMotion, getSystemReduced, () => false);
   const reduced = calm || systemReduced;
 
   const setCalm = useCallback((next: boolean) => {
-    setCalmState(next);
-    writeStorage(CALM_STORAGE_KEY, next ? "on" : "off");
+    setStoredValue(CALM_STORAGE_KEY, next ? "on" : "off");
   }, []);
 
   useEffect(() => {

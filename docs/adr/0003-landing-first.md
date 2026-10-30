@@ -19,3 +19,7 @@ Section 22 orders the landing page and waitlist (M1) before the writing app (M2)
 ## Amendment (M0 review)
 
 `src/App.tsx` compares `import.meta.env.VITE_APP_ENABLED === "true"` inline, so the build drops the app chunk when the flag is off. A flag-off build must contain no `src/app/` module except `flags.ts`; `npm run check:bundle` fails otherwise.
+
+## Amendment (M0 CI): prerender the landing page
+
+Lighthouse CI measured LCP at 3.0 s on CI runners because the headline appeared only after React rendered. The build now prerenders `/` (`src/entry-server.tsx`, `scripts/prerender.mjs`) into `dist/index.html`, and the client hydrates it. Other routes render on the client. The router's inline hydration script is off (`hydrate={false}`) to keep `script-src 'self'`. Stored preferences (theme, Calm) read through `useSyncExternalStore` with a server snapshot, so hydration never mismatches.

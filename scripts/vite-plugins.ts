@@ -33,10 +33,15 @@ export const MODULE_MAP_PATH = "build-meta/modules.json";
 
 /** Writes build-meta/modules.json (outside dist, so it never deploys) so scripts/check-bundle.mjs can see which source modules sit in the initial bundle. */
 export function moduleMap(): Plugin {
+  let ssr = false;
   return {
     name: "vlo-module-map",
     apply: "build",
+    configResolved(config) {
+      ssr = Boolean(config.build.ssr);
+    },
     generateBundle(_options, bundle) {
+      if (ssr) return;
       const map: Record<string, ChunkInfo> = {};
       for (const [fileName, output] of Object.entries(bundle)) {
         if (output.type !== "chunk") continue;

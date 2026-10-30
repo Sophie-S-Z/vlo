@@ -4,12 +4,12 @@ import {
   useContext,
   useLayoutEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useMotionPreferences } from "@/motion/MotionPreferences";
-import { readStorage, writeStorage } from "@/ui/lib/storage";
+import { getStoredValue, setStoredValue, subscribeStoredValues } from "@/ui/lib/storedValue";
 
 export const THEMES = ["ink", "paper", "night", "sepia"] as const;
 export type ThemeName = (typeof THEMES)[number];
@@ -66,10 +66,13 @@ function revealFrom(origin: RevealOrigin | undefined, ready: Promise<void>) {
 
 export function ThemeProvider({ scope, children }: { scope: ThemeScope; children: ReactNode }) {
   const { reduced } = useMotionPreferences();
-  const [theme, setThemeState] = useState<ThemeName>(() => {
-    const stored = readStorage(themeStorageKey(scope));
-    return isTheme(stored) ? stored : DEFAULT_THEME[scope];
-  });
+  const fallback = DEFAULT_THEME[scope];
+  const getTheme = useCallback(() => {
+    const stored = getStoredValue(themeStorageKey(scope));
+    return isTheme(stored) ? stored : fallback;
+  }, [scope, fallback]);
+  // The server snapshot (the scope default) keeps prerendered HTML and hydration in agreement.
+  const theme = useSyncExternalStore(subscribeStoredValues, getTheme, () => fallback);
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -78,10 +81,9 @@ export function ThemeProvider({ scope, children }: { scope: ThemeScope; children
   const setTheme = useCallback(
     (next: ThemeName, origin?: RevealOrigin) => {
       const apply = () => {
-        flushSync(() => setThemeState(next));
+        flushSync(() => setStoredValue(themeStorageKey(scope), next));
         document.documentElement.dataset.theme = next;
       };
-      writeStorage(themeStorageKey(scope), next);
       const doc = document as ViewTransitionDocument;
       if (reduced || typeof doc.startViewTransition !== "function") {
         apply();

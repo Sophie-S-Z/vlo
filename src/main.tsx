@@ -1,11 +1,20 @@
 import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import "@/ui/fonts";
 import "@/index.css";
 import { App } from "@/App";
 
-createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root")!;
+const app = (
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 );
+
+// index.html holds the prerendered landing page. Hydrate it on "/"; elsewhere render fresh.
+if (window.location.pathname === "/" && root.hasChildNodes()) {
+  hydrateRoot(root, app);
+} else {
+  root.replaceChildren();
+  createRoot(root).render(app);
+}
