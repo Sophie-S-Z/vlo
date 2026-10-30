@@ -27,8 +27,11 @@ describe("landing copy (spec section 20)", () => {
     ]);
   });
 
-  it("makes no numeric claims other than release years and the Ch. labels", () => {
-    const text = JSON.stringify({ ...copy, FIRST_LINES: [] }).replace(/Ch\. \d/g, "");
+  it("makes no numeric claims other than release years, Ch. labels and syllable counts", () => {
+    const text = JSON.stringify({ ...copy, FIRST_LINES: [], DEMO_POEM_SYLLABLES: [] }).replace(
+      /Ch\. \d/g,
+      "",
+    );
     expect(text).not.toMatch(/\d/);
   });
 

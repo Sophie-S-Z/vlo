@@ -134,3 +134,35 @@ test.describe("Poetry panel (spec 18.3 p.04, M1c)", () => {
     expect(requests.filter((url) => /\/assets\/(magnets|matter)/.test(url))).toEqual([]);
   });
 });
+
+test.describe("Privacy (spec 18.3 p.05, M1c)", () => {
+  test("the mode switch morphs the badge and the flashlight ends fully lit", async ({ page }) => {
+    await startEffects(page);
+    const section = page.locator("#privacy");
+    await section.scrollIntoViewIfNeeded();
+    const icon = page.locator("[data-mode-icon]");
+    const before = await icon.getAttribute("d");
+    await section.getByText("Reader", { exact: true }).click();
+    await expect(page.getByTestId("mode-badge")).toContainText("Questions and notes");
+    await expect.poll(() => icon.getAttribute("d")).not.toBe(before);
+    await expect(page.getByTestId("vlo-requests")).toHaveText("0");
+
+    const light = page.locator("[data-flashlight]");
+    await expect(light).toHaveCSS("mask-image", /radial-gradient/);
+    const top = await light.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    await page.evaluate((y) => window.scrollTo(0, y - window.innerHeight * 0.2), top);
+    await expect
+      .poll(() =>
+        light.evaluate((el) => parseFloat(getComputedStyle(el).getPropertyValue("--light-r"))),
+      )
+      .toBeGreaterThan(300);
+  });
+
+  test("Calm removes the flashlight mask", async ({ page }) => {
+    await startEffects(page);
+    const light = page.locator("[data-flashlight]");
+    await expect(light).toHaveCSS("mask-image", /radial-gradient/);
+    await page.getByRole("banner").getByRole("switch", { name: "Calm" }).click();
+    await expect(light).toHaveCSS("mask-image", "none");
+  });
+});

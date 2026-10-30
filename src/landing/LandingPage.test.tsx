@@ -43,7 +43,7 @@ describe("LandingPage (spec 18.3)", () => {
 
   it("keeps the poem's leading spaces in the DOM", () => {
     renderLanding();
-    const poem = document.querySelector("[data-poem]")!;
+    const poem = screen.getByTestId("poem-text");
     expect(poem.textContent).toContain("\n            I set the cup down");
   });
 

@@ -4,6 +4,7 @@ import { bento, cardToDialog } from "./demos";
 import { field } from "./field";
 import { formsTrack, magnets, memoirNames, novelBoard } from "./forms";
 import { startLenis } from "./lenis";
+import { privacy } from "./privacy";
 import { cursor, magnetic, tilt } from "./pointer";
 import { hero, manifesto, marquees, velocitySkew } from "./text";
 import type { Effect, Teardown } from "./types";
@@ -21,6 +22,7 @@ const EFFECTS: Effect[] = [
   novelBoard,
   memoirNames,
   magnets,
+  privacy,
   manifesto,
   velocitySkew,
   marquees,
