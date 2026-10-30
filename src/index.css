@@ -139,3 +139,16 @@ details[data-faq][open]::details-content {
 [data-word-band]::before {
   content: attr(data-text);
 }
+
+/* Three forms: the horizontal row on wide screens (effects only; spec 18.3 p.04). */
+[data-forms-track][data-track="row"] {
+  display: flex;
+  width: max-content;
+  max-width: none;
+  margin-inline: 0;
+  gap: 2rem;
+}
+[data-forms-track][data-track="row"] > * {
+  flex: none;
+  width: min(72vw, 46rem);
+}

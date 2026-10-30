@@ -2,6 +2,7 @@ import { gsap, ScrollTrigger } from "@/motion/gsap";
 import { inkLine, navHide, navHover, pageCounter } from "./chrome";
 import { bento, cardToDialog } from "./demos";
 import { field } from "./field";
+import { formsTrack } from "./forms";
 import { startLenis } from "./lenis";
 import { cursor, magnetic, tilt } from "./pointer";
 import { hero, manifesto, marquees, velocitySkew } from "./text";
@@ -16,6 +17,7 @@ const EFFECTS: Effect[] = [
   magnetic,
   tilt,
   hero,
+  formsTrack,
   manifesto,
   velocitySkew,
   marquees,
