@@ -1,0 +1,65 @@
+/* Vlo design tokens (spec section 16). Every color lives here as a CSS variable.
+   Muted, surface and rule colors for Paper, Night and Sepia are derived (ADR 0005). */
+
+:root {
+  --vlo-ink: #5b6cff;
+  --vlo-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --vlo-radius-card: 10px;
+  --vlo-rule-width: 1px;
+  --vlo-gutter: 16px;
+  --vlo-spring-stiffness: 300;
+  --vlo-spring-damping: 30;
+  --vlo-font-display: "Fraunces Variable", Georgia, serif;
+  --vlo-font-serif: "Newsreader Variable", Georgia, serif;
+  --vlo-font-sans: "Inter Variable", system-ui, sans-serif;
+  --vlo-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Ink is the fallback before a theme attribute is set. */
+  --vlo-bg: #0e0d0c;
+  --vlo-text: #efe8dc;
+  --vlo-muted: #8c857a;
+  --vlo-accent: #e0664b;
+  --vlo-surface: #1a1816;
+  --vlo-rule: #2e2a26;
+  color-scheme: dark;
+}
+
+[data-theme="ink"] {
+  --vlo-bg: #0e0d0c;
+  --vlo-text: #efe8dc;
+  --vlo-muted: #8c857a;
+  --vlo-accent: #e0664b;
+  --vlo-surface: #1a1816;
+  --vlo-rule: #2e2a26;
+  color-scheme: dark;
+}
+
+[data-theme="paper"] {
+  --vlo-bg: #f5f1e8;
+  --vlo-text: #1c1a17;
+  --vlo-muted: #645d53;
+  --vlo-accent: #c8452d;
+  --vlo-surface: #fbf8f2;
+  --vlo-rule: #ddd6c8;
+  color-scheme: light;
+}
+
+[data-theme="night"] {
+  --vlo-bg: #121110;
+  --vlo-text: #e8e2d6;
+  --vlo-muted: #8f887d;
+  --vlo-accent: #e0664b;
+  --vlo-surface: #1c1a18;
+  --vlo-rule: #302c28;
+  color-scheme: dark;
+}
+
+[data-theme="sepia"] {
+  --vlo-bg: #efe3cc;
+  --vlo-text: #3a2e22;
+  --vlo-muted: #6b5a47;
+  --vlo-accent: #a8432a;
+  --vlo-surface: #f6ecd9;
+  --vlo-rule: #d8c7a8;
+  color-scheme: light;
+}
