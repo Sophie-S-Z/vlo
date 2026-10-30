@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { soundLevel, soundOn, subscribeSound } from "@/audio/sound";
 
 /**
@@ -8,24 +8,29 @@ import { soundLevel, soundOn, subscribeSound } from "@/audio/sound";
  */
 export function Grain() {
   const on = useSyncExternalStore(subscribeSound, soundOn, () => false);
+  const layer = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!on) return;
-    const root = document.documentElement.style;
+    const style = layer.current?.style;
+    if (!on || !style) return;
+    // Only this layer restyles, and only when the level moves enough to see.
     let frame = 0;
+    let shown = -1;
     const follow = () => {
-      root.setProperty("--vlo-grain-boost", soundLevel().toFixed(3));
+      const level = Math.round(soundLevel() * 20) / 20;
+      if (level !== shown) style.setProperty("--vlo-grain-boost", String((shown = level)));
       frame = requestAnimationFrame(follow);
     };
     frame = requestAnimationFrame(follow);
     return () => {
       cancelAnimationFrame(frame);
-      root.removeProperty("--vlo-grain-boost");
+      style.removeProperty("--vlo-grain-boost");
     };
   }, [on]);
 
   return (
     <div
+      ref={layer}
       data-grain
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-40 overflow-hidden"

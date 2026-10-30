@@ -52,4 +52,11 @@ describe("TiltButton (spec 18.1 item 11)", () => {
     expect(screen.queryByRole("button", { name: "Enable motion" })).not.toBeInTheDocument();
     if (saved) window.DeviceOrientationEvent = saved;
   });
+
+  it("stops the tilt when the landing page unmounts", async () => {
+    const { unmount } = renderButton();
+    await userEvent.click(screen.getByRole("button", { name: "Enable motion" }));
+    unmount();
+    expect(tiltOn()).toBe(false);
+  });
 });

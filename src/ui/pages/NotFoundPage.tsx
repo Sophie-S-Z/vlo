@@ -35,7 +35,11 @@ export default function NotFoundPage() {
             frame = requestAnimationFrame(tick);
           };
           frame = requestAnimationFrame(tick);
+          // A narrower window moves the walls in, so no letter is left off screen.
+          const sizeWatch = new ResizeObserver(() => world.resize());
+          sizeWatch.observe(element);
           dispose = () => {
+            sizeWatch.disconnect();
             cancelAnimationFrame(frame);
             world.dispose();
             delete element.dataset.physics;

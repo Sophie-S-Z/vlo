@@ -16,7 +16,10 @@ export function InkLab() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "~" && !typing(event.target)) setInkLabOpen(!inkLabOpen());
+      // The entry curtain owns the keyboard until it lifts.
+      if (event.key !== "~" || typing(event.target) || document.documentElement.dataset.entry)
+        return;
+      setInkLabOpen(!inkLabOpen());
     };
     window.addEventListener("keydown", onKey);
     return () => {

@@ -37,6 +37,8 @@ test.describe("Ink lab, grain and tilt (spec 18.1 items 10 to 12)", () => {
   });
 
   test("the footer button opens the lab and the panel passes axe", async ({ page }) => {
+    // Still page: axe must not catch a scroll-driven fade halfway (the panel is the subject).
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     const button = page.getByRole("contentinfo").getByRole("button", { name: "Ink lab" });
     await button.click();

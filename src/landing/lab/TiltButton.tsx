@@ -16,6 +16,8 @@ export function TiltButton() {
   useEffect(() => {
     if (reduced) disableTilt();
   }, [reduced]);
+  // Leaving the landing page stops the sensor; no other page uses the tilt.
+  useEffect(() => disableTilt, []);
 
   if (!supported || reduced) return null;
   return (

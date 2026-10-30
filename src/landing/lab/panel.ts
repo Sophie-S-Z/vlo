@@ -26,11 +26,16 @@ export function createPanel(container: HTMLElement): () => void {
       .querySelectorAll("button")
       .forEach((button) => button.setAttribute("aria-label", `Pick ${label.toLowerCase()}`));
   }
+  // The theme accent stays live, through theme changes, until the visitor picks another ink.
+  let picked = Boolean(labSettings().ink);
   pane.addButton({ title: "Reset" }).on("click", () => {
+    picked = false;
     Object.assign(state, DEFAULT_LAB, { ink: accent });
     pane.refresh();
   });
-  // The theme accent stays live until the visitor picks another ink.
-  pane.on("change", () => setLab({ ...state, ink: state.ink === accent ? "" : state.ink }));
+  pane.on("change", (event) => {
+    if (event.target === rows[1]) picked = state.ink !== accent;
+    setLab({ ...state, ink: picked ? state.ink : "" });
+  });
   return () => pane.dispose();
 }

@@ -7,6 +7,8 @@ const MAX_STEP_MS = 1000 / 30;
 export interface Magnets {
   /** Advances the world by the frame time (capped) and moves the tiles. */
   step: (deltaMs: number) => void;
+  /** Moves the walls to the box's new size and brings stray tiles back inside. */
+  resize: () => void;
   /** Tilts gravity sideways a little, from -1 to 1. */
   tilt: (amount: number) => void;
   dispose: () => void;
@@ -99,6 +101,16 @@ export function createMagnets(box: HTMLElement, tiles: HTMLElement[]): Magnets {
         const x = body.position.x - home.x;
         const y = body.position.y - home.y;
         tile.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${body.angle.toFixed(3)}rad)`;
+      }
+    },
+    resize() {
+      placeWalls();
+      const w = box.clientWidth;
+      const h = box.clientHeight;
+      for (const { body } of bodies) {
+        const x = Math.min(Math.max(body.position.x, 0), w);
+        const y = Math.min(Math.max(body.position.y, 0), h);
+        if (x !== body.position.x || y !== body.position.y) Body.setPosition(body, { x, y });
       }
     },
     tilt(amount) {

@@ -231,4 +231,23 @@ describe("WaitlistForm (US16, US17)", () => {
     expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/\?ref=abc123$/));
     expect(document.querySelector("[data-copy-check]")).toBeInTheDocument();
   });
+
+  it("does not shake again when Calm turns off after an error", async () => {
+    const media = mockMatchMedia();
+    const shake = vi.fn();
+    let clock = 0;
+    renderWithMotion(
+      <WaitlistForm
+        join={async () => Promise.reject(new WaitlistError("unavailable"))}
+        now={() => clock}
+        shake={shake}
+      />,
+    );
+    clock = 5_000;
+    await userEvent.type(screen.getByLabelText("Email"), "ada@example.com{Enter}");
+    await vi.waitFor(() => expect(shake).toHaveBeenCalledOnce());
+    act(() => media.set(REDUCED_MOTION_QUERY, true));
+    act(() => media.set(REDUCED_MOTION_QUERY, false));
+    expect(shake).toHaveBeenCalledOnce();
+  });
 });

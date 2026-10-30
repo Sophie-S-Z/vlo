@@ -66,23 +66,9 @@ export function startLandingEffects(root: HTMLElement): Teardown {
     teardowns.length = 0;
   };
   try {
-    const t0 = performance.now();
-    for (const effect of FIRST) {
-      const a = performance.now();
-      run(effect);
-      console.log("T", effect.name, (performance.now() - a).toFixed(1));
-    }
-    const b = performance.now();
+    for (const effect of FIRST) run(effect);
     teardowns.unshift(startLenis(root));
-    console.log("T lenis", (performance.now() - b).toFixed(1));
-    const c = performance.now();
     ScrollTrigger.refresh();
-    console.log(
-      "T refresh",
-      (performance.now() - c).toFixed(1),
-      "total",
-      (performance.now() - t0).toFixed(1),
-    );
   } catch (error) {
     // Undo whatever already started, so a failed start never leaves effects Calm cannot stop.
     teardownAll();

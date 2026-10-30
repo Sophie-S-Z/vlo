@@ -70,8 +70,12 @@ export function WaitlistForm({
     if (result) ticketRef.current?.focus();
   }, [result]);
 
+  // Shake once per new failure; a later Calm change must not replay it.
+  const shaken = useRef(0);
   useEffect(() => {
-    if (failures > 0 && !reduced && formRef.current) shake?.(formRef.current);
+    if (failures <= shaken.current) return;
+    shaken.current = failures;
+    if (!reduced && formRef.current) shake?.(formRef.current);
   }, [failures, reduced, shake]);
 
   function fail(message: string) {

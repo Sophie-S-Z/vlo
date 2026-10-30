@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MotionPreferencesProvider } from "@/motion/MotionPreferences";
@@ -8,12 +8,15 @@ import { createRoutes } from "./router";
 function renderAt(path: string, appEnabled = false) {
   const loadApp = appEnabled ? () => import("@/app/AppShell") : null;
   const router = createMemoryRouter(createRoutes({ loadApp }), { initialEntries: [path] });
+  void routers.push(router);
   render(
     <MotionPreferencesProvider>
       <RouterProvider router={router} />
     </MotionPreferencesProvider>,
   );
 }
+
+const routers: ReturnType<typeof createMemoryRouter>[] = [];
 
 describe("routes (spec section 7)", () => {
   beforeEach(() => {
@@ -74,5 +77,19 @@ describe("routes (spec section 7)", () => {
     renderAt(path);
     await screen.findAllByRole("heading", { level: 1 });
     await vi.waitFor(() => expect(document.title).toBe(title));
+  });
+
+  it("wipes between landing pages (spec 18.3)", async () => {
+    renderAt("/privacy", true);
+    await screen.findByRole("heading", { level: 1, name: "Privacy" });
+    await act(() => routers.at(-1)!.navigate("/ai-policy"));
+    expect(document.querySelectorAll("[data-wipe-bar]")).toHaveLength(5);
+  });
+
+  it("never wipes inside the writing app (principle 1)", async () => {
+    renderAt("/app", true);
+    await screen.findByRole("heading", { level: 1, name: "Library" });
+    await act(() => routers.at(-1)!.navigate("/app/projects/1"));
+    expect(document.querySelectorAll("[data-wipe-bar]")).toHaveLength(0);
   });
 });

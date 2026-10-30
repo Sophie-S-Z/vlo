@@ -54,4 +54,12 @@ describe("InkLab (spec 18.1 item 12)", () => {
     render(<InkLab />);
     expect(screen.queryByRole("region", { name: "Ink lab" })).not.toBeInTheDocument();
   });
+
+  it("ignores ~ while the entry curtain is up", async () => {
+    document.documentElement.dataset.entry = "first";
+    render(<InkLab />);
+    await userEvent.keyboard("~");
+    expect(screen.queryByRole("region", { name: "Ink lab" })).not.toBeInTheDocument();
+    delete document.documentElement.dataset.entry;
+  });
 });

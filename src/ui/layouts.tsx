@@ -19,7 +19,8 @@ export function SkipLink() {
 function Scope({ scope }: { scope: ThemeScope }) {
   return (
     <ThemeProvider scope={scope}>
-      <RouteWipe />
+      {/* Principle 1: no wipes inside the writing app. */}
+      {scope === "landing" && <RouteWipe />}
       <Outlet />
     </ThemeProvider>
   );

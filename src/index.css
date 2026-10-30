@@ -216,7 +216,8 @@ html.lenis [data-magnet] {
 [data-entry-curtain] {
   display: none;
 }
-html[data-entry="first"] {
+/* Lock scrolling only while React runs the curtain, so the failsafe below leaves a usable page. */
+html[data-entry="first"]:has([data-entry-curtain][data-live]) {
   overflow: hidden;
 }
 html[data-entry="first"] [data-entry-curtain] {
