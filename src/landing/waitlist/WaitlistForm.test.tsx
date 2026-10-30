@@ -40,6 +40,23 @@ afterEach(() => {
 const turnOnCalm = () => setStoredValue(CALM_STORAGE_KEY, "on");
 
 describe("WaitlistForm (US16, US17)", () => {
+  it("slides a marker to the picked writer type (4A); Calm keeps the plain style", async () => {
+    const { user } = setup();
+    const marker = () => document.querySelector<HTMLElement>("[data-writer-marker]");
+    expect(marker()).toHaveAttribute("aria-hidden", "true");
+    expect(marker()).not.toHaveAttribute("data-on");
+    await user.click(screen.getByRole("radio", { name: "Poetry" }));
+    expect(marker()).toHaveAttribute("data-on", "poetry");
+    await user.click(screen.getByRole("radio", { name: "Memoir" }));
+    expect(marker()).toHaveAttribute("data-on", "memoir");
+  });
+
+  it("shows no marker with Calm on", () => {
+    turnOnCalm();
+    setup();
+    expect(document.querySelector("[data-writer-marker]")).toBeNull();
+  });
+
   it("joins with the typed details and shows the ticket", async () => {
     const { join, user } = setup();
     await user.type(screen.getByLabelText("Email"), "ada@example.com");

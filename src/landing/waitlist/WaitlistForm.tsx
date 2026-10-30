@@ -13,6 +13,7 @@ import { playPaper } from "@/audio/sound";
 import { useMotionPreferences } from "@/motion/MotionPreferences";
 import { canFly, fly as flyPlane, shake as shakeForm } from "./flight";
 import { HoldButton } from "./HoldButton";
+import { WriterMarker } from "./WriterMarker";
 
 const ERROR_TEXT: Record<WaitlistErrorCode | "bot", string> = {
   invalid_email: "Please check the email address.",
@@ -47,6 +48,7 @@ export function WaitlistForm({
   const { reduced } = useMotionPreferences();
   const ids = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
   const startedAt = useRef<number | null>(null);
   const [email, setEmail] = useState("");
   const [writerType, setWriterType] = useState<WriterType | undefined>(undefined);
@@ -202,7 +204,13 @@ export function WaitlistForm({
         <legend className="mb-3 font-mono text-xs tracking-widest text-muted uppercase">
           {WAITLIST.writeLabel}
         </legend>
-        <div className="flex flex-wrap gap-2">
+        <div
+          ref={optionsRef}
+          data-writer-options
+          data-marker={reduced ? undefined : ""}
+          className="relative flex flex-wrap gap-2"
+        >
+          {!reduced && <WriterMarker value={writerType} container={optionsRef} />}
           {WAITLIST.writeOptions.map((option) => (
             <label key={option.value} className="cursor-pointer">
               <input
@@ -213,7 +221,10 @@ export function WaitlistForm({
                 onChange={() => setWriterType(option.value)}
                 className="peer sr-only"
               />
-              <span className="inline-flex min-h-11 items-center rounded-full border border-rule px-4 text-sm peer-checked:border-accent peer-checked:bg-accent-text peer-checked:text-bg peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+              <span
+                data-writer-option={option.value}
+                className="relative inline-flex min-h-11 items-center rounded-full border border-rule px-4 text-sm peer-checked:border-accent peer-checked:bg-accent-text peer-checked:text-bg peer-focus-visible:outline-2 peer-focus-visible:outline-accent"
+              >
                 {option.label}
               </span>
             </label>

@@ -1,3 +1,4 @@
+import { springTo } from "@/motion/spring";
 import { gsap } from "@/motion/gsapPlus";
 import { keepChildren, listen, setText, type Teardown } from "./types";
 
@@ -91,10 +92,14 @@ export function bento(root: HTMLElement): Teardown {
   return () => stops.forEach((stop) => stop());
 }
 
-/** An AI card grows into its dialog (spec 18.3 p.06). The native dialog keeps focus and Escape. */
+/**
+ * An AI card grows into its dialog on a spring (spec 18.3 p.06, ADR 0012). The native dialog
+ * keeps focus and Escape.
+ */
 export function cardToDialog(root: HTMLElement): Teardown | void {
   const dialog = root.querySelector<HTMLDialogElement>("#ai dialog");
   if (!dialog) return;
+  let running: { cancel: () => void } | null = null;
   const stop = listen(root, "click", (event) => {
     const card = (event.target as Element | null)?.closest<HTMLElement>("#ai [data-tilt]");
     if (!card) return;
@@ -102,21 +107,19 @@ export function cardToDialog(root: HTMLElement): Teardown | void {
     requestAnimationFrame(() => {
       if (!dialog.open) return;
       const to = dialog.getBoundingClientRect();
-      gsap.from(dialog, {
-        x: from.left + from.width / 2 - (to.left + to.width / 2),
-        y: from.top + from.height / 2 - (to.top + to.height / 2),
-        scaleX: from.width / to.width,
-        scaleY: from.height / to.height,
-        opacity: 0.4,
-        duration: 0.5,
-        ease: "vlo",
-        clearProps: "transform,opacity",
+      const x = from.left + from.width / 2 - (to.left + to.width / 2);
+      const y = from.top + from.height / 2 - (to.top + to.height / 2);
+      const scale = `${from.width / to.width} ${from.height / to.height}`;
+      running?.cancel();
+      running = springTo(dialog, {
+        translate: [`${x}px ${y}px`, "0 0"],
+        scale: [scale, "1 1"],
+        opacity: [0.4, 1],
       });
     });
   });
   return () => {
     stop();
-    gsap.killTweensOf(dialog);
-    gsap.set(dialog, { clearProps: "transform,opacity" });
+    running?.cancel();
   };
 }

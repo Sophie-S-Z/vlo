@@ -279,6 +279,18 @@ html[data-entry="first"] [data-entry-curtain]:not([data-live]) {
   opacity: 0;
 }
 
+/* "I write" marker (ADR 0012): it glides behind the picked option, which keeps its text color. */
+[data-writer-marker] {
+  transition:
+    translate 0.6s var(--vlo-spring),
+    width 0.6s var(--vlo-spring),
+    height 0.6s var(--vlo-spring),
+    opacity 0.2s;
+}
+[data-writer-options][data-marker] .peer:checked + span {
+  background-color: transparent;
+}
+
 /* Sign-up ticket (spec 18.3 p.10): it slides in, then the check draws itself. */
 [data-ticket] {
   animation: ticket-in 0.7s var(--vlo-ease) backwards;

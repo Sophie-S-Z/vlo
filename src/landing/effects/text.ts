@@ -1,4 +1,5 @@
 import { gsap, ScrollTrigger, SplitText } from "@/motion/gsap";
+import { springTo } from "@/motion/spring";
 import { gentleMotion, setText, type Teardown } from "./types";
 
 /** Hero headline rises in by line; rotating word; spinning badge (spec 18.3 p.01). */
@@ -13,37 +14,7 @@ export function hero(root: HTMLElement): Teardown {
 
   const rotator = root.querySelector<HTMLElement>("[data-rotate]");
   const words = rotator?.dataset.rotate?.split("|") ?? [];
-  if (rotator && words.length > 1) {
-    const first = rotator.textContent ?? "";
-    const timeline = gsap.timeline({ repeat: -1 });
-    words.forEach((_, i) => {
-      const next = words[(i + 1) % words.length]!;
-      timeline
-        // Clip instead of fading: text keeps full contrast at every frame.
-        .to(rotator, {
-          yPercent: -40,
-          clipPath: "inset(0% 0% 100% 0%)",
-          duration: 0.35,
-          ease: "vlo",
-          delay: 2.2,
-        })
-        .call(() => setText(rotator, next))
-        .fromTo(
-          rotator,
-          { yPercent: 40, clipPath: "inset(100% 0% 0% 0%)" },
-          // immediateRender off: a fromTo in a timeline would otherwise shift the word at once.
-          {
-            yPercent: 0,
-            clipPath: "inset(0% 0% 0% 0%)",
-            duration: 0.35,
-            ease: "vlo",
-            immediateRender: false,
-          },
-        );
-    });
-    gsap.set(rotator, { display: "inline-block" });
-    stops.push(() => setText(rotator, first));
-  }
+  if (rotator && words.length > 1) stops.push(rotateWords(rotator, words));
 
   for (const badge of root.querySelectorAll("[data-spin]")) {
     gsap.to(badge, {
@@ -63,6 +34,47 @@ export function hero(root: HTMLElement): Teardown {
     });
   }
   return () => stops.forEach((stop) => stop());
+}
+
+const WORD_HOLD_MS = 2400;
+
+/**
+ * The hero's rotating word (spec 18.3 p.01). The word clips out upward, then the next word
+ * springs up from below (Lovable merge, ADR 0012). Clipping keeps full text contrast.
+ */
+function rotateWords(rotator: HTMLElement, words: string[]): Teardown {
+  const first = rotator.textContent ?? "";
+  let index = 0;
+  let timer = 0;
+  let running: Animation | { cancel: () => void } | null = null;
+  rotator.style.display = "inline-block";
+  const next = () => {
+    const leave = rotator.animate(
+      [
+        { translate: "0 0", clipPath: "inset(0 0 0 0)" },
+        { translate: "0 -0.5em", clipPath: "inset(0 0 100% 0)" },
+      ],
+      { duration: 260, easing: "cubic-bezier(0.65, 0, 0.35, 1)", fill: "forwards" },
+    );
+    running = leave;
+    leave.onfinish = () => {
+      index = (index + 1) % words.length;
+      setText(rotator, words[index]!);
+      leave.cancel();
+      running = springTo(rotator, {
+        translate: ["0 0.6em", "0 0"],
+        clipPath: ["inset(100% 0 0 0)", "inset(0 0 0 0)"],
+      });
+      timer = window.setTimeout(next, WORD_HOLD_MS);
+    };
+  };
+  timer = window.setTimeout(next, WORD_HOLD_MS);
+  return () => {
+    window.clearTimeout(timer);
+    running?.cancel();
+    rotator.style.removeProperty("display");
+    setText(rotator, first);
+  };
 }
 
 /** Manifesto words fill with ink as you read; the closing line flies in (spec 18.3 p.02). */

@@ -203,3 +203,45 @@ test.describe("Hold to sign (US16)", () => {
     expect(await formAnimations()).toBe(1);
   });
 });
+
+test.describe("Lovable merge springs (ADR 0012)", () => {
+  test("the hero word springs to the next writer", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await effectsRunning(page);
+    const word = page.locator("[data-rotate]");
+    await expect(word).toHaveText("novelists");
+    await expect(word).toHaveText("memoirists", { timeout: 5_000 });
+    await expect(page.getByRole("heading", { level: 1, name: headline })).toBeVisible();
+  });
+
+  test("the AI dialog opens on a spring from its card", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    await effectsRunning(page);
+    await page.locator("#ai [data-tilt]").first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    const animations = () => dialog.evaluate((d) => d.getAnimations().length);
+    await expect.poll(animations).toBeGreaterThan(0);
+    await expect.poll(animations, { timeout: 3_000 }).toBe(0);
+  });
+
+  test("the I write marker glides to the picked option", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto("/");
+    const marker = page.locator("[data-writer-marker]");
+    const form = page.locator("#waitlist");
+    await form.scrollIntoViewIfNeeded();
+    await form.getByText("Novels", { exact: true }).click();
+    await expect(marker).toHaveAttribute("data-on", "novels");
+    const first = await marker.boundingBox();
+    await form.getByText("Poetry", { exact: true }).click();
+    await expect(marker).toHaveAttribute("data-on", "poetry");
+    const target = await form.locator('[data-writer-option="poetry"]').boundingBox();
+    await expect
+      .poll(async () => Math.round((await marker.boundingBox())!.x))
+      .toBe(Math.round(target!.x));
+    expect(first!.x).not.toBe(target!.x);
+  });
+});

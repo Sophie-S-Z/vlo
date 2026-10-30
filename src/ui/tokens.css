@@ -4,6 +4,36 @@
 :root {
   --vlo-ink: #5b6cff;
   --vlo-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Spring token (stiffness 300, damping 30) sampled over 0.6 s, for CSS transitions. */
+  --vlo-spring: linear(
+    0,
+    0.049,
+    0.161,
+    0.297,
+    0.435,
+    0.561,
+    0.669,
+    0.758,
+    0.829,
+    0.883,
+    0.923,
+    0.952,
+    0.972,
+    0.985,
+    0.994,
+    1,
+    1.003,
+    1.004,
+    1.004,
+    1.004,
+    1.004,
+    1.003,
+    1.003,
+    1.002,
+    1.001,
+    1.001,
+    1
+  );
   --vlo-radius-card: 10px;
   --vlo-rule-width: 1px;
   --vlo-gutter: 16px;
