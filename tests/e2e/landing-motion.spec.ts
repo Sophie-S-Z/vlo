@@ -5,6 +5,7 @@ const headline = "Write the book only you can write.";
 
 async function effectsRunning(page: Page) {
   await expect(html(page)).toHaveClass(/\blenis\b/);
+  await expect(html(page)).toHaveAttribute("data-effects", "ready");
 }
 
 test.describe("Landing effects (spec 18.1, M1a)", () => {

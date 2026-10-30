@@ -7,9 +7,15 @@ const NAV_OFFSET = -72;
 let active: Lenis | null = null;
 
 /** Scrolls to a target through the running Lenis, or natively when Lenis is off. */
-export function glideTo(target: HTMLElement, options: { immediate?: boolean } = {}): void {
-  if (active) active.scrollTo(target, { offset: NAV_OFFSET, immediate: options.immediate });
-  else target.scrollIntoView({ behavior: options.immediate ? "instant" : "smooth" });
+export function glideTo(target: HTMLElement | number, options: { immediate?: boolean } = {}): void {
+  const behavior = options.immediate ? "instant" : "smooth";
+  if (active) {
+    active.scrollTo(target, {
+      offset: typeof target === "number" ? 0 : NAV_OFFSET,
+      immediate: options.immediate,
+    });
+  } else if (typeof target === "number") window.scrollTo({ top: target, behavior });
+  else target.scrollIntoView({ behavior });
 }
 
 /**

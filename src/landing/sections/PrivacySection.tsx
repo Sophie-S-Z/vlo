@@ -47,6 +47,7 @@ export function PrivacySection() {
                     type="radio"
                     name="ai-mode"
                     value={m.id}
+                    data-icon={MODE_ICONS[m.id]}
                     checked={mode === m.id}
                     onChange={() => setMode(m.id)}
                     className="peer sr-only"

@@ -1,10 +1,11 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { mockMatchMedia } from "@/test/matchMedia";
 
 // gsap reads matchMedia when its plugins register, so stub it before the import.
 mockMatchMedia({ "(pointer: fine)": true });
 window.scrollTo = () => {};
 const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+const { gsap } = await import("gsap");
 const { startLandingEffects } = await import("./index");
 
 beforeAll(() => {
@@ -71,6 +72,22 @@ describe("startLandingEffects", () => {
     const root = mountPage();
     startLandingEffects(root)();
     startLandingEffects(root)();
+    expect(ScrollTrigger.getAll()).toHaveLength(0);
+  });
+
+  it("starts the effects below the fold in later tasks, and teardown before then cancels them", async () => {
+    const root = mountPage();
+    const marquee = root.querySelector("[data-marquee]")!;
+    const teardown = startLandingEffects(root);
+    expect(gsap.getTweensOf(marquee)).toHaveLength(0);
+    await vi.waitFor(() => expect(gsap.getTweensOf(marquee).length).toBeGreaterThan(0));
+    teardown();
+    expect(gsap.getTweensOf(marquee)).toHaveLength(0);
+
+    const again = startLandingEffects(root);
+    again();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(gsap.getTweensOf(marquee)).toHaveLength(0);
     expect(ScrollTrigger.getAll()).toHaveLength(0);
   });
 });

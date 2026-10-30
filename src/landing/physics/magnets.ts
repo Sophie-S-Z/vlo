@@ -1,15 +1,14 @@
 import { Bodies, Body, Composite, Constraint, Engine, Vector } from "matter-js";
 
 const WALL = 100;
-const STEP_MS = 1000 / 60;
+/** Longer frames are capped, so a slow frame never tunnels tiles through the walls. */
+const MAX_STEP_MS = 1000 / 30;
 
 export interface Magnets {
-  /** Advances the world one step and moves the tiles. */
-  step: () => void;
+  /** Advances the world by the frame time (capped) and moves the tiles. */
+  step: (deltaMs: number) => void;
   /** Tilts gravity sideways a little, from -1 to 1. */
   tilt: (amount: number) => void;
-  /** Matches the walls to the box after a resize. */
-  resize: () => void;
   dispose: () => void;
 }
 
@@ -50,6 +49,8 @@ export function createMagnets(box: HTMLElement, tiles: HTMLElement[]): Magnets {
       };
       Body.scale(wall, scale.x, scale.y);
       Body.setPosition(wall, { x, y });
+      // Body.scale resets the mass; walls must stay immovable.
+      Body.setStatic(wall, true);
     });
   };
   placeWalls();
@@ -90,10 +91,11 @@ export function createMagnets(box: HTMLElement, tiles: HTMLElement[]): Magnets {
   box.addEventListener("pointermove", onMove);
   box.addEventListener("pointerup", onUp);
   box.addEventListener("pointercancel", onUp);
+  box.addEventListener("lostpointercapture", onUp);
 
   return {
-    step() {
-      Engine.update(engine, STEP_MS);
+    step(deltaMs) {
+      Engine.update(engine, Math.min(MAX_STEP_MS, Math.max(1, deltaMs)));
       for (const { tile, body, home } of bodies) {
         const x = body.position.x - home.x;
         const y = body.position.y - home.y;
@@ -103,12 +105,12 @@ export function createMagnets(box: HTMLElement, tiles: HTMLElement[]): Magnets {
     tilt(amount) {
       engine.gravity.x = Math.max(-1, Math.min(1, amount)) * 0.35;
     },
-    resize: placeWalls,
     dispose() {
       box.removeEventListener("pointerdown", onDown);
       box.removeEventListener("pointermove", onMove);
       box.removeEventListener("pointerup", onUp);
       box.removeEventListener("pointercancel", onUp);
+      box.removeEventListener("lostpointercapture", onUp);
       Composite.clear(engine.world, false);
       Engine.clear(engine);
       for (const { tile } of bodies) tile.style.removeProperty("transform");

@@ -1,4 +1,5 @@
 import { Draggable, Flip, gsap } from "@/motion/gsap";
+import { glideTo } from "./lenis";
 import { scrambleText } from "./scramble";
 import { listen, setText, type Teardown } from "./types";
 
@@ -35,7 +36,20 @@ export function formsTrack(root: HTMLElement): Teardown | void {
       },
     });
     const stopReveals = panelReveals(section, tween);
+    // Keyboard focus in an off-screen panel moves the page to the scroll point that shows it.
+    const stopFocus = listen(track, "focusin", (event) => {
+      const target = event.target as Element;
+      if (!target.matches(":focus-visible")) return; // a mouse click must not move the page
+      const panel = target.closest<HTMLElement>("[data-forms-track] > *");
+      const st = tween.scrollTrigger;
+      if (!panel || !st) return;
+      const box = panel.getBoundingClientRect();
+      if (box.left >= 0 && box.right <= window.innerWidth) return;
+      const progress = Math.min(1, Math.max(0, (panel.offsetLeft - track.offsetLeft) / distance()));
+      glideTo(st.start + progress * (st.end - st.start), { immediate: true });
+    });
     return () => {
+      stopFocus();
       stopReveals();
       delete track.dataset.track;
     };
@@ -107,14 +121,17 @@ export function memoirNames(root: HTMLElement): Teardown | void {
     name.getAttribute("aria-pressed") === "true" ? name.dataset.real! : name.dataset.alias!;
   const visible = new Map(names.map((name) => [name, current(name)]));
 
+  const tweens = new Map<HTMLElement, object>();
   const scramble = (name: HTMLElement, to: string) => {
     const from = visible.get(name) ?? to;
+    // Each scramble tweens its own state object, so the previous one for this name must stop.
+    const previous = tweens.get(name);
+    if (previous) gsap.killTweensOf(previous);
     const state = { progress: 0 };
     gsap.to(state, {
       progress: 1,
       duration: 0.5,
       ease: "none",
-      overwrite: true,
       onUpdate: () => {
         const text = scrambleText(from, to, state.progress);
         visible.set(name, text);
@@ -123,8 +140,6 @@ export function memoirNames(root: HTMLElement): Teardown | void {
     });
     tweens.set(name, state);
   };
-  const tweens = new Map<HTMLElement, object>();
-
   const stops: Teardown[] = [];
   for (const name of names) {
     stops.push(
@@ -172,6 +187,7 @@ export function novelBoard(root: HTMLElement): Teardown | void {
   const threads = () => {
     const svg = board.querySelector("svg");
     const lines = Array.from(board.querySelectorAll<SVGLineElement>("[data-thread]"));
+    for (const element of saved.keys()) if (!element.isConnected) saved.delete(element);
     for (const element of svg ? [svg, ...lines] : []) {
       if (saved.has(element)) continue;
       const names = element === svg ? ["viewBox", "preserveAspectRatio"] : THREAD_ATTRS;
@@ -231,6 +247,7 @@ export function novelBoard(root: HTMLElement): Teardown | void {
 
   // The click handler reads the layout before React changes it; the observer animates after.
   let state: Flip.FlipState | null = null;
+  let flip: gsap.core.Timeline | undefined;
   const stopClick = listen(
     board.parentElement ?? board,
     "click",
@@ -245,7 +262,7 @@ export function novelBoard(root: HTMLElement): Teardown | void {
     for (const draggable of draggables) draggable.update();
     updateThreads();
     if (state) {
-      Flip.from(state, {
+      flip = Flip.from(state, {
         duration: 0.7,
         ease: "vlo",
         stagger: 0.03,
@@ -257,15 +274,24 @@ export function novelBoard(root: HTMLElement): Teardown | void {
     drawThreads();
   });
   watch.observe(list, { attributes: true, attributeFilter: ["data-layout"] });
-  const stopResize = listen(window, "resize", updateThreads);
+  // The board resizes after media queries apply, unlike a window resize event.
+  const sizeWatch = new ResizeObserver(updateThreads);
+  sizeWatch.observe(board);
 
   return () => {
     watch.disconnect();
+    sizeWatch.disconnect();
     stopClick();
-    stopResize();
+    // Finishing the Flip removes its inline position and size before the cleanup below.
+    flip?.progress(1).kill();
     for (const draggable of draggables) draggable.kill();
     gsap.killTweensOf(cards);
-    gsap.set(cards, { clearProps: "transform,zIndex" });
+    gsap.set(cards, { clearProps: "transform,translate,rotate,scale,zIndex" });
+    for (const card of cards) {
+      for (const name of ["transform", "translate", "rotate", "scale", "z-index"]) {
+        card.style.removeProperty(name);
+      }
+    }
     for (const [element, attrs] of saved) {
       gsap.killTweensOf(element);
       gsap.set(element, { clearProps: "strokeDasharray,strokeDashoffset" });
@@ -290,21 +316,26 @@ export function magnets(root: HTMLElement): Teardown | void {
   let lastScroll = window.scrollY;
   let tilt = 0;
   let requested = false;
+  let build: (() => void) | undefined;
 
-  const tick = () => {
+  const tick = (_time: number, deltaMs: number) => {
     if (!world || !visible) return;
     const scroll = window.scrollY;
     tilt += ((lastScroll - scroll) * 0.02 - tilt) * 0.1;
     lastScroll = scroll;
     world.tilt(tilt);
-    world.step();
+    world.step(deltaMs);
   };
   const load = () => {
     void import("@/landing/physics/magnets")
       .then(({ createMagnets }) => {
         if (stopped) return;
         const tiles = Array.from(box.querySelectorAll<HTMLElement>("[data-magnet]"));
-        world = createMagnets(box, tiles);
+        build = () => {
+          world?.dispose();
+          world = createMagnets(box, tiles);
+        };
+        build();
         box.dataset.physics = "on";
         gsap.ticker.add(tick);
       })
@@ -321,12 +352,20 @@ export function magnets(root: HTMLElement): Teardown | void {
     { rootMargin: "300px" },
   );
   watch.observe(box);
-  const stopResize = listen(window, "resize", () => world?.resize());
+  // A new box size (a breakpoint, a rotated phone) reflows the tiles, so the world starts again
+  // from the new flow positions.
+  let width = box.clientWidth;
+  const sizeWatch = new ResizeObserver(() => {
+    if (box.clientWidth === width) return;
+    width = box.clientWidth;
+    build?.();
+  });
+  sizeWatch.observe(box);
 
   return () => {
     stopped = true;
     watch.disconnect();
-    stopResize();
+    sizeWatch.disconnect();
     gsap.ticker.remove(tick);
     world?.dispose();
     world = undefined;

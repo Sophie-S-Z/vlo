@@ -4,6 +4,14 @@ async function startEffects(page: Page) {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
   await expect(page.locator("html")).toHaveClass(/\blenis\b/);
+  await expect(page.locator("html")).toHaveAttribute("data-effects", "ready");
+}
+
+/** The nav hides on scroll down, so the switch is used by keyboard, as a visitor might. */
+async function calm(page: Page) {
+  await page.getByRole("banner").getByRole("switch", { name: "Calm" }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator("html")).toHaveAttribute("data-motion", "reduced");
 }
 
 const trackX = (page: Page) =>
@@ -162,7 +170,7 @@ test.describe("Privacy (spec 18.3 p.05, M1c)", () => {
     await startEffects(page);
     const light = page.locator("[data-flashlight]");
     await expect(light).toHaveCSS("mask-image", /radial-gradient/);
-    await page.getByRole("banner").getByRole("switch", { name: "Calm" }).click();
+    await calm(page);
     await expect(light).toHaveCSS("mask-image", "none");
   });
 });
@@ -202,9 +210,91 @@ test.describe("First lines (spec 18.3 p.08, M1c)", () => {
     await startEffects(page);
     const list = page.locator("[data-first-lines]");
     await expect(list).toHaveAttribute("data-canvas", "on");
-    await page.getByRole("banner").getByRole("switch", { name: "Calm" }).click();
+    await calm(page);
     await expect(list).not.toHaveAttribute("data-canvas", "on");
     await expect(page.locator("[data-clone]")).toHaveCount(0);
     expect(await page.locator("[data-line-card]").first().getAttribute("style")).toBeFalsy();
+  });
+});
+
+test.describe("M1c teardown and keyboard (review)", () => {
+  test("Calm restores the forms DOM and React still owns it", async ({ page }) => {
+    await startEffects(page);
+    const thread = page.locator('[data-thread="0"]');
+    await expect(thread).not.toHaveAttribute("x1", "24");
+    const name = page.locator('[data-real="Aunt Rosa"]');
+    await name.focus();
+    await page.keyboard.press("Enter");
+    await expect(name).toHaveAttribute("aria-pressed", "true");
+    await calm(page);
+    await expect(page.locator("html")).not.toHaveClass(/\blenis\b/);
+
+    await expect(thread).toHaveAttribute("x1", "24");
+    await expect(page.locator("[data-forms-track]")).not.toHaveAttribute("data-track", "row");
+    await expect(page.locator("[data-poem-line]").nth(1)).toHaveText(
+      "      keeps its one note going.",
+    );
+    await expect(name).toHaveAttribute("data-text", "Aunt Maria");
+    const card = page.locator("[data-drag-card]").first();
+    await expect(card).toHaveCSS("transform", /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/);
+    await expect(card).not.toHaveAttribute("style", /position: absolute/);
+
+    await page.getByRole("button", { name: "Grid" }).click();
+    await expect(page.locator("[data-thread]")).toHaveCount(0);
+    await page.getByRole("button", { name: "Board" }).click();
+    await expect(page.locator("[data-thread]")).toHaveCount(5);
+    await name.click();
+    await expect(name).toHaveAttribute("data-text", "Aunt Rosa");
+  });
+
+  test("fast mode switching ends on the chosen icon", async ({ page }) => {
+    await startEffects(page);
+    const section = page.locator("#privacy");
+    await section.scrollIntoViewIfNeeded();
+    await section.getByText("Reader", { exact: true }).click();
+    await section.getByText("Co-writer", { exact: true }).click();
+    await page.waitForTimeout(150);
+    await section.getByText("Pen", { exact: true }).click();
+    await page.waitForTimeout(1000);
+    await calm(page);
+    const pen = await section.locator('input[value="pen"]').getAttribute("data-icon");
+    await expect(page.locator("[data-mode-icon]")).toHaveAttribute("d", pen!);
+  });
+
+  test("hover slows the marquee rows", async ({ page, isMobile }) => {
+    test.skip(isMobile === true, "Hover runs on desktop");
+    await startEffects(page);
+    const row = page.locator("#first-lines [data-marquee]").first();
+    await row.scrollIntoViewIfNeeded();
+    const x = () => row.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41);
+    const travel = async () => {
+      const a = await x();
+      await page.waitForTimeout(800);
+      return Math.abs((await x()) - a);
+    };
+    await page.mouse.move(5, 5);
+    await page.waitForTimeout(600);
+    const free = await travel();
+    // The row never stops moving, so the pointer goes to its fixed parent instead.
+    const band = (await row.locator("..").boundingBox())!;
+    await page.mouse.move(band.x + band.width / 2, band.y + band.height / 2);
+    await page.waitForTimeout(800);
+    const slowed = await travel();
+    expect(slowed).toBeLessThan(free * 0.6);
+  });
+
+  test("keyboard focus in an off-screen panel of the pinned row brings it on screen", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile === true, "The pinned row is desktop only");
+    await startEffects(page);
+    const section = page.locator("#forms");
+    const top = await section.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    await page.evaluate((y) => window.scrollTo(0, y + 1100), top);
+    const grid = page.getByRole("button", { name: "Grid" });
+    await expect.poll(async () => (await grid.boundingBox())!.x).toBeLessThan(0);
+    await grid.focus();
+    await expect(grid).toBeInViewport();
   });
 });

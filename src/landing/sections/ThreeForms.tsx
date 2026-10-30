@@ -11,7 +11,7 @@ import { Eyebrow, Page } from "./Page";
 
 export function ThreeForms() {
   return (
-    <Page n={4} id="forms" titleId="forms-title" className="overflow-hidden">
+    <Page n={4} id="forms" titleId="forms-title" className="overflow-clip">
       <div className="mx-auto max-w-6xl">
         <Eyebrow n={4}>Three forms</Eyebrow>
         <h2
@@ -121,10 +121,12 @@ function NovelBoard() {
               <li
                 key={scene}
                 data-drag-card
-                style={board ? { left: `${x}%`, top: `${y}%` } : undefined}
+                // Centered on (x, y) with margins, not a translate: GSAP reads a translate into
+                // its transform cache and would write it back as an inline transform.
+                style={board ? { left: `calc(${x}% - 21%)`, top: `${y}%` } : undefined}
                 className={
                   "rounded-card border border-rule bg-bg p-3 font-mono text-xs" +
-                  (board ? " absolute w-[42%] -translate-x-1/2 -translate-y-1/2" : "")
+                  (board ? " absolute -mt-6 w-[42%]" : "")
                 }
               >
                 {scene}

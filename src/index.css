@@ -156,6 +156,7 @@ details[data-faq][open]::details-content {
 /* Memoir names: the visible text comes from data-text, so the effect can scramble it without
    touching React's nodes. The sr-only span carries the accessible name. */
 [data-alias-name]::before {
+  content: attr(data-text);
   content: attr(data-text) / "";
 }
 
@@ -188,7 +189,8 @@ html.lenis [data-magnet] {
   width: 100vw;
   margin-inline: calc(50% - 50vw);
   height: min(70vh, 40rem);
-  overflow: hidden;
+  /* clip, not hidden: focus on a card never scrolls the canvas out of its wrap math. */
+  overflow: clip;
   cursor: grab;
 }
 [data-first-lines][data-canvas="on"] > [data-line-card] {

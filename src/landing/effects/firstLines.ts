@@ -30,6 +30,7 @@ export function firstLines(root: HTMLElement): Teardown | void {
   let holding = false;
   let visible = false;
   const proxy = document.createElement("div");
+  let zoom: gsap.core.Timeline | undefined;
 
   const layout = () => {
     const card = originals[0]!;
@@ -112,13 +113,15 @@ export function firstLines(root: HTMLElement): Teardown | void {
       const blank = (event.target as Element).closest<HTMLAnchorElement>("[data-blank-card]");
       if (!blank) return;
       event.preventDefault();
-      zoomToWaitlist(root, list, blank);
+      zoom?.kill();
+      zoom = zoomToWaitlist(root, list, blank);
     }),
   ];
 
   // Marquee rows speed up with scroll and slow down under the pointer.
   const rows = Array.from(root.querySelectorAll<HTMLElement>("#first-lines [data-marquee]"));
-  const marqueeTweens = rows.flatMap((row) => gsap.getTweensOf(row));
+  // The marquee tweens start after this effect, so they are looked up on each tick.
+  const marqueeTweens = () => rows.flatMap((row) => gsap.getTweensOf(row));
   let boost = 0;
   let slow = false;
   const speed = ScrollTrigger.create({
@@ -128,7 +131,7 @@ export function firstLines(root: HTMLElement): Teardown | void {
   const marqueeTick = () => {
     boost *= 0.94;
     const target = slow ? 0.25 : 1 + boost;
-    for (const tween of marqueeTweens) {
+    for (const tween of marqueeTweens()) {
       tween.timeScale(tween.timeScale() + (target - tween.timeScale()) * 0.1);
     }
   };
@@ -146,19 +149,25 @@ export function firstLines(root: HTMLElement): Teardown | void {
     gsap.ticker.remove(tick);
     gsap.ticker.remove(marqueeTick);
     speed.kill();
-    for (const tween of marqueeTweens) tween.timeScale(1);
+    for (const tween of marqueeTweens()) tween.timeScale(1);
+    zoom?.kill();
     watch.disconnect();
     draggable?.kill();
     gsap.killTweensOf([proxy, pan]);
     for (const clone of cells.slice(originals.length)) clone.remove();
     for (const card of originals) card.style.removeProperty("transform");
+    gsap.set(list, { clearProps: "scale,transformOrigin" });
     delete list.dataset.canvas;
     document.querySelector("[data-zoom-card]")?.remove();
   };
 }
 
 /** The blank card grows to full screen, the page jumps to the waitlist under it, then it lifts. */
-function zoomToWaitlist(root: HTMLElement, list: HTMLElement, card: HTMLElement) {
+function zoomToWaitlist(
+  root: HTMLElement,
+  list: HTMLElement,
+  card: HTMLElement,
+): gsap.core.Timeline | undefined {
   const waitlist = root.querySelector<HTMLElement>("#waitlist");
   const email = waitlist?.querySelector<HTMLInputElement>('input[type="email"]');
   if (!waitlist) return;
@@ -179,7 +188,7 @@ function zoomToWaitlist(root: HTMLElement, list: HTMLElement, card: HTMLElement)
   const origin = `${r.left + r.width / 2 - list.getBoundingClientRect().left}px ${
     r.top + r.height / 2 - list.getBoundingClientRect().top
   }px`;
-  gsap
+  return gsap
     .timeline({ onComplete: () => overlay.remove() })
     .to(list, { scale: 1.12, transformOrigin: origin, duration: 0.7, ease: "vlo" }, 0)
     .to(

@@ -27,21 +27,30 @@ export function privacy(root: HTMLElement): Teardown | void {
   const icon = section.querySelector<SVGPathElement>("[data-mode-icon]");
   const modeSwitch = section.querySelector<HTMLElement>("[data-mode-switch]");
   if (icon && modeSwitch) {
-    let last = icon.getAttribute("d") ?? "";
+    // `shown` is the path on screen. React writes its own `d` at any time, and a running
+    // morph rewrites `d` every frame, so neither the DOM nor React says what the eye sees.
+    let shown = icon.getAttribute("d") ?? "";
+    let last = shown;
     let frame = 0;
     stops.push(
-      // React sets the new path after this change event; the next frame morphs to it.
-      listen(modeSwitch, "change", () => {
+      listen(modeSwitch, "change", (event) => {
+        const next = (event.target as HTMLElement).dataset.icon;
+        if (!next || next === last) return;
+        last = next;
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
-          const next = icon.getAttribute("d") ?? "";
-          if (next === last) return;
           gsap.fromTo(
             icon,
-            { morphSVG: last },
-            { morphSVG: next, duration: 0.6, ease: "vlo", overwrite: true },
+            { morphSVG: shown },
+            {
+              morphSVG: next,
+              duration: 0.6,
+              ease: "vlo",
+              overwrite: true,
+              onUpdate: () => (shown = icon.getAttribute("d") ?? shown),
+              onComplete: () => (shown = next),
+            },
           );
-          last = next;
           roll();
         });
       }),
