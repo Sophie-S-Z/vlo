@@ -67,7 +67,13 @@ test("hydration keeps stored preferences and logs no errors", async ({ page }) =
   });
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "sepia");
-  await expect(page.getByRole("switch", { name: "Calm" })).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByRole("radio", { name: "Sepia" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("banner").getByRole("switch", { name: "Calm" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expect(page.getByRole("banner").getByRole("radio", { name: "Sepia" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
   expect(errors).toEqual([]);
 });

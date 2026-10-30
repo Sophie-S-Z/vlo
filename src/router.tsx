@@ -1,6 +1,6 @@
 import type { RouteObject } from "react-router";
 import { LandingPage } from "@/landing/LandingPage";
-import { AppLayout, LandingLayout } from "@/ui/layouts";
+import { AppScope, LandingScope, PageShell } from "@/ui/layouts";
 
 type PageModule = { default: React.ComponentType };
 
@@ -21,19 +21,29 @@ export function createRoutes({ loadApp }: RouteOptions): RouteObject[] {
   };
   return [
     {
-      Component: LandingLayout,
+      Component: LandingScope,
       children: [
         { index: true, element: <LandingPage appEnabled={appEnabled} /> },
-        { path: "privacy", lazy: lazyPage(() => import("@/ui/pages/PrivacyPage")) },
-        { path: "ai-policy", lazy: lazyPage(() => import("@/ui/pages/AiPolicyPage")) },
-        notFound,
+        {
+          Component: PageShell,
+          children: [
+            { path: "privacy", lazy: lazyPage(() => import("@/ui/pages/PrivacyPage")) },
+            { path: "ai-policy", lazy: lazyPage(() => import("@/ui/pages/AiPolicyPage")) },
+            notFound,
+          ],
+        },
       ],
     },
     {
-      Component: AppLayout,
+      Component: AppScope,
       children: [
-        { path: "share/:id", lazy: lazyPage(() => import("@/share/ShareRoute")) },
-        ...(loadApp ? [{ path: "app/*", lazy: lazyPage(loadApp) }] : []),
+        {
+          Component: PageShell,
+          children: [
+            { path: "share/:id", lazy: lazyPage(() => import("@/share/ShareRoute")) },
+            ...(loadApp ? [{ path: "app/*", lazy: lazyPage(loadApp) }] : []),
+          ],
+        },
       ],
     },
   ];
