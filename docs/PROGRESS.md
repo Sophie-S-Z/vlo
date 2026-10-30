@@ -18,7 +18,10 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 - M1b review done. Fixed: the frame guard ignores pauses (hidden tab, shader compile); the page top rests on the wordmark; anchors follow layout changes; the atlas waits for fonts; a failed start frees the GPU context. Lighthouse (5 runs): LCP 1.54 to 1.56 s, accessibility 1.0, TBT 330 to 551 ms.
 - M1c: Three forms pins on wide screens and its panels move in one row (phones keep a stack). Novel board: draggable scene cards with inertia, threads that follow, Grid/Board switch with Flip. Memoir: alias names that scramble on hover and switch on click, an export preview, a drawn timeline. Poetry: the poem types itself with exact indents and hand-counted syllables; 30 word tiles under Matter.js (own 27 KB chunk, loads near the box). Privacy: Pen/Reader/Co-writer switch with a spring marker and morphing badge, a "Requests to Vlo servers: 0" odometer, a flashlight reveal. First lines: an endless draggable grid; blank cards zoom to full screen and land on the waitlist email field; marquees follow scroll speed and slow under the pointer.
 - M1c review done (8 findings, all fixed): marquee speed control never ran, fast mode switches could leave the wrong icon, focus in clipped areas, stale layout after a breakpoint, Flip styles left after Calm, older-browser fallback for the alias text, Matter wall mass, scramble tweens that raced. Section demos now start one per task after the first screen, and `html[data-effects=ready]` marks the end.
-- Deferred to M1b polish: cursor-driven font weight, vanishing-point line in the Manifesto, magnetic fill from the entry point, copy-link check tile.
+- M1d: entry curtain on the first visit (p.00) with real load progress and "Enter with sound" or "Enter in silence" (ADR 0009). Web Audio sound: room tone, hover ticks, paper sound, four-bar switch. Sign-up: the form folds into a dart, the plane art (and the particle plane) flies off on a curve, the ticket slides in with a drawn check; errors shake (ADR 0010). Five-bar route wipe on landing routes. 404 letters under Matter.js. Ink lab ("~" or the footer button, Tweakpane, lazy). Film grain at 4.5% that follows the sound level. "Enable motion" gyroscope parallax on touch screens. Frame-rate guard: under 40 fps for about 2 s halves the particles and stops the hero ink. Polish: Manifesto key words gain weight near the pointer, magnetic buttons fill from the entry point, copy-link check, footer wordmark wave.
+- M1d TBT work: only the headline and the canvas start in the first task; the other effects start one per task, and the section demos load in their own chunks.
+- M1d review done (10 findings, all fixed): leftover timing logs, scroll lock after the failsafe, wipes inside the app, tilt after leaving the page, Ink lab under the curtain, shake replay on Calm, grain restyle cost, 404 walls on resize, stale ink after a theme change, inline overflow restore.
+- Still open from earlier polish: the vanishing-point line in the Manifesto.
 
 ## Done (M0)
 
@@ -33,6 +36,17 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 - Lighthouse CI: median LCP 1.5 s locally (budget 2.5 s), accessibility 1.0.
 - GitHub Actions CI.
 - CLAUDE.md, this file, ADRs 0001 to 0006.
+
+## Gate status (M1d, internal step before the M1 gate)
+
+| Check                                                              | Status                                                        |
+| ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Unit tests                                                         | Pass: 187 tests                                               |
+| E2E with axe, desktop and 360 px, all themes, Calm, reduced motion | Pass: 124 tests                                               |
+| Lighthouse (5 runs), first visit with the entry curtain            | Pass: median LCP 1.66 s (1.66 to 2.46 s), accessibility 1.0   |
+| Bundle guardrail                                                   | Pass: initial JS 122 KB gzipped; tweakpane and matter-js lazy |
+| Code review                                                        | Done; all findings fixed                                      |
+| Total blocking time (warn budget 200 ms)                           | Over: 241 to 778 ms across runs; see open issues              |
 
 ## Gate status (M1c, internal step before the M1 gate)
 
@@ -81,11 +95,11 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 ## Open issues
 
 - Waitlist has no server-side rate limit (ADR 0007).
-- Total blocking time is over the 200 ms warn budget. The largest task is the parse of the effects chunk (about 300 ms under 4x throttle). Plan for M1d: split gsap plugins per section so each section loads its own code.
+- Total blocking time is still over the 200 ms warn budget after the M1d split. The largest tasks now are hydration (about 150 ms under 4x throttle) and the first effects task (gsap core, SplitText on the headline, the WebGL check). Local runs vary a lot with machine load. Next idea: start the effects at idle time after the load event.
 
 - Trademark check for "Vlo" not done (section 24 item 2).
 - `npm audit` advisories in the dev-only `@lhci/cli` tree (ADR 0001).
 
 ## Next step
 
-M1a, M1b and M1c done. Next: M1d (entry sequence, Web Audio, origami and plane flight, ticket card, route wipes, 404 physics, Ink lab, gyroscope, frame-rate guard) from `docs/plans/M1.md`. The M1 gate also needs the Supabase URL from the human for a real test sign-up.
+M1a to M1d done. The M1 gate needs two things from the human: the Supabase project URL for a real test sign-up, and approval of the look on desktop and phone (preview URL on PR #2).

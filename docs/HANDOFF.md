@@ -5,13 +5,11 @@ Updated: 2026-10-30.
 ## Done
 
 - M0 complete; PR #1 merged.
-- M1a, M1b and M1c are done on `claude/project-thread-mnsg2f`, draft PR #2 (CI green on 4bc6eec). Details and gate tables: `docs/PROGRESS.md`.
+- M1a to M1d are done on `claude/project-thread-mnsg2f`, draft PR #2. Details and gate tables: `docs/PROGRESS.md`.
 
 ## In progress
 
-- M1d. Scope in `docs/plans/M1.md` ("M1b, M1c, M1d" list) and spec 18.1 and 18.3: entry sequence (p.00), Web Audio sound with the four-bar toggle, origami fold and plane flight with the ticket card after sign-up, route wipes for `/privacy` and `/ai-policy`, 404 Matter.js letters, Ink lab (Tweakpane on "~"), gyroscope parallax on phones, the full frame-rate guard (18.4: under 40 fps for 2 s halves particles and stops the fluid). Also the deferred polish items in PROGRESS and the TBT open issue.
-- First step: write the "M1d detail" section in `docs/plans/M1.md`.
-- The M1 gate needs the Supabase URL (human) for a real sign-up, and the human's approval of the look.
+- The M1 gate. It waits on the human: the Supabase URL (Cloudflare build variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; the human sends only the URL in chat) and approval of the look. After both, run a real test sign-up on the preview and record the gate in `docs/PROGRESS.md`. Then M2 per spec section 22.
 
 ## Exact next commands
 
@@ -38,3 +36,7 @@ CHROME_PATH=/opt/pw-browsers/chromium npm run lhci
 - The nav hides on scroll; e2e tests use the Calm switch by focus and Space, not click.
 - The `vite preview` server started in the background stops at its time limit; Playwright starts its own server when none runs.
 - Heavy libraries load only through `import()`: three and postprocessing (`src/gl/`), matter-js (`src/landing/physics/`). `npm run check:bundle` enforces it.
+- Section demos load through `import()` from `src/landing/effects/index.ts`. Plugins that only they use (Draggable, Inertia, Flip, DrawSVG) register in `src/motion/gsapPlus.ts`; import them from there.
+- First-load motion (sign-up flight, shake, route wipe, grain) uses the Web Animations API or CSS, never gsap (ADR 0010).
+- `playwright.config.ts` sets `vlo:entered=1` so the entry curtain stays away; `tests/e2e/entry.spec.ts` clears it.
+- Run axe on a still page (reduced motion) when the subject is not the motion itself; a scroll fade caught halfway fails color contrast.
