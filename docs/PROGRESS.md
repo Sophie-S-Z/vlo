@@ -20,15 +20,15 @@ M0: Foundation. Plan: `docs/plans/M0.md`. Branch: `claude/project-thread-mnsg2f`
 
 ## Gate status (M0)
 
-| Check                               | Status                                      |
-| ----------------------------------- | ------------------------------------------- |
-| CI green                            | Pending first run on the PR                 |
-| Preview URL loads                   | Pending the Workers Builds preview on PR #1 |
-| Reduced motion and Calm mode toggle | Pass (`tests/e2e/motion.spec.ts`)           |
+| Check                               | Status                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| CI green                            | Pass on PR #1: lint, types, unit, build, bundle, Playwright with axe, Lighthouse     |
+| Preview URL loads                   | Preview deploy succeeds; waiting for the human to turn on Preview URLs in Cloudflare |
+| Reduced motion and Calm mode toggle | Pass (`tests/e2e/motion.spec.ts`)                                                    |
 
 ## Waiting on the human
 
-- Cloudflare preview URL for this branch (section 3, item 2).
+- Turn on Preview URLs for the `vlo` Worker in Cloudflare, then confirm the preview loads (section 3, item 2).
 - Later: Supabase project URL and anon key (M1), waitlist reply-to email (M1), domain (M6, optional).
 
 ## Section 24 decisions (defaults in use until the human answers)
