@@ -26,10 +26,11 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
+  /* The html element paints the page background. Body stays transparent, so the landing
+     canvas (z-index below zero) shows through. */
   body {
     margin: 0;
     min-height: 100dvh;
-    background: var(--vlo-bg);
     overflow-x: clip;
   }
   :focus-visible {
@@ -132,4 +133,9 @@ details[data-faq]::details-content {
 }
 details[data-faq][open]::details-content {
   block-size: auto;
+}
+
+/* The hero's giant word band (decorative). */
+[data-word-band]::before {
+  content: attr(data-text);
 }

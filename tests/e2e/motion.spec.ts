@@ -54,7 +54,9 @@ test.describe("theme switch", () => {
     await expect(html(page)).toHaveAttribute("data-theme", "ink");
     await page.getByRole("banner").getByRole("radio", { name: "Paper" }).click();
     await expect(html(page)).toHaveAttribute("data-theme", "paper");
-    const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const bg = await page.evaluate(
+      () => getComputedStyle(document.documentElement).backgroundColor,
+    );
     expect(bg).toBe("rgb(245, 241, 232)");
   });
 

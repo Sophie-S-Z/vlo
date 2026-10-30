@@ -16,6 +16,8 @@ export const FORBIDDEN_IN_INITIAL = [
   /\/node_modules\/gsap\//,
   /\/node_modules\/@gsap\//,
   /\/node_modules\/lenis\//,
+  /\/node_modules\/postprocessing\//,
+  /\/src\/gl\//,
   /\/node_modules\/motion\//,
   /\/node_modules\/framer-motion\//,
   /\/src\/landing\/effects\//,

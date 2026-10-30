@@ -19,13 +19,26 @@ export function hero(root: HTMLElement): Teardown {
     words.forEach((_, i) => {
       const next = words[(i + 1) % words.length]!;
       timeline
-        .to(rotator, { yPercent: -40, opacity: 0, duration: 0.35, ease: "vlo", delay: 2.2 })
+        // Clip instead of fading: text keeps full contrast at every frame.
+        .to(rotator, {
+          yPercent: -40,
+          clipPath: "inset(0% 0% 100% 0%)",
+          duration: 0.35,
+          ease: "vlo",
+          delay: 2.2,
+        })
         .call(() => setText(rotator, next))
         .fromTo(
           rotator,
-          { yPercent: 40 },
+          { yPercent: 40, clipPath: "inset(100% 0% 0% 0%)" },
           // immediateRender off: a fromTo in a timeline would otherwise shift the word at once.
-          { yPercent: 0, opacity: 1, duration: 0.35, ease: "vlo", immediateRender: false },
+          {
+            yPercent: 0,
+            clipPath: "inset(0% 0% 0% 0%)",
+            duration: 0.35,
+            ease: "vlo",
+            immediateRender: false,
+          },
         );
     });
     gsap.set(rotator, { display: "inline-block" });

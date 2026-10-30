@@ -58,6 +58,9 @@ function cloud(count: number, put: Put, random: Random) {
   }
 }
 
+const BOOK_TILT_COS = Math.cos(1);
+const BOOK_TILT_SIN = Math.sin(1);
+
 /** An open book: two curved page stacks, with the top pages lifting and fanning apart. */
 function book(count: number, put: Put, random: Random) {
   for (let i = 0; i < count; i++) {
@@ -69,7 +72,9 @@ function book(count: number, put: Put, random: Random) {
     const angle = 0.18 + lift + u * 0.05;
     const x = side * u * 0.7 * Math.cos(angle);
     const z = u * 0.7 * Math.sin(angle) * 0.6 + page * 0.006 - 0.25;
-    put(i, x, v * 0.5, Math.max(-0.5, Math.min(0.5, z)));
+    // Tip the book toward the viewer, so the open pages and the lift read from the front.
+    const y = v * 0.5;
+    put(i, x, y * BOOK_TILT_COS - z * BOOK_TILT_SIN, y * BOOK_TILT_SIN + z * BOOK_TILT_COS);
   }
 }
 

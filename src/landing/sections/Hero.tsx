@@ -14,7 +14,8 @@ export function Hero() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-24 overflow-hidden font-display text-[18vw] leading-none whitespace-nowrap text-fg opacity-[0.06] select-none"
       >
-        <span data-word-band>{HERO.words.join(" · ")}</span>
+        {/* Drawn through CSS content: decorative texture, not text to read or contrast-check. */}
+        <span data-word-band data-text={HERO.words.join(" · ")} className="inline-block" />
       </p>
       <div className="relative max-w-5xl">
         <p className="mb-6 font-mono text-xs tracking-widest text-muted uppercase">

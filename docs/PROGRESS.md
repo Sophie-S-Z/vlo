@@ -14,6 +14,7 @@ M1: Landing page and waitlist. Plan: `docs/plans/M1.md`. Branch: `claude/project
 - "Hold to sign" (US16): a pointer holds 1.2 s while a ring fills; keyboard, assistive tech and reduced motion submit at once.
 - Code review done; fixes in commit "fix(landing): address M1a review findings".
 - Bundle guardrail also blocks gsap, lenis, motion and the effects code from the initial chunks. Initial JS 116.5 KB gzipped; effects chunk 71 KB gzipped.
+- M1b so far: WebGL glyph particle field (`src/gl/`, ADR 0008). Seven shapes morph with scroll and gather where each section's still art sits. Bloom, vignette, velocity aberration. No canvas with Calm, reduced motion, no WebGL, a software renderer, or below about 22 fps; the still art shows instead. The three.js chunk is 147 KB gzipped and loads last.
 - Deferred to M1b polish: cursor-driven font weight, vanishing-point line in the Manifesto, magnetic fill from the entry point, copy-link check tile.
 
 ## Done (M0)
