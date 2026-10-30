@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Link } from "react-router";
 import { SkipLink } from "@/ui/layouts";
 import { Nav, PageCounter } from "./Nav";
@@ -12,11 +13,14 @@ import { Manifesto } from "./sections/Manifesto";
 import { PrivacySection } from "./sections/PrivacySection";
 import { ThreeForms } from "./sections/ThreeForms";
 import { WaitlistSection } from "./sections/WaitlistSection";
+import { useLandingEffects } from "./useLandingEffects";
 
-/** The landing page (spec 18). Complete as static HTML; effects attach later (M1a task 6). */
+/** The landing page (spec 18). Complete as static HTML; effects attach after hydration. */
 export function LandingPage({ appEnabled }: { appEnabled: boolean }) {
+  const root = useRef<HTMLDivElement>(null);
+  useLandingEffects(root);
   return (
-    <>
+    <div ref={root}>
       <title>Vlo · Write in flow</title>
       <SkipLink />
       <Nav />
@@ -44,6 +48,6 @@ export function LandingPage({ appEnabled }: { appEnabled: boolean }) {
         <WaitlistSection />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

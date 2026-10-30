@@ -94,6 +94,11 @@ describe("checkBundle (spec section 21, guardrail 5)", () => {
     ["/node_modules/three/src/Three.js", true],
     ["/node_modules/react/index.js", false],
     ["/home/u/vlo/src/ai-helpers/x.ts", false],
+    ["/node_modules/gsap/ScrollTrigger.js", true],
+    ["/node_modules/lenis/dist/lenis.mjs", true],
+    ["/node_modules/motion/dist/es/index.mjs", true],
+    ["/home/u/vlo/src/landing/effects/index.ts", true],
+    ["/home/u/vlo/src/landing/useLandingEffects.ts", false],
   ])("FORBIDDEN_IN_INITIAL matches %s: %s", (moduleId, expected) => {
     expect(FORBIDDEN_IN_INITIAL.some((pattern) => pattern.test(moduleId))).toBe(expected);
   });

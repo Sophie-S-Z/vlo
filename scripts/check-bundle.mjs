@@ -13,6 +13,12 @@ export const FORBIDDEN_IN_INITIAL = [
   /\/node_modules\/tweakpane\//,
   /\/node_modules\/@mlc-ai\/web-llm\//,
   /\/src\/ai\//,
+  /\/node_modules\/gsap\//,
+  /\/node_modules\/@gsap\//,
+  /\/node_modules\/lenis\//,
+  /\/node_modules\/motion\//,
+  /\/node_modules\/framer-motion\//,
+  /\/src\/landing\/effects\//,
 ];
 
 /** Writing-app code that must not ship at all while VITE_APP_ENABLED is off (spec section 7). */

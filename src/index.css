@@ -69,3 +69,40 @@
   animation: none;
   mix-blend-mode: normal;
 }
+
+/* Nav link underline (spec 18.1 item 4). Pure CSS, so it works without the effects chunk. */
+.nav-link {
+  background: linear-gradient(currentColor, currentColor) left bottom / 0 1px no-repeat;
+  transition: background-size 0.4s var(--vlo-ease);
+}
+.nav-link:hover,
+.nav-link:focus-visible {
+  background-size: 100% 1px;
+}
+
+/* Lenis smooth scroll (rules from lenis/dist/lenis.css, kept here so no extra stylesheet loads). */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* Custom cursor (spec 18.1 item 5). Only set while the effects run on a fine pointer. */
+html.has-custom-cursor,
+html.has-custom-cursor a,
+html.has-custom-cursor button,
+html.has-custom-cursor summary,
+html.has-custom-cursor label {
+  cursor: none;
+}
+
+/* Manifesto scroll fill (spec 18.3 p.02). The effects tween --fill from 0 to 1. Unread words
+   use the muted color, which still meets text contrast; without the effects, --fill is 1. */
+[data-word] {
+  color: color-mix(in srgb, var(--vlo-text) calc(var(--fill, 1) * 100%), var(--vlo-muted));
+}
