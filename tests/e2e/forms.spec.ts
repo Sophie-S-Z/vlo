@@ -20,7 +20,10 @@ test.describe("Three forms track (spec 18.3 p.04, M1c)", () => {
     const top = await section.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
     await page.evaluate((y) => window.scrollTo(0, y + 900), top);
     await expect.poll(() => trackX(page)).toBeLessThan(-200);
-    expect(await section.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(0);
+    const trackTop = page
+      .locator("[data-forms-track]")
+      .evaluate((el) => el.getBoundingClientRect().top);
+    expect(Math.round(await trackTop)).toBe(80);
   });
 
   test("phones keep the vertical stack with no horizontal scroll", async ({ page, isMobile }) => {
@@ -31,5 +34,36 @@ test.describe("Three forms track (spec 18.3 p.04, M1c)", () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+test.describe("Novel panel (spec 18.3 p.04, M1c)", () => {
+  test("dragging a card moves it and its thread follows", async ({ page, isMobile }) => {
+    test.skip(isMobile === true, "Mouse drag runs on desktop");
+    await startEffects(page);
+    const card = page.locator("[data-drag-card]").first();
+    const thread = page.locator('[data-thread="0"]');
+    await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    const box = (await card.boundingBox())!;
+    const before = await thread.getAttribute("x1");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 60, { steps: 8 });
+    await page.mouse.up();
+    await expect.poll(async () => (await card.boundingBox())!.y).toBeGreaterThan(box.y + 30);
+    expect(await thread.getAttribute("x1")).not.toBe(before);
+  });
+
+  test("Grid and Board switch with the keyboard", async ({ page }) => {
+    await startEffects(page);
+    const cards = page.getByRole("list", { name: "Scene cards" });
+    await page.getByRole("button", { name: "Grid" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(cards).toHaveAttribute("data-layout", "grid");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await expect(cards).toHaveAttribute("data-layout", "board");
+    await expect(page.locator("[data-thread]")).toHaveCount(5);
   });
 });
