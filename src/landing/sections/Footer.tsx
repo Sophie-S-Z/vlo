@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { SoundSwitch } from "@/audio/SoundSwitch";
 import { CalmSwitch } from "@/motion/CalmSwitch";
 import { ThemeSwitch } from "@/ui/theme/ThemeSwitch";
 import { TAGLINE } from "../copy";
@@ -50,6 +51,9 @@ export function Footer() {
             </li>
             <li>
               <ThemeSwitch />
+            </li>
+            <li>
+              <SoundSwitch />
             </li>
             <li>
               <CalmSwitch />

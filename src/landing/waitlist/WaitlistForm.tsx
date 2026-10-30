@@ -9,6 +9,7 @@ import {
   type WaitlistErrorCode,
   type WriterType,
 } from "./api";
+import { playPaper } from "@/audio/sound";
 import { HoldButton } from "./HoldButton";
 
 const ERROR_TEXT: Record<WaitlistErrorCode | "bot", string> = {
@@ -65,14 +66,14 @@ export function WaitlistForm({
     }
     setBusy(true);
     try {
-      setResult(
-        await join({
-          email,
-          writerType,
-          painPoint,
-          referredBy: parseReferral(window.location.search),
-        }),
-      );
+      const joined = await join({
+        email,
+        writerType,
+        painPoint,
+        referredBy: parseReferral(window.location.search),
+      });
+      playPaper();
+      setResult(joined);
     } catch (caught) {
       setError(ERROR_TEXT[caught instanceof WaitlistError ? caught.code : "unavailable"]);
     } finally {
