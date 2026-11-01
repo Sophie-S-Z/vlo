@@ -12,7 +12,7 @@ import { SplitText } from "gsap/SplitText";
  */
 gsap.registerPlugin(CustomEase, MorphSVGPlugin, ScrambleTextPlugin, ScrollTrigger, SplitText);
 
-/** Same curve as --vlo-ease in tokens.css. */
-export const VLO_EASE = CustomEase.create("vlo", "M0,0 C0.65,0 0.35,1 1,1");
+/** Registers the "vlo" ease: the same curve as --vlo-ease in tokens.css. */
+CustomEase.create("vlo", "M0,0 C0.65,0 0.35,1 1,1");
 
-export { gsap, MorphSVGPlugin, ScrollTrigger, SplitText };
+export { gsap, ScrollTrigger, SplitText };

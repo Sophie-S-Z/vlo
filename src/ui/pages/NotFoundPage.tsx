@@ -8,8 +8,8 @@ const DROP_DELAY_MS = 900;
 
 /**
  * 404 (spec 18.3): the letters of the heading drop under Matter.js, and visitors drag and throw
- * them. Screen readers get the heading as one piece of text. Reduced motion and Calm keep the
- * letters still.
+ * them. Screen readers get the heading as one piece of text. Calm keeps the letters still
+ * (ADR 0011: gentle mode keeps this motion).
  */
 export default function NotFoundPage() {
   const { reduced } = useMotionPreferences();

@@ -54,7 +54,6 @@ export function InkLab() {
       role="region"
       aria-label="Ink lab"
       tabIndex={-1}
-      data-ink-lab
       data-lenis-prevent
       onKeyDown={(event) => event.key === "Escape" && setInkLabOpen(false)}
       className="fixed right-4 bottom-4 z-50 w-72 rounded-card border border-rule bg-surface p-2 shadow-lg outline-none"

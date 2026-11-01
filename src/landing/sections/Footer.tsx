@@ -73,7 +73,6 @@ export function Footer() {
             <li>
               <button
                 type="button"
-                data-ink-lab-button
                 onClick={() => setInkLabOpen(true)}
                 className="inline-flex min-h-11 items-center uppercase underline-offset-4 hover:underline"
               >

@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/ui/lib/utils";
 
-export const PAGE_COUNT = 10;
-
 /** One landing "page" (spec 18.3). The page counter and the anchor glide read data-page. */
 export function Page({
   n,

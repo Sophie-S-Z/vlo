@@ -25,7 +25,6 @@ export function TiltButton() {
   return (
     <button
       type="button"
-      data-tilt-button
       aria-pressed={on}
       onClick={() => (on ? disableTilt() : void enableTilt())}
       className="hidden min-h-11 items-center rounded-full border border-rule px-4 font-mono text-xs tracking-wide uppercase pointer-coarse:inline-flex"
