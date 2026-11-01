@@ -92,6 +92,21 @@ Praneel's answers: 1B 2A 3A 4A 5A 6a,b,c,d. Plan: `docs/plans/M1e.md`. ADRs 0011
 | Bundle guardrail | Pass: initial JS 123 KB gzipped                  |
 | Code review      | See the M1e review notes below                   |
 
+## Code quality review (2026-11-01)
+
+Report: `docs/reviews/2026-11-01-code-quality.md`. ADR 0014.
+
+- Fixed: the cursor "Hold" label never showed (`data-hold` on the hold button); a flaky effects test under load; the hero word swap without an `Element.animate` check.
+- Removed: `src/app/flags.ts` (its table test now runs against `appLoader.ts`), `@gsap/react`, `class-variance-authority`, three unused exports, five unused `data-*` hooks.
+- Merged: theme swatch colors (`THEME_SWATCHES`, checked against `tokens.css`); the two canvas mask functions.
+- No Lovable files or shadcn/ui primitives are in the repository.
+
+| Check            | Result                              |
+| ---------------- | ----------------------------------- |
+| Unit tests       | Pass: 208 tests                     |
+| E2E with axe     | Pass: 150 tests, desktop and 360 px |
+| Bundle guardrail | Pass: initial JS 124 KB gzipped     |
+
 ## Gate status (M0)
 
 | Check                               | Status                                                                           |

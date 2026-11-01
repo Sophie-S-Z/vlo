@@ -1,12 +1,13 @@
 # Handoff
 
-Updated: 2026-10-30.
+Updated: 2026-11-01.
 
 ## Done
 
 - M0 complete; PR #1 merged.
 - M1a to M1d are done on `claude/project-thread-mnsg2f`, draft PR #2. Details and gate tables: `docs/PROGRESS.md`.
 - M1e (merge with Praneel's Lovable landing page) is done on the same branch. Plan `docs/plans/M1e.md`; ADRs 0011 to 0013.
+- Code quality review on `claude/project-thread-6o3q37` (based on the M1 branch): `docs/reviews/2026-11-01-code-quality.md`, ADR 0014.
 
 ## In progress
 
@@ -46,3 +47,5 @@ CHROME_PATH=/opt/pw-browsers/chromium npm run lhci
 - `lenis.resize()` runs after each ScrollTrigger refresh and before each glide; without it, glides stop short after the pins add spacers.
 - Never `pkill -f "vite preview"`: it kills the shell that runs it.
 - A ScrollTrigger refresh moves each pin out of its spacer and back, which drops focus. `keepFocus()` in `src/landing/effects/index.ts` gives focus back; keep it when you add pins.
+- Cursor labels: `CURSOR_LABELS` in `src/landing/effects/pointer.ts`. `LandingPage.test.tsx` fails when a label selector matches no landing markup.
+- Unit tests that wait for lazy effects need long `vi.waitFor` timeouts and a teardown in `finally` (`src/landing/effects/index.test.ts`).
