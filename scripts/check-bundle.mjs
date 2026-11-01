@@ -24,7 +24,7 @@ export const FORBIDDEN_IN_INITIAL = [
 ];
 
 /** Writing-app code that must not ship at all while VITE_APP_ENABLED is off (spec section 7). */
-export const HIDDEN_APP_MODULES = [/\/src\/app\/(?!flags\.ts$)/];
+export const HIDDEN_APP_MODULES = [/\/src\/app\//];
 
 /**
  * @param {{ dist: string; moduleMap: string; maxGzipKb: number; forbidden?: RegExp[]; forbiddenAnywhere?: RegExp[] }} options

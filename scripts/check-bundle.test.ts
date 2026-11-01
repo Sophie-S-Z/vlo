@@ -78,7 +78,7 @@ describe("checkBundle (spec section 21, guardrail 5)", () => {
 
   it("fails when hidden app code is built at all, even in a lazy chunk", () => {
     const paths = fixture({
-      "assets/index.js": chunk(["/src/main.tsx", "/home/u/vlo/src/app/flags.ts"], {
+      "assets/index.js": chunk(["/src/main.tsx", "/home/u/vlo/src/appLoader.ts"], {
         isEntry: true,
       }),
       "assets/AppShell.js": chunk(["/home/u/vlo/src/app/AppShell.tsx"]),

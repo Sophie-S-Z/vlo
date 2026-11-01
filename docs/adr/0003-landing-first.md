@@ -18,7 +18,7 @@ Section 22 orders the landing page and waitlist (M1) before the writing app (M2)
 
 ## Amendment (M0 review)
 
-`src/App.tsx` compares `import.meta.env.VITE_APP_ENABLED === "true"` inline, so the build drops the app chunk when the flag is off. A flag-off build must contain no `src/app/` module except `flags.ts`; `npm run check:bundle` fails otherwise.
+`src/appLoader.ts` compares `import.meta.env.VITE_APP_ENABLED === "true"` inline, so the build drops the app chunk when the flag is off. A flag-off build must contain no `src/app/` module; `npm run check:bundle` fails otherwise. `src/appLoader.test.ts` checks the flag values.
 
 ## Amendment (M0 CI): prerender the landing page
 
