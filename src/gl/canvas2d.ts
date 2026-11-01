@@ -24,23 +24,34 @@ export function drawGlyphAtlas(font: string): HTMLCanvasElement {
   return canvas;
 }
 
-/** The "Vlo" wordmark as an alpha bitmap for the shape sampler. */
-export function drawWordmarkMask(font: string): Mask {
-  const width = 360;
-  const height = 140;
+/** Mask size shared by the wordmark and the visitor's first line, so both fill the same box. */
+const MASK_WIDTH = 360;
+const MASK_HEIGHT = 140;
+
+/** Runs `draw` with white, centered text on a mask-sized canvas and returns its alpha channel. */
+function textMask(draw: (context: CanvasRenderingContext2D) => void): Mask {
+  const width = MASK_WIDTH;
+  const height = MASK_HEIGHT;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d", { willReadFrequently: true })!;
   context.fillStyle = "#fff";
-  context.font = `120px ${font}`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText("Vlo", width / 2, height / 2 + 6);
+  draw(context);
   const data = context.getImageData(0, 0, width, height).data;
   const alpha = new Uint8Array(width * height);
   for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]!;
   return { width, height, alpha };
+}
+
+/** The "Vlo" wordmark as an alpha bitmap for the shape sampler. */
+export function drawWordmarkMask(font: string): Mask {
+  return textMask((context) => {
+    context.font = `120px ${font}`;
+    context.fillText("Vlo", MASK_WIDTH / 2, MASK_HEIGHT / 2 + 6);
+  });
 }
 
 /** Characters per line before the visitor's first line wraps. */
@@ -51,31 +62,21 @@ const LINE_WIDTH = 22;
  * lines, sized to fill the same box.
  */
 export function drawLineMask(text: string, font: string): Mask {
-  const width = 360;
-  const height = 140;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d", { willReadFrequently: true })!;
   const lines = wrapLine(text, LINE_WIDTH);
-  let size = Math.floor(height / Math.max(1, lines.length) / 1.15);
-  // Fraunces changes its width with the optical size, so the fit takes a few rounds.
-  for (let round = 0; round < 4; round++) {
+  return textMask((context) => {
+    const fit = MASK_WIDTH * 0.96;
+    let size = Math.floor(MASK_HEIGHT / Math.max(1, lines.length) / 1.15);
+    // Fraunces changes its width with the optical size, so the fit takes a few rounds.
+    for (let round = 0; round < 4; round++) {
+      context.font = `${size}px ${font}`;
+      const widest = Math.max(1, ...lines.map((line) => context.measureText(line).width));
+      if (widest <= fit) break;
+      size = Math.max(10, Math.floor(size * (fit / widest)));
+    }
     context.font = `${size}px ${font}`;
-    const widest = Math.max(1, ...lines.map((line) => context.measureText(line).width));
-    if (widest <= width * 0.96) break;
-    size = Math.max(10, Math.floor(size * ((width * 0.96) / widest)));
-  }
-  context.font = `${size}px ${font}`;
-  context.fillStyle = "#fff";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  const step = size * 1.1;
-  lines.forEach((line, i) => {
-    context.fillText(line, width / 2, height / 2 + (i - (lines.length - 1) / 2) * step);
+    const step = size * 1.1;
+    lines.forEach((line, i) => {
+      context.fillText(line, MASK_WIDTH / 2, MASK_HEIGHT / 2 + (i - (lines.length - 1) / 2) * step);
+    });
   });
-  const data = context.getImageData(0, 0, width, height).data;
-  const alpha = new Uint8Array(width * height);
-  for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]!;
-  return { width, height, alpha };
 }
