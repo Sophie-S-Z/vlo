@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { THEME_SWATCHES, THEMES } from "./theme/ThemeProvider";
 
 const css = readFileSync(resolve(process.cwd(), "src/ui/tokens.css"), "utf8");
 
@@ -24,6 +25,12 @@ describe("design tokens (spec section 16)", () => {
   ])("%s has the exact palette", (selector, palette) => {
     for (const [key, hex] of Object.entries(palette)) {
       expect(value(selector, `--vlo-${key}`)).toBe(hex);
+    }
+  });
+
+  it("matches each theme swatch to that theme's background", () => {
+    for (const theme of THEMES) {
+      expect(THEME_SWATCHES[theme]).toBe(value(`[data-theme="${theme}"]`, "--vlo-bg"));
     }
   });
 

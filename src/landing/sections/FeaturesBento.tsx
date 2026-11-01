@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { THEME_SWATCHES, THEMES } from "@/ui/theme/ThemeProvider";
 import { FEATURES } from "../copy";
 import { Eyebrow, Page } from "./Page";
 
@@ -25,12 +26,9 @@ export function FeaturesBento() {
             value={version}
             onChange={(event) => setVersion(Number(event.target.value))}
             aria-label="Snapshot version"
-            data-snapshot-slider
             className="w-full accent-[var(--vlo-accent)]"
           />
-          <p className="mt-2 font-mono text-xs text-muted">
-            Version <span data-snapshot-value>{version}</span> of 5
-          </p>
+          <p className="mt-2 font-mono text-xs text-muted">Version {version} of 5</p>
         </Tile>
         <Tile title={t.formats}>
           <p
@@ -73,11 +71,11 @@ export function FeaturesBento() {
         </Tile>
         <Tile title={t.themes}>
           <div data-theme-flip className="flex gap-2" aria-hidden="true">
-            {["#0E0D0C", "#F5F1E8", "#121110", "#EFE3CC"].map((c) => (
+            {THEMES.map((theme) => (
               <span
-                key={c}
+                key={theme}
                 className="size-6 rounded-full border border-rule"
-                style={{ background: c }}
+                style={{ background: THEME_SWATCHES[theme] }}
               />
             ))}
           </div>

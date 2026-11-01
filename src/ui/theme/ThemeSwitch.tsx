@@ -1,18 +1,12 @@
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/ui/lib/utils";
-import { THEMES, useTheme, type ThemeName } from "./ThemeProvider";
+import { THEME_SWATCHES, THEMES, useTheme, type ThemeName } from "./ThemeProvider";
 
 const LABELS: Record<ThemeName, string> = {
   ink: "Ink",
   paper: "Paper",
   night: "Night",
   sepia: "Sepia",
-};
-const SWATCH: Record<ThemeName, string> = {
-  ink: "#0E0D0C",
-  paper: "#F5F1E8",
-  night: "#121110",
-  sepia: "#EFE3CC",
 };
 
 /** Radio group of themes with roving focus (arrow keys move and select). */
@@ -71,7 +65,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
               "block size-4 rounded-full border border-rule",
               theme === name && "ring-2 ring-accent ring-offset-2 ring-offset-bg",
             )}
-            style={{ background: SWATCH[name] }}
+            style={{ background: THEME_SWATCHES[name] }}
           />
         </button>
       ))}

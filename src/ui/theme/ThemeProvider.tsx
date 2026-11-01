@@ -14,6 +14,14 @@ import { getStoredValue, setStoredValue, subscribeStoredValues } from "@/ui/lib/
 export const THEMES = ["ink", "paper", "night", "sepia"] as const;
 export type ThemeName = (typeof THEMES)[number];
 
+/** Each theme's page color, for swatches that preview a theme other than the current one. */
+export const THEME_SWATCHES: Record<ThemeName, string> = {
+  ink: "#0E0D0C",
+  paper: "#F5F1E8",
+  night: "#121110",
+  sepia: "#EFE3CC",
+};
+
 /** The landing site and the writing app keep separate theme choices (spec section 16). */
 export type ThemeScope = "landing" | "app";
 const DEFAULT_THEME: Record<ThemeScope, ThemeName> = { landing: "ink", app: "paper" };
