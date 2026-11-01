@@ -14,7 +14,10 @@ export function hero(root: HTMLElement): Teardown {
 
   const rotator = root.querySelector<HTMLElement>("[data-rotate]");
   const words = rotator?.dataset.rotate?.split("|") ?? [];
-  if (rotator && words.length > 1) stops.push(rotateWords(rotator, words));
+  // Like springTo, skip the swap where Element.animate is missing (older browsers, jsdom).
+  if (rotator && words.length > 1 && typeof rotator.animate === "function") {
+    stops.push(rotateWords(rotator, words));
+  }
 
   for (const badge of root.querySelectorAll("[data-spin]")) {
     gsap.to(badge, {

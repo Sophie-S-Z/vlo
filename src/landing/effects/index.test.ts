@@ -35,17 +35,23 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("startLandingEffects", () => {
+// The later effects load through import(). A cold or busy test run can take seconds to
+// transform those modules, so the waits allow far more than vi.waitFor's 1 s default.
+const LOAD = { timeout: 10_000 };
+
+describe("startLandingEffects", { timeout: 15_000 }, () => {
   it("creates scroll triggers, smooth scroll and a cursor, then removes all of them", async () => {
     const root = mountPage();
     const teardown = startLandingEffects(root);
-
-    expect(document.documentElement.classList.contains("lenis")).toBe(true);
-    await vi.waitFor(() => expect(document.documentElement.dataset.effects).toBe("ready"));
-    expect(ScrollTrigger.getAll().length).toBeGreaterThan(0);
-    expect(document.querySelector("[data-cursor]")).not.toBeNull();
-
-    teardown();
+    try {
+      expect(document.documentElement.classList.contains("lenis")).toBe(true);
+      await vi.waitFor(() => expect(document.documentElement.dataset.effects).toBe("ready"), LOAD);
+      expect(ScrollTrigger.getAll().length).toBeGreaterThan(0);
+      expect(document.querySelector("[data-cursor]")).not.toBeNull();
+    } finally {
+      // A failure above must not leave triggers behind for the next tests.
+      teardown();
+    }
 
     expect(ScrollTrigger.getAll()).toHaveLength(0);
     expect(document.documentElement.classList.contains("lenis")).toBe(false);
@@ -80,9 +86,12 @@ describe("startLandingEffects", () => {
     const root = mountPage();
     const marquee = root.querySelector("[data-marquee]")!;
     const teardown = startLandingEffects(root);
-    expect(gsap.getTweensOf(marquee)).toHaveLength(0);
-    await vi.waitFor(() => expect(gsap.getTweensOf(marquee).length).toBeGreaterThan(0));
-    teardown();
+    try {
+      expect(gsap.getTweensOf(marquee)).toHaveLength(0);
+      await vi.waitFor(() => expect(gsap.getTweensOf(marquee).length).toBeGreaterThan(0), LOAD);
+    } finally {
+      teardown();
+    }
     expect(gsap.getTweensOf(marquee)).toHaveLength(0);
 
     const again = startLandingEffects(root);
