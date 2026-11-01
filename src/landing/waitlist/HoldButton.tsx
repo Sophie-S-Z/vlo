@@ -60,7 +60,7 @@ export function HoldButton({
         onPointerCancel={stop}
         onContextMenu={(event) => event.preventDefault()}
         onClick={onClick}
-        data-holding={holding || undefined}
+        data-hold
         className={cn("touch-manipulation select-none", className)}
       >
         <svg viewBox="0 0 20 20" className="mr-3 size-5 -rotate-90" aria-hidden="true">

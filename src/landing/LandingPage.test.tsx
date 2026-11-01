@@ -52,6 +52,15 @@ describe("LandingPage (spec 18.3)", () => {
     const faq = screen.getByRole("region", { name: "Questions" });
     expect(within(faq).getAllByRole("group")).toHaveLength(5);
   });
+
+  it("has a target for every cursor label (spec 18.1 item 5)", async () => {
+    // gsap reads matchMedia on import, so the module loads after the mock.
+    const { CURSOR_LABELS } = await import("./effects/pointer");
+    renderLanding();
+    for (const [selector] of CURSOR_LABELS) {
+      expect(document.querySelector(selector), selector).not.toBeNull();
+    }
+  });
 });
 
 describe("WaitlistSection count (spec 18.4)", () => {

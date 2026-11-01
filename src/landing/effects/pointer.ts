@@ -1,7 +1,8 @@
 import { gsap } from "@/motion/gsap";
 import { finePointer, gentleMotion, keepChildren, listen, type Teardown } from "./types";
 
-const LABELS: [selector: string, label: string][] = [
+/** Cursor ring labels and the elements that show them. */
+export const CURSOR_LABELS: [selector: string, label: string][] = [
   ["[data-drag-card]", "Drag"],
   ["[data-tilt]", "Open"],
   ["[data-hold]", "Hold"],
@@ -41,7 +42,7 @@ export function cursor(): Teardown | void {
     ringX(event.clientX);
     ringY(event.clientY);
     const target = event.target as Element | null;
-    const next = LABELS.find(([selector]) => target?.closest(selector))?.[1] ?? "";
+    const next = CURSOR_LABELS.find(([selector]) => target?.closest(selector))?.[1] ?? "";
     if (next !== label) {
       label = next;
       ring.textContent = label;
