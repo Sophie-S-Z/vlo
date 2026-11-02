@@ -19,7 +19,7 @@ export function projectTransitionName(id: string): string {
 
 export function ProjectCard({ project, wordCount, onRename, onDelete }: ProjectCardProps) {
   return (
-    <ViewTransition name={projectTransitionName(project.id)}>
+    <ViewTransition name={projectTransitionName(project.id)} update="none">
       <li className="group relative flex min-h-40 flex-col rounded-[var(--radius-card)] border border-rule bg-surface p-5 transition-shadow hover:shadow-[var(--shadow-hover)] focus-within:shadow-[var(--shadow-hover)]">
         <p className="text-xs font-medium tracking-wide text-muted uppercase">
           {TEMPLATES[project.template].label}

@@ -1,0 +1,235 @@
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { TEMPLATES } from '@/features/library/templates';
+import type { Item, ItemKind, Project, Status } from '@/lib/db';
+import { Button } from '@/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
+import { BinderItem, INDENT_PX, type BinderItemActions } from './BinderItem';
+import { ItemDialogs, type ItemAction } from './ItemDialogs';
+import { addItem, moveItem, nextTitle, updateItem } from './items';
+import {
+  descendantIds,
+  flattenTree,
+  indentTarget,
+  moveTarget,
+  outdentTarget,
+  projectDrop,
+  type FlatNode,
+  type Placement,
+} from './tree';
+
+interface BinderProps {
+  project: Project;
+  items: Item[];
+  openItemId: string | null;
+  onOpen: (itemId: string) => void;
+}
+
+const INSTRUCTIONS =
+  'To pick up an item, press Space or Enter. Use the arrow keys to move it. Press Space or Enter again to drop it, or Escape to cancel. The item menu also has Move up, Move down, Indent and Outdent.';
+
+/** "Scene 2 moved. It is now 1 of 2 in Chapter 1." */
+function describeMove(nodes: readonly FlatNode[], item: Item, placement: Placement): string {
+  const siblings = nodes
+    .filter((n) => n.parentId === placement.parentId && n.item.id !== item.id)
+    .map((n) => n.item.order);
+  const position = siblings.filter((order) => order < placement.order).length + 1;
+  const parent = nodes.find((n) => n.item.id === placement.parentId)?.item.title ?? 'the top level';
+  return `${item.title} moved. It is now ${String(position)} of ${String(siblings.length + 1)} in ${parent}.`;
+}
+
+export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
+  const template = TEMPLATES[project.template];
+  const nodes = useMemo(() => flattenTree(items), [items]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [offsetX, setOffsetX] = useState(0);
+  const [message, setMessage] = useState('');
+  const [action, setAction] = useState<ItemAction>(null);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const hidden = useMemo(
+    () => (activeId ? descendantIds(nodes, activeId) : new Set<string>()),
+    [nodes, activeId],
+  );
+  const visible = nodes.filter((n) => !hidden.has(n.item.id));
+  const offsetDepth = Math.round(offsetX / INDENT_PX);
+  const projection = activeId && overId ? projectDrop(nodes, activeId, overId, offsetDepth, template) : null;
+  const titleOf = (id: string | number) => nodes.find((n) => n.item.id === id)?.item.title ?? 'Item';
+
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${titleOf(active.id)}.`,
+    // A drag starts over its own row. Saying so would cut off "Picked up", so only real moves speak.
+    onDragOver: ({ active, over }) => {
+      if (!over) return `${titleOf(active.id)} is outside the binder.`;
+      return over.id === active.id ? undefined : `${titleOf(active.id)} is over ${titleOf(over.id)}.`;
+    },
+    onDragEnd: () => undefined,
+    onDragCancel: ({ active }) => `Moving ${titleOf(active.id)} was cancelled.`,
+  };
+
+  function reset() {
+    setActiveId(null);
+    setOverId(null);
+    setOffsetX(0);
+  }
+
+  async function place(item: Item, placement: Placement | null) {
+    if (!placement) return;
+    await moveItem(item.id, placement.parentId, placement.order);
+    setMessage(describeMove(nodes, item, placement));
+  }
+
+  async function dragEnd(event: DragEndEvent) {
+    const id = String(event.active.id);
+    const over = event.over ? String(event.over.id) : null;
+    const node = nodes.find((n) => n.item.id === id);
+    reset();
+    if (!node || !over) return;
+    const placement = projectDrop(nodes, id, over, Math.round(event.delta.x / INDENT_PX), template);
+    if (!placement) {
+      setMessage(`${node.item.title} cannot go there. Nothing moved.`);
+      return;
+    }
+    // Dropped where it started: nothing moves.
+    if (over === id && placement.parentId === node.parentId) return;
+    await place(node.item, placement);
+  }
+
+  async function add(parentId: string | null, kind: ItemKind) {
+    const label = template.kindLabel[kind] ?? kind;
+    const item = await addItem(project.id, parentId, kind, await nextTitle(project.id, kind, label));
+    setMessage(`Added ${item.title}.`);
+    if (template.editorKind(kind) !== null) onOpen(item.id);
+  }
+
+  function actionsFor(node: FlatNode): BinderItemActions {
+    const { item } = node;
+    const up = moveTarget(nodes, item.id, 'up');
+    const down = moveTarget(nodes, item.id, 'down');
+    const indent = indentTarget(nodes, item.id, template);
+    const outdent = outdentTarget(nodes, item.id, template);
+    return {
+      open: () => {
+        onOpen(item.id);
+      },
+      rename: () => {
+        setAction({ type: 'rename', item, hasChildren: false });
+      },
+      synopsis: () => {
+        setAction({ type: 'synopsis', item, hasChildren: false });
+      },
+      remove: () => {
+        setAction({ type: 'delete', item, hasChildren: nodes.some((n) => n.parentId === item.id) });
+      },
+      setStatus: (status: Status) => {
+        void updateItem(item.id, { status });
+      },
+      addChild: (kind: ItemKind) => {
+        void add(item.id, kind);
+      },
+      moveUp: up && (() => void place(item, up)),
+      moveDown: down && (() => void place(item, down)),
+      indent: indent && (() => void place(item, indent)),
+      outdent: outdent && (() => void place(item, outdent)),
+    };
+  }
+
+  const rootKinds = template.childKinds.root ?? [];
+
+  return (
+    <nav aria-label="Binder" className="grid gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-display text-xl font-semibold">Binder</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" aria-label="Add to binder">
+              <Plus aria-hidden="true" className="size-4" />
+              Add
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {rootKinds.map((kind) => (
+              <DropdownMenuItem
+                key={kind}
+                onSelect={() => {
+                  void add(null, kind);
+                }}
+              >
+                {template.kindLabel[kind] ?? kind}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        accessibility={{ announcements, screenReaderInstructions: { draggable: INSTRUCTIONS } }}
+        onDragStart={({ active }) => {
+          setActiveId(String(active.id));
+          setOverId(String(active.id));
+        }}
+        onDragMove={({ delta }) => {
+          setOffsetX(delta.x);
+        }}
+        onDragOver={({ over }) => {
+          setOverId(over ? String(over.id) : null);
+        }}
+        onDragEnd={(event) => void dragEnd(event)}
+        onDragCancel={reset}
+      >
+        <SortableContext items={visible.map((n) => n.item.id)} strategy={verticalListSortingStrategy}>
+          <ul aria-label="Binder items" className="grid gap-0.5">
+            {visible.map((node) => {
+              const dragging = node.item.id === activeId;
+              return (
+                <BinderItem
+                  key={node.item.id}
+                  item={node.item}
+                  depth={dragging ? (projection?.depth ?? node.depth) : node.depth}
+                  template={template}
+                  isOpen={node.item.id === openItemId}
+                  refused={dragging && overId !== null && projection === null}
+                  actions={actionsFor(node)}
+                />
+              );
+            })}
+          </ul>
+        </SortableContext>
+      </DndContext>
+
+      <p role="status" aria-live="polite" className="sr-only">
+        {message}
+      </p>
+
+      <ItemDialogs
+        action={action}
+        onClose={() => {
+          setAction(null);
+        }}
+        onDeleted={(item) => {
+          setMessage(`Deleted ${item.title}.`);
+        }}
+      />
+    </nav>
+  );
+}

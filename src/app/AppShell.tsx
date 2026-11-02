@@ -1,4 +1,4 @@
-import { useRef, ViewTransition } from 'react';
+import { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
@@ -55,12 +55,7 @@ export function AppShell() {
         tabIndex={-1}
         className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 outline-none"
       >
-        {/* React animates route changes inside this boundary (React Router 8 view transitions). */}
-        <ViewTransition>
-          <div>
-            <Outlet />
-          </div>
-        </ViewTransition>
+        <Outlet />
       </main>
       <footer className="border-t border-rule">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm text-muted">

@@ -7,6 +7,9 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | Package | Version | License | Used at |
 | --- | --- | --- | --- |
 | @axe-core/playwright | 4.14.0 | MPL-2.0 | build and test |
+| @dnd-kit/core | 6.3.1 | MIT | runtime |
+| @dnd-kit/sortable | 10.0.0 | MIT | runtime |
+| @dnd-kit/utilities | 3.2.2 | MIT | runtime |
 | @eslint/js | 9.39.5 | MIT | build and test |
 | @fontsource-variable/fraunces | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | runtime |
@@ -23,6 +26,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | class-variance-authority | 0.7.1 | Apache-2.0 | runtime |
 | clsx | 2.1.1 | MIT | runtime |
 | dexie | 4.4.7 | Apache-2.0 | runtime |
+| dexie-react-hooks | 4.4.0 | Apache-2.0 | runtime |
 | eslint | 9.39.5 | MIT | build and test |
 | eslint-plugin-jsx-a11y | 6.10.2 | MIT | build and test |
 | eslint-plugin-react-hooks | 7.1.1 | MIT | build and test |
