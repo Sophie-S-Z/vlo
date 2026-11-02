@@ -30,7 +30,20 @@ export function parsePreferences(raw: string | null): Preferences {
   }
 }
 
-export function loadPreferences(storage: Storage): Preferences {
+/**
+ * Returns window.localStorage, or null when the browser blocks site data.
+ * In that case the getter itself throws a SecurityError.
+ */
+export function safeStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function loadPreferences(storage: Storage | null): Preferences {
+  if (!storage) return { ...DEFAULT_PREFERENCES };
   try {
     return parsePreferences(storage.getItem(PREFERENCES_KEY));
   } catch {
@@ -38,7 +51,8 @@ export function loadPreferences(storage: Storage): Preferences {
   }
 }
 
-export function savePreferences(storage: Storage, prefs: Preferences): void {
+export function savePreferences(storage: Storage | null, prefs: Preferences): void {
+  if (!storage) return;
   try {
     storage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
   } catch {

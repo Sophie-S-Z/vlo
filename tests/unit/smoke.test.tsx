@@ -20,3 +20,18 @@ test('App renders the Vlo wordmark and the Library', async () => {
   expect(screen.getByRole('link', { name: 'Vlo' })).toBeTruthy();
   expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy();
 });
+
+test('a render error outside the router shows the root error screen', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const { RootErrorBoundary } = await import('@/app/RootErrorBoundary');
+  const Boom = () => {
+    throw new Error('boom');
+  };
+  render(
+    <RootErrorBoundary>
+      <Boom />
+    </RootErrorBoundary>,
+  );
+  expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Reload Vlo' })).toBeTruthy();
+});

@@ -4,6 +4,7 @@ import {
   loadPreferences,
   parsePreferences,
   resolveTheme,
+  safeStorage,
   savePreferences,
   type Preferences,
   type ResolvedTheme,
@@ -22,7 +23,7 @@ interface PreferencesContextValue {
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
-  const [prefs, setPrefs] = useState<Preferences>(() => loadPreferences(window.localStorage));
+  const [prefs, setPrefs] = useState<Preferences>(() => loadPreferences(safeStorage()));
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)');
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const resolvedTheme = resolveTheme(prefs.theme, systemDark);
@@ -46,7 +47,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const update = useCallback((patch: Partial<Preferences>) => {
     setPrefs((current) => {
       const next = { ...current, ...patch };
-      savePreferences(window.localStorage, next);
+      savePreferences(safeStorage(), next);
       return next;
     });
   }, []);
