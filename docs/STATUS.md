@@ -42,6 +42,17 @@ Last update: 2026-11-02
   writer's own change, and a cleared storage resets them. The app checks for an update each hour while online.
   An open editor takes a new name at once after a rename. `engines.node` is `22.x`, and Tailwind is a
   development package.
+- Gate 1 tests: fixtures for the novel and memoir (spec section 15), a seeded 100,000-word project (40 chapters,
+  120 scenes, 30 poems, one 10,000-word scene), a poem round trip that compares every character and hanging
+  indent after reload, and the performance budgets. Local Chromium results on the 100,000-word project:
+  - Open the 10,000-word scene from the binder: about 90 ms (budget 300 ms). On the phone layout, about 150 ms.
+  - Keystroke to the next frame, 95th percentile of 200 keys: about 15 ms (budget 50 ms).
+  - Only the open item's `vlo-item-*` database opens.
+  - A cold page load straight to the scene, app start included: 380 to 460 ms. The test logs it and does not
+    hold it to the budget. The binder's 191 rows (about 4,000 DOM nodes) take about 140 ms of that.
+  - Manuscript blocks use `content-visibility: auto`, which took about 60 ms off the open.
+- Initial JavaScript: 186,872 bytes gzip (budget 250,000). Project route chunk: 196,039 bytes gzip. Command
+  menu: 11,043 bytes. History panel: 4,823 bytes.
 
 ## In progress
 

@@ -11,6 +11,15 @@
   overflow-wrap: break-word;
 }
 
+/*
+ * Blocks far off screen skip layout and paint until they come near, so a 10,000-word item opens and
+ * types fast. The browser keeps each block's last measured height, so the scroll bar stays steady.
+ */
+.vlo-manuscript > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 6lh;
+}
+
 .vlo-manuscript:focus-visible {
   outline: none;
 }

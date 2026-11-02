@@ -4,6 +4,7 @@ const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  globalSetup: './tests/e2e/support/global-setup.ts',
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,

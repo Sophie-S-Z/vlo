@@ -22,5 +22,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "tests/unit", "scripts/*.d.mts"]
+  "include": ["src", "tests/unit", "tests/fixtures", "scripts/*.d.mts"]
 }
