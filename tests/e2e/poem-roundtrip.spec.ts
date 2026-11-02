@@ -55,9 +55,10 @@ test('Gate 1: the poem fixture survives paste, a hanging indent, save and reload
   await editor(page).evaluate((element, text) => {
     const data = new DataTransfer();
     data.setData('text/plain', text);
-    element.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
-    );
+    const paste = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+    // Firefox ignores `clipboardData` in the event options, so the data goes on the event itself.
+    Object.defineProperty(paste, 'clipboardData', { value: data });
+    element.dispatchEvent(paste);
   }, fixture);
   await expect(editor(page).locator('[data-poem-line]')).toHaveCount(expected.flat().length);
 

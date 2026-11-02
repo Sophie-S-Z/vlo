@@ -12,6 +12,10 @@ declare global {
     __itemOpens: string[];
     /** When each item database finished opening, for the stage timings in the log. */
     __itemOpenedAt: number[];
+    /** When the stored updates of an item finished loading. */
+    __itemReadAt: number[];
+    /** When a new manuscript element went into the page, at the end of the task that built it. */
+    __manuscriptAt: number[];
     __keyDelays: number[];
     /** Calls `done` once the next frame has rendered. */
     __afterPaint: (done: () => void) => void;
@@ -22,7 +26,34 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.__itemOpens = [];
     window.__itemOpenedAt = [];
+    window.__itemReadAt = [];
+    window.__manuscriptAt = [];
     window.__keyDelays = [];
+    const store = IDBObjectStore.prototype;
+    // The wrapper below calls it with the store as `this`.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const getAll = store.getAll;
+    store.getAll = function (this: IDBObjectStore, ...args: Parameters<IDBObjectStore['getAll']>) {
+      const request = getAll.apply(this, args);
+      if (this.name === 'updates' && this.transaction.db.name.startsWith('vlo-item-')) {
+        request.addEventListener('success', () => {
+          window.__itemReadAt.push(performance.now());
+        });
+      }
+      return request;
+    };
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (
+            node instanceof Element &&
+            (node.matches('.vlo-manuscript') || node.querySelector('.vlo-manuscript'))
+          ) {
+            window.__manuscriptAt.push(performance.now());
+          }
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
     const factory = IDBFactory.prototype;
     const open = factory.open.bind(indexedDB);
     factory.open = (name: string, version?: number) => {
@@ -94,44 +125,51 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
   await page.evaluate(() => {
     window.__itemOpens = [];
     window.__itemOpenedAt = [];
+    window.__itemReadAt = [];
+    window.__manuscriptAt = [];
   });
   const open = await page.evaluate(
     ({ title, end }) =>
-      new Promise<{ total: number; database: number; editor: number }>((resolve, reject) => {
-        const button = [...document.querySelectorAll<HTMLButtonElement>('[data-binder-title]')].find(
-          (b) => b.textContent === title,
-        );
-        if (!button) {
-          reject(new Error(`No binder button for ${title}`));
-          return;
-        }
-        const old = document.querySelector('.vlo-manuscript');
-        let editorAt = 0;
-        const start = performance.now();
-        button.click();
-        // Done when the scene's last words are in the editor and the browser reaches the next frame.
-        const check = (now: number) => {
-          const manuscript = document.querySelector('.vlo-manuscript');
-          if (!editorAt && manuscript && manuscript !== old) editorAt = now;
-          if (manuscript?.lastElementChild?.textContent.endsWith(end)) {
-            // The text is in the page. Stop the clock once the browser has painted it.
-            window.__afterPaint(() => {
-              resolve({
-                total: performance.now() - start,
-                database: (window.__itemOpenedAt[0] ?? start) - start,
-                editor: (editorAt || now) - start,
+      new Promise<{ total: number; database: number; read: number; built: number; editor: number }>(
+        (resolve, reject) => {
+          const button = [...document.querySelectorAll<HTMLButtonElement>('[data-binder-title]')].find(
+            (b) => b.textContent === title,
+          );
+          if (!button) {
+            reject(new Error(`No binder button for ${title}`));
+            return;
+          }
+          const old = document.querySelector('.vlo-manuscript');
+          let editorAt = 0;
+          const start = performance.now();
+          button.click();
+          // Done when the scene's last words are in the editor and the browser reaches the next frame.
+          const check = () => {
+            const manuscript = document.querySelector('.vlo-manuscript');
+            if (!editorAt && manuscript && manuscript !== old) editorAt = performance.now();
+            if (manuscript?.lastElementChild?.textContent.endsWith(end)) {
+              // The text is in the page. Stop the clock once the browser has painted it.
+              window.__afterPaint(() => {
+                resolve({
+                  total: performance.now() - start,
+                  database: (window.__itemOpenedAt[0] ?? start) - start,
+                  read: (window.__itemReadAt[0] ?? start) - start,
+                  built: (window.__manuscriptAt[0] ?? start) - start,
+                  editor: (editorAt || performance.now()) - start,
+                });
               });
-            });
-          } else requestAnimationFrame(check);
-        };
-        requestAnimationFrame(check);
-      }),
+            } else requestAnimationFrame(check);
+          };
+          requestAnimationFrame(check);
+        },
+      ),
     { title: seeded.longSceneTitle, end: seeded.longSceneEnd },
   );
   const contentVisibility = await page.evaluate(() => CSS.supports('content-visibility', 'auto'));
   console.log(
     `[${browserName}] open the 10,000-word scene from the binder: ${open.total.toFixed(0)} ms ` +
-      `(database open at ${open.database.toFixed(0)} ms, new editor at ${open.editor.toFixed(0)} ms, ` +
+      `(database open at ${open.database.toFixed(0)} ms, updates read at ${open.read.toFixed(0)} ms, ` +
+      `editor built at ${open.built.toFixed(0)} ms, first frame with it at ${open.editor.toFixed(0)} ms, ` +
       `content-visibility ${contentVisibility ? 'supported' : 'not supported'})`,
   );
   expect(open.total).toBeLessThan(300);
