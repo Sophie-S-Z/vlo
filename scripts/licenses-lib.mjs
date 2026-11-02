@@ -1,0 +1,35 @@
+export const ALLOWED = new Set([
+  'MIT',
+  'ISC',
+  'Apache-2.0',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'OFL-1.1',
+  '0BSD',
+  'MPL-2.0',
+]);
+
+/** Returns the rows whose license is outside the allowlist. */
+export function disallowed(rows) {
+  return rows.filter((r) => !ALLOWED.has(r.license));
+}
+
+/** Renders the rows as the body of docs/licenses.md. */
+export function toMarkdown(rows) {
+  const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
+  const lines = [
+    '# Licenses',
+    '',
+    'This file lists every direct dependency and its license. `npm run licenses` writes it. Do not edit it by hand.',
+    '',
+    'Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License 1.1.',
+    '',
+    '| Package | Version | License | Used at |',
+    '| --- | --- | --- | --- |',
+    ...sorted.map(
+      (r) => `| ${r.name} | ${r.version} | ${r.license} | ${r.dev ? 'build and test' : 'runtime'} |`,
+    ),
+    '',
+  ];
+  return lines.join('\n');
+}
