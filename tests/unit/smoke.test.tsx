@@ -1,10 +1,22 @@
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { App } from '@/app/App';
 
-afterEach(cleanup);
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
-test('App renders the Vlo name', () => {
+test('App renders the Vlo wordmark and the Library', async () => {
   render(<App />);
-  expect(screen.getByRole('heading', { name: 'Vlo' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Vlo' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy();
 });

@@ -6,11 +6,13 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 
 | Package | Version | License | Used at |
 | --- | --- | --- | --- |
+| @axe-core/playwright | 4.14.0 | MPL-2.0 | build and test |
 | @eslint/js | 9.39.5 | MIT | build and test |
 | @fontsource-variable/fraunces | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/newsreader | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |
+| @playwright/test | 1.63.0 | Apache-2.0 | build and test |
 | @tailwindcss/vite | 4.3.3 | MIT | runtime |
 | @testing-library/dom | 10.4.2 | MIT | build and test |
 | @testing-library/react | 16.3.3 | MIT | build and test |
@@ -26,6 +28,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | globals | 17.14.0 | MIT | build and test |
 | jsdom | 30.1.3 | MIT | build and test |
 | lucide-react | 1.66.0 | ISC | runtime |
+| playwright-core | 1.63.0 | Apache-2.0 | build and test |
 | prettier | 3.9.10 | MIT | build and test |
 | radix-ui | 1.8.1 | MIT | runtime |
 | react | 19.3.1 | MIT | runtime |

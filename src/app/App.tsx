@@ -1,7 +1,13 @@
+import { useState } from 'react';
+import { createBrowserRouter, RouterProvider } from 'react-router';
+import { PreferencesProvider } from './PreferencesProvider';
+import { routes } from './routes';
+
 export function App() {
+  const [router] = useState(() => createBrowserRouter(routes));
   return (
-    <main>
-      <h1>Vlo</h1>
-    </main>
+    <PreferencesProvider>
+      <RouterProvider router={router} />
+    </PreferencesProvider>
   );
 }
