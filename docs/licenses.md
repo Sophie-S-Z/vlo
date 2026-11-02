@@ -7,21 +7,33 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | Package | Version | License | Used at |
 | --- | --- | --- | --- |
 | @eslint/js | 9.39.5 | MIT | build and test |
+| @fontsource-variable/fraunces | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/inter | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/newsreader | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |
+| @tailwindcss/vite | 4.3.3 | MIT | runtime |
 | @testing-library/dom | 10.4.2 | MIT | build and test |
 | @testing-library/react | 16.3.3 | MIT | build and test |
 | @types/node | 22.20.5 | MIT | build and test |
 | @types/react | 19.3.0 | MIT | build and test |
 | @types/react-dom | 19.3.0 | MIT | build and test |
 | @vitejs/plugin-react | 6.2.1 | MIT | build and test |
+| class-variance-authority | 0.7.1 | Apache-2.0 | runtime |
+| clsx | 2.1.1 | MIT | runtime |
 | eslint | 9.39.5 | MIT | build and test |
 | eslint-plugin-jsx-a11y | 6.10.2 | MIT | build and test |
 | eslint-plugin-react-hooks | 7.1.1 | MIT | build and test |
 | globals | 17.14.0 | MIT | build and test |
 | jsdom | 30.1.3 | MIT | build and test |
+| lucide-react | 1.66.0 | ISC | runtime |
 | prettier | 3.9.10 | MIT | build and test |
+| radix-ui | 1.8.1 | MIT | runtime |
 | react | 19.3.1 | MIT | runtime |
 | react-dom | 19.3.1 | MIT | runtime |
 | react-router | 8.5.1 | MIT | runtime |
+| tailwind-merge | 3.7.0 | MIT | runtime |
+| tailwindcss | 4.3.3 | MIT | runtime |
+| tw-animate-css | 1.4.0 | MIT | runtime |
 | typescript | 6.0.3 | Apache-2.0 | build and test |
 | typescript-eslint | 8.72.1 | MIT | build and test |
 | vite | 8.3.5 | MIT | build and test |

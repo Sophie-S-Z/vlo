@@ -1,0 +1,37 @@
+/* Theme colors. Spec section 13. Extra values are recorded in docs/STATUS.md. */
+
+[data-theme='ink'] {
+  color-scheme: dark;
+  --bg: #0e0d0c;
+  --surface: #171513;
+  --text: #efe8dc;
+  --muted: #8c857a;
+  --rule: #2a2724;
+  --accent: #e0664b;
+  --accent-text: #e0664b;
+  --on-accent: #0e0d0c;
+}
+
+[data-theme='paper'] {
+  color-scheme: light;
+  --bg: #f5f1e8;
+  --surface: #fbf8f2;
+  --text: #1c1a17;
+  --muted: #6b655c;
+  --rule: #e2dccf;
+  --accent: #c8452d;
+  --accent-text: #b83e28;
+  --on-accent: #ffffff;
+}
+
+[data-theme='sepia'] {
+  color-scheme: light;
+  --bg: #efe3cc;
+  --surface: #f6ecd9;
+  --text: #3a2e22;
+  --muted: #6e5d48;
+  --rule: #dccbaa;
+  --accent: #a8432a;
+  --accent-text: #a8432a;
+  --on-accent: #ffffff;
+}

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="paper">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,6 +8,20 @@
       content="Vlo is a free, local-first writing app for novelists, memoirists and poets."
     />
     <title>Vlo</title>
+    <script>
+      (function () {
+        var t = 'system';
+        var c = false;
+        try {
+          var p = JSON.parse(localStorage.getItem('vlo:preferences') || '{}');
+          if (p.theme === 'ink' || p.theme === 'paper' || p.theme === 'sepia') t = p.theme;
+          c = p.calm === true;
+        } catch (e) {}
+        if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'ink' : 'paper';
+        document.documentElement.dataset.theme = t;
+        document.documentElement.dataset.calm = String(c);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
