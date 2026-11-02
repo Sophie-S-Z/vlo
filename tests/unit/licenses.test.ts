@@ -1,5 +1,4 @@
 import { expect, test } from 'vitest';
-// @ts-expect-error: plain JavaScript module without types
 import { disallowed, toMarkdown } from '../../scripts/licenses-lib.mjs';
 
 const rows = [
@@ -10,11 +9,11 @@ const rows = [
 ];
 
 test('disallowed lists packages outside the license allowlist', () => {
-  expect(disallowed(rows).map((r: { name: string }) => r.name)).toEqual(['gpl-thing', 'no-license']);
+  expect(disallowed(rows).map((r) => r.name)).toEqual(['gpl-thing', 'no-license']);
 });
 
 test('toMarkdown writes one table row per package, sorted by name', () => {
-  const md: string = toMarkdown(rows.slice(0, 2));
+  const md = toMarkdown(rows.slice(0, 2));
   expect(md).toContain('| lucide-react | 1.66.0 | ISC | runtime |');
   expect(md.indexOf('lucide-react')).toBeLessThan(md.indexOf('| react |'));
 });

@@ -1,0 +1,8 @@
+docs/VLO_SPEC.md
+docs/plans/
+docs/licenses.md
+package-lock.json
+dist/
+dev-dist/
+playwright-report/
+test-results/

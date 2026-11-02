@@ -26,7 +26,9 @@ export function toMarkdown(rows) {
     '',
     '| Package | Version | License | Used at |',
     '| --- | --- | --- | --- |',
-    ...sorted.map((r) => `| ${r.name} | ${r.version} | ${r.license} | ${r.dev ? 'build and test' : 'runtime'} |`),
+    ...sorted.map(
+      (r) => `| ${r.name} | ${r.version} | ${r.license} | ${r.dev ? 'build and test' : 'runtime'} |`,
+    ),
     '',
   ];
   return lines.join('\n');
