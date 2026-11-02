@@ -1,5 +1,5 @@
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type * as Y from 'yjs';
 import { FocusTools } from '@/features/focus/focusExtension';
 import { refreshFocus } from '@/features/focus/focusPlugin';
@@ -26,6 +26,18 @@ const HELP = {
   poem: 'Tab adds four spaces and Shift-Tab removes them. Enter on an empty line starts a new stanza. Press Escape, then Tab, to leave the poem.',
 };
 
+/** The editor element's attributes. A rename passes a new label. */
+function editorAttributes(label: string, kind: EditorProps['kind'], helpId: string): Record<string, string> {
+  return {
+    'aria-label': label,
+    'aria-multiline': 'true',
+    'aria-describedby': helpId,
+    role: 'textbox',
+    spellcheck: 'true',
+    class: kind === 'poem' ? 'vlo-manuscript vlo-poem' : 'vlo-manuscript vlo-prose',
+  };
+}
+
 export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: EditorProps) {
   const helpId = useId();
   const editor = useEditor(
@@ -39,19 +51,20 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
       autofocus: focusOnOpen ? 'end' : false,
       // The toolbar reads editor state on its own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
-      editorProps: {
-        attributes: {
-          'aria-label': label,
-          'aria-multiline': 'true',
-          'aria-describedby': helpId,
-          role: 'textbox',
-          spellcheck: 'true',
-          class: kind === 'poem' ? 'vlo-manuscript vlo-poem' : 'vlo-manuscript vlo-prose',
-        },
-      },
+      editorProps: { attributes: editorAttributes(label, kind, helpId) },
     },
     [doc, kind],
   );
+
+  // A rename changes the editor's accessible name at once, without reopening the item.
+  const namedAs = useRef(label);
+  useEffect(() => {
+    if (editor.isDestroyed || namedAs.current === label) return;
+    namedAs.current = label;
+    editor.setOptions({
+      editorProps: { ...editor.options.editorProps, attributes: editorAttributes(label, kind, helpId) },
+    });
+  }, [editor, label, kind, helpId]);
 
   const focus = useFocusPrefs();
   // A focus switch changed: redraw the dimming and center the caret at once.

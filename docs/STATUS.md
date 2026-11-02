@@ -36,13 +36,20 @@ Last update: 2026-11-02
 - Library grid and list layouts, a staggered card entrance, card morphs between layouts and into the project,
   and a theme change that spreads from the chosen control. Calm mode and reduced motion stop every animation and
   start no view transition (F14, US14).
+- Phase 0 follow-ups: each page sets its tab title and moves focus to its heading after navigation. The update
+  notice uses a live region that is always present. Theme radios carry only the theme name. The unchecked switch
+  track meets 3:1 contrast. The browser bar takes the theme's page color. Preferences save only after the
+  writer's own change, and a cleared storage resets them. The app checks for an update each hour while online.
+  An open editor takes a new name at once after a rename. `engines.node` is `22.x`, and Tailwind is a
+  development package.
 
 ## In progress
 
 - Phase 1 pull request 1 (tasks 1 to 9).
 - Phase 1 tasks 10 to 14 follow in pull request 2.
 - Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
-  same thing in Phase 0. Task 13 looks for the cause.
+  same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
+  retry covers it.
 
 ## Blocked
 

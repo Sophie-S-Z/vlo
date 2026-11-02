@@ -62,3 +62,13 @@ test('spec colors are present unchanged', () => {
   });
   expect(themeBlock('sepia')).toMatchObject({ bg: '#efe3cc', text: '#3a2e22', accent: '#a8432a' });
 });
+
+test('an unchecked switch has a --muted border, which meets 3:1 for controls in every theme', () => {
+  const switchSource = readFileSync('src/ui/switch.tsx', 'utf8');
+  expect(switchSource).toMatch(/rounded-full border border-muted bg-rule/);
+  for (const theme of ['ink', 'paper', 'sepia']) {
+    const vars = themeBlock(theme);
+    expect(contrast(vars.muted ?? '', vars.surface ?? '')).toBeGreaterThanOrEqual(3);
+    expect(contrast(vars.muted ?? '', vars.bg ?? '')).toBeGreaterThanOrEqual(3);
+  }
+});

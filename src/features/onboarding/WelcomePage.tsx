@@ -12,10 +12,12 @@ import { Label } from '@/ui/label';
 import { markOnboarded } from './firstVisit';
 import { HoldButton } from './HoldButton';
 import { MotionViewTransition } from '@/ui/MotionViewTransition';
+import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 const STEPS = ['What do you write?', 'Your words stay yours', 'Name it'] as const;
 
 export function WelcomePage() {
+  useDocumentTitle('Welcome');
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [template, setTemplate] = useState<Template>('novel');

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { PreferencesProvider } from '@/app/PreferencesProvider';
@@ -30,6 +30,7 @@ function renderAt(path: string, table: RouteObject[] = routes) {
       <RouterProvider router={router} />
     </PreferencesProvider>,
   );
+  return router;
 }
 
 test('a first visit to / goes to the welcome screen', async () => {
@@ -75,4 +76,32 @@ test('a route that throws shows the error screen', async () => {
 test('/p/:projectId loads the project screen, which reports a missing project', async () => {
   renderAt('/p/missing');
   expect(await screen.findByRole('heading', { level: 1, name: 'Project not found' })).toBeTruthy();
+});
+
+test.each([
+  ['/settings', 'Settings · Vlo'],
+  ['/nope', 'Page not found · Vlo'],
+  ['/p/missing', 'Project not found · Vlo'],
+])('%s sets the tab title', async (path, title) => {
+  await markOnboarded();
+  renderAt(path);
+  await waitFor(() => {
+    expect(document.title).toBe(title);
+  });
+});
+
+test('after moving to another screen, focus goes to its heading', async () => {
+  await markOnboarded();
+  const router = renderAt('/settings');
+  await screen.findByRole('heading', { level: 1, name: 'Settings' });
+  // The first screen keeps the browser's own focus.
+  expect(document.activeElement).toBe(document.body);
+  await act(async () => {
+    await router.navigate('/');
+  });
+  const library = await screen.findByRole('heading', { level: 1, name: 'Library' });
+  await waitFor(() => {
+    expect(document.activeElement).toBe(library);
+  });
+  expect(document.title).toBe('Library · Vlo');
 });

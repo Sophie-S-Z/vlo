@@ -54,8 +54,10 @@ test('System theme follows the color scheme with no reload', async ({ page }) =>
 test('a chosen theme stays when the color scheme changes', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/settings');
-  await page.getByRole('radio', { name: 'Sepia' }).click();
+  await page.getByRole('radio', { name: 'Sepia', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia');
+  // The browser bar takes the page color of the chosen theme.
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#efe3cc');
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia');
   await page.reload();

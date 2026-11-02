@@ -11,6 +11,7 @@ import { NewProjectDialog } from './NewProjectDialog';
 import { ProjectCard, type LibraryLayout } from './ProjectCard';
 import { RenameDialog } from './RenameDialog';
 import { useLibrary } from './useLibrary';
+import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 const LAYOUT_KEY = 'vlo:libraryLayout';
 
@@ -26,6 +27,7 @@ const toggleClass =
   'inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-muted hover:text-text data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:shadow-sm';
 
 export function LibraryPage() {
+  useDocumentTitle('Library');
   const library = useLibrary();
   const motion = useMotionAllowed();
   const [layout, setLayout] = useState<LibraryLayout>(loadLayout);

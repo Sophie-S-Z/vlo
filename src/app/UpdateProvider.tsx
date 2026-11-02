@@ -10,6 +10,18 @@ export interface UpdateState {
   applyUpdate: () => void;
 }
 
+export const UPDATE_CHECK_MS = 60 * 60 * 1000;
+
+/** Asks for a new version once an hour while online. A tab left open for days still finds updates. */
+export function checkHourly(registration: { update: () => Promise<unknown> }): () => void {
+  const timer = setInterval(() => {
+    if (navigator.onLine) void registration.update().catch(() => undefined);
+  }, UPDATE_CHECK_MS);
+  return () => {
+    clearInterval(timer);
+  };
+}
+
 const idle: UpdateState = { needRefresh: false, updatedElsewhere: false, applyUpdate: () => undefined };
 
 export const UpdateContext = createContext<UpdateState>(idle);
@@ -25,6 +37,9 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
+    onRegisteredSW(_url, registration) {
+      if (registration) checkHourly(registration);
+    },
     onNeedReload() {
       if (requestedHere.current) window.location.reload();
       else setUpdatedElsewhere(true);

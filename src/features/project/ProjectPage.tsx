@@ -19,6 +19,7 @@ import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import type { CommandAction } from './CommandMenu';
 import { ProjectLayout } from './ProjectLayout';
 import { useProject } from './useProject';
+import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
 const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
@@ -41,6 +42,13 @@ export function ProjectPage() {
   const { projectId = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const state = useProject(projectId);
+  useDocumentTitle(
+    state.status === 'ready'
+      ? state.project.title
+      : state.status === 'missing'
+        ? 'Project not found'
+        : 'Project',
+  );
   const [drawer, setDrawer] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

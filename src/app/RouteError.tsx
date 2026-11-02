@@ -1,9 +1,11 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router';
 import { Button } from '@/ui/button';
 import { ErrorScreen, reloadPage } from './ErrorScreen';
+import { useDocumentTitle } from './useDocumentTitle';
 import { useUpdate } from './UpdateProvider';
 
 export function RouteError() {
+  useDocumentTitle('Something went wrong');
   const error = useRouteError();
   const { needRefresh, applyUpdate } = useUpdate();
   const detail = isRouteErrorResponse(error)

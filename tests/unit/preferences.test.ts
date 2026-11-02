@@ -1,5 +1,5 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { createElement, StrictMode, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { PreferencesProvider, useMotionAllowed, usePreferences } from '@/app/PreferencesProvider';
 import {
@@ -85,6 +85,30 @@ describe('PreferencesProvider', () => {
       window.dispatchEvent(new StorageEvent('storage', { key: PREFERENCES_KEY, newValue: value }));
     });
     expect(result.current.prefs).toEqual({ theme: 'ink', calm: true });
+  });
+
+  test('another tab clearing all storage resets the preferences to the defaults', () => {
+    savePreferences(localStorage, { theme: 'sepia', calm: true });
+    const { result } = renderHook(() => usePreferences(), { wrapper });
+    act(() => {
+      localStorage.clear();
+      window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    });
+    expect(result.current.prefs).toEqual(DEFAULT_PREFERENCES);
+  });
+
+  test('one change writes storage once, even under StrictMode, and loading writes nothing', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const strict = ({ children }: { children: ReactNode }) =>
+      createElement(StrictMode, null, createElement(PreferencesProvider, null, children));
+    const { result } = renderHook(() => usePreferences(), { wrapper: strict });
+    expect(setItem).not.toHaveBeenCalled();
+    act(() => {
+      result.current.setTheme('paper');
+    });
+    expect(setItem).toHaveBeenCalledTimes(1);
+    expect(loadPreferences(localStorage).theme).toBe('paper');
+    setItem.mockRestore();
   });
 });
 

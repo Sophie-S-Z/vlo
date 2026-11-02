@@ -5,6 +5,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -42,11 +43,24 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.dataset.theme = resolvedTheme;
     root.dataset.calm = String(prefs.calm);
+    // The browser bar takes the theme's page color.
+    const background = getComputedStyle(root).getPropertyValue('--bg').trim();
+    if (background) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background);
   }, [resolvedTheme, prefs.calm]);
+
+  // Saves only the writer's own changes, never the first load or a change that came from another tab.
+  const dirty = useRef(false);
+  useEffect(() => {
+    if (!dirty.current) return;
+    dirty.current = false;
+    savePreferences(safeStorage(), prefs);
+  }, [prefs]);
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.key === PREFERENCES_KEY) setPrefs(parsePreferences(event.newValue));
+      // A null key means another tab cleared all site storage, so the defaults apply again.
+      if (event.key === null) setPrefs(parsePreferences(null));
+      else if (event.key === PREFERENCES_KEY) setPrefs(parsePreferences(event.newValue));
     };
     window.addEventListener('storage', onStorage);
     return () => {
@@ -55,11 +69,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const update = useCallback((patch: Partial<Preferences>) => {
-    setPrefs((current) => {
-      const next = { ...current, ...patch };
-      savePreferences(safeStorage(), next);
-      return next;
-    });
+    dirty.current = true;
+    setPrefs((current) => ({ ...current, ...patch }));
   }, []);
 
   const value = useMemo<PreferencesContextValue>(

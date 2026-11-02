@@ -5,6 +5,7 @@ import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { StorageHealth } from './StorageHealth';
+import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 const THEME_LABELS: Record<ThemeChoice, string> = {
   system: 'System',
@@ -30,6 +31,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function SettingsPage() {
+  useDocumentTitle('Settings');
   const { prefs, resolvedTheme, setTheme, setCalm } = usePreferences();
   const motion = useMotionAllowed();
   const [announcement, setAnnouncement] = useState('');
@@ -70,12 +72,14 @@ export function SettingsPage() {
               return (
                 <div key={choice} className="flex min-h-11 items-start gap-3">
                   <RadioGroupItem id={id} value={choice} aria-describedby={`${id}-hint`} className="mt-0.5" />
-                  <label htmlFor={id} className="grid cursor-pointer gap-0.5">
-                    <span>{THEME_LABELS[choice]}</span>
+                  <div className="grid gap-0.5">
+                    <label htmlFor={id} className="cursor-pointer">
+                      {THEME_LABELS[choice]}
+                    </label>
                     <span id={`${id}-hint`} className="text-sm text-muted">
                       {THEME_HINTS[choice]}
                     </span>
-                  </label>
+                  </div>
                 </div>
               );
             })}
