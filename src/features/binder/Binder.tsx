@@ -37,6 +37,14 @@ interface BinderProps {
   onOpen: (itemId: string) => void;
 }
 
+/*
+ * useSensor keeps a sensor only while its options object stays the same. New objects on each render would
+ * give every sortable row new listeners, and opening one item would re-render all of them.
+ */
+const MOUSE_OPTIONS = { activationConstraint: { distance: 4 } };
+const TOUCH_OPTIONS = { activationConstraint: { delay: 250, tolerance: 5 } };
+const KEYBOARD_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
+
 const INSTRUCTIONS =
   'To pick up an item, press Space or Enter. Use the arrow keys to move it. Press Space or Enter again to drop it, or Escape to cancel. The item menu also has Move up, Move down, Indent and Outdent.';
 
@@ -61,16 +69,18 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
   const addToEditor = useRef(false);
 
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(MouseSensor, MOUSE_OPTIONS),
+    useSensor(TouchSensor, TOUCH_OPTIONS),
+    useSensor(KeyboardSensor, KEYBOARD_OPTIONS),
   );
 
   const hidden = useMemo(
     () => (activeId ? descendantIds(nodes, activeId) : new Set<string>()),
     [nodes, activeId],
   );
-  const visible = nodes.filter((n) => !hidden.has(n.item.id));
+  const visible = useMemo(() => nodes.filter((n) => !hidden.has(n.item.id)), [nodes, hidden]);
+  // A stable id list keeps SortableContext's value the same, so opening an item re-renders only two rows.
+  const visibleIds = useMemo(() => visible.map((n) => n.item.id), [visible]);
   const offsetDepth = Math.round(offsetX / INDENT_PX);
   const projection = activeId && overId ? projectDrop(nodes, activeId, overId, offsetDepth, template) : null;
   const titleOf = (id: string | number) => nodes.find((n) => n.item.id === id)?.item.title ?? 'Item';
@@ -213,7 +223,7 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
         onDragEnd={(event) => void dragEnd(event)}
         onDragCancel={reset}
       >
-        <SortableContext items={visible.map((n) => n.item.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={visibleIds} strategy={verticalListSortingStrategy}>
           <ul aria-label="Binder items" className="grid gap-0.5">
             {visible.map((node) => {
               const dragging = node.item.id === activeId;
