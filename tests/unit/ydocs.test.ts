@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import { describe, expect, test } from 'vitest';
-import { YFRAGMENT, deleteItemDoc, docFromUpdate, encodeDoc, itemDocName, openItemDoc } from '@/lib/ydocs';
+import { deleteItemDoc, itemDocName } from '@/lib/itemDocName';
+import { YFRAGMENT, docFromUpdate, encodeDoc, openItemDoc } from '@/lib/ydocs';
 
 function writeLine(doc: Y.Doc, text: string) {
   const fragment = doc.getXmlFragment(YFRAGMENT);

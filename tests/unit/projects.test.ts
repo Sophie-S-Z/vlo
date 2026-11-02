@@ -2,7 +2,8 @@ import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { createProject, deleteProject, renameProject } from '@/features/library/projects';
 import { db } from '@/lib/db';
-import { itemDocName, openItemDoc } from '@/lib/ydocs';
+import { itemDocName } from '@/lib/itemDocName';
+import { openItemDoc } from '@/lib/ydocs';
 import { sortByOrder } from '@/lib/order';
 
 beforeEach(async () => {

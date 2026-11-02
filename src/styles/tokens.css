@@ -22,7 +22,20 @@ html[data-calm='true'] *::after {
   scroll-behavior: auto !important;
 }
 
+/* View transitions draw on pseudo-elements that the rule above does not reach. */
+html[data-calm='true']::view-transition-group(*),
+html[data-calm='true']::view-transition-old(*),
+html[data-calm='true']::view-transition-new(*) {
+  animation: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
   *,
   *::before,
   *::after {

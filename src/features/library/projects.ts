@@ -3,7 +3,7 @@ import { db, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
 import { requestPersistence } from '@/lib/storage';
-import { deleteItemDoc } from '@/lib/ydocs';
+import { deleteItemDoc } from '@/lib/itemDocName';
 import { TEMPLATES, type StarterItem } from './templates';
 
 export interface NewProjectInput {

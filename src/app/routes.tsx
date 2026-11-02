@@ -13,6 +13,10 @@ export const routes: RouteObject[] = [
     errorElement: <RouteError />,
     children: [
       { index: true, element: <LibraryPage /> },
+      {
+        path: 'p/:projectId',
+        lazy: async () => ({ Component: (await import('@/features/project/ProjectPage')).ProjectPage }),
+      },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],

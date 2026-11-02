@@ -61,3 +61,8 @@ test('a route that throws shows the error screen', async () => {
   expect(await screen.findByRole('heading', { level: 1, name: 'Something went wrong' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Reload Vlo' })).toBeTruthy();
 });
+
+test('/p/:projectId loads the project screen, which reports a missing project', async () => {
+  renderAt('/p/missing');
+  expect(await screen.findByRole('heading', { level: 1, name: 'Project not found' })).toBeTruthy();
+});
