@@ -20,49 +20,56 @@ async function novelWithTwoScenes(page: Page) {
   expect(await titles(page)).toEqual(['Chapter 1', 'Scene 1', 'Scene 2']);
 }
 
-test('mouse: drag Scene 2 above Scene 1, and the order stays after reload', async ({ page }) => {
-  await novelWithTwoScenes(page);
-  const handle = binder(page).getByRole('button', { name: 'Move Scene 2' });
-  const target = binder(page).getByRole('button', { name: 'Move Scene 1' });
-  const from = await handle.boundingBox();
-  const to = await target.boundingBox();
-  if (!from || !to) throw new Error('rows not laid out');
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2 - 10, { steps: 5 });
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2 - 4, { steps: 10 });
-  await expect(binder(page).getByRole('status').filter({ hasText: 'is over' })).toHaveText(
-    'Scene 2 is over Scene 1.',
-  );
-  await page.mouse.up();
-  await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
-  await page.reload();
-  await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
-});
+// Phones get the binder as a drawer. The drawer tests at the end of this file cover them.
+test.describe('wide screens', () => {
+  test.skip(({ isMobile }) => isMobile, 'Under 600 px the binder is a drawer.');
 
-test('keyboard: Space lifts, ArrowUp moves, Space drops, and the move is announced', async ({ page }) => {
-  await novelWithTwoScenes(page);
-  await binder(page).getByRole('button', { name: 'Move Scene 2' }).focus();
-  const live = binder(page).getByRole('status');
-  await page.keyboard.press('Space');
-  await expect(live.filter({ hasText: 'Picked up' })).toHaveText('Picked up Scene 2.');
-  await page.keyboard.press('ArrowUp');
-  await expect(live.filter({ hasText: 'is over' })).toHaveText('Scene 2 is over Scene 1.');
-  await page.keyboard.press('Space');
-  await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
-  await expect(live.filter({ hasText: 'moved' })).toHaveText('Scene 2 moved. It is now 1 of 2 in Chapter 1.');
-  await page.reload();
-  await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
-});
+  test('mouse: drag Scene 2 above Scene 1, and the order stays after reload', async ({ page }) => {
+    await novelWithTwoScenes(page);
+    const handle = binder(page).getByRole('button', { name: 'Move Scene 2' });
+    const target = binder(page).getByRole('button', { name: 'Move Scene 1' });
+    const from = await handle.boundingBox();
+    const to = await target.boundingBox();
+    if (!from || !to) throw new Error('rows not laid out');
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2 - 10, { steps: 5 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2 - 4, { steps: 10 });
+    await expect(binder(page).getByRole('status').filter({ hasText: 'is over' })).toHaveText(
+      'Scene 2 is over Scene 1.',
+    );
+    await page.mouse.up();
+    await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
+    await page.reload();
+    await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
+  });
 
-test('menu: Move up, then Move down, for screen reader users', async ({ page }) => {
-  await novelWithTwoScenes(page);
-  await binder(page).getByRole('button', { name: 'Options for Scene 2' }).click();
-  await page.getByRole('menuitem', { name: 'Move up' }).click();
-  await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
-  await binder(page).getByRole('button', { name: 'Options for Scene 2' }).click();
-  await page.getByRole('menuitem', { name: 'Move down' }).click();
-  await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 1', 'Scene 2']);
+  test('keyboard: Space lifts, ArrowUp moves, Space drops, and the move is announced', async ({ page }) => {
+    await novelWithTwoScenes(page);
+    await binder(page).getByRole('button', { name: 'Move Scene 2' }).focus();
+    const live = binder(page).getByRole('status');
+    await page.keyboard.press('Space');
+    await expect(live.filter({ hasText: 'Picked up' })).toHaveText('Picked up Scene 2.');
+    await page.keyboard.press('ArrowUp');
+    await expect(live.filter({ hasText: 'is over' })).toHaveText('Scene 2 is over Scene 1.');
+    await page.keyboard.press('Space');
+    await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
+    await expect(live.filter({ hasText: 'moved' })).toHaveText(
+      'Scene 2 moved. It is now 1 of 2 in Chapter 1.',
+    );
+    await page.reload();
+    await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
+  });
+
+  test('menu: Move up, then Move down, for screen reader users', async ({ page }) => {
+    await novelWithTwoScenes(page);
+    await binder(page).getByRole('button', { name: 'Options for Scene 2' }).click();
+    await page.getByRole('menuitem', { name: 'Move up' }).click();
+    await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 2', 'Scene 1']);
+    await binder(page).getByRole('button', { name: 'Options for Scene 2' }).click();
+    await page.getByRole('menuitem', { name: 'Move down' }).click();
+    await expect.poll(() => titles(page)).toEqual(['Chapter 1', 'Scene 1', 'Scene 2']);
+  });
 });
 
 test('touch: long-press and move reorders on a touch screen', async ({ browser, browserName }) => {
@@ -86,39 +93,43 @@ test('touch: long-press and move reorders on a touch screen', async ({ browser, 
   await context.close();
 });
 
-test('each item shows its status and synopsis, and the item menu changes them', async ({ page }) => {
-  await novelWithTwoScenes(page);
-  const row = binder(page).getByRole('listitem').filter({ hasText: 'Scene 1' });
-  await expect(row.getByText('Draft')).toBeVisible();
-  await binder(page).getByRole('button', { name: 'Options for Scene 1' }).click();
-  await page.getByRole('menuitem', { name: 'Status' }).click();
-  await page.getByRole('menuitemradio', { name: 'Revised' }).click();
-  await expect(row.getByText('Revised')).toBeVisible();
+test.describe('wide screens, item menu', () => {
+  test.skip(({ isMobile }) => isMobile, 'Under 600 px the binder is a drawer.');
 
-  await binder(page).getByRole('button', { name: 'Options for Scene 1' }).click();
-  await page.getByRole('menuitem', { name: 'Edit synopsis' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Synopsis for Scene 1' });
-  await dialog.getByLabel('Synopsis').fill('Mira finds the ledger.');
-  await dialog.getByRole('button', { name: 'Save' }).click();
-  await expect(row.getByText('Mira finds the ledger.')).toBeVisible();
-  await page.reload();
-  await expect(binder(page).getByText('Mira finds the ledger.')).toBeVisible();
-});
+  test('each item shows its status and synopsis, and the item menu changes them', async ({ page }) => {
+    await novelWithTwoScenes(page);
+    const row = binder(page).getByRole('listitem').filter({ hasText: 'Scene 1' });
+    await expect(row.getByText('Draft')).toBeVisible();
+    await binder(page).getByRole('button', { name: 'Options for Scene 1' }).click();
+    await page.getByRole('menuitem', { name: 'Status' }).click();
+    await page.getByRole('menuitemradio', { name: 'Revised' }).click();
+    await expect(row.getByText('Revised')).toBeVisible();
 
-test('deleting the open item opens another and removes its stored text', async ({ page }) => {
-  await novelWithTwoScenes(page);
-  await expect(page.getByRole('heading', { level: 2, name: 'Scene 2' })).toBeVisible();
-  const itemId = new URL(page.url()).searchParams.get('item');
-  await binder(page).getByRole('button', { name: 'Options for Scene 2' }).click();
-  await page.getByRole('menuitem', { name: 'Delete' }).click();
-  await page
-    .getByRole('alertdialog', { name: 'Delete Scene 2?' })
-    .getByRole('button', { name: 'Delete item' })
-    .click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Scene 1' })).toBeVisible();
-  expect(await titles(page)).toEqual(['Chapter 1', 'Scene 1']);
-  const names = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
-  expect(names).not.toContain(`vlo-item-${itemId ?? ''}`);
+    await binder(page).getByRole('button', { name: 'Options for Scene 1' }).click();
+    await page.getByRole('menuitem', { name: 'Edit synopsis' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Synopsis for Scene 1' });
+    await dialog.getByLabel('Synopsis').fill('Mira finds the ledger.');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(row.getByText('Mira finds the ledger.')).toBeVisible();
+    await page.reload();
+    await expect(binder(page).getByText('Mira finds the ledger.')).toBeVisible();
+  });
+
+  test('deleting the open item opens another and removes its stored text', async ({ page }) => {
+    await novelWithTwoScenes(page);
+    await expect(page.getByRole('heading', { level: 2, name: 'Scene 2' })).toBeVisible();
+    const itemId = new URL(page.url()).searchParams.get('item');
+    await binder(page).getByRole('button', { name: 'Options for Scene 2' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await page
+      .getByRole('alertdialog', { name: 'Delete Scene 2?' })
+      .getByRole('button', { name: 'Delete item' })
+      .click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Scene 1' })).toBeVisible();
+    expect(await titles(page)).toEqual(['Chapter 1', 'Scene 1']);
+    const names = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
+    expect(names).not.toContain(`vlo-item-${itemId ?? ''}`);
+  });
 });
 
 test('under 600 px the binder opens as a drawer, and picking an item closes it', async ({ page }) => {
@@ -132,8 +143,13 @@ test('under 600 px the binder opens as a drawer, and picking an item closes it',
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test('the project screen with its binder has no serious axe issues', async ({ page }) => {
-  await novelWithTwoScenes(page);
+test('the project screen with its binder has no serious axe issues', async ({ page, isMobile }) => {
+  if (isMobile) {
+    await novelWithTwoScenesSmall(page);
+    await page.getByRole('button', { name: 'Binder' }).click();
+  } else {
+    await novelWithTwoScenes(page);
+  }
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
     .analyze();
