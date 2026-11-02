@@ -7,6 +7,7 @@ export const ALLOWED = new Set([
   'OFL-1.1',
   '0BSD',
   'MPL-2.0',
+  'CC0-1.0',
 ]);
 
 /** Returns the rows whose license is outside the allowlist. */
