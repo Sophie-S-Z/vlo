@@ -12,13 +12,13 @@
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* Calm mode and the system reduced-motion setting stop all CSS motion. */
+/* Calm mode and the system reduced-motion setting stop all CSS motion. `none` (not a zero duration) leaves
+   no finished animation behind, so `document.getAnimations()` stays empty. */
 html[data-calm='true'] *,
 html[data-calm='true'] *::before,
 html[data-calm='true'] *::after {
-  animation-duration: 0s !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0s !important;
+  animation: none !important;
+  transition: none !important;
   scroll-behavior: auto !important;
 }
 
@@ -39,9 +39,8 @@ html[data-calm='true']::view-transition-new(*) {
   *,
   *::before,
   *::after {
-    animation-duration: 0s !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0s !important;
+    animation: none !important;
+    transition: none !important;
     scroll-behavior: auto !important;
   }
 }

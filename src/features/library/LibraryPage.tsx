@@ -1,14 +1,50 @@
-import { useState } from 'react';
+import { LayoutGrid, List } from 'lucide-react';
+import { ToggleGroup } from 'radix-ui';
+import { startTransition, useState } from 'react';
 import { MARKETING_URL } from '@/app/links';
+import { safeStorage } from '@/app/preferences';
+import { useMotionAllowed } from '@/app/PreferencesProvider';
 import type { Project } from '@/lib/db';
+import { cn } from '@/ui/cn';
 import { DeleteDialog } from './DeleteDialog';
 import { NewProjectDialog } from './NewProjectDialog';
-import { ProjectCard } from './ProjectCard';
+import { ProjectCard, type LibraryLayout } from './ProjectCard';
 import { RenameDialog } from './RenameDialog';
 import { useLibrary } from './useLibrary';
 
+const LAYOUT_KEY = 'vlo:libraryLayout';
+
+function loadLayout(): LibraryLayout {
+  try {
+    return safeStorage()?.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'grid';
+  } catch {
+    return 'grid';
+  }
+}
+
+const toggleClass =
+  'inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-muted hover:text-text data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:shadow-sm';
+
 export function LibraryPage() {
   const library = useLibrary();
+  const motion = useMotionAllowed();
+  const [layout, setLayout] = useState<LibraryLayout>(loadLayout);
+
+  const changeLayout = (next: LibraryLayout) => {
+    try {
+      safeStorage()?.setItem(LAYOUT_KEY, next);
+    } catch {
+      // Blocked storage: the layout still changes for this visit.
+    }
+    // In a transition, each card morphs to its new place. With motion off, the change is instant.
+    if (motion) {
+      startTransition(() => {
+        setLayout(next);
+      });
+    } else {
+      setLayout(next);
+    }
+  };
   const [renaming, setRenaming] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
 
@@ -16,7 +52,29 @@ export function LibraryPage() {
     <section className="grain">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-4xl font-semibold">Library</h1>
-        <NewProjectDialog />
+        <div className="flex flex-wrap items-center gap-3">
+          {library.status === 'ready' && library.projects.length > 0 && (
+            <ToggleGroup.Root
+              type="single"
+              aria-label="Layout"
+              value={layout}
+              onValueChange={(value) => {
+                if (value === 'grid' || value === 'list') changeLayout(value);
+              }}
+              className="inline-flex rounded-lg border border-rule bg-bg p-0.5"
+            >
+              <ToggleGroup.Item value="grid" className={toggleClass}>
+                <LayoutGrid aria-hidden="true" className="size-4" />
+                Grid
+              </ToggleGroup.Item>
+              <ToggleGroup.Item value="list" className={toggleClass}>
+                <List aria-hidden="true" className="size-4" />
+                List
+              </ToggleGroup.Item>
+            </ToggleGroup.Root>
+          )}
+          <NewProjectDialog />
+        </div>
       </div>
 
       {library.status === 'error' && (
@@ -44,12 +102,20 @@ export function LibraryPage() {
       )}
 
       {library.status === 'ready' && library.projects.length > 0 && (
-        <ul aria-label="Projects" className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {library.projects.map(({ project, wordCount }) => (
+        <ul
+          aria-label="Projects"
+          className={cn(
+            'vlo-stagger mt-8 grid',
+            layout === 'grid' ? 'gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'gap-2',
+          )}
+        >
+          {library.projects.map(({ project, wordCount }, index) => (
             <ProjectCard
               key={project.id}
               project={project}
               wordCount={wordCount}
+              layout={layout}
+              index={index}
               onRename={() => {
                 setRenaming(project);
               }}

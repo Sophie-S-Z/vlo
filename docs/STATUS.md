@@ -33,6 +33,9 @@ Last update: 2026-11-02
 - Focus mode (hides the binder, details and site header; Escape leaves), typewriter scrolling, focus-line
   dimming, a session timer with a gentle close prompt, and a Mod-K command menu that finds items by title or
   text and runs actions (F10, F11). The menu, cmdk and MiniSearch load on first open.
+- Library grid and list layouts, a staggered card entrance, card morphs between layouts and into the project,
+  and a theme change that spreads from the chosen control. Calm mode and reduced motion stop every animation and
+  start no view transition (F14, US14).
 
 ## In progress
 

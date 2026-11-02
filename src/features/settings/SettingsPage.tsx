@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
-import { usePreferences } from '@/app/PreferencesProvider';
+import { useMotionAllowed, usePreferences } from '@/app/PreferencesProvider';
 import type { ThemeChoice } from '@/app/preferences';
+import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { StorageHealth } from './StorageHealth';
@@ -30,6 +31,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function SettingsPage() {
   const { prefs, resolvedTheme, setTheme, setCalm } = usePreferences();
+  const motion = useMotionAllowed();
   const [announcement, setAnnouncement] = useState('');
   const calmId = useId();
   const calmHintId = useId();
@@ -48,7 +50,18 @@ export function SettingsPage() {
             value={prefs.theme}
             onValueChange={(value) => {
               const choice = value as ThemeChoice;
-              setTheme(choice);
+              // The new theme grows from the radio the writer chose.
+              const rect = document.activeElement?.getBoundingClientRect();
+              const origin = rect
+                ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+                : undefined;
+              withViewTransition(
+                motion,
+                () => {
+                  setTheme(choice);
+                },
+                { origin, className: 'vlo-theme-reveal' },
+              );
               setAnnouncement(`Theme set to ${THEME_LABELS[choice]}.`);
             }}
           >

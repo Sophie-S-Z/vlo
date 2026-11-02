@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState, ViewTransition } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Binder } from '@/features/binder/Binder';
@@ -15,6 +15,7 @@ import type { Item, Project } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { withViewTransition } from '@/ui/motion';
+import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import type { CommandAction } from './CommandMenu';
 import { ProjectLayout } from './ProjectLayout';
 import { useProject } from './useProject';
@@ -151,7 +152,7 @@ export function ProjectPage() {
   ];
 
   return (
-    <ViewTransition name={projectTransitionName(project.id)} update="none">
+    <MotionViewTransition name={projectTransitionName(project.id)} update="none">
       <section>
         <ProjectLayout
           binderOpen={drawer}
@@ -247,6 +248,6 @@ export function ProjectPage() {
           </DialogContent>
         </Dialog>
       </section>
-    </ViewTransition>
+    </MotionViewTransition>
   );
 }

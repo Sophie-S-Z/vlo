@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   PREFERENCES_KEY,
   loadPreferences,
@@ -28,7 +37,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const resolvedTheme = resolveTheme(prefs.theme, systemDark);
 
-  useEffect(() => {
+  // A layout effect, so a theme change inside a view transition is in place before the browser takes the new picture.
+  useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = resolvedTheme;
     root.dataset.calm = String(prefs.calm);

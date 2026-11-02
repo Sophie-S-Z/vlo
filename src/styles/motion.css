@@ -39,3 +39,40 @@
 html[data-focus-mode='true'] [data-chrome] {
   display: none;
 }
+
+/* Library cards rise into place one after another. */
+.vlo-stagger > * {
+  animation: vlo-rise 0.6s var(--ease-reveal) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 60ms);
+}
+
+@keyframes vlo-rise {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+/* Cards morph between grid and list, and into the project screen. */
+::view-transition-group(*) {
+  animation-duration: 0.5s;
+  animation-timing-function: var(--ease-reveal);
+}
+
+/* A theme change spreads as a circle from the control the writer used. */
+html.vlo-theme-reveal::view-transition-old(root) {
+  animation: none;
+}
+
+html.vlo-theme-reveal::view-transition-new(root) {
+  animation: vlo-reveal 0.7s var(--ease-reveal);
+}
+
+@keyframes vlo-reveal {
+  from {
+    clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+  to {
+    clip-path: circle(150vmax at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+}
