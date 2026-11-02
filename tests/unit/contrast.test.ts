@@ -8,7 +8,7 @@ function themeBlock(theme: string): Record<string, string> {
   if (!match?.[1]) throw new Error(`No block for theme ${theme}`);
   const vars: Record<string, string> = {};
   for (const [, name, value] of match[1].matchAll(/--([\w-]+):\s*(#[0-9a-fA-F]{6})/g)) {
-    if (name && value) vars[name] = value;
+    if (name && value) vars[name] = value.toLowerCase();
   }
   return vars;
 }
@@ -45,20 +45,20 @@ describe.each(['ink', 'paper', 'sepia'])('theme %s', (theme) => {
 
 test('spec colors are present unchanged', () => {
   expect(themeBlock('ink')).toMatchObject({
-    bg: '#0E0D0C',
+    bg: '#0e0d0c',
     surface: '#171513',
-    text: '#EFE8DC',
-    muted: '#8C857A',
-    rule: '#2A2724',
-    accent: '#E0664B',
+    text: '#efe8dc',
+    muted: '#8c857a',
+    rule: '#2a2724',
+    accent: '#e0664b',
   });
   expect(themeBlock('paper')).toMatchObject({
-    bg: '#F5F1E8',
-    surface: '#FBF8F2',
-    text: '#1C1A17',
-    muted: '#6B655C',
-    rule: '#E2DCCF',
-    accent: '#C8452D',
+    bg: '#f5f1e8',
+    surface: '#fbf8f2',
+    text: '#1c1a17',
+    muted: '#6b655c',
+    rule: '#e2dccf',
+    accent: '#c8452d',
   });
-  expect(themeBlock('sepia')).toMatchObject({ bg: '#EFE3CC', text: '#3A2E22', accent: '#A8432A' });
+  expect(themeBlock('sepia')).toMatchObject({ bg: '#efe3cc', text: '#3a2e22', accent: '#a8432a' });
 });
