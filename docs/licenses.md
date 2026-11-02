@@ -40,4 +40,6 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | typescript | 6.0.3 | Apache-2.0 | build and test |
 | typescript-eslint | 8.72.1 | MIT | build and test |
 | vite | 8.3.5 | MIT | build and test |
+| vite-plugin-pwa | 2.0.0 | MIT | build and test |
 | vitest | 5.1.0 | MIT | build and test |
+| workbox-window | 7.4.1 | MIT | runtime |

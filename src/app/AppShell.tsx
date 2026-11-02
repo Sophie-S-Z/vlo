@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
+import { UpdatePrompt } from './UpdatePrompt';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -59,6 +60,7 @@ export function AppShell() {
       <footer className="border-t border-rule">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm text-muted">
           <p>Your writing stays on this device.</p>
+          <UpdatePrompt />
           <a href={MARKETING_URL} rel="noreferrer">
             About Vlo
           </a>
