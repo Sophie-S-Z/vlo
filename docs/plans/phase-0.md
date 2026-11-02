@@ -35,7 +35,7 @@
 
 ## Branches
 
-- `main`: a new default branch that starts at the commit with `docs/VLO_SPEC.md`.
+- `main`: the default branch. It already exists and holds `docs/VLO_SPEC.md`.
 - `phase-0-foundation`: all Phase 0 work. A pull request merges it into `main` at Gate 0.
 
 ## Packages outside section 6 (need your approval)
