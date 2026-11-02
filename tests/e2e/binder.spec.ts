@@ -1,5 +1,5 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
 
 const binder = (page: Page) => page.getByRole('navigation', { name: 'Binder' });
@@ -150,11 +150,7 @@ test('the project screen with its binder has no serious axe issues', async ({ pa
   } else {
     await novelWithTwoScenes(page);
   }
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-    .analyze();
-  const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-  expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  expect(await seriousIssues(page)).toEqual([]);
 });
 
 /** The same setup as novelWithTwoScenes, through the phone drawer. */

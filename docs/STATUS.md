@@ -33,6 +33,8 @@ Last update: 2026-11-02
 
 - Phase 1 pull request 1 (tasks 1 to 9).
 - Phase 1 tasks 10 to 14 follow in pull request 2.
+- Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
+  same thing in Phase 0. Task 13 looks for the cause.
 
 ## Blocked
 

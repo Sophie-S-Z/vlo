@@ -1,5 +1,5 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { seriousIssues } from './support/axe';
 
 async function holdToOpen(page: Page) {
   const hold = page.getByRole('button', { name: 'Hold to open your first page' });
@@ -79,13 +79,7 @@ test('every welcome step has no serious axe issues and no horizontal scroll at 3
   await page.goto('/welcome');
   for (const heading of ['What do you write?', 'Your words stay yours', 'Name it']) {
     await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-    const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-      .analyze();
-    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-    expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.failureSummary ?? '').join(' | ')}`)).toEqual(
-      [],
-    );
+    expect(await seriousIssues(page)).toEqual([]);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     if (heading !== 'Name it') await page.getByRole('button', { name: 'Next' }).click();

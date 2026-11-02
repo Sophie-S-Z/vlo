@@ -1,15 +1,6 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
-
-async function seriousIssues(page: Page) {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-    .analyze();
-  return results.violations
-    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-    .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
-}
 
 async function createPoetry(page: Page) {
   await page.getByRole('button', { name: 'New project' }).click();
