@@ -36,8 +36,25 @@ describe('vercel.json', () => {
     expect(config.outputDirectory).toBe('dist');
   });
 
-  test('rewrites every path to the app shell', () => {
-    expect(config.rewrites).toContainEqual({ source: '/(.*)', destination: '/index.html' });
+  test('rewrites app routes to the app shell, but never static files', () => {
+    expect(config.rewrites).toHaveLength(1);
+    const [rewrite] = config.rewrites;
+    expect(rewrite?.destination).toBe('/index.html');
+    // Vercel sources use path-to-regexp. This source is one regex group, so a JavaScript RegExp reads it the same way.
+    const pattern = new RegExp(`^${rewrite?.source ?? ''}$`);
+    for (const path of ['/', '/settings', '/p/abc', '/p/abc/board', '/r/xyz', '/nope']) {
+      expect(pattern.test(path), path).toBe(true);
+    }
+    // A missing hashed file must be a 404, never index.html served as "immutable" for a year.
+    for (const path of [
+      '/assets/index-X.js',
+      '/icons/icon-192.png',
+      '/sw.js',
+      '/workbox-abc.js',
+      '/manifest.webmanifest',
+    ]) {
+      expect(pattern.test(path), path).toBe(false);
+    }
   });
 
   test('sends the security headers from spec section 12', () => {
