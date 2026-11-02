@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useMotionAllowed, usePreferences } from '@/app/PreferencesProvider';
 import type { ThemeChoice } from '@/app/preferences';
 import { withViewTransition } from '@/ui/motion';
@@ -37,6 +37,7 @@ export function SettingsPage() {
   const [announcement, setAnnouncement] = useState('');
   const calmId = useId();
   const calmHintId = useId();
+  const themes = useRef<HTMLDivElement>(null);
 
   return (
     <div className="max-w-2xl">
@@ -48,12 +49,16 @@ export function SettingsPage() {
       <div className="mt-6">
         <Section title="Theme">
           <RadioGroup
+            ref={themes}
             aria-label="Theme"
             value={prefs.theme}
             onValueChange={(value) => {
               const choice = value as ThemeChoice;
-              // The new theme grows from the radio the writer chose.
-              const rect = document.activeElement?.getBoundingClientRect();
+              // The new theme grows from the radio the writer chose. Safari does not focus a clicked
+              // button, so the radio comes from the group, by its value, for a click and a key alike.
+              const rect = themes.current
+                ?.querySelector(`[role="radio"][value="${CSS.escape(choice)}"]`)
+                ?.getBoundingClientRect();
               const origin = rect
                 ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
                 : undefined;

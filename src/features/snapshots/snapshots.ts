@@ -32,6 +32,15 @@ export async function takeSnapshot(
   return snapshot;
 }
 
+/** The text of an item's newest snapshot, or null when it has none. Reads one row only. */
+export async function latestSnapshotText(itemId: string): Promise<string | null> {
+  const last = await db.snapshots
+    .where('[itemId+createdAt]')
+    .between([itemId, Dexie.minKey], [itemId, Dexie.maxKey])
+    .last();
+  return last?.text ?? null;
+}
+
 /** An item's snapshots, newest first. */
 export function snapshotsOf(itemId: string): Promise<Snapshot[]> {
   return db.snapshots

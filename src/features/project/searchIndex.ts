@@ -21,12 +21,20 @@ export function buildSearchIndex(texts: readonly ItemText[], items: readonly Ite
   return index;
 }
 
-/** About 80 characters of `text` around the first query word, with "…" where it was cut. */
-export function snippet(text: string, query: string): string | null {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+/**
+ * About 80 characters of `text` around the first place that one of `terms` occurs, with "…" where it
+ * was cut. Pass the query words and the terms MiniSearch matched, so prefix and fuzzy hits get a
+ * snippet too.
+ */
+export function snippet(text: string, terms: readonly string[]): string | null {
   const lower = text.toLowerCase();
-  const at = words.map((w) => lower.indexOf(w)).find((i) => i >= 0);
-  if (at === undefined) return null;
+  const places = terms
+    .map((t) => t.toLowerCase())
+    .filter(Boolean)
+    .map((t) => lower.indexOf(t))
+    .filter((i) => i >= 0);
+  if (places.length === 0) return null;
+  const at = Math.min(...places);
   const start = Math.max(0, at - 30);
   const end = Math.min(text.length, at + 50);
   const body = text.slice(start, end).replace(/\s+/g, ' ').trim();

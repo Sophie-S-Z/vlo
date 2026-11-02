@@ -5,7 +5,13 @@ import { proseExtensions } from '@/features/editor/extensions/prose';
 import { poemExtensions } from '@/features/editor/extensions/poem';
 import { docText } from '@/features/editor/itemText';
 import { parsePoemText, poemDataFromDoc, poemDataToJSON } from '@/features/editor/poemText';
-import { BEFORE_RESTORE, restoreSnapshot, snapshotsOf, takeSnapshot } from '@/features/snapshots/snapshots';
+import {
+  BEFORE_RESTORE,
+  latestSnapshotText,
+  restoreSnapshot,
+  snapshotsOf,
+  takeSnapshot,
+} from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { YFRAGMENT, docFromUpdate } from '@/lib/ydocs';
@@ -59,6 +65,15 @@ test('snapshotsOf lists an item’s snapshots newest first', async () => {
   await takeSnapshot(item, doc, 'two');
   await takeSnapshot({ id: 'other', projectId: 'project-1' }, doc, 'other');
   expect((await snapshotsOf('item-1')).map((s) => s.text)).toEqual(['two', 'one']);
+});
+
+test('latestSnapshotText gives the newest snapshot text of that item, or null', async () => {
+  mount('prose');
+  expect(await latestSnapshotText('item-1')).toBeNull();
+  await takeSnapshot(item, doc, 'one');
+  await takeSnapshot(item, doc, 'two');
+  await takeSnapshot({ id: 'other', projectId: 'project-1' }, doc, 'other');
+  expect(await latestSnapshotText('item-1')).toBe('two');
 });
 
 test('restore saves the current text first, then shows the old text in the same document', async () => {

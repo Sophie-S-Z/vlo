@@ -1,5 +1,5 @@
 import { Timer } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { clock } from '@/lib/clock';
 import type { Session } from '@/lib/db';
 import {
@@ -40,6 +40,14 @@ function wordsText(words: number): string {
   return `${words.toLocaleString()} ${words === 1 ? 'word' : 'words'}`;
 }
 
+/** Closes a session with what the project gained since it started. Returns the words added. */
+async function finishSession(projectId: string, running: Running): Promise<number> {
+  const totals = await projectTotals(projectId);
+  const words = Math.max(0, totals.words - running.start.words);
+  await endSession(running.session.id, words, totals.poems - running.start.poems);
+  return words;
+}
+
 /**
  * A writing session timer. At the end a gentle prompt asks to close the session. Nothing is lost or
  * counted against the writer if they keep going. The ring updates once a second, outside the editor.
@@ -49,6 +57,27 @@ export function SessionTimer({ projectId }: { projectId: string }) {
   const [now, setNow] = useState(() => clock.now());
   const [asking, setAsking] = useState(false);
   const [message, setMessage] = useState('');
+  const runningRef = useRef<Running | null>(null);
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
+
+  // Leaving the project or closing the tab ends the session with what it added, so its record is right.
+  useEffect(() => {
+    const leave = () => {
+      const open = runningRef.current;
+      if (!open) return;
+      runningRef.current = null;
+      setRunning(null);
+      setAsking(false);
+      void finishSession(projectId, open);
+    };
+    window.addEventListener('pagehide', leave);
+    return () => {
+      window.removeEventListener('pagehide', leave);
+      leave();
+    };
+  }, [projectId]);
 
   useEffect(() => {
     if (!running || running.overtime) return;
@@ -73,16 +102,14 @@ export function SessionTimer({ projectId }: { projectId: string }) {
 
   async function close() {
     if (!running) return;
-    const totals = await projectTotals(projectId);
-    const words = Math.max(0, totals.words - running.start.words);
-    await endSession(running.session.id, words, totals.poems - running.start.poems);
+    runningRef.current = null;
+    const words = await finishSession(projectId, running);
     setRunning(null);
     setAsking(false);
     setMessage(`Session closed. You wrote ${wordsText(words)}.`);
   }
 
   const left = running ? running.endsAt - now : 0;
-  const minutesLeft = Math.max(1, Math.ceil(left / 60_000));
   const fraction = running ? Math.min(1, Math.max(0, left / (running.minutes * 60_000))) : 0;
 
   return (
@@ -111,12 +138,7 @@ export function SessionTimer({ projectId }: { projectId: string }) {
       ) : (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              aria-label={
-                running.overtime ? 'Session open' : `Session timer, ${String(minutesLeft)} minutes left`
-              }
-            >
+            <Button variant="outline">
               {!running.overtime && (
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 -rotate-90">
                   <circle cx="12" cy="12" r={RADIUS} fill="none" stroke="var(--rule)" strokeWidth="2.5" />
@@ -133,9 +155,16 @@ export function SessionTimer({ projectId }: { projectId: string }) {
                   />
                 </svg>
               )}
-              <span aria-hidden="true" className="font-mono tabular-nums">
-                {running.overtime ? 'Session open' : clockText(left)}
-              </span>
+              {running.overtime ? (
+                'Session open'
+              ) : (
+                // The name holds the visible time, so a voice command that says it works (WCAG 2.5.3).
+                <span>
+                  <span className="sr-only">Session timer, </span>
+                  <span className="font-mono tabular-nums">{clockText(left)}</span>
+                  <span className="sr-only"> left</span>
+                </span>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

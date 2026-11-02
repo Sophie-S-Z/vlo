@@ -98,4 +98,36 @@ test('with motion allowed, the cards rise in and morph between grid and list, an
   await page.getByRole('radio', { name: /^Sepia/ }).click();
   await expect.poll(() => page.evaluate(() => window.__viewTransitions)).toBeGreaterThan(before);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia');
+  // The reveal grows from the centre of the radio the writer chose.
+  const box = await page.getByRole('radio', { name: /^Sepia/ }).boundingBox();
+  const origin = await page.evaluate(() => ({
+    x: parseFloat(document.documentElement.style.getPropertyValue('--vt-x')),
+    y: parseFloat(document.documentElement.style.getPropertyValue('--vt-y')),
+  }));
+  expect(origin.x).toBeCloseTo((box?.x ?? 0) + (box?.width ?? 0) / 2, 0);
+  expect(origin.y).toBeCloseTo((box?.y ?? 0) + (box?.height ?? 0) / 2, 0);
+});
+
+test('turning reduced motion on keeps the open editor, its text and its focus', async ({ page }) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  await page
+    .getByRole('dialog', { name: 'New project' })
+    .getByRole('button', { name: 'Create project' })
+    .click();
+  const editor = page.getByRole('textbox', { name: 'Scene 1' });
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('Rain on the ledger.');
+  const before = await editor.elementHandle();
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect
+    .poll(() => page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches))
+    .toBe(true);
+  // The same element, still focused: the page below the view transition boundary did not remount.
+  expect(await before.evaluate((element) => element.isConnected && element === document.activeElement)).toBe(
+    true,
+  );
+  await page.keyboard.type(' Still here.');
+  await expect(editor).toHaveText('Rain on the ledger. Still here.');
 });

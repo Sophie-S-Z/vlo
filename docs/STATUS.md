@@ -44,20 +44,46 @@ Last update: 2026-11-02
   development package.
 - Gate 1 tests: fixtures for the novel and memoir (spec section 15), a seeded 100,000-word project (40 chapters,
   120 scenes, 30 poems, one 10,000-word scene), a poem round trip that compares every character and hanging
-  indent after reload, and the performance budgets. Local Chromium results on the 100,000-word project:
-  - Open the 10,000-word scene from the binder: about 90 ms (budget 300 ms). On the phone layout, about 150 ms.
-  - Keystroke to the next frame, 95th percentile of 200 keys: about 15 ms (budget 50 ms).
+  indent after reload, and the performance budgets. Each time runs to the first painted frame. Local Chromium
+  results on the 100,000-word project:
+  - Open the 10,000-word scene from the binder: 55 to 96 ms (budget 300 ms). On the phone layout, about 140 ms.
+  - Keystroke to the next painted frame, 95th percentile of 200 keys typed 30 ms apart: about 19 ms (budget
+    50 ms).
   - Only the open item's `vlo-item-*` database opens.
-  - A cold page load straight to the scene, app start included: 380 to 460 ms. The test logs it and does not
-    hold it to the budget. The binder's 191 rows (about 4,000 DOM nodes) take about 140 ms of that.
+  - A cold page load straight to the scene, app start included: 450 to 500 ms on the desktop layout and about
+    370 ms on the phone layout, where the binder is closed. The test logs it and does not hold it to the budget.
   - Manuscript blocks use `content-visibility: auto`, which took about 60 ms off the open.
+- Binder speed fix: the drag sensors and the sortable list now keep the same objects between renders. Before,
+  opening an item re-rendered all 191 binder rows, and WebKit in CI took 383 to 433 ms to open the long scene.
+  Now only the 2 changed rows render.
+- Design audit (Task 14, impeccable rules applied by hand, because the skill's scripts are not in the
+  workspace). Fixed: on phones the project tools took over half of the first screen, so they show icons only
+  under 640 px and keep their names for screen readers. Fixed: template labels were in tracked capitals, and now
+  use sentence case. Left as they are: the 2 px quote rule on block quotes, white text on the accent color
+  (the contrast tests pass), and the prose toolbar that wraps to two rows on phones.
+- Review fixes for pull request 2:
+  - The History diff runs in a Web Worker with a 10 s limit. A very large change shows "Too many changes to
+    mark. Restore still works." and the page stays responsive.
+  - Automatic snapshots count active minutes per item across editors, compare against the newest snapshot, keep
+    the minutes after a failed save, and tell the writer when a save fails.
+  - The session timer ends the session with its real totals when the writer leaves the project or the tab.
+  - Turning reduced motion on keeps the open editor, its text and its focus.
+  - The timer button reads "Session timer, 10:00 left". Snapshot names show seconds.
+  - Typewriter scrolling centers on the visible area above an on-screen keyboard, and centers at once when the
+    writer turns it on.
+  - The command menu leaves out chapters and parts, shows a snippet for prefix and near-miss hits, and does not
+    open over another dialog.
+  - The hourly update check stops when the app unmounts. The theme reveal grows from the chosen radio in Safari
+    too.
 - Initial JavaScript: 186,872 bytes gzip (budget 250,000). Project route chunk: 196,039 bytes gzip. Command
   menu: 11,043 bytes. History panel: 4,823 bytes.
 
 ## In progress
 
-- Phase 1 pull request 1 (tasks 1 to 9).
-- Phase 1 tasks 10 to 14 follow in pull request 2.
+- Phase 1 pull request 1 (tasks 1 to 9) is merged as pull request #3.
+- Phase 1 tasks 10 to 14 are in pull request #4.
+- Open question for the product owner: focus-line dimming sets other lines to 40 % opacity. That gives 2.2:1 to
+  3.3:1 contrast, below WCAG AA. Dimming is off until the writer turns it on.
 - Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
   retry covers it.
@@ -99,3 +125,4 @@ Last update: 2026-11-02
 | 2026-11-02 | `@tiptap/y-tiptap` and `y-protocols` replace `y-prosemirror`.                          | `@tiptap/extension-collaboration` 3.32 needs them as peers.                                                            |
 | 2026-11-02 | Shared-element transitions use React's `<ViewTransition name>`, not Motion `layoutId`. | React Router 8 deprecates its `viewTransition` option and points to React 19.3 `<ViewTransition>` (rule 11).           |
 | 2026-11-02 | Two tabs on one item sync live through `BroadcastChannel`.                             | Better than the planned notice alone. Yjs merges both tabs, so no typing is lost.                                      |
+| 2026-11-02 | Storage health says "Unknown" and "Limit for Vlo", not "Not available" and "Quota".    | "Limit for Vlo" says what the number means. "Unknown" matches the other rows.                                          |

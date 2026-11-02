@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 export interface UpdateState {
@@ -32,19 +32,30 @@ export const UpdateContext = createContext<UpdateState>(idle);
  */
 export function UpdateProvider({ children }: { children: ReactNode }) {
   const requestedHere = useRef(false);
+  const stopChecks = useRef<(() => void) | null>(null);
   const [updatedElsewhere, setUpdatedElsewhere] = useState(false);
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_url, registration) {
-      if (registration) checkHourly(registration);
+      if (!registration) return;
+      stopChecks.current?.();
+      stopChecks.current = checkHourly(registration);
     },
     onNeedReload() {
       if (requestedHere.current) window.location.reload();
       else setUpdatedElsewhere(true);
     },
   });
+
+  useEffect(
+    () => () => {
+      stopChecks.current?.();
+      stopChecks.current = null;
+    },
+    [],
+  );
 
   const value = useMemo<UpdateState>(
     () => ({

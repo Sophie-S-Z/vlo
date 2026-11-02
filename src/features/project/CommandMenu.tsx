@@ -63,14 +63,23 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
     id: String(r.id),
     match: r.match,
   }));
+  const queryWords = trimmed.split(/\s+/).filter(Boolean);
+  // Chapters and parts have no editor, so the menu leaves them out.
+  const openable = (id: string) => {
+    const item = byId.get(id);
+    return item && canOpen(item) ? item : undefined;
+  };
   const titleHits =
     trimmed === ''
       ? items.filter(canOpen)
       : found
           .filter((r) => matchedIn(r, 'title'))
-          .map((r) => byId.get(r.id))
+          .map((r) => openable(r.id))
           .filter((i) => i !== undefined);
-  const textHits = found.filter((r) => matchedIn(r, 'text'));
+  const textHits = found
+    .filter((r) => matchedIn(r, 'text'))
+    .map((r) => ({ item: openable(r.id), terms: [...queryWords, ...Object.keys(r.match)] }))
+    .filter((r): r is { item: Item; terms: string[] } => r.item !== undefined);
   const shownActions = actions.filter((a) => a.label.toLowerCase().includes(trimmed.toLowerCase()));
 
   const choose = (run: () => void) => {
@@ -94,7 +103,6 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
               <Command.Item
                 key={item.id}
                 value={`item-${item.id}`}
-                disabled={!canOpen(item)}
                 onSelect={() => {
                   choose(() => {
                     onOpenItem(item.id);
@@ -109,26 +117,21 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
         )}
         {textHits.length > 0 && (
           <Command.Group heading="Text" className={groupClass}>
-            {textHits.map((hit) => {
-              const item = byId.get(hit.id);
-              if (!item) return null;
-              return (
-                <Command.Item
-                  key={hit.id}
-                  value={`text-${hit.id}`}
-                  disabled={!canOpen(item)}
-                  onSelect={() => {
-                    choose(() => {
-                      onOpenItem(item.id);
-                    });
-                  }}
-                  className={itemClass}
-                >
-                  <span>{item.title}</span>
-                  <span className="text-xs text-muted">{snippet(textById.get(hit.id) ?? '', trimmed)}</span>
-                </Command.Item>
-              );
-            })}
+            {textHits.map(({ item, terms }) => (
+              <Command.Item
+                key={item.id}
+                value={`text-${item.id}`}
+                onSelect={() => {
+                  choose(() => {
+                    onOpenItem(item.id);
+                  });
+                }}
+                className={itemClass}
+              >
+                <span>{item.title}</span>
+                <span className="text-xs text-muted">{snippet(textById.get(item.id) ?? '', terms)}</span>
+              </Command.Item>
+            ))}
           </Command.Group>
         )}
         {shownActions.length > 0 && (

@@ -62,9 +62,11 @@ export function ProjectPage() {
   };
 
   // Mod-K opens the command menu from anywhere on the project screen, the editor included.
+  // Over another dialog or menu, the key does nothing, so two dialogs never stack.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+        if (layerOpen()) return;
         event.preventDefault();
         setMenuOpen(true);
       }

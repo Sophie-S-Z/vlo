@@ -65,6 +65,35 @@ test.describe('wide screens', () => {
     await page.keyboard.press('Enter');
     await expect(scene(page, 2)).toBeVisible();
   });
+
+  test('the command menu lists only items that open, finds near misses and stays shut over a dialog', async ({
+    page,
+  }) => {
+    await newNovel(page);
+    await page.keyboard.type('The kettle sings on the stove.');
+    await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toHaveText('Saved');
+
+    await page.keyboard.press(`${mod}+k`);
+    const menu = page.getByRole('dialog', { name: 'Command menu' });
+    await menu.getByRole('combobox').fill('Chapter');
+    await expect(menu.getByText('Nothing matches.')).toBeVisible();
+    await expect(menu.getByRole('option', { name: 'Chapter 1' })).toHaveCount(0);
+
+    // A misspelt word still finds the scene, and the snippet shows the word it matched.
+    await menu.getByRole('combobox').fill('ketle');
+    await expect(menu.getByRole('group', { name: 'Text' }).getByRole('option')).toContainText(
+      'The kettle sings on the stove.',
+    );
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+
+    await page.getByRole('button', { name: 'History' }).click();
+    const history = page.getByRole('dialog', { name: 'History' });
+    await expect(history).toBeVisible();
+    await page.keyboard.press(`${mod}+k`);
+    await expect(menu).toBeHidden();
+    await expect(history).toBeVisible();
+  });
 });
 
 test('the session timer ends with a gentle prompt and no penalty', async ({ page }) => {
@@ -73,9 +102,9 @@ test('the session timer ends with a gentle prompt and no penalty', async ({ page
   await page.keyboard.type('Rain on the ledger.');
   await page.getByRole('button', { name: 'Timer' }).click();
   await page.getByRole('menuitem', { name: 'Write for 10 minutes' }).click();
-  await expect(page.getByRole('button', { name: 'Session timer, 10 minutes left' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Session timer, 10:00 left' })).toBeVisible();
   await page.clock.fastForward('05:00');
-  await expect(page.getByRole('button', { name: 'Session timer, 5 minutes left' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Session timer, 5:00 left' })).toBeVisible();
   await page.clock.fastForward('05:01');
 
   const prompt = page.getByRole('alertdialog', { name: 'Close the session?' });
@@ -92,6 +121,44 @@ test('the session timer ends with a gentle prompt and no penalty', async ({ page
   await expect(page.getByRole('status').filter({ hasText: 'Session closed' })).toHaveText(
     /Session closed\. You wrote \d+ words?\./,
   );
+});
+
+/** The project's session rows, read from Vlo's own database. */
+function sessionRows(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<{ startedAt: number; endedAt: number; wordsAdded: number }[]>((resolve, reject) => {
+        const open = indexedDB.open('vlo');
+        open.onerror = () => {
+          reject(open.error ?? new Error('open failed'));
+        };
+        open.onsuccess = () => {
+          const request = open.result.transaction('sessions').objectStore('sessions').getAll();
+          request.onsuccess = () => {
+            open.result.close();
+            resolve(request.result as { startedAt: number; endedAt: number; wordsAdded: number }[]);
+          };
+        };
+      }),
+  );
+}
+
+test('leaving the project ends a running session with the words it added', async ({ page }) => {
+  await newNovel(page);
+  await page.getByRole('button', { name: 'Timer' }).click();
+  await page.getByRole('menuitem', { name: 'Write for 25 minutes' }).click();
+  await expect(page.getByRole('button', { name: /^Session timer, / })).toBeVisible();
+  await scene(page, 1).click();
+  await page.keyboard.type('Rain on the ledger tonight.');
+  await expect(page.getByText('5 words')).toBeVisible();
+  const left = Date.now();
+  await page.getByRole('link', { name: 'Library' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+
+  await expect.poll(async () => (await sessionRows(page))[0]?.wordsAdded).toBe(5);
+  const [row] = await sessionRows(page);
+  // Ended when the writer left, not at the planned end 25 minutes later.
+  expect(row?.endedAt).toBeLessThan(left + 60_000);
 });
 
 for (const theme of ['ink', 'paper', 'sepia'] as const) {

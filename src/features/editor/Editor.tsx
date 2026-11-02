@@ -2,7 +2,7 @@ import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/r
 import { useEffect, useId, useRef } from 'react';
 import type * as Y from 'yjs';
 import { FocusTools } from '@/features/focus/focusExtension';
-import { refreshFocus } from '@/features/focus/focusPlugin';
+import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
 import { useFocusPrefs } from '@/features/focus/focusPrefs';
 import { cn } from '@/ui/cn';
 import { poemExtensions } from './extensions/poem';
@@ -71,6 +71,7 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
   useEffect(() => {
     if (editor.isDestroyed) return;
     editor.view.dispatch(refreshFocus(editor.state.tr));
+    if (focus.typewriter && editor.view.hasFocus()) centerCaret(editor.view);
   }, [editor, focus]);
 
   useEffect(() => {

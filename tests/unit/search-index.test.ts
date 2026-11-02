@@ -40,8 +40,16 @@ test('every word of a phrase must match', () => {
 });
 
 test('a snippet shows the text around the match', () => {
-  expect(snippet('Salt on the sill.\n    The kettle sings\n', 'kettle')).toBe(
+  expect(snippet('Salt on the sill.\n    The kettle sings\n', ['kettle'])).toBe(
     'Salt on the sill. The kettle sings',
   );
-  expect(snippet('No match here', 'kettle')).toBeNull();
+  expect(snippet('No match here', ['kettle'])).toBeNull();
+});
+
+test('a fuzzy hit gets a snippet from the term the index matched', () => {
+  const index = buildSearchIndex(texts, items);
+  const [hit] = index.search('ketle');
+  expect(hit?.id as string | undefined).toBe('p1');
+  const terms = ['ketle', ...Object.keys(hit?.match ?? {})];
+  expect(snippet(texts[0]?.text ?? '', terms)).toBe('Salt on the sill. The kettle sings');
 });

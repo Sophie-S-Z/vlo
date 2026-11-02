@@ -90,6 +90,11 @@ describe('typewriter scrolling', () => {
     expect(typewriterTarget(700, 730, 800, 1000)).toBe(1315);
   });
 
+  test('with a phone keyboard open, the caret goes to the middle of the part above it', () => {
+    // A 300 px visible area that starts 100 px down: its middle is at 250.
+    expect(typewriterTarget(700, 730, 300, 1000, 100)).toBe(1465);
+  });
+
   test('the target never goes above the top of the page', () => {
     expect(typewriterTarget(10, 40, 800, 0)).toBe(0);
   });

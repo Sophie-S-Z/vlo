@@ -65,23 +65,33 @@ function build(state: EditorState, dim: boolean): FocusState {
 }
 
 /**
- * Where the window should scroll so the caret line sits at the vertical center.
- * `caretTop` and `caretBottom` are viewport coordinates of the caret.
+ * Where the window should scroll so the caret line sits at the vertical center of the visible area.
+ * `caretTop` and `caretBottom` are viewport coordinates of the caret. `visibleTop` is where the visible
+ * area starts, which is below 0 when a phone's keyboard pushes it.
  */
 export function typewriterTarget(
   caretTop: number,
   caretBottom: number,
-  viewportHeight: number,
+  visibleHeight: number,
   scrollY: number,
+  visibleTop = 0,
 ) {
   const middle = (caretTop + caretBottom) / 2;
-  return Math.max(0, Math.round(scrollY + middle - viewportHeight / 2));
+  return Math.max(0, Math.round(scrollY + middle - visibleTop - visibleHeight / 2));
 }
 
-function centerCaret(view: EditorView) {
+/** Scrolls so the caret line sits in the middle of what the writer can see, above a phone's keyboard. */
+export function centerCaret(view: EditorView) {
   const { head } = view.state.selection;
   const caret = view.coordsAtPos(head);
-  const top = typewriterTarget(caret.top, caret.bottom, window.innerHeight, window.scrollY);
+  const visible = window.visualViewport;
+  const top = typewriterTarget(
+    caret.top,
+    caret.bottom,
+    visible?.height ?? window.innerHeight,
+    window.scrollY,
+    visible?.offsetTop ?? 0,
+  );
   if (Math.abs(top - window.scrollY) > 1) window.scrollTo({ top, behavior: 'instant' });
 }
 

@@ -2,12 +2,19 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { History, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
-import { snapshotsOf, takeSnapshot } from '@/features/snapshots/snapshots';
+import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
+import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
 import type { Item } from '@/lib/db';
 import { Button } from '@/ui/button';
-import { Dialog, DialogClose, DialogContent, DialogTrigger } from '@/ui/dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@/ui/dialog';
 import { Editor } from './Editor';
 import { docText, writeItemText } from './itemText';
 import { SaveStatus } from './SaveStatus';
@@ -74,11 +81,15 @@ export function EditorPane({ item, kind, width, snapshotEveryMinutes }: EditorPa
     if (!open) return;
     return watchActiveMinutes({
       doc: open.doc,
+      active: activeMinutesOf(target.id),
       ignoreOrigins: [open.persistence, TAB_ORIGIN],
       everyMinutes: snapshotEveryMinutes,
       readText,
-      latestText: async () => (await snapshotsOf(target.id))[0]?.text ?? null,
+      latestText: () => latestSnapshotText(target.id),
       save: (text) => takeSnapshot(target, open.doc, text),
+      onError: () => {
+        setNotice('Vlo could not save an automatic snapshot. It tries again at your next pause.');
+      },
     });
   }, [open, snapshotEveryMinutes, readText, target]);
 
@@ -106,6 +117,14 @@ export function EditorPane({ item, kind, width, snapshotEveryMinutes }: EditorPa
                   <X aria-hidden="true" className="size-4" />
                 </Button>
               </DialogClose>
+              {/* Outside the lazy panel, so the dialog has its name while the panel loads. */}
+              <div className="grid gap-1 pr-10">
+                <DialogTitle>History</DialogTitle>
+                <DialogDescription>
+                  Vlo saves a snapshot of {item.title} after every {snapshotEveryMinutes} minutes of writing.
+                  Restoring one saves the current text first.
+                </DialogDescription>
+              </div>
               {editor && open && (
                 <Suspense fallback={<p className="text-muted">Loading history.</p>}>
                   <HistoryPanel
