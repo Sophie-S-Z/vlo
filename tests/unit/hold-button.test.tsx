@@ -140,3 +140,23 @@ test('after an early release, a later bare click still confirms', () => {
   fireEvent.click(button, { detail: 0 });
   expect(onConfirm).toHaveBeenCalledTimes(1);
 });
+
+test('when the action reports failure, the button works again', async () => {
+  const onConfirm = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  render(
+    <PreferencesProvider>
+      <HoldButton label="Hold to open your first page" onConfirm={onConfirm} />
+    </PreferencesProvider>,
+  );
+  const button = screen.getByRole('button', { name: 'Hold to open your first page' });
+  fireEvent.click(button, { detail: 0 });
+  await act(async () => {
+    await Promise.resolve();
+  });
+  fireEvent.click(button, { detail: 0 });
+  await act(async () => {
+    await Promise.resolve();
+  });
+  fireEvent.click(button, { detail: 0 });
+  expect(onConfirm).toHaveBeenCalledTimes(2);
+});

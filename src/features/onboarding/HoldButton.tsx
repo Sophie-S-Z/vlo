@@ -8,7 +8,8 @@ interface HoldButtonProps {
   /** The name when motion is off and a click confirms. Defaults to `label`. */
   plainLabel?: string;
   holdMs?: number;
-  onConfirm: () => void;
+  /** Return false (or a promise of false) when the action failed, so the button works again. */
+  onConfirm: () => boolean | undefined | Promise<boolean | undefined>;
 }
 
 const RING = 2 * Math.PI * 9;
@@ -35,7 +36,14 @@ export function HoldButton({ label, plainLabel = label, holdMs = 1200, onConfirm
   function confirm() {
     if (done.current) return;
     done.current = true;
-    onConfirm();
+    void Promise.resolve(onConfirm()).then(
+      (ok) => {
+        if (ok === false) done.current = false;
+      },
+      () => {
+        done.current = false;
+      },
+    );
   }
 
   function start() {

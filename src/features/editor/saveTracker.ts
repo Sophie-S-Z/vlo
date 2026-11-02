@@ -56,9 +56,21 @@ export function trackSaves(options: SaveTrackerOptions): () => void {
     }, pauseMs);
   };
 
+  // A tab that closes during the pause never runs the timer. Write the text copy and counts when the page hides.
+  const flush = (event: Event) => {
+    if (timer === null) return;
+    if (event.type !== 'pagehide' && document.visibilityState !== 'hidden') return;
+    clearTimeout(timer);
+    timer = null;
+    void settle(generation);
+  };
   doc.on('update', onUpdate);
+  document.addEventListener('visibilitychange', flush);
+  window.addEventListener('pagehide', flush);
   return () => {
     stopped = true;
+    document.removeEventListener('visibilitychange', flush);
+    window.removeEventListener('pagehide', flush);
     doc.off('update', onUpdate);
     // Leaving during the pause still writes the text copy and the counts.
     if (timer !== null) {

@@ -125,3 +125,19 @@ describe('menu moves', () => {
     expect(target && target.order > 'a0' && target.order < 'a1').toBe(true);
   });
 });
+
+describe('duplicate order keys', () => {
+  // Two tabs can add a sibling at the same moment and give both the same key.
+  const twins = flattenTree([
+    item('c1', 'chapter', null, 'a0'),
+    item('s1', 'scene', 'c1', 'a0'),
+    item('s2', 'scene', 'c1', 'a0'),
+  ]);
+
+  test('menu moves and drops still work, and nothing throws', () => {
+    expect(() => moveTarget(twins, 's2', 'up')).not.toThrow();
+    expect(() => moveTarget(twins, 's1', 'down')).not.toThrow();
+    expect(() => projectDrop(twins, 's2', 's1', 0, TEMPLATES.novel)).not.toThrow();
+    expect(moveTarget(twins, 's1', 'down')?.order).not.toBe('a0');
+  });
+});

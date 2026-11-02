@@ -71,6 +71,13 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: 'prose' | 'poe
     }),
   });
   const [linkOpen, setLinkOpen] = useState(false);
+  // Said only after a hanging indent button press. A caret move changes the readout but says nothing.
+  const [hangMessage, setHangMessage] = useState('');
+  const hang = (next: number) => () => {
+    if (editor.chain().focus().setHanging(next).run()) {
+      setHangMessage(`Hanging indent ${String(Math.min(Math.max(next, 0), MAX_HANGING_EM))} em.`);
+    }
+  };
   const run = (fn: (chain: ReturnType<Editor['chain']>) => ReturnType<Editor['chain']>) => () => {
     fn(editor.chain().focus()).run();
   };
@@ -151,25 +158,28 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: 'prose' | 'poe
               title="Less hanging indent"
               className={itemClass}
               disabled={state.hanging <= 0}
-              onClick={run((c) => c.setHanging(state.hanging - 1))}
+              onClick={hang(state.hanging - 1)}
             >
               <IndentDecrease aria-hidden="true" className="size-4" />
             </ToolbarPrimitive.Button>
-            <span className="min-w-20 text-center font-mono text-xs text-muted" aria-live="polite">
-              Hang {state.hanging} em
-            </span>
+            <span className="min-w-20 text-center font-mono text-xs text-muted">Hang {state.hanging} em</span>
             <ToolbarPrimitive.Button
               aria-label="More hanging indent"
               title="More hanging indent"
               className={itemClass}
               disabled={state.hanging >= MAX_HANGING_EM}
-              onClick={run((c) => c.setHanging(state.hanging + 1))}
+              onClick={hang(state.hanging + 1)}
             >
               <IndentIncrease aria-hidden="true" className="size-4" />
             </ToolbarPrimitive.Button>
           </>
         )}
       </ToolbarPrimitive.Root>
+      {kind === 'poem' && (
+        <p role="status" className="sr-only">
+          {hangMessage}
+        </p>
+      )}
       {kind === 'prose' && (
         <LinkDialog
           open={linkOpen}

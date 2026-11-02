@@ -52,3 +52,10 @@ test('docText separates prose blocks with a blank line and writes scene breaks a
   expect(docText(editor.state.doc, 'prose')).toBe('One two.\n\n#\n\nThree.');
   editor.destroy();
 });
+
+test('docText keeps a line break between words, so they count apart', () => {
+  const editor = new Editor({ extensions: proseExtensions(new Y.Doc()) });
+  editor.commands.setContent('<p>Salt<br>Tide</p>');
+  expect(docText(editor.state.doc, 'prose')).toBe('Salt\nTide');
+  editor.destroy();
+});

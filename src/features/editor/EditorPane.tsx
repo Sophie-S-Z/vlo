@@ -3,7 +3,6 @@ import type { Editor as TiptapEditor } from '@tiptap/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clock } from '@/lib/clock';
 import type { Item } from '@/lib/db';
-import { confirmSaved } from '@/lib/ydocs';
 import { Editor } from './Editor';
 import { docText, writeItemText } from './itemText';
 import { SaveStatus } from './SaveStatus';
@@ -47,7 +46,7 @@ export function EditorPane({ item, kind, width }: EditorPaneProps) {
     return trackSaves({
       doc: open.doc,
       ignoreOrigins: [open.persistence, TAB_ORIGIN],
-      confirm: () => confirmSaved(open.persistence, clock.now()),
+      confirm: () => open.confirmSaved(clock.now()),
       onPause: async () => {
         if (latest.current) await writeItemText(target, docText(latest.current, kind), kind);
       },

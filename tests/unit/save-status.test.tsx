@@ -116,3 +116,20 @@ test('the status region stays quiet while saving, so typing is not read aloud', 
   render(<SaveStatus state="saving" />);
   expect(screen.getByRole('status').textContent).toBe('');
 });
+
+test('a page that hides during the pause writes the text copy and confirms the save', async () => {
+  const doc = new Y.Doc();
+  const states: SaveState[] = [];
+  const onPause = vi.fn(() => Promise.resolve());
+  const confirm = vi.fn(() => Promise.resolve());
+  trackSaves({ doc, ignoreOrigins: [], confirm, onPause, onState: (s) => states.push(s) });
+  type(doc, 'a');
+  window.dispatchEvent(new Event('pagehide'));
+  await flush();
+  expect(onPause).toHaveBeenCalledTimes(1);
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect(states).toEqual(['saving', 'saved']);
+  vi.advanceTimersByTime(600);
+  await flush();
+  expect(onPause).toHaveBeenCalledTimes(1);
+});

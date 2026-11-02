@@ -53,3 +53,65 @@ describe('item documents', () => {
     expect(readText(copy)).toBe(readText(doc));
   });
 });
+
+/** Makes one real write fail, so its error event bubbles to the database as a quota error would. */
+async function failOneWrite(db: IDBDatabase) {
+  await new Promise<void>((resolve) => {
+    const tx = db.transaction(['custom'], 'readwrite');
+    const store = tx.objectStore('custom');
+    store.add(1, 'twice');
+    store.add(2, 'twice'); // ConstraintError
+    tx.onabort = () => {
+      resolve();
+    };
+  });
+}
+
+describe('confirmSaved', () => {
+  test('resolves when the writes are in IndexedDB', async () => {
+    const open = openItemDoc('confirm-ok');
+    await open.ready;
+    writeLine(open.doc, 'Salt');
+    await expect(open.confirmSaved(1)).resolves.toBeUndefined();
+    await open.close();
+  });
+
+  test('after a failed update write it stores the whole document again', async () => {
+    const open = openItemDoc('confirm-retry');
+    await open.ready;
+    writeLine(open.doc, 'Lost line');
+    const db = open.persistence.db;
+    if (!db) throw new Error('no db');
+    await failOneWrite(db);
+    await open.confirmSaved(1);
+    // The rewrite replaced the separate updates with one full state.
+    const count = await new Promise<number>((resolve) => {
+      const request = db.transaction(['updates'], 'readonly').objectStore('updates').count();
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+    });
+    expect(count).toBe(1);
+    await open.close();
+    const again = openItemDoc('confirm-retry');
+    await again.ready;
+    expect(readText(again.doc)).toContain('Lost line');
+    await again.close();
+  });
+
+  test('rejects with QuotaExceededError when the retry also fails', async () => {
+    const open = openItemDoc('confirm-full');
+    await open.ready;
+    writeLine(open.doc, 'Salt');
+    const db = open.persistence.db;
+    if (!db) throw new Error('no db');
+    await failOneWrite(db);
+    const real = db.transaction.bind(db);
+    db.transaction = () => {
+      throw new DOMException('full', 'QuotaExceededError');
+    };
+    await expect(open.confirmSaved(1)).rejects.toMatchObject({ name: 'QuotaExceededError' });
+    db.transaction = real;
+    await open.close();
+  });
+});

@@ -48,7 +48,19 @@ export function shareWithTabs(
   doc.on('update', onUpdate);
   post({ type: 'hello', tab });
 
+  // A closed tab never runs React clean-up, so it says goodbye on pagehide. A page restored from the back-forward cache says hello again.
+  const onPageHide = () => {
+    post({ type: 'bye', tab });
+  };
+  const onPageShow = (event: PageTransitionEvent) => {
+    if (event.persisted) post({ type: 'hello', tab });
+  };
+  window.addEventListener('pagehide', onPageHide);
+  window.addEventListener('pageshow', onPageShow);
+
   return () => {
+    window.removeEventListener('pagehide', onPageHide);
+    window.removeEventListener('pageshow', onPageShow);
     doc.off('update', onUpdate);
     post({ type: 'bye', tab });
     channel.close();

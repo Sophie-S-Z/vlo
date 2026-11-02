@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createProject, deleteProject, renameProject } from '@/features/library/projects';
 import { db } from '@/lib/db';
 import { itemDocName } from '@/lib/itemDocName';
@@ -51,7 +51,24 @@ describe('createProject', () => {
 
   test('the first project asks the browser for persistent storage and records the answer', async () => {
     await createProject({ title: 'One', template: 'poetry' });
-    expect((await db.appMeta.get('persistence'))?.value).toBe('granted');
+    await vi.waitFor(async () => {
+      expect((await db.appMeta.get('persistence'))?.value).toBe('granted');
+    });
+  });
+
+  test('creating the first project does not wait for the persistent storage answer', async () => {
+    let answer: (granted: boolean) => void = () => undefined;
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: { persist: () => new Promise<boolean>((resolve) => (answer = resolve)) },
+    });
+    const { firstItemId } = await createProject({ title: 'One', template: 'poetry' });
+    expect(firstItemId).toBeTruthy();
+    expect(await db.appMeta.get('persistence')).toBeUndefined();
+    answer(false);
+    await vi.waitFor(async () => {
+      expect((await db.appMeta.get('persistence'))?.value).toBe('denied');
+    });
   });
 });
 

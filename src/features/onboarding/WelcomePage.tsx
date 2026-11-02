@@ -44,17 +44,19 @@ export function WelcomePage() {
     }
   }
 
-  async function open() {
+  async function open(): Promise<boolean> {
     if (shownTitle.trim() === '') {
       setError('A project needs a title.');
-      return;
+      return false;
     }
     try {
       const { project, firstItemId } = await createProject({ title: shownTitle, template });
       await markOnboarded();
       await navigate(`/p/${project.id}?item=${firstItemId}`);
+      return true;
     } catch {
       setError('Vlo could not save the project on this device. Check that the browser allows site data.');
+      return false;
     }
   }
 
@@ -151,7 +153,7 @@ export function WelcomePage() {
               <HoldButton
                 label="Hold to open your first page"
                 plainLabel="Open your first page"
-                onConfirm={() => void open()}
+                onConfirm={open}
               />
             )}
           </div>

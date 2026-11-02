@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Ellipsis, GripVertical } from 'lucide-react';
+import { memo } from 'react';
 import type { TemplateDef } from '@/features/library/templates';
 import type { Item, ItemKind, Status } from '@/lib/db';
 import { cn } from '@/ui/cn';
@@ -26,17 +27,40 @@ export const STATUS_LABEL: Record<Status, string> = {
   done: 'Done',
 };
 
+export type BinderMove = 'up' | 'down' | 'indent' | 'outdent';
+
+/** One stable set of actions for every row. Move targets are worked out only when a menu opens. */
 export interface BinderItemActions {
-  open: () => void;
-  rename: () => void;
-  synopsis: () => void;
-  remove: () => void;
-  setStatus: (status: Status) => void;
-  addChild: (kind: ItemKind) => void;
-  moveUp: (() => void) | null;
-  moveDown: (() => void) | null;
-  indent: (() => void) | null;
-  outdent: (() => void) | null;
+  open: (item: Item) => void;
+  rename: (item: Item) => void;
+  synopsis: (item: Item) => void;
+  remove: (item: Item) => void;
+  setStatus: (item: Item, status: Status) => void;
+  addChild: (item: Item, kind: ItemKind) => void;
+  canMove: (item: Item, move: BinderMove) => boolean;
+  move: (item: Item, move: BinderMove) => void;
+}
+
+const MOVES: { move: BinderMove; label: string }[] = [
+  { move: 'up', label: 'Move up' },
+  { move: 'down', label: 'Move down' },
+  { move: 'indent', label: 'Indent' },
+  { move: 'outdent', label: 'Outdent' },
+];
+
+/** Radix mounts menu content only while the menu is open, so this work runs once per open menu. */
+function MoveItems({ item, actions }: { item: Item; actions: BinderItemActions }) {
+  return MOVES.map(({ move, label }) => (
+    <DropdownMenuItem
+      key={move}
+      disabled={!actions.canMove(item, move)}
+      onSelect={() => {
+        actions.move(item, move);
+      }}
+    >
+      {label}
+    </DropdownMenuItem>
+  ));
 }
 
 interface BinderItemProps {
@@ -49,7 +73,14 @@ interface BinderItemProps {
   actions: BinderItemActions;
 }
 
-export function BinderItem({ item, depth, template, isOpen, refused, actions }: BinderItemProps) {
+export const BinderItem = memo(function BinderItem({
+  item,
+  depth,
+  template,
+  isOpen,
+  refused,
+  actions,
+}: BinderItemProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
   const writable = template.editorKind(item.kind) !== null;
@@ -85,7 +116,9 @@ export function BinderItem({ item, depth, template, isOpen, refused, actions }: 
           {writable ? (
             <button
               type="button"
-              onClick={actions.open}
+              onClick={() => {
+                actions.open(item);
+              }}
               aria-current={isOpen ? 'page' : undefined}
               className="block w-full text-left font-medium [overflow-wrap:anywhere] hover:text-accent-text"
               data-binder-title
@@ -112,16 +145,36 @@ export function BinderItem({ item, depth, template, isOpen, refused, actions }: 
             <Ellipsis aria-hidden="true" className="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {writable && <DropdownMenuItem onSelect={actions.open}>Open</DropdownMenuItem>}
-            <DropdownMenuItem onSelect={actions.rename}>Rename</DropdownMenuItem>
-            <DropdownMenuItem onSelect={actions.synopsis}>Edit synopsis</DropdownMenuItem>
+            {writable && (
+              <DropdownMenuItem
+                onSelect={() => {
+                  actions.open(item);
+                }}
+              >
+                Open
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onSelect={() => {
+                actions.rename(item);
+              }}
+            >
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => {
+                actions.synopsis(item);
+              }}
+            >
+              Edit synopsis
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup
                   value={item.status}
                   onValueChange={(value) => {
-                    actions.setStatus(value as Status);
+                    actions.setStatus(item, value as Status);
                   }}
                 >
                   {(Object.keys(STATUS_LABEL) as Status[]).map((status) => (
@@ -137,27 +190,21 @@ export function BinderItem({ item, depth, template, isOpen, refused, actions }: 
               <DropdownMenuItem
                 key={kind}
                 onSelect={() => {
-                  actions.addChild(kind);
+                  actions.addChild(item, kind);
                 }}
               >
                 Add {template.kindLabel[kind] ?? kind} inside
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled={!actions.moveUp} onSelect={actions.moveUp ?? undefined}>
-              Move up
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!actions.moveDown} onSelect={actions.moveDown ?? undefined}>
-              Move down
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!actions.indent} onSelect={actions.indent ?? undefined}>
-              Indent
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!actions.outdent} onSelect={actions.outdent ?? undefined}>
-              Outdent
-            </DropdownMenuItem>
+            <MoveItems item={item} actions={actions} />
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={actions.remove} className="text-accent-text">
+            <DropdownMenuItem
+              onSelect={() => {
+                actions.remove(item);
+              }}
+              className="text-accent-text"
+            >
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -165,4 +212,4 @@ export function BinderItem({ item, depth, template, isOpen, refused, actions }: 
       </div>
     </li>
   );
-}
+});

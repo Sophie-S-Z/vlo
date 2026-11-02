@@ -73,12 +73,19 @@ export async function createProject(
     await db.items.bulkAdd(items);
   });
 
-  if (isFirstProject) {
-    const answer = await requestPersistence();
-    await db.appMeta.put({ key: 'persistence', value: answer });
-  }
+  // Firefox can show a prompt for persistent storage. The writer goes to the first page without waiting for an answer.
+  if (isFirstProject) void recordPersistence();
 
   return { project, firstItemId: first.id };
+}
+
+async function recordPersistence(): Promise<void> {
+  try {
+    const answer = await requestPersistence();
+    await db.appMeta.put({ key: 'persistence', value: answer });
+  } catch {
+    // With no stored answer, Settings still shows what the browser reports now.
+  }
 }
 
 export async function renameProject(id: string, title: string): Promise<void> {
@@ -87,13 +94,19 @@ export async function renameProject(id: string, title: string): Promise<void> {
 
 /** Deletes a project, its rows and every item's stored text. */
 export async function deleteProject(id: string): Promise<void> {
-  const itemIds = await db.items.where('projectId').equals(id).primaryKeys();
-  await db.transaction('rw', [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts], async () => {
-    await db.items.where('projectId').equals(id).delete();
-    await db.snapshots.where('projectId').equals(id).delete();
-    await db.sessions.where('projectId').equals(id).delete();
-    await db.itemTexts.where('projectId').equals(id).delete();
-    await db.projects.delete(id);
-  });
+  const itemIds = await db.transaction(
+    'rw',
+    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts],
+    async () => {
+      // Read the ids in the same transaction, so an item added from another tab cannot be left behind.
+      const ids = await db.items.where('projectId').equals(id).primaryKeys();
+      await db.items.where('projectId').equals(id).delete();
+      await db.snapshots.where('projectId').equals(id).delete();
+      await db.sessions.where('projectId').equals(id).delete();
+      await db.itemTexts.where('projectId').equals(id).delete();
+      await db.projects.delete(id);
+      return ids;
+    },
+  );
   await Promise.all(itemIds.map((itemId) => deleteItemDoc(itemId)));
 }

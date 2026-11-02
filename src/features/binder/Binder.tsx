@@ -11,12 +11,12 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TEMPLATES } from '@/features/library/templates';
 import type { Item, ItemKind, Project, Status } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
-import { BinderItem, INDENT_PX, type BinderItemActions } from './BinderItem';
+import { BinderItem, INDENT_PX, type BinderItemActions, type BinderMove } from './BinderItem';
 import { ItemDialogs, type ItemAction } from './ItemDialogs';
 import { addItem, moveItem, nextTitle, updateItem } from './items';
 import {
@@ -120,37 +120,44 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
     if (template.editorKind(kind) !== null) onOpen(item.id);
   }
 
-  function actionsFor(node: FlatNode): BinderItemActions {
-    const { item } = node;
-    const up = moveTarget(nodes, item.id, 'up');
-    const down = moveTarget(nodes, item.id, 'down');
-    const indent = indentTarget(nodes, item.id, template);
-    const outdent = outdentTarget(nodes, item.id, template);
+  // Rows get one stable actions object, so a drag move does not re-render every row. It reads the latest state here.
+  const latest = useRef({ nodes, template, onOpen, place, add });
+  useEffect(() => {
+    latest.current = { nodes, template, onOpen, place, add };
+  });
+
+  const actions = useMemo<BinderItemActions>(() => {
+    const targetOf = (item: Item, move: BinderMove): Placement | null => {
+      const { nodes: rows, template: def } = latest.current;
+      if (move === 'up' || move === 'down') return moveTarget(rows, item.id, move);
+      return move === 'indent' ? indentTarget(rows, item.id, def) : outdentTarget(rows, item.id, def);
+    };
     return {
-      open: () => {
-        onOpen(item.id);
+      open: (item) => {
+        latest.current.onOpen(item.id);
       },
-      rename: () => {
+      rename: (item) => {
         setAction({ type: 'rename', item, hasChildren: false });
       },
-      synopsis: () => {
+      synopsis: (item) => {
         setAction({ type: 'synopsis', item, hasChildren: false });
       },
-      remove: () => {
-        setAction({ type: 'delete', item, hasChildren: nodes.some((n) => n.parentId === item.id) });
+      remove: (item) => {
+        const hasChildren = latest.current.nodes.some((n) => n.parentId === item.id);
+        setAction({ type: 'delete', item, hasChildren });
       },
-      setStatus: (status: Status) => {
+      setStatus: (item, status: Status) => {
         void updateItem(item.id, { status });
       },
-      addChild: (kind: ItemKind) => {
-        void add(item.id, kind);
+      addChild: (item, kind) => {
+        void latest.current.add(item.id, kind);
       },
-      moveUp: up && (() => void place(item, up)),
-      moveDown: down && (() => void place(item, down)),
-      indent: indent && (() => void place(item, indent)),
-      outdent: outdent && (() => void place(item, outdent)),
+      canMove: (item, move) => targetOf(item, move) !== null,
+      move: (item, move) => {
+        void latest.current.place(item, targetOf(item, move));
+      },
     };
-  }
+  }, []);
 
   const rootKinds = template.childKinds.root ?? [];
 
@@ -209,7 +216,7 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
                   template={template}
                   isOpen={node.item.id === openItemId}
                   refused={dragging && overId !== null && projection === null}
-                  actions={actionsFor(node)}
+                  actions={actions}
                 />
               );
             })}

@@ -1,7 +1,11 @@
 import { generateKeyBetween } from 'fractional-indexing';
 
-/** A key that sorts between two neighbours. Pass null for an open end. */
+/**
+ * A key that sorts between two neighbours. Pass null for an open end.
+ * Two tabs can give siblings the same key. When the neighbours are equal or out of order, the key goes after `before`.
+ */
 export function orderBetween(before: string | null, after: string | null): string {
+  if (before !== null && after !== null && before >= after) return generateKeyBetween(before, null);
   return generateKeyBetween(before, after);
 }
 

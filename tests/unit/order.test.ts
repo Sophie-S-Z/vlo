@@ -46,4 +46,9 @@ describe('fractional ordering', () => {
     expect(rows[0]?.order).toBe('a0');
     expect(rows[1]?.order).toBe('a1');
   });
+
+  test('equal or swapped neighbours give a key after the first one, so a duplicate never crashes', () => {
+    expect(orderBetween('a1', 'a1') > 'a1').toBe(true);
+    expect(orderBetween('a2', 'a1') > 'a2').toBe(true);
+  });
 });

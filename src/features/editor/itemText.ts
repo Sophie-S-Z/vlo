@@ -4,10 +4,13 @@ import { db, type Item } from '@/lib/db';
 import { countLines, countWords } from '@/lib/wordcount';
 import { poemDataFromDoc, poemDataToText } from './poemText';
 
+/** Text for leaf nodes: a line break keeps words apart, and a scene break is "#". */
+const LEAF_TEXT: Record<string, string> = { hardBreak: '\n', sceneBreak: '#' };
+
 /** Plain text of an editor document. Prose blocks are separated by a blank line; a scene break is "#". */
 export function docText(doc: ProseMirrorNode, kind: 'prose' | 'poem'): string {
   if (kind === 'poem') return poemDataToText(poemDataFromDoc(doc));
-  return doc.textBetween(0, doc.content.size, '\n\n', (leaf) => (leaf.type.name === 'sceneBreak' ? '#' : ''));
+  return doc.textBetween(0, doc.content.size, '\n\n', (leaf) => LEAF_TEXT[leaf.type.name] ?? '');
 }
 
 /**
