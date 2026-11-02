@@ -6,22 +6,28 @@ import tseslint from 'typescript-eslint';
 
 const NETWORK_MESSAGE = 'Only src/lib/net.ts may make network requests (VLO_SPEC section 10).';
 
+const NETWORK_APIS = [
+  'fetch',
+  'XMLHttpRequest',
+  'WebSocket',
+  'EventSource',
+  'WebTransport',
+  'RTCPeerConnection',
+  'sendBeacon',
+];
+
 const networkRules = {
   'no-restricted-globals': [
     'error',
-    ...['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'].map((name) => ({
+    ...NETWORK_APIS.filter((name) => name !== 'sendBeacon').map((name) => ({
       name,
       message: NETWORK_MESSAGE,
     })),
   ],
+  // Property-only entries catch window.fetch, globalThis.WebSocket, window.navigator.sendBeacon and the like.
   'no-restricted-properties': [
     'error',
-    ...['window', 'globalThis', 'self'].map((object) => ({
-      object,
-      property: 'fetch',
-      message: NETWORK_MESSAGE,
-    })),
-    { object: 'navigator', property: 'sendBeacon', message: NETWORK_MESSAGE },
+    ...NETWORK_APIS.map((property) => ({ property, message: NETWORK_MESSAGE })),
   ],
 };
 
@@ -45,8 +51,12 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.configs.recommended.rules,
-      ...networkRules,
     },
+  },
+  {
+    files: ['src/**/*.{ts,tsx,js,jsx,mjs,cjs}'],
+    languageOptions: { globals: globals.browser },
+    rules: networkRules,
   },
   {
     files: ['src/lib/net.ts'],
