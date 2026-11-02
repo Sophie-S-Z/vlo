@@ -28,7 +28,7 @@ export function AppShell() {
       >
         Skip to content
       </a>
-      <header className="border-b border-rule">
+      <header data-chrome className="border-b border-rule">
         <div className={cn('mx-auto flex items-center justify-between gap-4 px-4 py-2', width)}>
           <NavLink
             to="/"
@@ -60,7 +60,7 @@ export function AppShell() {
       >
         <Outlet />
       </main>
-      <footer className="border-t border-rule">
+      <footer data-chrome className="border-t border-rule">
         <div
           className={cn(
             'mx-auto flex flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm text-muted',

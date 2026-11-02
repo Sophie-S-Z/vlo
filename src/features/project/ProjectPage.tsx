@@ -1,14 +1,31 @@
-import { useState, ViewTransition } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { Search } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState, ViewTransition } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Binder } from '@/features/binder/Binder';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { EditorPane } from '@/features/editor/EditorPane';
+import { FocusControls } from '@/features/focus/FocusControls';
+import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
+import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
 import type { Item, Project } from '@/lib/db';
+import { Button } from '@/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
+import { withViewTransition } from '@/ui/motion';
+import type { CommandAction } from './CommandMenu';
 import { ProjectLayout } from './ProjectLayout';
 import { useProject } from './useProject';
+
+// The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
+const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
+
+/** True while a dialog or menu is open, so Escape belongs to it. */
+function layerOpen(): boolean {
+  return document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"]') !== null;
+}
 
 /** The item to open: the one in the address, else the first item that has an editor. */
 function openItem(project: Project, items: readonly Item[], requested: string | null): Item | undefined {
@@ -24,6 +41,50 @@ export function ProjectPage() {
   const [params, setParams] = useSearchParams();
   const state = useProject(projectId);
   const [drawer, setDrawer] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const motion = useMotionAllowed();
+  const navigate = useNavigate();
+
+  const changeFocusMode = (on: boolean) => {
+    withViewTransition(motion, () => {
+      setFocusMode(on);
+    });
+  };
+
+  // Mod-K opens the command menu from anywhere on the project screen, the editor included.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setMenuOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, []);
+
+  // In focus mode, Escape leaves it, unless a dialog or menu is open and takes the key first.
+  useEffect(() => {
+    if (!focusMode) return;
+    const root = document.documentElement;
+    root.dataset.focusMode = 'true';
+    document.querySelector<HTMLElement>('.vlo-manuscript')?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || layerOpen()) return;
+      withViewTransition(motion, () => {
+        setFocusMode(false);
+      });
+    };
+    // Capture, so the editor's own Escape handling (Escape, then Tab, leaves the text) cannot hide it.
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      delete root.dataset.focusMode;
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [focusMode, motion]);
 
   if (state.status === 'loading') return null;
 
@@ -50,6 +111,44 @@ export function ProjectPage() {
     setParams({ item: itemId });
     setDrawer(false);
   };
+  const canOpen = (i: Item) => template.editorKind(i.kind) !== null;
+  const actions: CommandAction[] = [
+    {
+      id: 'focus',
+      label: 'Enter focus mode',
+      run: () => {
+        changeFocusMode(true);
+      },
+    },
+    {
+      id: 'typewriter',
+      label: getFocusPrefs().typewriter ? 'Turn off typewriter scrolling' : 'Turn on typewriter scrolling',
+      run: () => {
+        setFocusPrefs({ typewriter: !getFocusPrefs().typewriter });
+      },
+    },
+    {
+      id: 'dim',
+      label: getFocusPrefs().dim ? 'Stop dimming other lines' : 'Dim other lines',
+      run: () => {
+        setFocusPrefs({ dim: !getFocusPrefs().dim });
+      },
+    },
+    {
+      id: 'library',
+      label: 'Go to the Library',
+      run: () => {
+        void navigate('/');
+      },
+    },
+    {
+      id: 'settings',
+      label: 'Open Settings',
+      run: () => {
+        void navigate('/settings');
+      },
+    },
+  ];
 
   return (
     <ViewTransition name={projectTransitionName(project.id)} update="none">
@@ -57,6 +156,30 @@ export function ProjectPage() {
         <ProjectLayout
           binderOpen={drawer}
           onBinderOpen={setDrawer}
+          focusMode={focusMode}
+          onLeaveFocus={() => {
+            changeFocusMode(false);
+          }}
+          timer={<SessionTimer projectId={project.id} />}
+          tools={
+            <>
+              <Button
+                variant="outline"
+                aria-keyshortcuts="Control+K Meta+K"
+                onClick={() => {
+                  setMenuOpen(true);
+                }}
+              >
+                <Search aria-hidden="true" className="size-4" />
+                Search
+              </Button>
+              <FocusControls
+                onFocusMode={() => {
+                  changeFocusMode(true);
+                }}
+              />
+            </>
+          }
           title={
             <header className="min-w-0">
               <p className="text-xs font-medium tracking-wide text-muted uppercase">{template.label}</p>
@@ -100,6 +223,29 @@ export function ProjectPage() {
             )
           }
         />
+        <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+          <DialogContent className="top-[12vh] max-w-xl translate-y-0 gap-2 p-3">
+            <DialogTitle className="sr-only">Command menu</DialogTitle>
+            <DialogDescription className="sr-only">
+              Type to find an item by title or by its text, or to run an action. Use the arrow keys, then
+              Enter.
+            </DialogDescription>
+            {menuOpen && (
+              <Suspense fallback={<p className="p-3 text-muted">Loading.</p>}>
+                <CommandMenu
+                  project={project}
+                  items={items}
+                  canOpen={canOpen}
+                  actions={actions}
+                  onOpenItem={open}
+                  onDone={() => {
+                    setMenuOpen(false);
+                  }}
+                />
+              </Suspense>
+            )}
+          </DialogContent>
+        </Dialog>
       </section>
     </ViewTransition>
   );

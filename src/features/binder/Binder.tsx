@@ -58,6 +58,7 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
   const [offsetX, setOffsetX] = useState(0);
   const [message, setMessage] = useState('');
   const [action, setAction] = useState<ItemAction>(null);
+  const addToEditor = useRef(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
@@ -172,11 +173,19 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
               Add
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent
+            align="end"
+            onCloseAutoFocus={(event) => {
+              // A new writable item opens in the editor, which takes the focus.
+              if (addToEditor.current) event.preventDefault();
+              addToEditor.current = false;
+            }}
+          >
             {rootKinds.map((kind) => (
               <DropdownMenuItem
                 key={kind}
                 onSelect={() => {
+                  addToEditor.current = template.editorKind(kind) !== null;
                   void add(null, kind);
                 }}
               >

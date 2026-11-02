@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Ellipsis, GripVertical } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import type { TemplateDef } from '@/features/library/templates';
 import type { Item, ItemKind, Status } from '@/lib/db';
 import { cn } from '@/ui/cn';
@@ -83,6 +83,7 @@ export const BinderItem = memo(function BinderItem({
 }: BinderItemProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
+  const toEditor = useRef(false);
   const writable = template.editorKind(item.kind) !== null;
   const kindLabel = template.kindLabel[item.kind] ?? item.kind;
   const childKinds = template.childKinds[item.kind] ?? [];
@@ -144,10 +145,18 @@ export const BinderItem = memo(function BinderItem({
           >
             <Ellipsis aria-hidden="true" className="size-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent
+            align="end"
+            onCloseAutoFocus={(event) => {
+              // Open and Add move the cursor into the editor. Returning focus to this button would take it back.
+              if (toEditor.current) event.preventDefault();
+              toEditor.current = false;
+            }}
+          >
             {writable && (
               <DropdownMenuItem
                 onSelect={() => {
+                  toEditor.current = true;
                   actions.open(item);
                 }}
               >
@@ -190,6 +199,7 @@ export const BinderItem = memo(function BinderItem({
               <DropdownMenuItem
                 key={kind}
                 onSelect={() => {
+                  toEditor.current = template.editorKind(kind) !== null;
                   actions.addChild(item, kind);
                 }}
               >

@@ -1,6 +1,10 @@
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
 import { useEffect, useId } from 'react';
 import type * as Y from 'yjs';
+import { FocusTools } from '@/features/focus/focusExtension';
+import { refreshFocus } from '@/features/focus/focusPlugin';
+import { useFocusPrefs } from '@/features/focus/focusPrefs';
+import { cn } from '@/ui/cn';
 import { poemExtensions } from './extensions/poem';
 import { proseExtensions } from './extensions/prose';
 import { Toolbar } from './Toolbar';
@@ -26,7 +30,10 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
   const helpId = useId();
   const editor = useEditor(
     {
-      extensions: kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc),
+      extensions: [
+        ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
+        FocusTools,
+      ],
       enableInputRules: kind === 'prose',
       enablePasteRules: kind === 'prose',
       autofocus: focusOnOpen ? 'end' : false,
@@ -46,6 +53,13 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
     [doc, kind],
   );
 
+  const focus = useFocusPrefs();
+  // A focus switch changed: redraw the dimming and center the caret at once.
+  useEffect(() => {
+    if (editor.isDestroyed) return;
+    editor.view.dispatch(refreshFocus(editor.state.tr));
+  }, [editor, focus]);
+
   useEffect(() => {
     onEditor?.(editor);
     return () => onEditor?.(null);
@@ -54,7 +68,7 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
   return (
     <div className="grid gap-3">
       <Toolbar editor={editor} kind={kind} />
-      <EditorContent editor={editor} />
+      <EditorContent editor={editor} className={cn(focus.typewriter && 'vlo-typewriter')} />
       <p id={helpId} className="text-xs text-muted">
         {HELP[kind]}
       </p>

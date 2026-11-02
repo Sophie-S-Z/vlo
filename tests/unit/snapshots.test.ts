@@ -43,9 +43,14 @@ test('a snapshot stores the Yjs state and the text', async () => {
   editor.commands.setContent('<p>The tide goes out.</p>');
   const snapshot = await takeSnapshot(item, doc, 'The tide goes out.', 'First draft');
   const stored = await db.snapshots.get(snapshot.id);
-  expect(stored).toMatchObject({ itemId: 'item-1', projectId: 'project-1', label: 'First draft', text: 'The tide goes out.' });
+  expect(stored).toMatchObject({
+    itemId: 'item-1',
+    projectId: 'project-1',
+    label: 'First draft',
+    text: 'The tide goes out.',
+  });
   const copy = docFromUpdate(stored?.state ?? new Uint8Array());
-  expect(copy.getXmlFragment(YFRAGMENT).toString()).toContain('The tide goes out.');
+  expect(copy.getXmlFragment(YFRAGMENT).toJSON()).toContain('The tide goes out.');
 });
 
 test('snapshotsOf lists an item’s snapshots newest first', async () => {
@@ -66,7 +71,7 @@ test('restore saves the current text first, then shows the old text in the same 
   await restoreSnapshot(item, editor, doc, old.id, 'prose');
 
   expect(docText(editor.state.doc, 'prose')).toBe('The tide goes out.');
-  expect(fragment.toString()).toContain('The tide goes out.');
+  expect(fragment.toJSON()).toContain('The tide goes out.');
   expect(doc.getXmlFragment(YFRAGMENT)).toBe(fragment);
   const [newest] = await snapshotsOf('item-1');
   expect(newest).toMatchObject({ label: BEFORE_RESTORE, text: 'The sea comes in.' });

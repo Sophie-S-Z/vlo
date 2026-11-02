@@ -81,3 +81,14 @@
   white-space: pre-wrap;
   tab-size: 4;
 }
+
+/* Focus-line dimming. Only opacity changes, so text does not move. */
+.vlo-manuscript .vlo-dim {
+  opacity: 0.4;
+  transition: opacity 0.2s var(--ease-reveal, ease-out);
+}
+
+/* Typewriter scrolling needs room below the last line to bring it to the middle. */
+.vlo-typewriter .vlo-manuscript {
+  padding-bottom: 50vh;
+}

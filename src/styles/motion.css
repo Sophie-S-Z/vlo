@@ -34,3 +34,8 @@
     opacity: 0;
   }
 }
+
+/* Focus mode shows only the manuscript. The site header and footer go too. */
+html[data-focus-mode='true'] [data-chrome] {
+  display: none;
+}

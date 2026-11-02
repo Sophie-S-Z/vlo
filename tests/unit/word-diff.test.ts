@@ -13,7 +13,12 @@ test('marks a changed word as removed and added', () => {
 test('spaces count, so a poem indent change shows', () => {
   const parts = wordDiff('Salt\n  Tide', 'Salt\n    Tide');
   expect(parts.some((p) => p.kind !== 'same')).toBe(true);
-  expect(parts.filter((p) => p.kind !== 'removed').map((p) => p.text).join('')).toBe('Salt\n    Tide');
+  expect(
+    parts
+      .filter((p) => p.kind !== 'removed')
+      .map((p) => p.text)
+      .join(''),
+  ).toBe('Salt\n    Tide');
 });
 
 test('equal texts give one unchanged part', () => {

@@ -30,6 +30,9 @@ Last update: 2026-11-02
   - Autosave within 1 s, save status, word count, and live sync between tabs (F04, US02).
 - Snapshots after every 10 active minutes and on demand, a word diff between any two versions, and restore
   in 2 clicks that saves the current text first (F05, US03). The history panel and `diff` load on first open.
+- Focus mode (hides the binder, details and site header; Escape leaves), typewriter scrolling, focus-line
+  dimming, a session timer with a gentle close prompt, and a Mod-K command menu that finds items by title or
+  text and runs actions (F10, F11). The menu, cmdk and MiniSearch load on first open.
 
 ## In progress
 
