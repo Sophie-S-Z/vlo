@@ -75,8 +75,8 @@ Last update: 2026-11-02
     open over another dialog.
   - The hourly update check stops when the app unmounts. The theme reveal grows from the chosen radio in Safari
     too.
-- Initial JavaScript: 186,872 bytes gzip (budget 250,000). Project route chunk: 196,039 bytes gzip. Command
-  menu: 11,043 bytes. History panel: 4,823 bytes.
+- Initial JavaScript: 187,284 bytes gzip (budget 250,000). Project route chunk: 196,417 bytes gzip. Command
+  menu: 11,087 bytes. History panel: 5,201 bytes. Diff worker: 3,205 bytes.
 
 ## In progress
 
