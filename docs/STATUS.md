@@ -28,6 +28,8 @@ Last update: 2026-11-02
   - Binder with mouse, touch, keyboard and menu reorder (F02).
   - Prose and poem editors. Poems keep every space, stanza and hanging indent (F01).
   - Autosave within 1 s, save status, word count, and live sync between tabs (F04, US02).
+- Snapshots after every 10 active minutes and on demand, a word diff between any two versions, and restore
+  in 2 clicks that saves the current text first (F05, US03). The history panel and `diff` load on first open.
 
 ## In progress
 

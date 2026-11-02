@@ -33,6 +33,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | clsx | 2.1.1 | MIT | runtime |
 | dexie | 4.4.7 | Apache-2.0 | runtime |
 | dexie-react-hooks | 4.4.0 | Apache-2.0 | runtime |
+| diff | 9.0.0 | BSD-3-Clause | runtime |
 | eslint | 9.39.5 | MIT | build and test |
 | eslint-plugin-jsx-a11y | 6.10.2 | MIT | build and test |
 | eslint-plugin-react-hooks | 7.1.1 | MIT | build and test |

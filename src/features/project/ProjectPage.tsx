@@ -88,7 +88,13 @@ export function ProjectPage() {
           }
           manuscript={(width) =>
             item && kind ? (
-              <EditorPane key={item.id} item={item} kind={kind} width={width} />
+              <EditorPane
+                key={item.id}
+                item={item}
+                kind={kind}
+                width={width}
+                snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
+              />
             ) : (
               <p className="text-muted">Add an item from the binder to start writing.</p>
             )
