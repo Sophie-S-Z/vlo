@@ -71,9 +71,9 @@ export function ProjectLayout({
           {focusMode ? null : small ? (
             <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="max-sm:min-w-11 max-sm:px-0">
                   <PanelLeft aria-hidden="true" className="size-4" />
-                  Binder
+                  <span className="max-sm:sr-only">Binder</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="top-0 left-0 h-dvh max-h-dvh w-[min(22rem,calc(100vw-2rem))] translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0">
@@ -100,6 +100,7 @@ export function ProjectLayout({
           {!focusMode && (
             <Button
               variant="outline"
+              className="max-sm:min-w-11 max-sm:px-0"
               aria-expanded={showDetails}
               aria-controls={detailsId}
               onClick={() => {
@@ -107,7 +108,7 @@ export function ProjectLayout({
               }}
             >
               <PanelRight aria-hidden="true" className="size-4" />
-              {showDetails ? 'Hide details' : 'Show details'}
+              <span className="max-sm:sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
             </Button>
           )}
         </div>

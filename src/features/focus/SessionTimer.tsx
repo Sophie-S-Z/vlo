@@ -90,9 +90,9 @@ export function SessionTimer({ projectId }: { projectId: string }) {
       {running === null ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">
+            <Button variant="outline" className="max-sm:min-w-11 max-sm:px-0">
               <Timer aria-hidden="true" className="size-4" />
-              Timer
+              <span className="max-sm:sr-only">Timer</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

@@ -36,9 +36,7 @@ export function ProjectCard({ project, wordCount, layout, index, onRename, onDel
           list ? 'flex-wrap items-baseline gap-x-4 gap-y-1 py-3 pr-14 pl-5' : 'min-h-40 flex-col p-5',
         )}
       >
-        <p className={cn('text-xs font-medium tracking-wide text-muted uppercase', list && 'order-2')}>
-          {TEMPLATES[project.template].label}
-        </p>
+        <p className={cn('text-sm text-muted', list && 'order-2')}>{TEMPLATES[project.template].label}</p>
         <h2
           className={cn(
             'font-display leading-tight font-semibold [overflow-wrap:anywhere]',

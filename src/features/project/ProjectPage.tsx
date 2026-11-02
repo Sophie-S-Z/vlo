@@ -174,13 +174,14 @@ export function ProjectPage() {
             <>
               <Button
                 variant="outline"
+                className="max-sm:min-w-11 max-sm:px-0"
                 aria-keyshortcuts="Control+K Meta+K"
                 onClick={() => {
                   setMenuOpen(true);
                 }}
               >
                 <Search aria-hidden="true" className="size-4" />
-                Search
+                <span className="max-sm:sr-only">Search</span>
               </Button>
               <FocusControls
                 onFocusMode={() => {
@@ -191,7 +192,7 @@ export function ProjectPage() {
           }
           title={
             <header className="min-w-0">
-              <p className="text-xs font-medium tracking-wide text-muted uppercase">{template.label}</p>
+              <p className="text-sm text-muted">{template.label}</p>
               <h1 className="mt-1 font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
                 {project.title}
               </h1>
