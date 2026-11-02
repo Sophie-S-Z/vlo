@@ -1,8 +1,11 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router';
 import { Button } from '@/ui/button';
+import { ErrorScreen, reloadPage } from './ErrorScreen';
+import { useUpdate } from './UpdateProvider';
 
 export function RouteError() {
   const error = useRouteError();
+  const { needRefresh, applyUpdate } = useUpdate();
   const detail = isRouteErrorResponse(error)
     ? `${String(error.status)} ${error.statusText}`
     : error instanceof Error
@@ -10,25 +13,16 @@ export function RouteError() {
       : null;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-prose flex-col justify-center px-4 py-8">
-      <h1 className="font-display text-4xl font-semibold">Something went wrong</h1>
-      <p className="mt-4 text-muted">
-        Vlo hit an error on this screen. Your saved writing is safe on this device. Reload Vlo to go on.
-      </p>
-      {detail ? (
-        <p className="mt-4 font-mono text-sm text-muted">
-          Error: <span>{detail}</span>
-        </p>
-      ) : null}
-      <div className="mt-6">
-        <Button
-          onClick={() => {
-            window.location.reload();
-          }}
-        >
-          Reload Vlo
-        </Button>
-      </div>
-    </main>
+    <ErrorScreen
+      detail={detail}
+      actions={
+        // A plain reload keeps the cached build, which may be the one that fails. Offer the new version first.
+        needRefresh ? (
+          <Button onClick={applyUpdate}>Reload to update</Button>
+        ) : (
+          <Button onClick={reloadPage}>Reload Vlo</Button>
+        )
+      }
+    />
   );
 }

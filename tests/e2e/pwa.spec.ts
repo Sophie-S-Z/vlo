@@ -56,9 +56,15 @@ test('Chromium reports no installability errors', async ({ page, browserName }) 
   expect(installabilityErrors.map((e) => e.errorId)).toEqual([]);
 });
 
-test('Vlo opens offline, including deep links and unknown paths', async ({ page, context }) => {
+test('Vlo opens offline, including deep links and unknown paths', async ({ page, context, browserName }) => {
   await waitForControl(page);
-  await context.setOffline(true);
+  if (browserName === 'webkit') {
+    // Playwright's WebKit cannot navigate under setOffline when a service worker answers the request.
+    // Failing every network request is the same condition for the app: only the service worker can answer.
+    await context.route('**/*', (route) => route.abort('internetdisconnected'));
+  } else {
+    await context.setOffline(true);
+  }
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
   await page.goto('/settings');
@@ -88,6 +94,38 @@ test('a new version waits for the writer and never reloads by itself', async ({ 
     await page.waitForTimeout(1_000);
     expect(await page.evaluate(() => (window as unknown as { __marker?: boolean }).__marker)).toBe(true);
     await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+  } finally {
+    writeFileSync(swPath, original);
+  }
+});
+
+test('updating in one tab never reloads another tab', async ({ context }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Runs once, in the chromium project.');
+  const writing = await context.newPage();
+  const other = await context.newPage();
+  await waitForControl(writing);
+  await waitForControl(other);
+  await writing.evaluate(() => {
+    (window as unknown as { __marker: boolean }).__marker = true;
+  });
+  const swPath = 'dist/sw.js';
+  const original = readFileSync(swPath, 'utf8');
+  try {
+    writeFileSync(swPath, `${original}\n// next version ${String(Date.now())}\n`);
+    await other.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update();
+    });
+    await expect(other.getByRole('button', { name: 'Reload to update' })).toBeVisible({ timeout: 15_000 });
+    await expect(writing.getByRole('button', { name: 'Reload to update' })).toBeVisible({ timeout: 15_000 });
+
+    const otherReloaded = other.waitForEvent('load');
+    await other.getByRole('button', { name: 'Reload to update' }).click();
+    await otherReloaded;
+
+    await expect(writing.getByText('Vlo was updated in another tab.')).toBeVisible({ timeout: 15_000 });
+    await writing.waitForTimeout(1_000);
+    expect(await writing.evaluate(() => (window as unknown as { __marker?: boolean }).__marker)).toBe(true);
   } finally {
     writeFileSync(swPath, original);
   }
