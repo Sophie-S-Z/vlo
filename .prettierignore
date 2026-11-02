@@ -6,3 +6,4 @@ dist/
 dev-dist/
 playwright-report/
 test-results/
+tests/fixtures/

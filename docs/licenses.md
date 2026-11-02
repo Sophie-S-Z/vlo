@@ -19,6 +19,12 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @tailwindcss/vite | 4.3.3 | MIT | runtime |
 | @testing-library/dom | 10.4.2 | MIT | build and test |
 | @testing-library/react | 16.3.3 | MIT | build and test |
+| @tiptap/core | 3.32.2 | MIT | runtime |
+| @tiptap/extension-collaboration | 3.32.2 | MIT | runtime |
+| @tiptap/pm | 3.32.2 | MIT | runtime |
+| @tiptap/react | 3.32.2 | MIT | runtime |
+| @tiptap/starter-kit | 3.32.2 | MIT | runtime |
+| @tiptap/y-tiptap | 3.0.12 | MIT | runtime |
 | @types/node | 22.20.5 | MIT | build and test |
 | @types/react | 19.3.0 | MIT | build and test |
 | @types/react-dom | 19.3.0 | MIT | build and test |
@@ -51,4 +57,5 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | vitest | 5.1.0 | MIT | build and test |
 | workbox-window | 7.4.1 | MIT | runtime |
 | y-indexeddb | 9.0.12 | MIT | runtime |
+| y-protocols | 1.0.7 | MIT | runtime |
 | yjs | 13.6.33 | MIT | runtime |
