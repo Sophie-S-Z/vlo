@@ -2,11 +2,15 @@ import { act, cleanup, render, renderHook, screen } from '@testing-library/react
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { App } from '@/app/App';
+import { markOnboarded } from '@/features/onboarding/firstVisit';
+import { db } from '@/lib/db';
 import { PreferencesProvider, usePreferences } from '@/app/PreferencesProvider';
 
 const realDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
 
-beforeEach(() => {
+beforeEach(async () => {
+  await db.open();
+  await markOnboarded();
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -21,8 +25,9 @@ beforeEach(() => {
     },
   });
 });
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await db.delete();
   vi.unstubAllGlobals();
   if (realDescriptor) Object.defineProperty(window, 'localStorage', realDescriptor);
 });

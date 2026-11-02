@@ -1,18 +1,35 @@
-import type { RouteObject } from 'react-router';
+import { redirect, type RouteObject } from 'react-router';
 import { LibraryPage } from '@/features/library/LibraryPage';
+import { needsOnboarding } from '@/features/onboarding/firstVisit';
+import { WelcomePage } from '@/features/onboarding/WelcomePage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { AppShell } from './AppShell';
 import { NotFound } from './NotFound';
 import { RouteError } from './RouteError';
 
+/** A first visit to the Library goes to the welcome screen. If storage fails, the Library shows why. */
+async function firstVisitLoader() {
+  try {
+    if (await needsOnboarding()) return redirect('/welcome');
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 /** The route table. Each phase adds the routes for the screens it builds (spec section 4). */
 export const routes: RouteObject[] = [
+  { path: '/welcome', element: <WelcomePage />, errorElement: <RouteError /> },
   {
     path: '/',
     element: <AppShell />,
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <LibraryPage /> },
+      { index: true, loader: firstVisitLoader, element: <LibraryPage /> },
+      {
+        path: 'p/:projectId',
+        lazy: async () => ({ Component: (await import('@/features/project/ProjectPage')).ProjectPage }),
+      },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],

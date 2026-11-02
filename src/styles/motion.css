@@ -1,0 +1,36 @@
+/* Texture and route motion. Spec section 13. Calm mode and reduced motion stop the animations (tokens.css). */
+
+/* 4% film grain. Only the Library and the welcome screen use it, never the editor. */
+.grain::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The welcome screen zooms through into the first page. */
+::view-transition-old(.vlo-zoom-through) {
+  animation: vlo-zoom-through 0.7s var(--ease-reveal) both;
+}
+
+@keyframes vlo-zoom-through {
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* The word count rolls up into place after a typing pause. */
+.vlo-roll {
+  animation: vlo-roll 0.4s var(--ease-reveal) both;
+}
+
+@keyframes vlo-roll {
+  from {
+    transform: translateY(60%);
+    opacity: 0;
+  }
+}

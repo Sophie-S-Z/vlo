@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { skipOnboarding } from './support/onboarding';
 
 interface ManifestIcon {
   src: string;
@@ -17,7 +18,7 @@ interface Manifest {
 }
 
 async function waitForControl(page: Page) {
-  await page.goto('/');
+  await skipOnboarding(page);
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });

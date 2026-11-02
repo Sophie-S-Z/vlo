@@ -1,5 +1,6 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { seriousIssues } from './support/axe';
+import { skipOnboarding } from './support/onboarding';
 
 const ROUTES = [
   { path: '/', heading: 'Library' },
@@ -18,6 +19,7 @@ for (const { path, heading } of ROUTES) {
   for (const width of [360, 1280]) {
     test(`${path} has no horizontal scroll at ${String(width)} px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
+      if (path === '/') await skipOnboarding(page);
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -28,14 +30,11 @@ for (const { path, heading } of ROUTES) {
   for (const theme of THEMES) {
     test(`${path} has no serious axe issues in ${theme}`, async ({ page }) => {
       await setTheme(page, theme);
+      if (path === '/') await skipOnboarding(page);
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      const results = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-        .analyze();
-      const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-      expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+      expect(await seriousIssues(page)).toEqual([]);
     });
   }
 }
@@ -71,7 +70,9 @@ test('the Calm mode switch sets data-calm', async ({ page }) => {
 });
 
 test('the skip link moves focus to the main content', async ({ page }) => {
+  await skipOnboarding(page);
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to content' });
   await expect(skip).toBeFocused();
