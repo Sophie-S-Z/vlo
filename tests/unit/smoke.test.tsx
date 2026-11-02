@@ -1,8 +1,12 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { App } from '@/app/App';
+import { markOnboarded } from '@/features/onboarding/firstVisit';
+import { db } from '@/lib/db';
 
-beforeEach(() => {
+beforeEach(async () => {
+  await db.open();
+  await markOnboarded();
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -10,14 +14,15 @@ beforeEach(() => {
     removeEventListener: () => undefined,
   }));
 });
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await db.delete();
   vi.unstubAllGlobals();
 });
 
 test('App renders the Vlo wordmark and the Library', async () => {
   render(<App />);
-  expect(screen.getByRole('link', { name: 'Vlo' })).toBeTruthy();
+  expect(await screen.findByRole('link', { name: 'Vlo' })).toBeTruthy();
   expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy();
 });
 

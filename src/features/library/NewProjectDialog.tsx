@@ -1,10 +1,8 @@
-import { BookOpen, Feather, Hourglass, Plus, type LucideIcon } from 'lucide-react';
-import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
+import { Plus } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { Template } from '@/lib/db';
 import { Button } from '@/ui/button';
-import { cn } from '@/ui/cn';
 import {
   Dialog,
   DialogClose,
@@ -16,16 +14,8 @@ import {
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { createProject } from './projects';
-import { TEMPLATE_ORDER, TEMPLATES } from './templates';
-
-const ICONS: Record<Template, LucideIcon> = { novel: BookOpen, memoir: Hourglass, poetry: Feather };
-
-/* The three cards lean apart like a hand of cards on wider screens. Calm mode and reduced motion keep them flat. */
-const FAN: Record<Template, string> = {
-  novel: 'sm:-rotate-3 sm:translate-y-2',
-  memoir: 'sm:-translate-y-1',
-  poetry: 'sm:rotate-3 sm:translate-y-2',
-};
+import { TemplatePicker } from './TemplatePicker';
+import { TEMPLATES } from './templates';
 
 export function NewProjectDialog() {
   const navigate = useNavigate();
@@ -81,39 +71,7 @@ export function NewProjectDialog() {
           }}
           className="grid gap-6"
         >
-          <RadioGroupPrimitive.Root
-            aria-label="Template"
-            value={template}
-            onValueChange={(value) => {
-              setTemplate(value as Template);
-            }}
-            orientation="horizontal"
-            className="grid gap-3 sm:grid-cols-3 sm:gap-4 sm:px-2 sm:pt-2 sm:pb-4"
-          >
-            {TEMPLATE_ORDER.map((id) => {
-              const def = TEMPLATES[id];
-              const Icon = ICONS[id];
-              return (
-                <RadioGroupPrimitive.Item
-                  key={id}
-                  value={id}
-                  aria-describedby={`${titleId}-${id}`}
-                  className={cn(
-                    'flex flex-col items-start gap-2 rounded-[var(--radius-card)] border border-rule bg-bg p-4 text-left transition-[transform,border-color,box-shadow] duration-500 ease-[var(--ease-reveal)]',
-                    'hover:shadow-[var(--shadow-hover)] data-[state=checked]:border-accent data-[state=checked]:shadow-[inset_0_0_0_1px_var(--accent)]',
-                    FAN[id],
-                    'sm:hover:translate-y-0 sm:hover:rotate-0 motion-reduce:transform-none in-[[data-calm=true]]:transform-none',
-                  )}
-                >
-                  <Icon aria-hidden="true" className="size-6 text-accent-text" />
-                  <span className="font-display text-lg font-semibold">{def.label}</span>
-                  <span id={`${titleId}-${id}`} className="text-sm text-muted">
-                    {def.description}
-                  </span>
-                </RadioGroupPrimitive.Item>
-              );
-            })}
-          </RadioGroupPrimitive.Root>
+          <TemplatePicker value={template} onChange={setTemplate} />
           <div className="grid gap-2">
             <Label htmlFor={titleId}>Title</Label>
             <Input

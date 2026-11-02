@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { skipOnboarding } from './support/onboarding';
 
 async function seriousIssues(page: Page) {
   const results = await new AxeBuilder({ page })
@@ -20,7 +21,7 @@ async function createPoetry(page: Page) {
 test('create a Poetry project, land on its first poem, and find its card in the Library', async ({
   page,
 }) => {
-  await page.goto('/');
+  await skipOnboarding(page);
   await createPoetry(page);
   await expect(page).toHaveURL(/\/p\/[0-9a-f-]{36}\?item=[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Untitled collection' })).toBeVisible();
@@ -35,7 +36,7 @@ test('create a Poetry project, land on its first poem, and find its card in the 
 });
 
 test('a project stays after reload', async ({ page }) => {
-  await page.goto('/');
+  await skipOnboarding(page);
   await createPoetry(page);
   await expect(page.getByRole('heading', { level: 2, name: 'Poem 1' })).toBeVisible();
   await page.goto('/');
@@ -43,7 +44,7 @@ test('a project stays after reload', async ({ page }) => {
 });
 
 test('keyboard only: create a Memoir project with a typed title', async ({ page }) => {
-  await page.goto('/');
+  await skipOnboarding(page);
   const newButton = page.getByRole('button', { name: 'New project' });
   await expect(newButton).toBeVisible();
   await newButton.focus();
@@ -65,7 +66,7 @@ test('keyboard only: create a Memoir project with a typed title', async ({ page 
 });
 
 test('rename and delete from the card menu', async ({ page }) => {
-  await page.goto('/');
+  await skipOnboarding(page);
   await createPoetry(page);
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
 
@@ -94,7 +95,7 @@ test('an unknown project shows a way back to the Library', async ({ page }) => {
 });
 
 test('the Library with projects and the New project dialog have no serious axe issues', async ({ page }) => {
-  await page.goto('/');
+  await skipOnboarding(page);
   await createPoetry(page);
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
   await expect(page.getByRole('link', { name: /Untitled collection/ })).toBeVisible();
@@ -107,7 +108,7 @@ test('the Library with projects and the New project dialog have no serious axe i
 
 test('the Library has no horizontal scroll at 360 px with a project', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto('/');
+  await skipOnboarding(page);
   await createPoetry(page);
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
   await expect(page.getByRole('link', { name: /Untitled collection/ })).toBeVisible();

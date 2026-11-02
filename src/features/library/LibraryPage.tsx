@@ -13,7 +13,7 @@ export function LibraryPage() {
   const [deleting, setDeleting] = useState<Project | null>(null);
 
   return (
-    <section>
+    <section className="grain">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-4xl font-semibold">Library</h1>
         <NewProjectDialog />

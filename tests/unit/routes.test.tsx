@@ -5,8 +5,11 @@ import { PreferencesProvider } from '@/app/PreferencesProvider';
 import { AppShell } from '@/app/AppShell';
 import { RouteError } from '@/app/RouteError';
 import { routes } from '@/app/routes';
+import { markOnboarded } from '@/features/onboarding/firstVisit';
+import { db } from '@/lib/db';
 
-beforeEach(() => {
+beforeEach(async () => {
+  await db.open();
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -14,9 +17,10 @@ beforeEach(() => {
     removeEventListener: () => undefined,
   }));
 });
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   vi.unstubAllGlobals();
+  await db.delete();
 });
 
 function renderAt(path: string, table: RouteObject[] = routes) {
@@ -28,7 +32,13 @@ function renderAt(path: string, table: RouteObject[] = routes) {
   );
 }
 
-test('/ shows the Library', async () => {
+test('a first visit to / goes to the welcome screen', async () => {
+  renderAt('/');
+  expect(await screen.findByRole('heading', { level: 1, name: 'What do you write?' })).toBeTruthy();
+});
+
+test('/ shows the Library after onboarding', async () => {
+  await markOnboarded();
   renderAt('/');
   expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy();
 });
