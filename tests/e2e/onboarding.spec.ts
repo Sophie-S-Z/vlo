@@ -79,7 +79,9 @@ test('every welcome step has no serious axe issues and no horizontal scroll at 3
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
       .analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-    expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.failureSummary ?? '').join(' | ')}`)).toEqual([]);
+    expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.failureSummary ?? '').join(' | ')}`)).toEqual(
+      [],
+    );
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     if (heading !== 'Name it') await page.getByRole('button', { name: 'Next' }).click();
