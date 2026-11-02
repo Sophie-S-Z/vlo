@@ -9,7 +9,7 @@ async function holdToOpen(page: Page) {
   await page.mouse.up();
 }
 
-test('US15: a first visit reaches the first poem in four actions, with Skip on every step', async ({
+test('US15: a first visit reaches typing in the first poem in five actions, with Skip on every step', async ({
   page,
 }) => {
   const started = Date.now();
@@ -35,6 +35,10 @@ test('US15: a first visit reaches the first poem in four actions, with Skip on e
   await expect(page).toHaveURL(/\/p\/[0-9a-f-]{36}\?item=[0-9a-f-]{36}$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Untitled collection' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Poem 1' })).toBeVisible();
+  const poem = page.getByRole('textbox', { name: 'Poem 1' });
+  await expect(poem).toBeFocused();
+  await page.keyboard.type('First words'); // action 5
+  await expect(poem).toHaveText('First words');
   expect(Date.now() - started).toBeLessThan(120_000);
 
   await page.goto('/');

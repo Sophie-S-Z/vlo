@@ -22,3 +22,15 @@
     opacity: 0;
   }
 }
+
+/* The word count rolls up into place after a typing pause. */
+.vlo-roll {
+  animation: vlo-roll 0.4s var(--ease-reveal) both;
+}
+
+@keyframes vlo-roll {
+  from {
+    transform: translateY(60%);
+    opacity: 0;
+  }
+}

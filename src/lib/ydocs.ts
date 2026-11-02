@@ -39,3 +39,28 @@ export function docFromUpdate(update: Uint8Array): Y.Doc {
   Y.applyUpdate(doc, update);
   return doc;
 }
+
+/**
+ * Resolves once every update stored before the call is committed. y-indexeddb does not report write
+ * results, so this writes a mark in a transaction that also covers the updates store: IndexedDB runs it
+ * after the earlier update writes. It rejects with the browser's error, such as QuotaExceededError.
+ */
+export function confirmSaved(persistence: IndexeddbPersistence, now: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const db = persistence.db;
+    if (!db) {
+      reject(new Error('The item database is not open.'));
+      return;
+    }
+    const tx = db.transaction(['updates', 'custom'], 'readwrite');
+    tx.objectStore('custom').put(now, 'vlo:savedAt');
+    tx.oncomplete = () => {
+      resolve();
+    };
+    const fail = () => {
+      reject(tx.error ?? new Error('Vlo could not save.'));
+    };
+    tx.onerror = fail;
+    tx.onabort = fail;
+  });
+}

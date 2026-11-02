@@ -1,13 +1,13 @@
-import { PanelLeft } from 'lucide-react';
 import { useState, ViewTransition } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { useMediaQuery } from '@/app/useMediaQuery';
 import { Binder } from '@/features/binder/Binder';
+import { STATUS_LABEL } from '@/features/binder/BinderItem';
+import { EditorPane } from '@/features/editor/EditorPane';
+import { formatWords } from '@/features/library/format';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
 import type { Item, Project } from '@/lib/db';
-import { Button } from '@/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/ui/dialog';
+import { ProjectLayout } from './ProjectLayout';
 import { useProject } from './useProject';
 
 /** The item to open: the one in the address, else the first item that has an editor. */
@@ -23,7 +23,6 @@ export function ProjectPage() {
   const { projectId = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const state = useProject(projectId);
-  const small = useMediaQuery('(max-width: 599px)');
   const [drawer, setDrawer] = useState(false);
 
   if (state.status === 'loading') return null;
@@ -43,44 +42,58 @@ export function ProjectPage() {
   }
 
   const { project, items } = state;
+  const template = TEMPLATES[project.template];
   const item = openItem(project, items, params.get('item'));
+  const kind = item ? template.editorKind(item.kind) : null;
+  const totalWords = items.reduce((sum, i) => sum + i.wordCount, 0);
   const open = (itemId: string) => {
     setParams({ item: itemId });
     setDrawer(false);
   };
-  const binder = <Binder project={project} items={items} openItemId={item?.id ?? null} onOpen={open} />;
 
   return (
     <ViewTransition name={projectTransitionName(project.id)} update="none">
-      <section className="grid gap-6 min-[600px]:grid-cols-[18rem_minmax(0,1fr)]">
-        <header className="min-[600px]:col-span-2">
-          <p className="text-xs font-medium tracking-wide text-muted uppercase">
-            {TEMPLATES[project.template].label}
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-semibold [overflow-wrap:anywhere]">
-            {project.title}
-          </h1>
-        </header>
-        {small ? (
-          <Dialog open={drawer} onOpenChange={setDrawer}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="justify-self-start">
-                <PanelLeft aria-hidden="true" className="size-4" />
-                Binder
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="top-0 left-0 h-dvh max-h-dvh w-[min(22rem,calc(100vw-2rem))] translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0">
-              <DialogTitle className="sr-only">Binder</DialogTitle>
-              <DialogDescription className="sr-only">
-                Pick an item to open, or reorder items.
-              </DialogDescription>
-              {binder}
-            </DialogContent>
-          </Dialog>
-        ) : (
-          <aside>{binder}</aside>
-        )}
-        <div>{item && <h2 className="font-display text-2xl font-semibold">{item.title}</h2>}</div>
+      <section>
+        <ProjectLayout
+          binderOpen={drawer}
+          onBinderOpen={setDrawer}
+          title={
+            <header className="min-w-0">
+              <p className="text-xs font-medium tracking-wide text-muted uppercase">{template.label}</p>
+              <h1 className="mt-1 font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
+                {project.title}
+              </h1>
+            </header>
+          }
+          binder={<Binder project={project} items={items} openItemId={item?.id ?? null} onOpen={open} />}
+          details={
+            <dl className="grid gap-3 text-sm">
+              <div>
+                <dt className="text-muted">Project</dt>
+                <dd className="font-mono">{formatWords(totalWords)}</dd>
+              </div>
+              {item && (
+                <>
+                  <div>
+                    <dt className="text-muted">{template.kindLabel[item.kind] ?? item.kind}</dt>
+                    <dd>{STATUS_LABEL[item.status]}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">Synopsis</dt>
+                    <dd>{item.synopsis ?? 'None yet. Add one from the binder item menu.'}</dd>
+                  </div>
+                </>
+              )}
+            </dl>
+          }
+          manuscript={(width) =>
+            item && kind ? (
+              <EditorPane key={item.id} item={item} kind={kind} width={width} />
+            ) : (
+              <p className="text-muted">Add an item from the binder to start writing.</p>
+            )
+          }
+        />
       </section>
     </ViewTransition>
   );

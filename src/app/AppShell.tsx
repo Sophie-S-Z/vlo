@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useMatch } from 'react-router';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -12,6 +12,9 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 
 export function AppShell() {
   const mainRef = useRef<HTMLElement>(null);
+  // The project screen has up to three columns, so it uses the full window width.
+  const wide = useMatch('/p/:projectId') !== null;
+  const width = wide ? 'max-w-[110rem]' : 'max-w-5xl';
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -26,7 +29,7 @@ export function AppShell() {
         Skip to content
       </a>
       <header className="border-b border-rule">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-2">
+        <div className={cn('mx-auto flex items-center justify-between gap-4 px-4 py-2', width)}>
           <NavLink
             to="/"
             className="font-display text-2xl font-semibold text-text no-underline [font-variation-settings:'SOFT'_50,'opsz'_72]"
@@ -53,12 +56,17 @@ export function AppShell() {
         id="main"
         ref={mainRef}
         tabIndex={-1}
-        className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 outline-none"
+        className={cn('mx-auto w-full flex-1 px-4 py-8 outline-none', width)}
       >
         <Outlet />
       </main>
       <footer className="border-t border-rule">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm text-muted">
+        <div
+          className={cn(
+            'mx-auto flex flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm text-muted',
+            width,
+          )}
+        >
           <p>Your writing stays on this device.</p>
           <UpdatePrompt />
           <a href={MARKETING_URL} rel="noreferrer">

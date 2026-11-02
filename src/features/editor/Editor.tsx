@@ -11,7 +11,8 @@ interface EditorProps {
   kind: 'prose' | 'poem';
   /** The accessible name, such as the item's title. */
   label: string;
-  autoFocus?: boolean;
+  /** Puts the cursor at the end of the text when the editor opens. */
+  focusOnOpen?: boolean;
   /** Receives the editor once it exists, and null when it goes. */
   onEditor?: (editor: TiptapEditor | null) => void;
 }
@@ -21,14 +22,14 @@ const HELP = {
   poem: 'Tab adds four spaces and Shift-Tab removes them. Enter on an empty line starts a new stanza. Press Escape, then Tab, to leave the poem.',
 };
 
-export function Editor({ doc, kind, label, autoFocus = false, onEditor }: EditorProps) {
+export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: EditorProps) {
   const helpId = useId();
   const editor = useEditor(
     {
       extensions: kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc),
       enableInputRules: kind === 'prose',
       enablePasteRules: kind === 'prose',
-      autofocus: autoFocus ? 'end' : false,
+      autofocus: focusOnOpen ? 'end' : false,
       // The toolbar reads editor state on its own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
       editorProps: {
