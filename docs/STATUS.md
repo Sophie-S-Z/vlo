@@ -97,6 +97,12 @@ Last update: 2026-11-03
   - Footnotes: insert from the toolbar, the `/` menu, the command menu or Mod-Alt-F. A note panel edits the note
     with inline styles. A list of notes sits under the text. Numbers follow the text order after every cut,
     paste, undo and change in another tab.
+  - Review fixes: a tab with an older Vlo build no longer shares edits with a newer one, and each tab warns
+    when another tab runs another version. Item documents carry a schema version, and a build does not open a
+    document newer than its own schema. Typing or pasting over a selected footnote goes after it. The note
+    panel stays on its footnote when another tab edits the paragraph. Gradient stops can pass each other.
+    Smart punctuation changes only quotes, dashes and dots. History word counts leave notes out. In poems,
+    highlights and footnote references add no padding. The `/` list follows the page when it scrolls.
 - Initial JavaScript: 187,284 bytes gzip (budget 250,000). Project route chunk: 196,417 bytes gzip. Command
   menu: 11,087 bytes. History panel: 5,201 bytes. Diff worker: 3,205 bytes.
 
@@ -105,6 +111,11 @@ Last update: 2026-11-03
 - Phase 2 pull request A1 (tasks A1 to A5). Next: pull request A2 (math, fonts, page format, scenes and sound,
   and the extras), then pull request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
+- Known after review, left for later: while the gradient editor is open, the selected words show in plain
+  theme color, and the preview shows the look. Each step of a color or gradient drag is one change, and the
+  undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
+  keys, and some browsers keep those keys for themselves. Palette colors copy into other apps without their
+  color; exports resolve them in pull request B.
 - Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
   retry covers it.
@@ -158,6 +169,7 @@ Last update: 2026-11-03
 | 2026-11-03 | New marks beyond section 7: `superscript`, `subscript`, `highlight` (color), `textStyle` (color, font size), `textFill`.                                        | Phase 2 editor tools (plan decision 12).                                                                                               |
 | 2026-11-03 | New attributes: `textAlign`, `lineSpacing`, `firstLineIndent` and `dropCap` on paragraphs and headings.                                                         | Phase 2 block tools, prose only.                                                                                                       |
 | 2026-11-03 | New node: `footnote`, an inline atom with its note in `content`. Poem lines hold `inline*`, not `text*`.                                                        | Footnotes in prose and poems (plan decision 4). Hard breaks stay off in poems.                                                         |
+| 2026-11-03 | Item documents store a schema version (`vlo` map, key `schema`, now 2). Tabs share edits only with tabs of the same schema, on a channel named for it.          | A Phase 1 tab drops formats it cannot show, and Yjs saves that loss. The guard keeps each later schema change safe.                    |
 | 2026-11-03 | Footnote numbers are not stored. A plugin counts them in text order.                                                                                            | A stored number goes stale after a cut, a paste, an undo or a change in another tab.                                                   |
 | 2026-11-03 | An item's plain-text copy ends with its notes under "Notes". Word and line counts leave the notes out.                                                          | Search finds notes and readable backups keep them. Counts match the writing itself.                                                    |
 | 2026-11-03 | A copy from a Vlo poem pastes into a poem with its styles and footnotes. Text from other apps still pastes as plain text.                                       | Phase 2 gives poems inline styles, and the plain-text paste dropped them. A copy inside one line now stays one line in plain text too. |

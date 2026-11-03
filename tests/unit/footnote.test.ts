@@ -217,6 +217,23 @@ describe('footnotes in prose', () => {
     expect(notes(e)).toEqual(['1:Wet.']);
   });
 
+  test('typing or pasting over a selected reference goes after it and keeps the note', () => {
+    const e = mount('prose');
+    e.commands.setContent('<p>one two</p>');
+    noteAfter(e, 'one', 'Kept.');
+    expect(selectedFootnote(e.state)).not.toBeNull();
+    const typed = e.view.someProp('handleTextInput', (f) =>
+      f(e.view, e.state.selection.from, e.state.selection.to, 'x', () => e.state.tr),
+    );
+    expect(typed).toBe(true);
+    expect(notes(e)).toEqual(['1:Kept.']);
+    expect(e.state.doc.textContent).toBe('onex two');
+    e.commands.setNodeSelection(footnotesOf(e.state)[0]?.pos ?? 0);
+    e.view.pasteText('y', clipboard({ 'text/plain': 'y' }));
+    expect(notes(e)).toEqual(['1:Kept.']);
+    expect(e.state.doc.textContent).toBe('oneyx two');
+  });
+
   test('a footnote cannot go between blocks, such as after a selected scene break', () => {
     const e = mount('prose');
     e.commands.setContent('<p>One.</p><div data-scene-break></div><p>Two.</p>');

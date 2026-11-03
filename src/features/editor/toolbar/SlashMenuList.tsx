@@ -1,4 +1,4 @@
-import { computePosition, flip, offset, shift } from '@floating-ui/dom';
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import { useLayoutEffect, useRef } from 'react';
@@ -15,29 +15,36 @@ export function SlashMenuList({ editor, listId }: { editor: Editor; listId: stri
   const open = slash !== null && slash.from !== null;
   const from = slash?.from ?? null;
 
-  // Place the list under the "/", or above it near the bottom of the screen.
+  // Place the list under the "/", or above it near the bottom of the screen. It follows the "/" when the
+  // page scrolls or resizes.
   useLayoutEffect(() => {
     const el = list.current;
     if (!el || from === null) return;
     const reference = {
       getBoundingClientRect: () => {
+        if (editor.isDestroyed || from > editor.state.doc.content.size) return new DOMRect();
         const c = editor.view.coordsAtPos(from);
         return new DOMRect(c.left, c.top, 1, c.bottom - c.top);
       },
+      contextElement: editor.view.dom,
     };
     let live = true;
-    void computePosition(reference, el, {
-      strategy: 'fixed',
-      placement: 'bottom-start',
-      middleware: [offset(6), flip(), shift({ padding: 12 })],
-    }).then(({ x, y }) => {
-      if (!live) return;
-      el.style.left = `${String(x)}px`;
-      el.style.top = `${String(y)}px`;
-      el.style.visibility = 'visible';
-    });
+    const place = () => {
+      void computePosition(reference, el, {
+        strategy: 'fixed',
+        placement: 'bottom-start',
+        middleware: [offset(6), flip(), shift({ padding: 12 })],
+      }).then(({ x, y }) => {
+        if (!live) return;
+        el.style.left = `${String(x)}px`;
+        el.style.top = `${String(y)}px`;
+        el.style.visibility = 'visible';
+      });
+    };
+    const stop = autoUpdate(reference, el, place);
     return () => {
       live = false;
+      stop();
     };
   }, [editor, from, slash?.matches.length]);
 

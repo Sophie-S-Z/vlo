@@ -200,6 +200,25 @@ export const Footnote = Node.create<FootnoteOptions>({
         },
         props: {
           decorations: (state) => footnoteKey.getState(state)?.decorations ?? DecorationSet.empty,
+          // Typed text goes after a selected reference and never replaces it, so a note cannot vanish by
+          // accident. Backspace and Delete still remove a reference.
+          handleTextInput: (view, _from, _to, text) => {
+            const at = selectedFootnote(view.state);
+            if (at === null) return false;
+            const after = at + (view.state.doc.nodeAt(at)?.nodeSize ?? 1);
+            const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, after));
+            tr.insertText(text);
+            view.dispatch(tr.scrollIntoView());
+            return true;
+          },
+          // A paste over a selected reference goes after it, for the same reason.
+          handlePaste: (view) => {
+            const at = selectedFootnote(view.state);
+            if (at === null) return false;
+            const after = at + (view.state.doc.nodeAt(at)?.nodeSize ?? 1);
+            view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, after)));
+            return false;
+          },
           // A click on a reference selects it and opens its note.
           handleClickOn: (view, _pos, node, nodePos, _event, direct) => {
             if (!direct || node.type.name !== FOOTNOTE) return false;

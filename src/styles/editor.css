@@ -163,6 +163,12 @@
   outline-offset: 1px;
 }
 
+/* In a poem, spaces set the layout, so highlights and references add no width of their own. */
+.vlo-poem mark,
+.vlo-poem .vlo-footnote-ref {
+  padding: 0;
+}
+
 /* The selection stays marked while a tool panel has focus. */
 .vlo-manuscript .vlo-held-selection {
   background: color-mix(in oklab, var(--accent) 22%, transparent);

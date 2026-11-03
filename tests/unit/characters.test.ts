@@ -1,9 +1,9 @@
 import { Editor } from '@tiptap/core';
-import Typography from '@tiptap/extension-typography';
 import * as Y from 'yjs';
 import { afterEach, describe, expect, test } from 'vitest';
 import { command, insertText } from '@/features/editor/commands/registry';
 import { poemExtensions } from '@/features/editor/extensions/poem';
+import { SmartPunctuation } from '@/features/editor/extensions/smartPunctuation';
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { CHARACTER_CATEGORIES, searchCharacters } from '@/features/editor/format/characters';
 import { recentCharacters, rememberCharacter } from '@/features/editor/format/recentCharacters';
@@ -66,7 +66,7 @@ function mount(kind: 'prose' | 'poem', smart: boolean): Editor {
   const base = kind === 'poem' ? poemExtensions(new Y.Doc(), { tabSpaces: 4 }) : proseExtensions(new Y.Doc());
   const editor = new Editor({
     element: host,
-    extensions: [...base, ...(smart ? [Typography] : [])],
+    extensions: [...base, ...(smart ? [SmartPunctuation] : [])],
     enableInputRules: kind === 'prose' ? true : smart ? ['typography'] : false,
   });
   editors.push(editor);
@@ -108,6 +108,13 @@ describe('smart punctuation', () => {
     e.commands.setTextSelection(1);
     type(e, '"Wait..." -- she said');
     expect(e.state.doc.textContent).toBe('“Wait…” — she said');
+  });
+
+  test('only quotes, dashes and dots change: arrows, fractions and symbols stay as typed', () => {
+    const e = mount('prose', true);
+    e.commands.setTextSelection(1);
+    type(e, '2x4 (c) 1/2 -> << != ^2 ');
+    expect(e.state.doc.textContent).toBe('2x4 (c) 1/2 -> << != ^2 ');
   });
 
   test('poems keep straight quotes and hyphens unless the poet turns it on', () => {

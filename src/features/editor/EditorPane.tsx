@@ -153,6 +153,22 @@ export function EditorPane({ item, kind, width, snapshotEveryMinutes }: EditorPa
           This item is open in another tab. Changes show in both tabs.
         </p>
       )}
+      {state.otherVersions.older > 0 && (
+        <p role="alert" className="mb-3 rounded-md border border-accent bg-surface px-3 py-2 text-sm">
+          Another tab has this item open in an older version of Vlo. Reload that tab before you write there.
+          The older version cannot show footnotes and the new colors and styles, and it can remove them.
+        </p>
+      )}
+      {state.otherVersions.newer > 0 && (
+        <p role="alert" className="mb-3 rounded-md border border-accent bg-surface px-3 py-2 text-sm">
+          Another tab has this item open in a newer version of Vlo. Reload this tab to keep writing here.
+        </p>
+      )}
+      {state.status === 'newer' && (
+        <p role="alert" className="text-accent-text">
+          A newer version of Vlo saved this item. Reload Vlo to open it.
+        </p>
+      )}
       {state.status === 'error' && (
         <p role="alert" className="text-accent-text">
           Vlo could not open this item. Reload Vlo and try again.

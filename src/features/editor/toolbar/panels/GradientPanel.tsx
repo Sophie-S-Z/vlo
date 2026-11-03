@@ -28,6 +28,7 @@ import {
   parseFill,
   weakestStop,
   type FillLook,
+  type FillStop,
   type TextFill,
 } from '../../format/fill';
 import { currentTheme } from '../../format/palette';
@@ -35,6 +36,30 @@ import { removeLook, saveLook, savedLooks, type SavedLook } from '../../format/s
 
 function fillClass(fill: TextFill): string {
   return cn('vlo-fill', `vlo-fill-${fill.look}`, fill.shimmer && 'vlo-fill-shimmer');
+}
+
+/**
+ * A stop as the panel edits it. The id stays the same while the stop moves, so a stop dragged past
+ * another one keeps its focus and its place in the list. The mark gets the stops sorted by place.
+ */
+interface EditStop extends FillStop {
+  id: number;
+}
+
+type FillRest = Omit<TextFill, 'stops'>;
+
+let lastStopId = 0;
+function tagStops(stops: readonly FillStop[]): EditStop[] {
+  return stops.map((stop) => ({ ...stop, id: ++lastStopId }));
+}
+
+function restOf(fill: TextFill): FillRest {
+  return { angle: fill.angle, look: fill.look, shimmer: fill.shimmer, speed: fill.speed };
+}
+
+/** The stops from left to right. Two stops at one place keep the order they were made in. */
+function byPlace(stops: readonly EditStop[]): EditStop[] {
+  return [...stops].sort((a, b) => a.at - b.at || a.id - b.id);
 }
 
 /** The fill on the selection, or null when the selection has none. */
@@ -115,15 +140,18 @@ function AngleDial({ angle, onChange }: { angle: number; onChange: (angle: numbe
 
 /** The stop bar: drag a stop, press the bar to add one, arrow keys move the chosen stop. */
 function StopBar({
+  stops,
   fill,
   selected,
   onSelect,
   onChange,
 }: {
+  stops: readonly EditStop[];
+  /** The sorted fill, for the bar's gradient and the color of a new stop. */
   fill: TextFill;
   selected: number;
-  onSelect: (index: number) => void;
-  onChange: (fill: TextFill, selected: number) => void;
+  onSelect: (id: number) => void;
+  onChange: (stops: EditStop[], selected: number) => void;
 }) {
   const bar = useRef<HTMLDivElement>(null);
   const placeOf = (clientX: number) => {
@@ -131,14 +159,24 @@ function StopBar({
     if (!rect || rect.width === 0) return 0;
     return Math.round(Math.min(Math.max(((clientX - rect.left) / rect.width) * 100, 0), 100));
   };
-  const move = (index: number, at: number) => {
-    const stops = fill.stops.map((s, i) => (i === index ? { ...s, at } : s));
-    onChange({ ...fill, stops }, index);
+  const move = (id: number, at: number) => {
+    onChange(
+      stops.map((s) => (s.id === id ? { ...s, at } : s)),
+      id,
+    );
   };
-  const remove = (index: number) => {
-    if (fill.stops.length <= MIN_STOPS) return;
-    onChange({ ...fill, stops: fill.stops.filter((_, i) => i !== index) }, Math.max(0, index - 1));
+  const remove = (id: number) => {
+    if (stops.length <= MIN_STOPS) return;
+    const ordered = byPlace(stops);
+    const index = ordered.findIndex((s) => s.id === id);
+    const rest = ordered.filter((s) => s.id !== id);
+    const next = rest[Math.max(0, index - 1)] ?? rest[0];
+    onChange(
+      stops.filter((s) => s.id !== id),
+      next?.id ?? 0,
+    );
   };
+  const order = byPlace(stops).map((s) => s.id);
 
   return (
     <div className="relative px-2.5">
@@ -146,50 +184,50 @@ function StopBar({
         ref={bar}
         aria-hidden="true"
         onPointerDown={(event) => {
-          if (event.target !== event.currentTarget || fill.stops.length >= MAX_STOPS) return;
+          if (event.target !== event.currentTarget || stops.length >= MAX_STOPS) return;
           const at = placeOf(event.clientX);
-          const stops = [...fill.stops, { color: colorAt(fill, at), at }];
-          onChange({ ...fill, stops }, stops.length - 1);
+          const [added] = tagStops([{ color: colorAt(fill, at), at }]);
+          if (added) onChange([...stops, added], added.id);
         }}
         className="h-8 cursor-copy rounded-md border border-rule"
         style={{ backgroundImage: gradientCss({ ...fill, angle: 90 }) }}
       />
-      {fill.stops.map((stop, i) => (
+      {stops.map((stop) => (
         <div
-          key={i}
+          key={stop.id}
           role="slider"
           tabIndex={0}
-          aria-label={`Color stop ${String(i + 1)}, ${stop.color}`}
+          aria-label={`Color stop ${String(order.indexOf(stop.id) + 1)}, ${stop.color}`}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={stop.at}
           aria-valuetext={`${String(stop.at)} percent`}
           onFocus={() => {
-            onSelect(i);
+            onSelect(stop.id);
           }}
           onKeyDown={(event) => {
             const step = event.shiftKey ? 10 : 1;
             if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
               event.preventDefault();
-              move(i, Math.min(stop.at + step, 100));
+              move(stop.id, Math.min(stop.at + step, 100));
             } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
               event.preventDefault();
-              move(i, Math.max(stop.at - step, 0));
+              move(stop.id, Math.max(stop.at - step, 0));
             } else if (event.key === 'Delete' || event.key === 'Backspace') {
               event.preventDefault();
-              remove(i);
+              remove(stop.id);
             }
           }}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);
-            onSelect(i);
+            onSelect(stop.id);
           }}
           onPointerMove={(event) => {
-            if (event.currentTarget.hasPointerCapture(event.pointerId)) move(i, placeOf(event.clientX));
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) move(stop.id, placeOf(event.clientX));
           }}
           className={cn(
             'absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none rounded-full border-2 shadow outline-none focus-visible:ring-2 focus-visible:ring-accent pointer-coarse:size-7',
-            i === selected ? 'border-text' : 'border-surface',
+            stop.id === selected ? 'border-text' : 'border-surface',
           )}
           style={{
             left: `calc(0.625rem + (100% - 1.25rem) * ${String(stop.at / 100)})`,
@@ -206,32 +244,44 @@ function StopBar({
  * current theme, a contrast check of every stop, and named looks saved on this device.
  */
 export function GradientPanel({ editor }: { editor: Editor }) {
-  const [fill, setFill] = useState<TextFill>(() => currentFill(editor) ?? DEFAULT_FILL);
+  const [initial] = useState<TextFill>(() => currentFill(editor) ?? DEFAULT_FILL);
+  const [stops, setStops] = useState<EditStop[]>(() => tagStops(initial.stops));
+  const [rest, setRest] = useState<FillRest>(() => restOf(initial));
   const [hasFill, setHasFill] = useState(() => currentFill(editor) !== null);
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(() => stops[0]?.id ?? 0);
   const [looks, setLooks] = useState<SavedLook[]>(savedLooks);
   const [lookName, setLookName] = useState('');
   const [hexDraft, setHexDraft] = useState<string | null>(null);
   const ids = { hex: useId(), speed: useId(), shimmer: useId(), name: useId(), color: useId() };
 
-  const stop = fill.stops[Math.min(selected, fill.stops.length - 1)] ?? fill.stops[0];
-  const apply = (next: TextFill, nextSelected = selected) => {
-    const clean = parseFill(next);
+  // The sorted, checked fill: what the mark stores, the preview shows and the contrast check reads.
+  const fill = parseFill({ ...rest, stops: byPlace(stops) }) ?? DEFAULT_FILL;
+  const stop = stops.find((s) => s.id === selected) ?? stops[0];
+  const write = (nextStops: EditStop[], nextRest: FillRest, nextSelected = selected) => {
+    const clean = parseFill({ ...nextRest, stops: byPlace(nextStops) });
     if (!clean) return;
-    // Sorting by place can move the chosen stop, so find it again by its place and color.
-    const chosen = clean.stops.length === next.stops.length ? next.stops[nextSelected] : undefined;
-    const found = chosen
-      ? clean.stops.findIndex((s) => s.at === Math.round(chosen.at) && s.color === chosen.color.toLowerCase())
-      : -1;
-    setFill(clean);
-    setSelected(found >= 0 ? found : Math.min(nextSelected, clean.stops.length - 1));
+    setStops(nextStops);
+    setRest(nextRest);
+    setSelected(nextStops.some((s) => s.id === nextSelected) ? nextSelected : (nextStops[0]?.id ?? 0));
     setHexDraft(null);
     if (editor.chain().setTextFill(clean).run()) setHasFill(true);
+  };
+  /** Changes the angle, look, shimmer or speed. */
+  const apply = (next: Partial<FillRest>) => {
+    write(stops, { ...rest, ...next });
+  };
+  /** Starts from a preset or a saved look. */
+  const start = (from: TextFill) => {
+    const tagged = tagStops(from.stops);
+    write(tagged, restOf(from), tagged[0]?.id ?? 0);
   };
   const setStopColor = (color: string) => {
     const rgb = parseColor(color);
     if (!rgb || !stop) return;
-    apply({ ...fill, stops: fill.stops.map((s) => (s === stop ? { ...s, color: toHex(rgb) } : s)) });
+    write(
+      stops.map((s) => (s.id === stop.id ? { ...s, color: toHex(rgb) } : s)),
+      rest,
+    );
   };
 
   const weakest = weakestStop(fill, currentTheme());
@@ -256,7 +306,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
               fill={p.fill}
               label={p.name}
               onPick={() => {
-                apply(p.fill, 0);
+                start(p.fill);
               }}
             />
           ))}
@@ -274,7 +324,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
                     fill={look.fill}
                     label={`Use ${look.name}`}
                     onPick={() => {
-                      apply(look.fill, 0);
+                      start(look.fill);
                     }}
                   />
                   <span className="truncate text-sm">{look.name}</span>
@@ -297,14 +347,22 @@ export function GradientPanel({ editor }: { editor: Editor }) {
 
       <section className="grid gap-2">
         <h3 className="text-xs font-medium text-muted">Colors</h3>
-        <StopBar fill={fill} selected={selected} onSelect={setSelected} onChange={apply} />
+        <StopBar
+          stops={stops}
+          fill={fill}
+          selected={selected}
+          onSelect={setSelected}
+          onChange={(next, id) => {
+            write(next, rest, id);
+          }}
+        />
         <p className="text-xs text-muted">
           Press the bar to add a color. Drag a color, or use the arrow keys. Delete removes it.
         </p>
         {stop && (
           <div className="flex items-center gap-2">
             <label htmlFor={ids.color} className="sr-only">
-              Color of stop {selected + 1}
+              Color of the chosen stop
             </label>
             <input
               id={ids.color}
@@ -316,7 +374,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
               className="size-11 shrink-0 cursor-pointer rounded-md border border-rule bg-bg p-1 pointer-fine:size-9"
             />
             <label htmlFor={ids.hex} className="sr-only">
-              Color code of stop {selected + 1}
+              Color code of the chosen stop
             </label>
             <Input
               id={ids.hex}
@@ -340,9 +398,16 @@ export function GradientPanel({ editor }: { editor: Editor }) {
             <Button
               variant="outline"
               className="shrink-0 px-3"
-              disabled={fill.stops.length <= MIN_STOPS}
+              disabled={stops.length <= MIN_STOPS}
               onClick={() => {
-                apply({ ...fill, stops: fill.stops.filter((s) => s !== stop) }, Math.max(0, selected - 1));
+                const ordered = byPlace(stops);
+                const index = ordered.findIndex((s) => s.id === stop.id);
+                const left = ordered.filter((s) => s.id !== stop.id);
+                write(
+                  stops.filter((s) => s.id !== stop.id),
+                  rest,
+                  (left[Math.max(0, index - 1)] ?? left[0])?.id ?? 0,
+                );
               }}
             >
               Remove
@@ -355,7 +420,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
         <AngleDial
           angle={fill.angle}
           onChange={(angle) => {
-            apply({ ...fill, angle });
+            apply({ angle });
           }}
         />
         <p className="text-sm">
@@ -370,7 +435,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
           aria-label="Look"
           value={fill.look}
           onValueChange={(look) => {
-            if (look) apply({ ...fill, look: look as FillLook });
+            if (look) apply({ look: look as FillLook });
           }}
           className="grid grid-cols-2 gap-1"
         >
@@ -392,7 +457,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
             id={ids.shimmer}
             checked={fill.shimmer}
             onCheckedChange={(shimmer) => {
-              apply({ ...fill, shimmer });
+              apply({ shimmer });
             }}
           />
           <label htmlFor={ids.shimmer} className="text-sm">
@@ -414,7 +479,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
             aria-valuetext={`${String(fill.speed)} seconds for each pass`}
             disabled={!fill.shimmer}
             onChange={(event) => {
-              apply({ ...fill, speed: MIN_SPEED + MAX_SPEED - Number(event.target.value) });
+              apply({ speed: MIN_SPEED + MAX_SPEED - Number(event.target.value) });
             }}
             className="accent-[var(--accent)] disabled:opacity-40"
           />

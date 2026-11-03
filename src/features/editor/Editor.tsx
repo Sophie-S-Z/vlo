@@ -1,4 +1,3 @@
-import Typography from '@tiptap/extension-typography';
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
 import { useEffect, useId, useRef } from 'react';
 import type * as Y from 'yjs';
@@ -13,6 +12,7 @@ import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
+import { SmartPunctuation } from './extensions/smartPunctuation';
 import { TypingState } from './extensions/textFill';
 import { ensurePaletteStyles } from './format/palette';
 import { PanelHost } from './toolbar/PanelHost';
@@ -85,7 +85,7 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
     {
       extensions: [
         ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
-        ...(smart ? [Typography] : []),
+        ...(smart ? [SmartPunctuation] : []),
         FocusTools,
         TypingState,
         HeldSelection,

@@ -79,3 +79,13 @@ export function notesBlock(notes: readonly NoteContent[]): string {
   const lines = notes.map((note, i) => `${String(i + 1)}. ${noteText(note)}`);
   return `Notes\n${lines.join('\n')}`;
 }
+
+/**
+ * A plain-text copy without the notes block that `docText` adds at its end, for word counts that cover
+ * the writing only, such as the counts in History.
+ */
+export function withoutNotes(text: string): string {
+  if (text.startsWith('Notes\n1. ')) return '';
+  const at = text.lastIndexOf('\n\nNotes\n1. ');
+  return at < 0 ? text : text.slice(0, at);
+}

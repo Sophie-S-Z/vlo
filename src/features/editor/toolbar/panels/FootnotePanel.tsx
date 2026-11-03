@@ -97,7 +97,11 @@ export function FootnotePanel({ editor }: { editor: Editor }) {
       const current = posRef.current;
       if (current === null || !transaction.docChanged) return;
       const mapped = transaction.mapping.mapResult(current, 1);
-      const next = mapped.deleted ? null : targetAt(editor, mapped.pos);
+      // A change from another tab replaces the whole paragraph or stanza, so the mapping reports the
+      // reference as deleted even when it is still there. The editor keeps it selected, so look there.
+      const next =
+        (mapped.deleted ? null : targetAt(editor, mapped.pos)) ??
+        targetAt(editor, selectedFootnote(editor.state));
       posRef.current = next?.pos ?? null;
       setTarget((old) => (old?.pos === next?.pos && old?.number === next?.number ? old : next));
     };
@@ -107,10 +111,14 @@ export function FootnotePanel({ editor }: { editor: Editor }) {
     };
   }, [editor]);
 
-  // The reference is gone, for example after an undo or a change in another tab.
+  // The reference is gone, for example after an undo or a change in another tab. A reference that is
+  // still selected gives way to a caret after it, so the next key cannot replace it.
   useEffect(() => {
-    if (target === null) closePanel();
-  }, [target]);
+    if (target !== null) return;
+    const at = selectedFootnote(editor.state);
+    if (at !== null) leaveFootnote(editor, at);
+    closePanel();
+  }, [editor, target]);
 
   // Reads only the ref and the editor, so the note editor's key handler can keep the first copy.
   const done = () => {
