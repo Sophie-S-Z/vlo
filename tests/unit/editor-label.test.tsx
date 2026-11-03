@@ -1,10 +1,20 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import * as Y from 'yjs';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { Editor } from '@/features/editor/Editor';
 
+beforeEach(() => {
+  // The selection menu asks whether the screen is a phone. jsdom has no matchMedia.
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
+});
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 test('a rename changes the accessible name of the open editor', async () => {

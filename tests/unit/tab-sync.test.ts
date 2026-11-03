@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import { afterEach, expect, test, vi } from 'vitest';
-import { shareWithTabs } from '@/features/editor/tabSync';
+import { DOC_SCHEMA, docSchema, stampDocSchema } from '@/features/editor/docSchema';
+import { shareWithTabs, type OtherVersions } from '@/features/editor/tabSync';
 
 const stops: (() => void)[] = [];
 afterEach(() => {
@@ -43,4 +44,44 @@ test('a tab that closes says goodbye on pagehide, and says hello again when rest
   await vi.waitFor(() => {
     expect(lastPeers(a.onPeers)).toBe(1);
   });
+});
+
+test('a Phase 1 tab is counted as an older version and never gets or gives edits', async () => {
+  const onVersions = vi.fn<(v: OtherVersions) => void>();
+  const doc = new Y.Doc();
+  stops.push(shareWithTabs('item-3', doc, 'database load', vi.fn(), onVersions));
+  // A Phase 1 tab speaks on the old channel name and sends no schema.
+  const old = new BroadcastChannel('vlo-item-item-3');
+  const heard: { type: string }[] = [];
+  old.onmessage = (event: MessageEvent<{ type: string }>) => {
+    heard.push(event.data);
+  };
+  const oldDoc = new Y.Doc();
+  oldDoc.getText('t').insert(0, 'old');
+  old.postMessage({ type: 'hello', tab: 'old-tab' });
+  old.postMessage({ type: 'update', tab: 'old-tab', update: Y.encodeStateAsUpdate(oldDoc) });
+  await vi.waitFor(() => {
+    expect(onVersions.mock.lastCall?.[0]).toEqual({ older: 1, newer: 0 });
+  });
+  doc.getText('t').insert(0, 'new');
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(doc.getText('t').toJSON()).toBe('new');
+  expect(heard.some((m) => m.type === 'update')).toBe(false);
+  old.postMessage({ type: 'bye', tab: 'old-tab' });
+  await vi.waitFor(() => {
+    expect(onVersions.mock.lastCall?.[0]).toEqual({ older: 0, newer: 0 });
+  });
+  old.close();
+});
+
+test('the document schema is stamped once and read back, and Phase 1 documents count as 1', () => {
+  const doc = new Y.Doc();
+  expect(docSchema(doc)).toBe(1);
+  stampDocSchema(doc);
+  expect(docSchema(doc)).toBe(DOC_SCHEMA);
+  const copy = new Y.Doc();
+  Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc));
+  expect(docSchema(copy)).toBe(DOC_SCHEMA);
+  copy.getMap('vlo').set('schema', 'x');
+  expect(docSchema(copy)).toBe(1);
 });

@@ -7,8 +7,10 @@ import type * as Y from 'yjs';
 import { YFRAGMENT } from '@/lib/ydocs';
 import { parsePoemText, poemDataToText, type PoemData } from '../poemText';
 import { EscapeTab } from './escapeTab';
+import { Footnote } from './footnote';
+import { ClearFormatting, inlineFormatting } from './formatting';
 
-/* The poem schema: doc > stanza+ > poemLine+ > text. Every space is content, and lines keep layout. */
+/* The poem schema: doc > stanza+ > poemLine+ > inline. Every space is content, and lines keep layout. */
 
 export const MAX_HANGING_EM = 8;
 
@@ -92,6 +94,7 @@ function sliceText(slice: Slice): string {
 function sliceToPoem(slice: Slice): PoemData {
   const poem: PoemData = [];
   let loose: PoemData[number] = [];
+  let previousInline = false;
   slice.content.forEach((node) => {
     if (node.type.name === 'stanza') {
       if (loose.length > 0) poem.push(loose);
@@ -103,9 +106,13 @@ function sliceToPoem(slice: Slice): PoemData {
       poem.push(lines);
     } else if (node.type.name === 'poemLine') {
       loose.push({ text: node.textContent, hanging: Number(node.attrs.hanging) || 0 });
-    } else if (node.isText) {
-      loose.push({ text: node.text ?? '', hanging: 0 });
+    } else if (node.isInline) {
+      // Inline pieces of one line (text runs with different styles, footnotes) join into that line.
+      const last = loose[loose.length - 1];
+      if (last && previousInline) last.text += node.textContent;
+      else loose.push({ text: node.textContent, hanging: 0 });
     }
+    previousInline = node.isInline;
   });
   if (loose.length > 0) poem.push(loose);
   return poem;
@@ -125,7 +132,8 @@ function insertPoemText(tr: Transaction, schema: Schema, text: string): void {
 
 const PoemLine = Node.create<PoemOptions>({
   name: 'poemLine',
-  content: 'text*',
+  // Text and inline atoms such as footnotes. Hard breaks are off, so a line stays one line.
+  content: 'inline*',
   marks: '_',
   whitespace: 'pre',
   defining: true,
@@ -240,12 +248,24 @@ const PoemLine = Node.create<PoemOptions>({
         props: {
           // Paste keeps plain text with every space. Styles, images and links from other apps drop.
           handlePaste: (view, event, slice) => {
+            // A copy from a Vlo poem keeps its styles and footnotes. ProseMirror pastes it with every space.
+            const html = event.clipboardData?.getData('text/html') ?? '';
+            if (html.includes('data-pm-slice') && html.includes('data-poem-line')) return false;
             const plain = event.clipboardData?.getData('text/plain');
             const text = plain !== undefined && plain !== '' ? plain : sliceText(slice);
             const { tr } = view.state;
             insertPoemText(tr, view.state.schema, text);
             view.dispatch(tr.scrollIntoView());
             return true;
+          },
+          // A copy inside one line has no line around it. Wrapping it keeps the copy marked as a Vlo poem.
+          transformCopied: (slice, view) => {
+            const line = view.state.schema.nodes.poemLine;
+            if (!line || slice.openStart > 0 || slice.content.childCount === 0) return slice;
+            for (let i = 0; i < slice.content.childCount; i++) {
+              if (!slice.content.child(i).isInline) return slice;
+            }
+            return new Slice(Fragment.from(line.create(null, slice.content)), 1, 1);
           },
           clipboardTextSerializer: (slice) => poemDataToText(sliceToPoem(slice)).replace(/\n$/, ''),
         },
@@ -254,7 +274,7 @@ const PoemLine = Node.create<PoemOptions>({
   },
 });
 
-/** The poem schema with bold, italic, underline and strike. Collaboration keeps undo history. */
+/** The poem schema with every inline format. Block formats stay out, so lines keep their layout. */
 export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
   return [
     StarterKit.configure({
@@ -279,6 +299,9 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     PoemDocument,
     Stanza,
     PoemLine.configure(opts),
+    ...inlineFormatting(),
+    ClearFormatting.configure({ blocks: false }),
+    Footnote,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

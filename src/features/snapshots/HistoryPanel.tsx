@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useId, useMemo, useState } from 'react';
 import type * as Y from 'yjs';
 import type { Item, Snapshot } from '@/lib/db';
+import { withoutNotes } from '@/features/editor/format/notes';
 import { countWords } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
 import { restoreSnapshot, snapshotsOf, takeSnapshot } from './snapshots';
@@ -82,7 +83,7 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
   // The text when the panel opened. The dialog is modal, so only another tab can change it meanwhile.
   const [nowText, setNowText] = useState(currentText);
   const wordCounts = useMemo(
-    () => new Map((snapshots ?? []).map((s) => [s.id, countWords(s.text)])),
+    () => new Map((snapshots ?? []).map((s) => [s.id, countWords(withoutNotes(s.text))])),
     [snapshots],
   );
 

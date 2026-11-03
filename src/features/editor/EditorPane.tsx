@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from '@/ui/dialog';
 import { Editor } from './Editor';
-import { docText, writeItemText } from './itemText';
+import { docBody, docText, writeItemText } from './itemText';
 import { SaveStatus } from './SaveStatus';
 import { trackSaves, type SaveState } from './saveTracker';
 import { TAB_ORIGIN } from './tabSync';
@@ -71,7 +71,8 @@ export function EditorPane({ item, kind, width, snapshotEveryMinutes }: EditorPa
       ignoreOrigins: [open.persistence, TAB_ORIGIN],
       confirm: () => open.confirmSaved(clock.now()),
       onPause: async () => {
-        if (latest.current) await writeItemText(target, docText(latest.current, kind), kind);
+        const doc = latest.current;
+        if (doc) await writeItemText(target, docText(doc, kind), kind, docBody(doc, kind));
       },
       onState: setSave,
     });
@@ -150,6 +151,22 @@ export function EditorPane({ item, kind, width, snapshotEveryMinutes }: EditorPa
       {state.otherTabs > 0 && (
         <p className="mb-3 rounded-md border border-rule bg-surface px-3 py-2 text-sm">
           This item is open in another tab. Changes show in both tabs.
+        </p>
+      )}
+      {state.otherVersions.older > 0 && (
+        <p role="alert" className="mb-3 rounded-md border border-accent bg-surface px-3 py-2 text-sm">
+          Another tab has this item open in an older version of Vlo. Reload that tab before you write there.
+          The older version cannot show footnotes and the new colors and styles, and it can remove them.
+        </p>
+      )}
+      {state.otherVersions.newer > 0 && (
+        <p role="alert" className="mb-3 rounded-md border border-accent bg-surface px-3 py-2 text-sm">
+          Another tab has this item open in a newer version of Vlo. Reload this tab to keep writing here.
+        </p>
+      )}
+      {state.status === 'newer' && (
+        <p role="alert" className="text-accent-text">
+          A newer version of Vlo saved this item. Reload Vlo to open it.
         </p>
       )}
       {state.status === 'error' && (

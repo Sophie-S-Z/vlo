@@ -5,10 +5,25 @@ import { FocusTools } from '@/features/focus/focusExtension';
 import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
 import { useFocusPrefs } from '@/features/focus/focusPrefs';
 import { cn } from '@/ui/cn';
+import { openPanel, runCommand, setActiveEditor, getActiveEditor } from './commands/editorBus';
+import { commandsFor, matchesCommand, type EditorCommand } from './commands/registry';
+import { HeldSelection, ToolKeys } from './extensions/editorTools';
+import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { proseExtensions } from './extensions/prose';
-import { Toolbar } from './Toolbar';
+import { SlashMenu } from './extensions/slashMenu';
+import { SmartPunctuation } from './extensions/smartPunctuation';
+import { TypingState } from './extensions/textFill';
+import { ensurePaletteStyles } from './format/palette';
+import { PanelHost } from './toolbar/PanelHost';
+import { SelectionMenu } from './toolbar/SelectionMenu';
+import { SlashMenuList } from './toolbar/SlashMenuList';
+import { Toolbar } from './toolbar/Toolbar';
+import { useWritingPrefs } from './writingPrefs';
 import '@/styles/editor.css';
+
+// The theme colors behind each palette swatch. The editor chunk adds them once.
+ensurePaletteStyles();
 
 interface EditorProps {
   doc: Y.Doc;
@@ -22,8 +37,8 @@ interface EditorProps {
 }
 
 const HELP = {
-  prose: 'Press Escape, then Tab, to leave the text.',
-  poem: 'Tab adds four spaces and Shift-Tab removes them. Enter on an empty line starts a new stanza. Press Escape, then Tab, to leave the poem.',
+  prose: 'Type / for tools. Press Escape, then Tab, to leave the text.',
+  poem: 'Type / for tools. Tab adds four spaces and Shift-Tab removes them. Enter on an empty line starts a new stanza. Press Escape, then Tab, to leave the poem.',
 };
 
 /** The editor element's attributes. A rename passes a new label. */
@@ -38,22 +53,65 @@ function editorAttributes(label: string, kind: EditorProps['kind'], helpId: stri
   };
 }
 
+/** Tools for the / menu: label matches first, then keyword matches, each in registry order. */
+function slashItems(kind: EditorProps['kind']) {
+  const tools = commandsFor(kind).filter((c) => c.slash);
+  return (query: string): EditorCommand[] => {
+    const found = tools.filter((c) => matchesCommand(c, query));
+    const q = query.trim().toLowerCase();
+    if (q === '') return found;
+    const byLabel = found.filter((c) => c.label.toLowerCase().includes(q));
+    return [...byLabel, ...found.filter((c) => !byLabel.includes(c))];
+  };
+}
+
+/** Alt-F10 moves focus to the selection menu when it shows, else to the toolbar. */
+function focusTools(editor: TiptapEditor): boolean {
+  const root = editor.view.dom.closest('[data-vlo-editor]');
+  const target =
+    root?.querySelector<HTMLElement>('[data-vlo-selection-menu] button:not([disabled])') ??
+    root?.querySelector<HTMLElement>('[data-vlo-toolbar] button:not([disabled])');
+  if (!target) return false;
+  target.focus();
+  return true;
+}
+
 export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: EditorProps) {
   const helpId = useId();
+  const listId = `${useId()}-tools`;
+  const writing = useWritingPrefs();
+  const smart = kind === 'poem' ? writing.smartPoems : writing.smartProse;
   const editor = useEditor(
     {
       extensions: [
         ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
+        ...(smart ? [SmartPunctuation] : []),
         FocusTools,
+        TypingState,
+        HeldSelection,
+        SlashMenu.configure({
+          items: slashItems(kind),
+          listId,
+          onChoose: (cmd, e) => {
+            runCommand(e, cmd, 'caret');
+          },
+        }),
+        ToolKeys.configure({
+          onShortcuts: (e) => {
+            openPanel({ editor: e, panel: 'shortcuts', anchor: 'caret' });
+          },
+          onToolFocus: focusTools,
+        }),
       ],
-      enableInputRules: kind === 'prose',
+      // Poems run no input rules, so "1." or "- " stays as typed. Smart punctuation is the one opt-in rule.
+      enableInputRules: kind === 'prose' ? true : smart ? ['typography'] : false,
       enablePasteRules: kind === 'prose',
       autofocus: focusOnOpen ? 'end' : false,
-      // The toolbar reads editor state on its own, so a keystroke does not re-render this tree.
+      // The tool surfaces read editor state on their own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
       editorProps: { attributes: editorAttributes(label, kind, helpId) },
     },
-    [doc, kind],
+    [doc, kind, smart],
   );
 
   // A rename changes the editor's accessible name at once, without reopening the item.
@@ -79,10 +137,22 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
     return () => onEditor?.(null);
   }, [editor, onEditor]);
 
+  // The command menu runs format commands on the open editor.
+  useEffect(() => {
+    setActiveEditor({ editor, form: kind });
+    return () => {
+      if (getActiveEditor()?.editor === editor) setActiveEditor(null);
+    };
+  }, [editor, kind]);
+
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" data-vlo-editor="">
       <Toolbar editor={editor} kind={kind} />
-      <EditorContent editor={editor} className={cn(focus.typewriter && 'vlo-typewriter')} />
+      <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+      <FootnoteList editor={editor} />
+      <SelectionMenu editor={editor} form={kind} />
+      <SlashMenuList editor={editor} listId={listId} />
+      <PanelHost editor={editor} form={kind} />
       <p id={helpId} className="text-xs text-muted">
         {HELP[kind]}
       </p>

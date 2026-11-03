@@ -75,7 +75,11 @@ test('a route that throws shows the error screen', async () => {
 
 test('/p/:projectId loads the project screen, which reports a missing project', async () => {
   renderAt('/p/missing');
-  expect(await screen.findByRole('heading', { level: 1, name: 'Project not found' })).toBeTruthy();
+  // The project route loads the editor code on first use. Under a busy test run, its first transform can
+  // take over the 1 s default, so this wait is longer. The app itself is not under test for speed here.
+  expect(
+    await screen.findByRole('heading', { level: 1, name: 'Project not found' }, { timeout: 5_000 }),
+  ).toBeTruthy();
 });
 
 test.each([

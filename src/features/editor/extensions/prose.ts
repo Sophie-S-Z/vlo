@@ -4,6 +4,8 @@ import StarterKit from '@tiptap/starter-kit';
 import type * as Y from 'yjs';
 import { YFRAGMENT } from '@/lib/ydocs';
 import { EscapeTab } from './escapeTab';
+import { Footnote } from './footnote';
+import { blockFormatting, ClearFormatting, inlineFormatting } from './formatting';
 import { SceneBreak } from './sceneBreak';
 
 /** The prose schema for scenes, memories and notes. Collaboration keeps undo history, so UndoRedo is off. */
@@ -17,7 +19,11 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
       undoRedo: false,
       link: { openOnClick: false, autolink: false, defaultProtocol: 'https' },
     }),
+    ...inlineFormatting(),
+    ...blockFormatting(),
+    ClearFormatting,
     SceneBreak,
+    Footnote,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

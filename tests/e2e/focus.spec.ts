@@ -75,7 +75,8 @@ test.describe('wide screens', () => {
 
     await page.keyboard.press(`${mod}+k`);
     const menu = page.getByRole('dialog', { name: 'Command menu' });
-    await menu.getByRole('combobox').fill('Chapter');
+    // "Chapter" alone also finds the Drop cap tool ("chapter opening"), so the query names the item.
+    await menu.getByRole('combobox').fill('Chapter 1');
     await expect(menu.getByText('Nothing matches.')).toBeVisible();
     await expect(menu.getByRole('option', { name: 'Chapter 1' })).toHaveCount(0);
 

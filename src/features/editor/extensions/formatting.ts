@@ -1,0 +1,175 @@
+import { Extension, type AnyExtension } from '@tiptap/core';
+import Highlight from '@tiptap/extension-highlight';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
+import TextAlign from '@tiptap/extension-text-align';
+import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
+import { swatchVar } from '../format/palette';
+import { TextFillMark } from './textFill';
+
+/* Formats beyond StarterKit. Inline formats apply to prose and poems; block formats to prose only. */
+
+/** Word-style line spacing multiples. The page shows each one 1.15 times taller, like Word. */
+export const LINE_SPACINGS = [1, 1.15, 1.5, 2] as const;
+export type LineSpacing = (typeof LINE_SPACINGS)[number];
+
+/** Font sizes relative to the manuscript size, so page zoom and themes scale them too. */
+export const FONT_SIZES = [
+  { label: 'Small', value: '0.85em' },
+  { label: 'Normal', value: null },
+  { label: 'Large', value: '1.25em' },
+  { label: 'Larger', value: '1.5em' },
+  { label: 'Huge', value: '2em' },
+] as const;
+
+/** The block types that take alignment, spacing and indent. */
+const TEXT_BLOCKS = ['paragraph', 'heading'];
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    blockStyle: {
+      /** Sets the line spacing of each selected block. Null returns to the default. */
+      setLineSpacing: (spacing: LineSpacing | null) => ReturnType;
+      /** Turns a first-line indent on or off for each selected paragraph. */
+      toggleFirstLineIndent: () => ReturnType;
+      /** Turns a drop cap on or off for the paragraph at the cursor. */
+      toggleDropCap: () => ReturnType;
+    };
+    clearFormatting: {
+      /** Removes every mark from the selection, and resets alignment, spacing, indent and drop caps. */
+      clearFormatting: () => ReturnType;
+    };
+  }
+}
+
+function isLineSpacing(value: number): value is LineSpacing {
+  return (LINE_SPACINGS as readonly number[]).includes(value);
+}
+
+/** Line spacing, first-line indent and drop caps, as attributes on paragraphs and headings. */
+export const BlockStyle = Extension.create({
+  name: 'blockStyle',
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: TEXT_BLOCKS,
+        attributes: {
+          lineSpacing: {
+            default: null,
+            parseHTML: (element) => {
+              const value = Number(element.dataset.lineSpacing);
+              return isLineSpacing(value) ? value : null;
+            },
+            renderHTML: (attributes) => {
+              const value = Number(attributes.lineSpacing);
+              if (!isLineSpacing(value)) return {};
+              return {
+                'data-line-spacing': String(value),
+                style: `line-height: ${String(Math.round(value * 115) / 100)}`,
+              };
+            },
+          },
+        },
+      },
+      {
+        types: ['paragraph'],
+        attributes: {
+          firstLineIndent: {
+            default: false,
+            parseHTML: (element) => element.dataset.indent === 'first',
+            renderHTML: (attributes) => (attributes.firstLineIndent ? { 'data-indent': 'first' } : {}),
+          },
+          dropCap: {
+            default: false,
+            parseHTML: (element) => element.dataset.dropCap === 'true',
+            renderHTML: (attributes) => (attributes.dropCap ? { 'data-drop-cap': 'true' } : {}),
+          },
+        },
+      },
+    ];
+  },
+
+  addCommands() {
+    return {
+      setLineSpacing:
+        (spacing) =>
+        ({ commands }) =>
+          TEXT_BLOCKS.map((type) => commands.updateAttributes(type, { lineSpacing: spacing })).some(Boolean),
+      toggleFirstLineIndent:
+        () =>
+        ({ editor, commands }) =>
+          commands.updateAttributes('paragraph', {
+            firstLineIndent: !editor.getAttributes('paragraph').firstLineIndent,
+          }),
+      toggleDropCap:
+        () =>
+        ({ editor, commands }) =>
+          commands.updateAttributes('paragraph', { dropCap: !editor.getAttributes('paragraph').dropCap }),
+    };
+  },
+});
+
+/** Mod-\ clears marks; in prose it also resets the block styles of the selected blocks. */
+export const ClearFormatting = Extension.create<{ blocks: boolean }>({
+  name: 'clearFormatting',
+
+  addOptions() {
+    return { blocks: true };
+  },
+
+  addCommands() {
+    return {
+      clearFormatting:
+        () =>
+        ({ chain }) => {
+          let next = chain().unsetAllMarks();
+          if (this.options.blocks) {
+            next = next
+              .unsetTextAlign()
+              .setLineSpacing(null)
+              .updateAttributes('paragraph', { firstLineIndent: false, dropCap: false });
+          }
+          return next.run();
+        },
+    };
+  },
+
+  addKeyboardShortcuts() {
+    return { 'Mod-\\': () => this.editor.commands.clearFormatting() };
+  },
+});
+
+const ColoredHighlight = Highlight.extend({
+  // Mod-Shift-H marks the selection yellow, the first swatch, so the shortcut gives a visible result.
+  addKeyboardShortcuts() {
+    return {
+      'Mod-Shift-h': () => this.editor.commands.toggleHighlight({ color: swatchVar('mark', 'yellow') }),
+    };
+  },
+}).configure({ multicolor: true });
+
+/** Inline formats for every editor: superscript, subscript, highlight, font color, font size and fills. */
+export function inlineFormatting(): AnyExtension[] {
+  return [
+    Superscript.extend({ excludes: 'subscript' }),
+    Subscript.extend({ excludes: 'superscript' }),
+    ColoredHighlight,
+    TextStyle,
+    Color,
+    FontSize,
+    TextFillMark,
+  ];
+}
+
+/** Block formats for prose: alignment, line spacing, first-line indent, drop caps, and clear formatting. */
+export function blockFormatting(): AnyExtension[] {
+  return [
+    TextAlign.configure({
+      types: TEXT_BLOCKS,
+      alignments: ['left', 'center', 'right', 'justify'],
+      defaultAlignment: null,
+    }),
+    BlockStyle,
+  ];
+}

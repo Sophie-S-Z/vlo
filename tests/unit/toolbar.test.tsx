@@ -4,7 +4,7 @@ import * as Y from 'yjs';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { poemExtensions } from '@/features/editor/extensions/poem';
 import { poemDataToJSON, parsePoemText } from '@/features/editor/poemText';
-import { Toolbar } from '@/features/editor/Toolbar';
+import { Toolbar } from '@/features/editor/toolbar/Toolbar';
 
 let editor: Editor;
 

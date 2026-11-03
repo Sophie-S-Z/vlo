@@ -3,12 +3,26 @@ import type { MatchInfo } from 'minisearch';
 import { useEffect, useMemo, useState } from 'react';
 import type { Item, ItemText, Project } from '@/lib/db';
 import { db } from '@/lib/db';
+import { cn } from '@/ui/cn';
 import { buildSearchIndex, snippet } from './searchIndex';
 
 export interface CommandAction {
   id: string;
   label: string;
   run: () => void;
+  /** More words that find the action. */
+  keywords?: readonly string[];
+  /** The shortcut, shown at the end of the row. */
+  hint?: string;
+  /** Format actions act on the open text and list after the other actions. */
+  group?: 'actions' | 'format';
+}
+
+/** True when every query word is in the action's label or keywords. */
+export function actionMatches(action: CommandAction, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const haystack = [action.label, ...(action.keywords ?? [])].join(' ').toLowerCase();
+  return words.every((w) => haystack.includes(w));
 }
 
 interface CommandMenuProps {
@@ -80,7 +94,8 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
     .filter((r) => matchedIn(r, 'text'))
     .map((r) => ({ item: openable(r.id), terms: [...queryWords, ...Object.keys(r.match)] }))
     .filter((r): r is { item: Item; terms: string[] } => r.item !== undefined);
-  const shownActions = actions.filter((a) => a.label.toLowerCase().includes(trimmed.toLowerCase()));
+  const shownActions = actions.filter((a) => a.group !== 'format' && actionMatches(a, trimmed));
+  const shownFormats = actions.filter((a) => a.group === 'format' && actionMatches(a, trimmed));
 
   const choose = (run: () => void) => {
     run();
@@ -146,6 +161,27 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
                 className={itemClass}
               >
                 {action.label}
+              </Command.Item>
+            ))}
+          </Command.Group>
+        )}
+        {shownFormats.length > 0 && (
+          <Command.Group heading="Format" className={groupClass}>
+            {shownFormats.map((action) => (
+              <Command.Item
+                key={action.id}
+                value={`format-${action.id}`}
+                onSelect={() => {
+                  choose(action.run);
+                }}
+                className={cn(itemClass, 'flex-row items-center justify-between')}
+              >
+                <span>{action.label}</span>
+                {action.hint && (
+                  <span aria-hidden="true" className="font-mono text-xs text-muted">
+                    {action.hint}
+                  </span>
+                )}
               </Command.Item>
             ))}
           </Command.Group>
