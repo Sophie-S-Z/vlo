@@ -96,40 +96,40 @@ Each font keeps its own lazy chunk, so the initial JavaScript budget (250 KB) do
 
 **Files:** Create `src/features/editor/commands/registry.ts`, `src/features/editor/toolbar/Toolbar.tsx`, `SelectionMenu.tsx`, `SlashMenu.tsx`, `ShortcutSheet.tsx`. Modify `EditorPane.tsx`, `ProjectPage.tsx` (command menu reads the registry).
 
-- [ ] Write unit tests: the registry has unique ids and shortcuts; each command lists its forms; poem items get no block command.
-- [ ] Build the toolbar with grouped controls, overflow into a "More" menu under 640 px, hidden in focus mode.
-- [ ] Build the selection menu (bubble menu) with the most used inline styles.
-- [ ] Build the `/` menu: typing `/` at a block start or after a space opens a filtered list. Escape closes it and keeps the `/`.
-- [ ] Build the shortcut sheet (E6).
-- [ ] Playwright: each surface runs Bold on the same text; keyboard-only use; axe.
+- [x] Write unit tests: the registry has unique ids and shortcuts; each command lists its forms; poem items get no block command.
+- [x] Build the toolbar with grouped controls, overflow into a "More" menu under 640 px, hidden in focus mode.
+- [x] Build the selection menu (bubble menu) with the most used inline styles.
+- [x] Build the `/` menu: typing `/` at a block start or after a space opens a filtered list. Escape closes it and keeps the `/`.
+- [x] Build the shortcut sheet (E6).
+- [x] Playwright: each surface runs Bold on the same text; keyboard-only use; axe.
 
 ### Task A2: Text styles
 
 Bold, italic, underline, strikethrough, superscript, subscript, highlight (palette and custom), font color (palette and custom), font size, clear formatting. Prose also gets alignment, line spacing, first-line indent and drop caps (E5).
 
-- [ ] Unit tests for each mark's schema, parse and render. Round-trip tests through save and reload.
-- [ ] Color picker: theme-aware palette, a custom picker, recent colors, contrast readout.
-- [ ] Playwright: apply each style by toolbar, shortcut and `/` menu; reload; check the DOM.
+- [x] Unit tests for each mark's schema, parse and render. Round-trip tests through save and reload.
+- [x] Color picker: theme-aware palette, a custom picker, recent colors, contrast readout.
+- [x] Playwright: apply each style by toolbar, shortcut and `/` menu; reload; check the DOM.
 
 ### Task A3: Special characters (and smart typography E3)
 
-- [ ] A searchable picker with categories: punctuation and typography, accented letters, Greek, math, arrows, currency, fractions, superscript and subscript digits, symbols, emoji (a curated list of about 300). Each entry has a name for search. Recent picks come first.
-- [ ] `/` menu entries for the most used characters.
-- [ ] Smart typography with a switch in Settings (E3).
-- [ ] Tests: search finds "em dash", "alpha", "section sign"; inserting keeps poem spaces.
+- [x] A searchable picker with categories: punctuation and typography, accented letters, Greek, math, arrows, currency, fractions, superscript and subscript digits, symbols, emoji (a curated list of about 300). Each entry has a name for search. Recent picks come first.
+- [x] `/` menu entries for the most used characters.
+- [x] Smart typography with a switch in Settings (E3).
+- [x] Tests: search finds "em dash", "alpha", "section sign"; inserting keeps poem spaces.
 
 ### Task A4: Gradient, metallic and prismatic colors
 
-- [ ] Mark `textFill` with attributes `stops` (color and position), `angle`, `look` (`gradient`, `metallic`, `prismatic`, `glow`), `shimmer` (on or off) and `speed`.
-- [ ] Full gradient editor: add, move and remove stops, angle dial, look, shimmer speed, live preview on the current theme, contrast check of each stop, save as a named look. 16 presets as starting points (for example Gold leaf, Rose gold, Chrome, Opal, Aurora, Nebula, Prism, Ember, Lagoon, Moonstone).
-- [ ] CSS only: `background-clip: text`, `caret-color`, a shimmer keyframe on `background-position`, paused under `data-typing`, Calm mode and reduced motion.
-- [ ] Tests: typing inside a run (Review Focus 1); shimmer paused while typing (computed `animation-play-state`); Calm mode shows no animation; keystroke budget with 500 shimmer runs on screen.
+- [x] Mark `textFill` with attributes `stops` (color and position), `angle`, `look` (`gradient`, `metallic`, `prismatic`, `glow`), `shimmer` (on or off) and `speed`.
+- [x] Full gradient editor: add, move and remove stops, angle dial, look, shimmer speed, live preview on the current theme, contrast check of each stop, save as a named look. 16 presets as starting points (for example Gold leaf, Rose gold, Chrome, Opal, Aurora, Nebula, Prism, Ember, Lagoon, Moonstone).
+- [x] CSS only: `background-clip: text`, `caret-color`, a shimmer keyframe on `background-position`, paused under `data-typing`, Calm mode and reduced motion.
+- [x] Tests: typing inside a run (Review Focus 1); shimmer paused while typing (computed `animation-play-state`); Calm mode shows no animation; keystroke budget with 500 shimmer runs on screen.
 
 ### Task A5: Footnotes
 
-- [ ] Node `footnote` (Decision 4), insert by toolbar, `/` menu and Mod-Alt-F.
-- [ ] Popover editor for the note, list at the end of the item, numbers from document order.
-- [ ] Tests: numbering after cut, paste, undo and a second tab (Review Focus 2); footnotes in a poem line keep its spaces.
+- [x] Node `footnote` (Decision 4), insert by toolbar, `/` menu and Mod-Alt-F.
+- [x] Popover editor for the note, list at the end of the item, numbers from document order.
+- [x] Tests: numbering after cut, paste, undo and a second tab (Review Focus 2); footnotes in a poem line keep its spaces.
 
 ### Task A6: Math with MathLive
 

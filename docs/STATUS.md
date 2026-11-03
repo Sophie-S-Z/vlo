@@ -78,13 +78,32 @@ Last update: 2026-11-03
     open over another dialog.
   - The hourly update check stops when the app unmounts. The theme reveal grows from the chosen radio in Safari
     too.
+- Phase 1 merged (pull requests #3 and #4).
+- Phase 2 plan approved (`docs/plans/phase-2.md`): editor upgrade first (pull requests A1 and A2), then exports
+  (pull request B).
+- Phase 2 tasks A1 to A5 built on branch `claude/project-thread-9q00v8`:
+  - One command registry behind the toolbar, the selection menu, the `/` menu, the command menu (Mod-K) and a
+    shortcut sheet (Mod-/). Under 640 px the wide toolbar groups move into the More menu. Alt-F10 moves focus to
+    the tools.
+  - Text styles: superscript, subscript, highlight and font color (theme palette, custom color, recent colors,
+    contrast readout), font size, line spacing, first-line indent, drop caps, alignment and clear formatting.
+    Poems get the inline styles only.
+  - Special characters: about 900 searchable characters in 10 groups, recent picks first, and quick inserts in
+    the `/` menu. Smart punctuation with a switch for prose and one for poems in Settings.
+  - Gradient, metallic, prismatic and glowing text with a full gradient editor: color stops, angle dial, look,
+    shimmer speed, contrast of the weakest stop, 16 presets and saved looks. Shimmer pauses while the writer
+    types, and Calm mode and reduced motion stop it. Keystroke p95 with 500 shimmering runs on screen: about
+    26 ms (budget 50 ms).
+  - Footnotes: insert from the toolbar, the `/` menu, the command menu or Mod-Alt-F. A note panel edits the note
+    with inline styles. A list of notes sits under the text. Numbers follow the text order after every cut,
+    paste, undo and change in another tab.
 - Initial JavaScript: 187,284 bytes gzip (budget 250,000). Project route chunk: 196,417 bytes gzip. Command
   menu: 11,087 bytes. History panel: 5,201 bytes. Diff worker: 3,205 bytes.
 
 ## In progress
 
-- Phase 1 pull request 1 (tasks 1 to 9) is merged as pull request #3.
-- Phase 1 tasks 10 to 14 are in pull request #4.
+- Phase 2 pull request A1 (tasks A1 to A5). Next: pull request A2 (math, fonts, page format, scenes and sound,
+  and the extras), then pull request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
 - Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
@@ -108,25 +127,41 @@ Last update: 2026-11-03
 | 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                     |
 | 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1). |
 | 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).               |
+| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                             |
+| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.              |
+| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.              |
+| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.            |
+| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.               |
+| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.    |
 
 ## Spec changes
 
-| Date       | Change                                                                                          | Reason                                                                                                                 |
-| ---------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-02 | `vercel.json` replaces `public/_headers`.                                                       | Hosting moved to Vercel.                                                                                               |
-| 2026-11-02 | The CSP has no Supabase host until Phase 5.                                                     | The spec value is a placeholder.                                                                                       |
-| 2026-11-02 | Routes arrive in the phase that builds their screen.                                            | No placeholder screens (section 0, rule 8).                                                                            |
-| 2026-11-02 | Paper adds `--accent-text: #B83E28`.                                                            | `#C8452D` on `#F5F1E8` is 4.29:1 and fails WCAG AA for body text.                                                      |
-| 2026-11-02 | Sepia adds surface `#F6ECD9`, muted `#6E5D48`, rule `#DCCBAA`.                                  | The spec gives only three Sepia colors.                                                                                |
-| 2026-11-02 | TypeScript 6.0, not 7.0.                                                                        | typescript-eslint 8.72 supports TypeScript below 6.1.                                                                  |
-| 2026-11-02 | ESLint 9.39, not 10.                                                                            | eslint-plugin-jsx-a11y 6.10 supports ESLint up to 9.                                                                   |
-| 2026-11-02 | The CSP adds `manifest-src 'self'`.                                                             | Tighter than the `default-src` fallback, same effect.                                                                  |
-| 2026-11-02 | `/assets/*` gets `Cache-Control: public, max-age=31536000, immutable`.                          | File names carry a content hash.                                                                                       |
-| 2026-11-02 | The SPA rewrite skips `/assets/`, `/icons/`, `/sw.js`, `/workbox-*` and the manifest.           | A missing file must return 404, never `index.html`, or the service worker can cache HTML as a script.                  |
-| 2026-11-02 | In WebKit the offline test checks only the precache.                                            | Playwright cannot load a service-worker page in WebKit with the network off. Real Safari is a manual check in Phase 6. |
-| 2026-11-02 | `@tiptap/y-tiptap` and `y-protocols` replace `y-prosemirror`.                                   | `@tiptap/extension-collaboration` 3.32 needs them as peers.                                                            |
-| 2026-11-02 | Shared-element transitions use React's `<ViewTransition name>`, not Motion `layoutId`.          | React Router 8 deprecates its `viewTransition` option and points to React 19.3 `<ViewTransition>` (rule 11).           |
-| 2026-11-02 | Two tabs on one item sync live through `BroadcastChannel`.                                      | Better than the planned notice alone. Yjs merges both tabs, so no typing is lost.                                      |
-| 2026-11-03 | Focus-line dimming uses 70 % opacity, not 40 %.                                                 | 40 % gave 2.2:1 to 3.3:1 contrast. 70 % meets WCAG AA in every theme (product owner decision).                         |
-| 2026-11-03 | CI WebKit holds the open budget to a 700 ms ceiling. Real Safari is checked by hand in Phase 6. | Linux WebKit in CI takes 364 to 567 ms and varies by up to 200 ms per run (product owner decision).                    |
-| 2026-11-02 | Storage health says "Unknown" and "Limit for Vlo", not "Not available" and "Quota".             | "Limit for Vlo" says what the number means. "Unknown" matches the other rows.                                          |
+| Date       | Change                                                                                                                                                          | Reason                                                                                                                                 |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-02 | `vercel.json` replaces `public/_headers`.                                                                                                                       | Hosting moved to Vercel.                                                                                                               |
+| 2026-11-02 | The CSP has no Supabase host until Phase 5.                                                                                                                     | The spec value is a placeholder.                                                                                                       |
+| 2026-11-02 | Routes arrive in the phase that builds their screen.                                                                                                            | No placeholder screens (section 0, rule 8).                                                                                            |
+| 2026-11-02 | Paper adds `--accent-text: #B83E28`.                                                                                                                            | `#C8452D` on `#F5F1E8` is 4.29:1 and fails WCAG AA for body text.                                                                      |
+| 2026-11-02 | Sepia adds surface `#F6ECD9`, muted `#6E5D48`, rule `#DCCBAA`.                                                                                                  | The spec gives only three Sepia colors.                                                                                                |
+| 2026-11-02 | TypeScript 6.0, not 7.0.                                                                                                                                        | typescript-eslint 8.72 supports TypeScript below 6.1.                                                                                  |
+| 2026-11-02 | ESLint 9.39, not 10.                                                                                                                                            | eslint-plugin-jsx-a11y 6.10 supports ESLint up to 9.                                                                                   |
+| 2026-11-02 | The CSP adds `manifest-src 'self'`.                                                                                                                             | Tighter than the `default-src` fallback, same effect.                                                                                  |
+| 2026-11-02 | `/assets/*` gets `Cache-Control: public, max-age=31536000, immutable`.                                                                                          | File names carry a content hash.                                                                                                       |
+| 2026-11-02 | The SPA rewrite skips `/assets/`, `/icons/`, `/sw.js`, `/workbox-*` and the manifest.                                                                           | A missing file must return 404, never `index.html`, or the service worker can cache HTML as a script.                                  |
+| 2026-11-02 | In WebKit the offline test checks only the precache.                                                                                                            | Playwright cannot load a service-worker page in WebKit with the network off. Real Safari is a manual check in Phase 6.                 |
+| 2026-11-02 | `@tiptap/y-tiptap` and `y-protocols` replace `y-prosemirror`.                                                                                                   | `@tiptap/extension-collaboration` 3.32 needs them as peers.                                                                            |
+| 2026-11-02 | Shared-element transitions use React's `<ViewTransition name>`, not Motion `layoutId`.                                                                          | React Router 8 deprecates its `viewTransition` option and points to React 19.3 `<ViewTransition>` (rule 11).                           |
+| 2026-11-02 | Two tabs on one item sync live through `BroadcastChannel`.                                                                                                      | Better than the planned notice alone. Yjs merges both tabs, so no typing is lost.                                                      |
+| 2026-11-03 | Focus-line dimming uses 70 % opacity, not 40 %.                                                                                                                 | 40 % gave 2.2:1 to 3.3:1 contrast. 70 % meets WCAG AA in every theme (product owner decision).                                         |
+| 2026-11-03 | CI WebKit holds the open budget to a 700 ms ceiling. Real Safari is checked by hand in Phase 6.                                                                 | Linux WebKit in CI takes 364 to 567 ms and varies by up to 200 ms per run (product owner decision).                                    |
+| 2026-11-02 | Storage health says "Unknown" and "Limit for Vlo", not "Not available" and "Quota".                                                                             | "Limit for Vlo" says what the number means. "Unknown" matches the other rows.                                                          |
+| 2026-11-03 | New marks beyond section 7: `superscript`, `subscript`, `highlight` (color), `textStyle` (color, font size), `textFill`.                                        | Phase 2 editor tools (plan decision 12).                                                                                               |
+| 2026-11-03 | New attributes: `textAlign`, `lineSpacing`, `firstLineIndent` and `dropCap` on paragraphs and headings.                                                         | Phase 2 block tools, prose only.                                                                                                       |
+| 2026-11-03 | New node: `footnote`, an inline atom with its note in `content`. Poem lines hold `inline*`, not `text*`.                                                        | Footnotes in prose and poems (plan decision 4). Hard breaks stay off in poems.                                                         |
+| 2026-11-03 | Footnote numbers are not stored. A plugin counts them in text order.                                                                                            | A stored number goes stale after a cut, a paste, an undo or a change in another tab.                                                   |
+| 2026-11-03 | An item's plain-text copy ends with its notes under "Notes". Word and line counts leave the notes out.                                                          | Search finds notes and readable backups keep them. Counts match the writing itself.                                                    |
+| 2026-11-03 | A copy from a Vlo poem pastes into a poem with its styles and footnotes. Text from other apps still pastes as plain text.                                       | Phase 2 gives poems inline styles, and the plain-text paste dropped them. A copy inside one line now stays one line in plain text too. |
+| 2026-11-03 | Gradient text is allowed in the writer's own words, and the toolbar never uses it.                                                                              | The product owner asked for gradient and metallic text. Interface surfaces keep plain colors.                                          |
+| 2026-11-03 | Scenes count as artwork, not interface surfaces, so they can use gradients and motion.                                                                          | Section 13 bans gradients on interface surfaces (plan decision 12).                                                                    |
+| 2026-11-03 | Ambient sound (F22) moves from Phase 3 to Phase 2.                                                                                                              | The product owner asked for music and nature sounds with the editor upgrade.                                                           |
+| 2026-11-03 | New packages: `@floating-ui/dom` and the TipTap `bubble-menu`, `highlight`, `subscript`, `superscript`, `text-align`, `text-style` and `typography` extensions. | Approved with the Phase 2 plan. All MIT. `docs/licenses.md` lists them.                                                                |
