@@ -1,13 +1,13 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { useTool } from './support/tools';
 
 /* Task A5: footnotes. Numbers follow document order in every tab, and notes survive a reload. */
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
 const scene = (page: Page) => page.getByRole('textbox', { name: 'Scene 1' });
 const poem = (page: Page) => page.getByRole('textbox', { name: 'Poem 1' });
-const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting', exact: true });
 const notes = (page: Page) => page.getByRole('region', { name: 'Notes' });
 const panel = (page: Page) => page.getByRole('dialog', { name: 'Footnote' });
 
@@ -59,7 +59,7 @@ test('footnotes from the toolbar and Mod-Alt-F number in text order, edit from t
   await page.keyboard.type('The harbour lights came on one by one.');
 
   // The toolbar inserts a reference at the caret and opens its note.
-  await toolbar(page).getByRole('button', { name: 'Footnote', exact: true }).click();
+  await useTool(page, 'Footnote');
   await expect(panel(page)).toBeVisible();
   await expect(panel(page).getByRole('textbox', { name: 'Footnote 1' })).toBeFocused();
   await page.keyboard.type('Lit in 1904.');

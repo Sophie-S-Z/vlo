@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { useTool } from './support/tools';
 
 /* Task A1 and A2: one command registry behind the toolbar, the selection menu, the / menu and Mod-K. */
 
@@ -96,7 +97,8 @@ test('keyboard only: Alt-F10 reaches the selection menu, Escape returns, and the
   await page.keyboard.press('Escape');
   await expect(scene(page)).toBeFocused();
 
-  await page.keyboard.press('End');
+  // The end of the text, not of the line: on a phone the sentence wraps.
+  await page.keyboard.press(`${mod}+End`);
   await page.keyboard.press('Enter');
   await page.keyboard.type('/quo');
   await expect(scene(page)).toHaveAttribute('aria-activedescendant', /.+/);
@@ -196,7 +198,7 @@ test('the open tool surfaces have no serious axe issues', async ({ page }) => {
 test('special characters: find by name, insert with Enter, then find it under Recent', async ({ page }) => {
   await newNovel(page);
   await page.keyboard.type(' ');
-  await toolbar(page).getByRole('button', { name: 'Special characters' }).click();
+  await useTool(page, 'Special characters');
   const panel = page.getByRole('dialog', { name: 'Special characters' });
   await panel.getByLabel('Find a character by name').fill('section sign');
   await page.keyboard.press('Enter');

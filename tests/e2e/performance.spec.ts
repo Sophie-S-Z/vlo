@@ -263,3 +263,79 @@ test('typing stays under 50 ms at p95 with 500 shimmering runs on screen, and th
   expect(p95).toBeLessThan(50);
   await expect.poll(playState, { timeout: 4_000 }).toBe('running');
 });
+
+// DIAGNOSTIC, temporary: which part of the fill styles makes WebKit slow. Removed before merge.
+test('diagnostic: shimmer cost by style part', async ({ page, browserName }) => {
+  test.skip(browserName !== 'webkit' && !process.env.VLO_DIAG, 'WebKit only');
+  test.setTimeout(240_000);
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  await page
+    .getByRole('dialog', { name: 'New project' })
+    .getByRole('button', { name: 'Create project' })
+    .click();
+  const editor = page.getByRole('textbox', { name: 'Scene 1' });
+  await expect(editor).toBeFocused();
+  await editor.evaluate((root) => {
+    const fill = JSON.stringify({
+      stops: [
+        { color: '#8a6316', at: 0 },
+        { color: '#e8c35a', at: 50 },
+        { color: '#7a5512', at: 100 },
+      ],
+      angle: 90,
+      look: 'metallic',
+      shimmer: true,
+      speed: 4,
+    }).replaceAll('"', '&quot;');
+    const run = `<span data-fill="${fill}">gold</span>`;
+    const html = Array.from(
+      { length: 25 },
+      () => `<p>${Array.from({ length: 20 }, () => run).join(' ')}</p>`,
+    ).join('');
+    const data = new DataTransfer();
+    data.setData('text/html', html);
+    data.setData('text/plain', 'gold');
+    const paste = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, 'clipboardData', { value: data });
+    root.dispatchEvent(paste);
+  });
+  await expect(editor.locator('.vlo-fill-shimmer')).toHaveCount(500);
+  const variants: Record<string, string> = {
+    baseline: '',
+    noFilter: '.vlo-fill { filter: none !important; }',
+    noAnimation: '.vlo-fill-shimmer { animation: none !important; }',
+    noFilterNoAnimation:
+      '.vlo-fill { filter: none !important; } .vlo-fill-shimmer { animation: none !important; }',
+    noClipText:
+      '.vlo-fill { filter: none !important; -webkit-background-clip: border-box !important; background-clip: border-box !important; -webkit-text-fill-color: currentColor !important; }',
+    noBackground:
+      '.vlo-fill { filter: none !important; background: none !important; -webkit-text-fill-color: currentColor !important; animation: none !important; }',
+    sliceDecoration:
+      '.vlo-fill { box-decoration-break: slice !important; -webkit-box-decoration-break: slice !important; }',
+    oneLayerFill:
+      '.vlo-fill-metallic { background-image: var(--vlo-fill) !important; background-size: 100% 100% !important; }',
+  };
+  await page.keyboard.press('ControlOrMeta+End');
+  for (const [name, css] of Object.entries(variants)) {
+    await page.evaluate((text) => {
+      document.getElementById('vlo-diag')?.remove();
+      const style = document.createElement('style');
+      style.id = 'vlo-diag';
+      style.textContent = text;
+      document.head.append(style);
+    }, css);
+    await page.waitForTimeout(2_000);
+    await page.evaluate(() => {
+      window.__keyDelays = [];
+    });
+    const typed = ' and the lamp swung out over the water'.repeat(2).slice(0, 60);
+    await page.keyboard.type(typed, { delay: 30 });
+    await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+    const delays = await page.evaluate(() => window.__keyDelays);
+    const sorted = [...delays].sort((a, b) => a - b);
+    const p50 = sorted[Math.floor(sorted.length / 2)] ?? Infinity;
+    const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+    console.log(`[diag ${browserName}] ${name}: p50 ${p50.toFixed(1)} ms, p95 ${p95.toFixed(1)} ms`);
+  }
+});

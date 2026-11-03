@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
 import { shortcutLabel } from '../commands/keys';
-import { focusText, runCommand, type PanelAnchor } from '../commands/editorBus';
+import { focusText, getPanelRequest, runCommand, type PanelAnchor } from '../commands/editorBus';
 import { command, type EditorCommand, type EditorForm } from '../commands/registry';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { ToolButton, toolClass } from './ToolButton';
@@ -111,7 +111,8 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
     pending.current = null;
     event.preventDefault();
     if (next) run(next, anchor ?? 'caret');
-    else focusText(editor);
+    // A tool that opened a panel as it ran, such as Footnote, keeps the focus it gave the panel.
+    else if (getPanelRequest()?.editor !== editor) focusText(editor);
   };
 
   // Said only after a hanging indent press. A caret move changes the readout but says nothing.
