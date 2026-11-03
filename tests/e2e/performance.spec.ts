@@ -313,6 +313,10 @@ test('diagnostic: shimmer cost by style part', async ({ page, browserName }) => 
       '.vlo-fill { filter: none !important; background: none !important; -webkit-text-fill-color: currentColor !important; animation: none !important; }',
     sliceDecoration:
       '.vlo-fill { box-decoration-break: slice !important; -webkit-box-decoration-break: slice !important; }',
+    lastParagraphPlain:
+      '.ProseMirror > p:last-child .vlo-fill { filter: none !important; background: none !important; -webkit-text-fill-color: currentColor !important; animation: none !important; }',
+    othersPlain:
+      '.ProseMirror > p:not(:last-child) .vlo-fill { filter: none !important; background: none !important; -webkit-text-fill-color: currentColor !important; animation: none !important; }',
     oneLayerFill:
       '.vlo-fill-metallic { background-image: var(--vlo-fill) !important; background-size: 100% 100% !important; }',
   };
