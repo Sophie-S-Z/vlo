@@ -133,10 +133,10 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task A6: Math with MathLive
 
-- [ ] Nodes `mathInline` and `mathBlock` (block only in prose) with attribute `latex`.
-- [ ] A popover with `<math-field>` and the MathLive virtual keyboard. Templates for fractions, roots, powers, sums, integrals, matrices and chemistry. The writer never needs to see LaTeX, and a "Show LaTeX" switch shows it for writers who want it.
-- [ ] Static render in the node view with MathLive markup. MathLive loads on first use only.
-- [ ] Tests: insert a fraction with buttons only; reload keeps it; a poem line with math keeps its hanging indent (Review Focus 4); Pen mode test shows no new origin.
+- [x] Nodes `mathInline` and `mathBlock` (block only in prose) with attribute `latex`.
+- [x] A popover with `<math-field>` and the MathLive virtual keyboard. Templates for fractions, roots, powers, sums, integrals, matrices and chemistry. The writer never needs to see LaTeX, and a "Show LaTeX" switch shows it for writers who want it.
+- [x] Static render in the node view with MathLive markup. MathLive loads on first use only.
+- [x] Tests: insert a fraction with buttons only; reload keeps it; a poem line with math keeps its hanging indent (Review Focus 4); Pen mode test shows no new origin.
 
 ### Task A7: Fonts and page format
 

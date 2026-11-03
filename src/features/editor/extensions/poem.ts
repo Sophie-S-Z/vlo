@@ -5,9 +5,11 @@ import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/p
 import StarterKit from '@tiptap/starter-kit';
 import type * as Y from 'yjs';
 import { YFRAGMENT } from '@/lib/ydocs';
+import { nodeText } from '../leafText';
 import { parsePoemText, poemDataToText, type PoemData } from '../poemText';
 import { EscapeTab } from './escapeTab';
 import { Footnote } from './footnote';
+import { MathInline } from './math';
 import { ClearFormatting, inlineFormatting } from './formatting';
 
 /* The poem schema: doc > stanza+ > poemLine+ > inline. Every space is content, and lines keep layout. */
@@ -64,6 +66,19 @@ function leadingSpaces(text: string): number {
   return text.length - text.replace(/^ +/, '').length;
 }
 
+/** The spaces at the start of a line, up to its first character, footnote or equation. */
+function lineIndent(line: ProseMirrorNode): number {
+  let count = 0;
+  for (let i = 0; i < line.childCount; i++) {
+    const child = line.child(i);
+    const text = child.isText ? (child.text ?? '') : '';
+    const spaces = leadingSpaces(text);
+    count += spaces;
+    if (!child.isText || spaces < text.length) break;
+  }
+  return count;
+}
+
 /** Stanza nodes for poem data. */
 function poemNodes(schema: Schema, poem: PoemData): ProseMirrorNode[] {
   const { stanza, poemLine } = schema.nodes;
@@ -83,7 +98,7 @@ function sliceText(slice: Slice): string {
   const lines: string[] = [];
   slice.content.descendants((node) => {
     if (!node.isTextblock) return true;
-    const text = node.textContent.replace(/\u00a0/g, ' ');
+    const text = nodeText(node).replace(/\u00a0/g, ' ');
     lines.push(text.trim() === '' ? '' : text);
     return false;
   });
@@ -100,17 +115,15 @@ function sliceToPoem(slice: Slice): PoemData {
       if (loose.length > 0) poem.push(loose);
       loose = [];
       const lines: PoemData[number] = [];
-      node.forEach((line) =>
-        lines.push({ text: line.textContent, hanging: Number(line.attrs.hanging) || 0 }),
-      );
+      node.forEach((line) => lines.push({ text: nodeText(line), hanging: Number(line.attrs.hanging) || 0 }));
       poem.push(lines);
     } else if (node.type.name === 'poemLine') {
-      loose.push({ text: node.textContent, hanging: Number(node.attrs.hanging) || 0 });
+      loose.push({ text: nodeText(node), hanging: Number(node.attrs.hanging) || 0 });
     } else if (node.isInline) {
-      // Inline pieces of one line (text runs with different styles, footnotes) join into that line.
+      // Inline pieces of one line (text runs with different styles, footnotes, equations) join into that line.
       const last = loose[loose.length - 1];
-      if (last && previousInline) last.text += node.textContent;
-      else loose.push({ text: node.textContent, hanging: 0 });
+      if (last && previousInline) last.text += nodeText(node);
+      else loose.push({ text: nodeText(node), hanging: 0 });
     }
     previousInline = node.isInline;
   });
@@ -198,7 +211,7 @@ const PoemLine = Node.create<PoemOptions>({
           if (lines.length === 0) return false;
           if (dispatch) {
             for (const { node, pos } of lines) {
-              const count = Math.min(leadingSpaces(node.textContent), this.options.tabSpaces);
+              const count = Math.min(lineIndent(node), this.options.tabSpaces);
               if (count > 0) tr.delete(pos + 1, pos + 1 + count);
             }
           }
@@ -302,6 +315,7 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     ...inlineFormatting(),
     ClearFormatting.configure({ blocks: false }),
     Footnote,
+    MathInline,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

@@ -60,6 +60,8 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'first-line-indent',
       'drop-cap',
       'scene-break',
+      'math',
+      'math-block',
       'clear',
       'shortcuts',
     ],
@@ -72,7 +74,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['bold', 'italic'], wide: true },
       { tools: ['underline', 'strike'], wide: true },
       { tools: ['color', 'highlight', 'gradient'], wide: true },
-      { tools: ['characters', 'footnote'], wide: true },
+      { tools: ['characters', 'footnote', 'math'], wide: true },
     ],
     more: ['superscript', 'subscript', 'size', 'clear', 'shortcuts'],
   },
@@ -100,7 +102,7 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
   const state = useCommandState(editor, all);
   const at = (id: string) => state[id] ?? NO_STATE;
   const more = useRef<HTMLButtonElement>(null);
-  // A panel chosen from a menu opens after the menu has closed and given focus back.
+  // A tool chosen from a menu runs after the menu has closed and given focus back.
   const pending = useRef<EditorCommand | null>(null);
 
   const run = (cmd: EditorCommand, anchor: PanelAnchor) => {
@@ -111,7 +113,7 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
     pending.current = null;
     event.preventDefault();
     if (next) run(next, anchor ?? 'caret');
-    // A tool that opened a panel as it ran, such as Footnote, keeps the focus it gave the panel.
+    // A menu closed with no choice gives focus back to the text, unless a panel is open.
     else if (getPanelRequest()?.editor !== editor) focusText(editor);
   };
 
@@ -147,10 +149,10 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
         )}
       </>
     );
+    // Every tool waits until the menu has closed and given focus back. A tool that opens a panel, such as
+    // Equation, would otherwise lose that panel when the closing menu takes focus.
     const select = () => {
-      // Run tools act at once. A panel waits until the menu has closed, so the two never fight for focus.
-      if (cmd.kind === 'run') runCommand(editor, cmd);
-      else pending.current = cmd;
+      pending.current = cmd;
     };
     const className = cn(narrow && 'sm:hidden');
     // Toggles show a check, so the menu says which formats are on.

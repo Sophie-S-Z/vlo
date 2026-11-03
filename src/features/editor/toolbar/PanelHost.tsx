@@ -14,6 +14,9 @@ import {
 import type { EditorForm, PanelId } from '../commands/registry';
 import { heldKey } from '../extensions/editorTools';
 import { leaveFootnote, selectedFootnote } from '../extensions/footnote';
+import { dropEmptyMath, leaveMath, selectedMath } from '../extensions/math';
+import { useMathKeyboard } from '../math/keyboard';
+import { saveOpenField } from '../math/openField';
 import { CharactersPanel } from './panels/CharactersPanel';
 import { ColorPanel } from './panels/ColorPanel';
 import { FootnotePanel } from './panels/FootnotePanel';
@@ -24,6 +27,8 @@ import { ShortcutSheet } from './ShortcutSheet';
 
 // The gradient editor loads the first time a writer opens it.
 const GradientPanel = lazy(async () => ({ default: (await import('./panels/GradientPanel')).GradientPanel }));
+// So does the equation panel, which loads MathLive in turn.
+const MathPanel = lazy(async () => ({ default: (await import('./panels/MathPanel')).MathPanel }));
 
 /** A rectangle at the selection start, for panels opened from the / menu or the command menu. */
 function caretRect(editor: Editor): DOMRect {
@@ -74,6 +79,12 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
           <GradientPanel editor={editor} />
         </Suspense>
       );
+    case 'math':
+      return (
+        <Suspense fallback={<p className="text-sm text-muted">Loading the equation editor.</p>}>
+          <MathPanel editor={editor} />
+        </Suspense>
+      );
   }
 }
 
@@ -87,7 +98,13 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   characters: 'Special characters',
   footnote: 'Footnote',
   gradient: 'Gradient and shimmer',
+  math: 'Equation',
 };
+
+/** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */
+function inMathLiveUi(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('.ML__keyboard, .ui-menu-container') !== null;
+}
 
 /** Shows the panel any tool surface asked for: a popover at its button or the caret, or the shortcut sheet. */
 export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }) {
@@ -95,6 +112,7 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
   const mine = request?.editor === editor ? request : null;
   const popover = mine && mine.panel !== 'shortcuts' ? mine : null;
   const anchor = useMemo(() => (popover ? measurable(editor, popover.anchor) : null), [editor, popover]);
+  const keyboard = useMathKeyboard();
 
   // The selected text stays marked while the panel has focus, so the writer sees what the panel changes.
   useEffect(() => {
@@ -113,11 +131,19 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
     [editor],
   );
 
-  // A closing note panel leaves the caret after its reference, so the next key does not replace it.
+  // A closing note or equation panel leaves the caret after its node, so the next key does not replace
+  // it. An equation the writer left empty goes away.
   const leaveNote = () => {
-    if (popover?.panel !== 'footnote') return;
-    const at = selectedFootnote(editor.state);
-    if (at !== null) leaveFootnote(editor, at);
+    if (popover?.panel === 'footnote') {
+      const at = selectedFootnote(editor.state);
+      if (at !== null) leaveFootnote(editor, at);
+    } else if (popover?.panel === 'math') {
+      saveOpenField();
+      const at = selectedMath(editor.state);
+      if (at === null) return;
+      dropEmptyMath(editor, at);
+      leaveMath(editor, at);
+    }
   };
 
   const backToText = (event: Event) => {
@@ -148,10 +174,15 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
             side="bottom"
             align="start"
             className={
-              popover.panel === 'characters' || popover.panel === 'gradient'
+              popover.panel === 'characters' || popover.panel === 'gradient' || popover.panel === 'math'
                 ? 'w-[min(24rem,calc(100vw-1.5rem))]'
                 : undefined
             }
+            // The panel stays clear of MathLive's symbol keyboard at the bottom of the screen.
+            collisionPadding={{ top: 12, right: 12, left: 12, bottom: 12 + keyboard.height }}
+            onInteractOutside={(event) => {
+              if (inMathLiveUi(event.target)) event.preventDefault();
+            }}
             onCloseAutoFocus={backIfLost}
             onEscapeKeyDown={() => {
               // Back to the text at once, so keys typed during the closing fade reach it.

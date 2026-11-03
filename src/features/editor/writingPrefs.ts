@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { safeStorage } from '@/app/preferences';
+import { cleanZoom } from './format/page';
 
 /*
  * Writing switches on this device. Smart punctuation turns straight quotes into curly quotes, "--" into an
@@ -10,10 +11,19 @@ import { safeStorage } from '@/app/preferences';
 export interface WritingPrefs {
   smartProse: boolean;
   smartPoems: boolean;
+  /** The equation panel shows the LaTeX under the equation. Off, so a writer never needs to see code. */
+  showLatex: boolean;
+  /** Page zoom in percent, 80 to 200, on this device (E7). It is separate from the browser's zoom. */
+  zoom: number;
 }
 
 const KEY = 'vlo:writing';
-export const WRITING_DEFAULTS: WritingPrefs = { smartProse: true, smartPoems: false };
+export const WRITING_DEFAULTS: WritingPrefs = {
+  smartProse: true,
+  smartPoems: false,
+  showLatex: false,
+  zoom: 100,
+};
 const listeners = new Set<() => void>();
 
 function load(): WritingPrefs {
@@ -24,6 +34,8 @@ function load(): WritingPrefs {
       return {
         smartProse: typeof value.smartProse === 'boolean' ? value.smartProse : WRITING_DEFAULTS.smartProse,
         smartPoems: typeof value.smartPoems === 'boolean' ? value.smartPoems : WRITING_DEFAULTS.smartPoems,
+        showLatex: typeof value.showLatex === 'boolean' ? value.showLatex : WRITING_DEFAULTS.showLatex,
+        zoom: cleanZoom(value.zoom),
       };
     }
   } catch {
@@ -39,7 +51,7 @@ export function getWritingPrefs(): WritingPrefs {
 }
 
 export function setWritingPrefs(change: Partial<WritingPrefs>): void {
-  current = { ...current, ...change };
+  current = { ...current, ...change, zoom: cleanZoom(change.zoom ?? current.zoom) };
   try {
     safeStorage()?.setItem(KEY, JSON.stringify(current));
   } catch {

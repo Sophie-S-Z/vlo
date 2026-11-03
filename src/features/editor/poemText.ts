@@ -1,5 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { nodeText } from './leafText';
 
 /*
  * The one place that maps between poem documents and plain text. Exporters reuse it (Phase 2).
@@ -41,13 +42,13 @@ export function poemDataToText(poem: PoemData): string {
   return `${poem.map((stanza) => stanza.map((line) => line.text).join('\n')).join('\n\n')}\n`;
 }
 
-/** Reads a poem editor document (doc > stanza > poemLine). */
+/** Reads a poem editor document (doc > stanza > poemLine). An equation reads as its LaTeX between $ signs. */
 export function poemDataFromDoc(doc: ProseMirrorNode): PoemData {
   const poem: PoemData = [];
   doc.forEach((stanza) => {
     const lines: PoemLineData[] = [];
     stanza.forEach((line) => {
-      lines.push({ text: line.textContent, hanging: Number(line.attrs.hanging) || 0 });
+      lines.push({ text: nodeText(line), hanging: Number(line.attrs.hanging) || 0 });
     });
     poem.push(lines);
   });

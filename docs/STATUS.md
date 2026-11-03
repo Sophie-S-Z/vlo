@@ -103,16 +103,29 @@ Last update: 2026-11-03
     panel stays on its footnote when another tab edits the paragraph. Gradient stops can pass each other.
     Smart punctuation changes only quotes, dashes and dots. History word counts leave notes out. In poems,
     highlights and footnote references add no padding. The `/` list follows the page when it scrolls.
+- Phase 2 pull request A1 merged (pull request #5).
+- Phase 2 task A6 built on branch `claude/project-thread-9q00v8` (pull request A2): equations with MathLive.
+  - Equation in a line (prose and poems) and equation on its own line (prose), from the `/` menu, the More
+    menu, the poem toolbar and the command menu. A selected piece of LaTeX turns into an equation.
+  - The equation panel: a MathLive field, 28 one-press parts in four groups (Basics, Calculus, Matrices,
+    Chemistry), a themed symbol keyboard, and a "Show LaTeX" switch (off by default, kept on this device).
+    Enter, Done, Escape or a click outside returns to the text after the equation. An equation left empty goes
+    away.
+  - MathLive, its fonts and its keyboard load on first use only and come from Vlo's own files. They are in the
+    offline cache, so equations work offline. Screen readers hear each equation in words.
+  - Search text, backups and plain-text copies keep an equation as `$...$` in a line and `$$...$$` on its own
+    line. Shift-Tab in a poem never removes an equation or footnote at the start of a line.
+  - A tool chosen from a toolbar menu now runs after the menu closes, so a panel it opens keeps its focus.
 - Initial JavaScript: 187,284 bytes gzip (budget 250,000). Project route chunk: 196,417 bytes gzip. Command
   menu: 11,087 bytes. History panel: 5,201 bytes. Diff worker: 3,205 bytes.
 
 ## In progress
 
-- Phase 2 pull request A1 (tasks A1 to A5). Next: pull request A2 (math, fonts, page format, scenes and sound,
-  and the extras), then pull request B (exports, backup and import, Gate 2).
+- Phase 2 pull request A2: task A6 is built. Next: fonts and page format (A7), scenes (A8), sound (A9), and find
+  and replace, read aloud and writing stats (A10). Then pull request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
-- Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand before pull request A1 merges.
-  CI WebKit has a 120 ms ceiling for that test.
+- Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
+  check has no result yet. CI WebKit has a 120 ms ceiling for that test.
 - Known after review, left for later: while the gradient editor is open, the selected words show in plain
   theme color, and the preview shows the look. Each step of a color or gradient drag is one change, and the
   undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
@@ -173,6 +186,9 @@ Last update: 2026-11-03
 | 2026-11-03 | New attributes: `textAlign`, `lineSpacing`, `firstLineIndent` and `dropCap` on paragraphs and headings.                                                         | Phase 2 block tools, prose only.                                                                                                                                                               |
 | 2026-11-03 | New node: `footnote`, an inline atom with its note in `content`. Poem lines hold `inline*`, not `text*`.                                                        | Footnotes in prose and poems (plan decision 4). Hard breaks stay off in poems.                                                                                                                 |
 | 2026-11-03 | Item documents store a schema version (`vlo` map, key `schema`, now 2). Tabs share edits only with tabs of the same schema, on a channel named for it.          | A Phase 1 tab drops formats it cannot show, and Yjs saves that loss. The guard keeps each later schema change safe.                                                                            |
+| 2026-11-03 | New nodes: `mathInline` (prose and poems) and `mathBlock` (prose only), atoms with the LaTeX in `latex`. Item document schema is now 3.                         | Equations (plan Task A6). A build with schema 2 does not open a document that has equations, so it cannot drop them.                                                                           |
+| 2026-11-03 | New package: `mathlive` 0.111.4 (MIT), loaded on first use. Its fonts and keyboard are in the offline cache, which adds about 1.1 MB to the first install.      | Approved with the Phase 2 plan. Equations work offline, and Pen mode sends no request outside the app.                                                                                         |
+| 2026-11-03 | A tool chosen from a toolbar menu runs after the menu closes.                                                                                                   | On a phone, the closing menu took focus from the equation panel and closed it. Footnote had the same risk.                                                                                     |
 | 2026-11-03 | Footnote numbers are not stored. A plugin counts them in text order.                                                                                            | A stored number goes stale after a cut, a paste, an undo or a change in another tab.                                                                                                           |
 | 2026-11-03 | An item's plain-text copy ends with its notes under "Notes". Word and line counts leave the notes out.                                                          | Search finds notes and readable backups keep them. Counts match the writing itself.                                                                                                            |
 | 2026-11-03 | A copy from a Vlo poem pastes into a poem with its styles and footnotes. Text from other apps still pastes as plain text.                                       | Phase 2 gives poems inline styles, and the plain-text paste dropped them. A copy inside one line now stays one line in plain text too.                                                         |

@@ -25,7 +25,9 @@ import {
   Quote,
   Redo2,
   RemoveFormatting,
+  Sigma,
   Sparkles,
+  SquareSigma,
   Strikethrough,
   Subscript,
   Superscript,
@@ -48,7 +50,16 @@ export type EditorForm = 'prose' | 'poem';
 
 /** Tools that open a small panel instead of acting at once. */
 export type PanelId =
-  'link' | 'color' | 'highlight' | 'gradient' | 'size' | 'spacing' | 'characters' | 'footnote' | 'shortcuts';
+  | 'link'
+  | 'color'
+  | 'highlight'
+  | 'gradient'
+  | 'size'
+  | 'spacing'
+  | 'characters'
+  | 'footnote'
+  | 'math'
+  | 'shortcuts';
 
 export type CommandGroup =
   'history' | 'style' | 'color' | 'block' | 'align' | 'paragraph' | 'indent' | 'insert' | 'clear' | 'help';
@@ -556,6 +567,50 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isEnabled: (e) => e.can().insertFootnote(),
+  },
+  {
+    kind: 'run',
+    id: 'math',
+    label: 'Equation',
+    icon: Sigma,
+    group: 'insert',
+    forms: BOTH,
+    keywords: [
+      'math',
+      'formula',
+      'latex',
+      'fraction',
+      'square root',
+      'exponent',
+      'integral',
+      'sum',
+      'matrix',
+      'chemistry',
+    ],
+    slash: true,
+    // Adds the equation, then opens it, so the writer builds it at once.
+    run: (e) => {
+      if (!e.commands.insertMath()) return false;
+      openPanel({ editor: e, panel: 'math', anchor: 'caret' });
+      return true;
+    },
+    isEnabled: (e) => e.can().insertMath(),
+  },
+  {
+    kind: 'run',
+    id: 'math-block',
+    label: 'Equation on its own line',
+    icon: SquareSigma,
+    group: 'insert',
+    forms: PROSE,
+    keywords: ['math', 'formula', 'latex', 'display', 'centered equation', 'block'],
+    slash: true,
+    run: (e) => {
+      if (!e.commands.insertMathBlock()) return false;
+      openPanel({ editor: e, panel: 'math', anchor: 'caret' });
+      return true;
+    },
+    isEnabled: (e) => e.can().insertMathBlock(),
   },
   ...QUICK_CHARACTERS.map(([id, char, label, keywords]): RunCommand => ({
     kind: 'run',

@@ -14,6 +14,7 @@ export async function useTool(page: Page, name: string): Promise<void> {
   await toolbar.getByRole('button', { name: 'More tools' }).click();
   await page
     .getByRole('menu')
-    .getByRole('menuitem', { name: new RegExp(`^${name}`) })
+    // A tool that opens a panel ends its menu name with an ellipsis.
+    .getByRole('menuitem', { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}…?$`) })
     .click();
 }
