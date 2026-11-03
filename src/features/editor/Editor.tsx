@@ -1,3 +1,4 @@
+import Typography from '@tiptap/extension-typography';
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
 import { useEffect, useId, useRef } from 'react';
 import type * as Y from 'yjs';
@@ -16,6 +17,7 @@ import { PanelHost } from './toolbar/PanelHost';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
 import { Toolbar } from './toolbar/Toolbar';
+import { useWritingPrefs } from './writingPrefs';
 import '@/styles/editor.css';
 
 // The theme colors behind each palette swatch. The editor chunk adds them once.
@@ -75,10 +77,13 @@ function focusTools(editor: TiptapEditor): boolean {
 export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
+  const writing = useWritingPrefs();
+  const smart = kind === 'poem' ? writing.smartPoems : writing.smartProse;
   const editor = useEditor(
     {
       extensions: [
         ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
+        ...(smart ? [Typography] : []),
         FocusTools,
         HeldSelection,
         SlashMenu.configure({
@@ -95,14 +100,15 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
           onToolFocus: focusTools,
         }),
       ],
-      enableInputRules: kind === 'prose',
+      // Poems run no input rules, so "1." or "- " stays as typed. Smart punctuation is the one opt-in rule.
+      enableInputRules: kind === 'prose' ? true : smart ? ['typography'] : false,
       enablePasteRules: kind === 'prose',
       autofocus: focusOnOpen ? 'end' : false,
       // The tool surfaces read editor state on their own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
       editorProps: { attributes: editorAttributes(label, kind, helpId) },
     },
-    [doc, kind],
+    [doc, kind, smart],
   );
 
   // A rename changes the editor's accessible name at once, without reopening the item.

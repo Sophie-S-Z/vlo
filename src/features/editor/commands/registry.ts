@@ -17,6 +17,7 @@ import {
   Keyboard,
   LetterText,
   Link,
+  Omega,
   List,
   ListOrdered,
   Pilcrow,
@@ -43,7 +44,7 @@ import { swatchVar } from '../format/palette';
 export type EditorForm = 'prose' | 'poem';
 
 /** Tools that open a small panel instead of acting at once. */
-export type PanelId = 'link' | 'color' | 'highlight' | 'size' | 'spacing' | 'shortcuts';
+export type PanelId = 'link' | 'color' | 'highlight' | 'size' | 'spacing' | 'characters' | 'shortcuts';
 
 export type CommandGroup =
   'history' | 'style' | 'color' | 'block' | 'align' | 'paragraph' | 'indent' | 'insert' | 'clear' | 'help';
@@ -80,6 +81,8 @@ interface BaseCommand {
   isActive?: (editor: Editor) => boolean;
   /** False when the tool cannot act now, such as Undo with nothing to undo. */
   isEnabled?: (editor: Editor) => boolean;
+  /** A character to show in menus in place of the icon, for tools that insert that character. */
+  glyph?: string;
 }
 
 export interface RunCommand extends BaseCommand {
@@ -98,6 +101,30 @@ export type EditorCommand = RunCommand | PanelCommand;
 const BOTH: readonly EditorForm[] = ['prose', 'poem'];
 const PROSE: readonly EditorForm[] = ['prose'];
 const POEM: readonly EditorForm[] = ['poem'];
+
+/** Inserts text at the selection with the marks there, so a symbol typed in bold text is bold too. */
+export function insertText(editor: Editor, text: string): boolean {
+  return editor
+    .chain()
+    .command(({ tr }) => {
+      tr.insertText(text);
+      return true;
+    })
+    .run();
+}
+
+/** Quick inserts for the / menu and the command menu. The full set is in the special characters panel. */
+const QUICK_CHARACTERS: readonly (readonly [string, string, string, readonly string[]])[] = [
+  ['em-dash', '—', 'Em dash', ['long dash', 'mdash']],
+  ['en-dash', '–', 'En dash', ['short dash', 'range', 'ndash']],
+  ['ellipsis', '…', 'Ellipsis', ['dots', 'three dots']],
+  ['section', '§', 'Section sign', ['paragraph', 'law']],
+  ['pilcrow', '¶', 'Pilcrow', ['paragraph mark']],
+  ['bullet', '•', 'Bullet', ['dot', 'middle']],
+  ['degree', '°', 'Degree sign', ['temperature', 'angle']],
+  ['copyright', '©', 'Copyright sign', ['rights']],
+  ['nbsp', '\u00a0', 'Non-breaking space', ['space', 'nbsp', 'keep together']],
+];
 
 function hanging(editor: Editor): number {
   return Number(editor.getAttributes('poemLine').hanging) || 0;
@@ -473,6 +500,29 @@ export const COMMANDS: readonly EditorCommand[] = [
     run: (e) => e.commands.setHanging(hanging(e) + 1),
     isEnabled: (e) => hanging(e) < MAX_HANGING_EM,
   },
+  {
+    kind: 'panel',
+    id: 'characters',
+    label: 'Special characters',
+    icon: Omega,
+    group: 'insert',
+    forms: BOTH,
+    keywords: ['symbol', 'emoji', 'accent', 'greek', 'math', 'arrow', 'currency', 'fraction', 'dash'],
+    panel: 'characters',
+    slash: true,
+  },
+  ...QUICK_CHARACTERS.map(([id, char, label, keywords]): RunCommand => ({
+    kind: 'run',
+    id: `char-${id}`,
+    label,
+    icon: Omega,
+    glyph: char === '\u00a0' ? '⍽' : char,
+    group: 'insert',
+    forms: BOTH,
+    keywords: ['character', 'symbol', ...keywords],
+    slash: true,
+    run: (e) => insertText(e, char),
+  })),
   {
     kind: 'run',
     id: 'clear',

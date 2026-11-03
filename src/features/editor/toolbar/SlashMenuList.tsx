@@ -99,7 +99,16 @@ export function SlashMenuList({ editor, listId }: { editor: Editor; listId: stri
                 i === slash.index && 'bg-bg text-accent-text',
               )}
             >
-              <Icon aria-hidden="true" className="size-4 shrink-0 text-muted" />
+              {cmd.glyph ? (
+                <span
+                  aria-hidden="true"
+                  className="w-4 shrink-0 text-center font-manuscript text-base text-muted"
+                >
+                  {cmd.glyph}
+                </span>
+              ) : (
+                <Icon aria-hidden="true" className="size-4 shrink-0 text-muted" />
+              )}
               <span className="flex-1">{cmd.label}</span>
               {cmd.keys && (
                 <span aria-hidden="true" className="font-mono text-xs text-muted">

@@ -5,6 +5,7 @@ import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { StorageHealth } from './StorageHealth';
+import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 const THEME_LABELS: Record<ThemeChoice, string> = {
@@ -30,6 +31,33 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function SettingSwitch({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex items-start gap-3">
+      <Switch id={id} checked={checked} aria-describedby={`${id}-hint`} onCheckedChange={onChange} />
+      <div className="grid gap-0.5">
+        <label htmlFor={id} className="cursor-pointer">
+          {label}
+        </label>
+        <p id={`${id}-hint`} className="text-sm text-muted">
+          {hint}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   useDocumentTitle('Settings');
   const { prefs, resolvedTheme, setTheme, setCalm } = usePreferences();
@@ -38,6 +66,7 @@ export function SettingsPage() {
   const calmId = useId();
   const calmHintId = useId();
   const themes = useRef<HTMLDivElement>(null);
+  const writing = useWritingPrefs();
 
   return (
     <div className="max-w-2xl">
@@ -114,6 +143,31 @@ export function SettingsPage() {
                 for reduced motion.
               </p>
             </div>
+          </div>
+        </Section>
+
+        <Section title="Writing">
+          <div className="grid gap-5">
+            <SettingSwitch
+              label="Smart punctuation in prose"
+              hint={
+                'Turns straight quotes into curly quotes, -- into an em dash and ... into an ellipsis as you type. Backspace right after a change puts back what you typed.'
+              }
+              checked={writing.smartProse}
+              onChange={(on) => {
+                setWritingPrefs({ smartProse: on });
+                setAnnouncement(on ? 'Smart punctuation in prose on.' : 'Smart punctuation in prose off.');
+              }}
+            />
+            <SettingSwitch
+              label="Smart punctuation in poems"
+              hint="Off at first, so every character in a poem stays as you type it."
+              checked={writing.smartPoems}
+              onChange={(on) => {
+                setWritingPrefs({ smartPoems: on });
+                setAnnouncement(on ? 'Smart punctuation in poems on.' : 'Smart punctuation in poems off.');
+              }}
+            />
           </div>
         </Section>
 

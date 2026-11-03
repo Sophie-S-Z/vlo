@@ -13,6 +13,7 @@ import {
 } from '../commands/editorBus';
 import type { EditorForm, PanelId } from '../commands/registry';
 import { heldKey } from '../extensions/editorTools';
+import { CharactersPanel } from './panels/CharactersPanel';
 import { ColorPanel } from './panels/ColorPanel';
 import { LinkPanel } from './panels/LinkPanel';
 import { SizePanel } from './panels/SizePanel';
@@ -58,6 +59,8 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
       return <SpacingPanel editor={editor} />;
     case 'link':
       return <LinkPanel editor={editor} onDone={closePanel} />;
+    case 'characters':
+      return <CharactersPanel editor={editor} />;
   }
 }
 
@@ -68,6 +71,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   size: 'Font size',
   spacing: 'Line spacing',
   link: 'Link',
+  characters: 'Special characters',
 };
 
 /** Shows the panel any tool surface asked for: a popover at its button or the caret, or the shortcut sheet. */
@@ -119,6 +123,7 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
             aria-label={PANEL_NAMES[popover.panel]}
             side="bottom"
             align="start"
+            className={popover.panel === 'characters' ? 'w-[min(24rem,calc(100vw-1.5rem))]' : undefined}
             onCloseAutoFocus={backIfLost}
             onEscapeKeyDown={() => {
               // Back to the text at once, so keys typed during the closing fade reach it.

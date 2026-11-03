@@ -192,3 +192,48 @@ test('the open tool surfaces have no serious axe issues', async ({ page }) => {
   await expect(page.getByRole('listbox', { name: 'Tools' })).toBeVisible();
   expect(await seriousIssues(page)).toEqual([]);
 });
+
+test('special characters: find by name, insert with Enter, then find it under Recent', async ({ page }) => {
+  await newNovel(page);
+  await page.keyboard.type(' ');
+  await toolbar(page).getByRole('button', { name: 'Special characters' }).click();
+  const panel = page.getByRole('dialog', { name: 'Special characters' });
+  await panel.getByLabel('Find a character by name').fill('section sign');
+  await page.keyboard.press('Enter');
+  await expect(scene(page)).toContainText(`${LINE} §`);
+
+  // Arrow keys move in the grid. The panel stays open for the next character.
+  await panel.getByLabel('Find a character by name').fill('greek small letter');
+  await page.keyboard.press('ArrowDown');
+  await expect(panel.getByRole('button', { name: 'greek small letter alpha' })).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect(scene(page)).toContainText(`${LINE} §β`);
+
+  await panel.getByLabel('Find a character by name').fill('');
+  await expect(panel.getByRole('button', { name: 'Recent', pressed: true })).toBeVisible();
+  await expect(panel.getByRole('group', { name: 'Recent' }).getByRole('button')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await expect(scene(page)).toBeFocused();
+
+  await page.keyboard.type(' /em da');
+  await page.keyboard.press('Enter');
+  await expect(scene(page)).toContainText(`${LINE} §β —`);
+});
+
+test('smart punctuation curls quotes in prose and can be turned off in Settings', async ({ page }) => {
+  await newNovel(page);
+  await page.keyboard.type(' "Yes," she said -- quietly...');
+  await expect(scene(page)).toContainText('“Yes,” she said — quietly…');
+
+  await page.getByRole('link', { name: 'Settings' }).click();
+  const prose = page.getByRole('switch', { name: 'Smart punctuation in prose' });
+  await expect(prose).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Smart punctuation in poems' })).not.toBeChecked();
+  await prose.click();
+  await page.goBack();
+  await scene(page).click();
+  await page.keyboard.press(`${mod}+End`);
+  await page.keyboard.type(' "plain"');
+  await expect(scene(page)).toContainText('quietly… "plain"');
+});
