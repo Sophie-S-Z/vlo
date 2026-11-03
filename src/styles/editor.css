@@ -137,3 +137,135 @@
   background: color-mix(in oklab, var(--accent) 22%, transparent);
   border-radius: 0.1em;
 }
+
+/*
+ * Gradient, metallic, prismatic and glowing text (the textFill mark). The fill paints the glyphs, and the
+ * caret and lines keep theme colors. Shimmer is CSS only. It pauses while the writer types
+ * (data-typing on the page root), and Calm mode and reduced motion stop it (plan decision 3).
+ */
+.vlo-fill {
+  background-image: var(--vlo-fill);
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--text);
+  text-decoration-color: var(--vlo-fill-glow);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.vlo-fill::selection,
+.vlo-fill *::selection {
+  -webkit-text-fill-color: var(--text);
+}
+
+/* While a tool panel holds the selection, the held text shows in plain theme color so it stays readable. */
+.vlo-fill .vlo-held-selection {
+  -webkit-text-fill-color: var(--text);
+}
+
+.vlo-fill-metallic {
+  background-image:
+    linear-gradient(
+      105deg,
+      transparent 38%,
+      rgb(255 255 255 / 0.55) 47%,
+      rgb(255 255 255 / 0.85) 50%,
+      rgb(255 255 255 / 0.55) 53%,
+      transparent 62%
+    ),
+    var(--vlo-fill);
+  background-size:
+    250% 100%,
+    100% 100%;
+  background-position:
+    110% 0,
+    0 0;
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.2));
+}
+
+.vlo-fill-prismatic {
+  background-size: 220% 100%;
+  filter: saturate(1.15);
+}
+
+.vlo-fill-glow {
+  filter: drop-shadow(0 0 0.2em color-mix(in srgb, var(--vlo-fill-glow) 65%, transparent));
+}
+
+.vlo-fill-shimmer.vlo-fill-gradient {
+  background-size: 220% 100%;
+  animation: vlo-fill-sweep var(--vlo-fill-speed, 6s) ease-in-out infinite alternate;
+}
+
+.vlo-fill-shimmer.vlo-fill-metallic {
+  animation: vlo-fill-sheen var(--vlo-fill-speed, 6s) ease-in-out infinite;
+}
+
+.vlo-fill-shimmer.vlo-fill-prismatic {
+  animation: vlo-fill-prism var(--vlo-fill-speed, 6s) ease-in-out infinite alternate;
+}
+
+.vlo-fill-shimmer.vlo-fill-glow {
+  background-size: 220% 100%;
+  animation:
+    vlo-fill-sweep var(--vlo-fill-speed, 6s) ease-in-out infinite alternate,
+    vlo-fill-pulse calc(var(--vlo-fill-speed, 6s) / 2) ease-in-out infinite alternate;
+}
+
+@keyframes vlo-fill-sweep {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 100% 0;
+  }
+}
+
+@keyframes vlo-fill-sheen {
+  from {
+    background-position:
+      110% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      -10% 0,
+      0 0;
+  }
+}
+
+@keyframes vlo-fill-prism {
+  from {
+    background-position: 0% 0;
+    filter: saturate(1.15) hue-rotate(0deg);
+  }
+  to {
+    background-position: 100% 0;
+    filter: saturate(1.15) hue-rotate(45deg);
+  }
+}
+
+@keyframes vlo-fill-pulse {
+  from {
+    filter: drop-shadow(0 0 0.12em color-mix(in srgb, var(--vlo-fill-glow) 45%, transparent));
+  }
+  to {
+    filter: drop-shadow(0 0 0.32em color-mix(in srgb, var(--vlo-fill-glow) 80%, transparent));
+  }
+}
+
+html[data-typing='true'] .vlo-fill-shimmer {
+  animation-play-state: paused;
+}
+
+html[data-calm='true'] .vlo-fill-shimmer {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vlo-fill-shimmer {
+    animation: none;
+  }
+}

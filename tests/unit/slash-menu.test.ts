@@ -97,7 +97,7 @@ test('Escape closes the menu and keeps the slash', () => {
 
 test('a space after a query that finds nothing closes the menu, so prose goes on', () => {
   editor.commands.setTextSelection(5);
-  type(' /and');
+  type(' /qzx');
   expect(menu()?.matches).toEqual([]);
   type(' ');
   expect(menu()?.from).toBeNull();

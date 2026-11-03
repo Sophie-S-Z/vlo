@@ -12,6 +12,7 @@ import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { poemExtensions } from './extensions/poem';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
+import { TypingState } from './extensions/textFill';
 import { ensurePaletteStyles } from './format/palette';
 import { PanelHost } from './toolbar/PanelHost';
 import { SelectionMenu } from './toolbar/SelectionMenu';
@@ -85,6 +86,7 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
         ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
         ...(smart ? [Typography] : []),
         FocusTools,
+        TypingState,
         HeldSelection,
         SlashMenu.configure({
           items: slashItems(kind),

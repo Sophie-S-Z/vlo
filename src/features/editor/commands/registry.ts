@@ -24,6 +24,7 @@ import {
   Quote,
   Redo2,
   RemoveFormatting,
+  Sparkles,
   Strikethrough,
   Subscript,
   Superscript,
@@ -44,7 +45,8 @@ import { swatchVar } from '../format/palette';
 export type EditorForm = 'prose' | 'poem';
 
 /** Tools that open a small panel instead of acting at once. */
-export type PanelId = 'link' | 'color' | 'highlight' | 'size' | 'spacing' | 'characters' | 'shortcuts';
+export type PanelId =
+  'link' | 'color' | 'highlight' | 'gradient' | 'size' | 'spacing' | 'characters' | 'shortcuts';
 
 export type CommandGroup =
   'history' | 'style' | 'color' | 'block' | 'align' | 'paragraph' | 'indent' | 'insert' | 'clear' | 'help';
@@ -261,6 +263,30 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     isActive: (e) => e.isActive('highlight'),
+  },
+  {
+    kind: 'panel',
+    id: 'gradient',
+    label: 'Gradient and shimmer',
+    icon: Sparkles,
+    group: 'color',
+    forms: BOTH,
+    keywords: [
+      'metallic',
+      'gold',
+      'chrome',
+      'prismatic',
+      'holographic',
+      'rainbow',
+      'glow',
+      'mystical',
+      'shimmer',
+      'fill',
+    ],
+    panel: 'gradient',
+    slash: true,
+    selection: true,
+    isActive: (e) => e.isActive('textFill'),
   },
   {
     kind: 'run',

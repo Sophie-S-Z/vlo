@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import { X } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { Button } from '@/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Popover, PopoverAnchor, PopoverContent } from '@/ui/popover';
@@ -19,6 +19,9 @@ import { LinkPanel } from './panels/LinkPanel';
 import { SizePanel } from './panels/SizePanel';
 import { SpacingPanel } from './panels/SpacingPanel';
 import { ShortcutSheet } from './ShortcutSheet';
+
+// The gradient editor loads the first time a writer opens it.
+const GradientPanel = lazy(async () => ({ default: (await import('./panels/GradientPanel')).GradientPanel }));
 
 /** A rectangle at the selection start, for panels opened from the / menu or the command menu. */
 function caretRect(editor: Editor): DOMRect {
@@ -61,6 +64,12 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
       return <LinkPanel editor={editor} onDone={closePanel} />;
     case 'characters':
       return <CharactersPanel editor={editor} />;
+    case 'gradient':
+      return (
+        <Suspense fallback={<p className="text-sm text-muted">Loading the gradient editor.</p>}>
+          <GradientPanel editor={editor} />
+        </Suspense>
+      );
   }
 }
 
@@ -72,6 +81,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   spacing: 'Line spacing',
   link: 'Link',
   characters: 'Special characters',
+  gradient: 'Gradient and shimmer',
 };
 
 /** Shows the panel any tool surface asked for: a popover at its button or the caret, or the shortcut sheet. */
@@ -123,7 +133,11 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
             aria-label={PANEL_NAMES[popover.panel]}
             side="bottom"
             align="start"
-            className={popover.panel === 'characters' ? 'w-[min(24rem,calc(100vw-1.5rem))]' : undefined}
+            className={
+              popover.panel === 'characters' || popover.panel === 'gradient'
+                ? 'w-[min(24rem,calc(100vw-1.5rem))]'
+                : undefined
+            }
             onCloseAutoFocus={backIfLost}
             onEscapeKeyDown={() => {
               // Back to the text at once, so keys typed during the closing fade reach it.

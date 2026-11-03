@@ -237,3 +237,59 @@ test('smart punctuation curls quotes in prose and can be turned off in Settings'
   await page.keyboard.type(' "plain"');
   await expect(scene(page)).toContainText('quietly… "plain"');
 });
+
+test('a gradient preset applies from the selection menu, keeps typing readable and stops in Calm mode', async ({
+  page,
+}) => {
+  await newNovel(page);
+  await selectWord(page, 'harbour');
+  await bubble(page).getByRole('button', { name: 'Gradient and shimmer' }).click();
+  const panel = page.getByRole('dialog', { name: 'Gradient and shimmer' });
+  await panel.getByRole('button', { name: 'Gold leaf' }).click();
+  await expect(panel.getByText(/Lowest contrast \d+\.\d:1 on this page/)).toBeVisible();
+  const run = scene(page).locator('span.vlo-fill');
+  await expect(run).toHaveText('harbour');
+  await expect(run).toHaveClass(/vlo-fill-metallic/);
+
+  // The angle dial and the look work by keyboard.
+  await panel.getByRole('slider', { name: 'Angle' }).focus();
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(panel.getByRole('slider', { name: 'Angle' })).toHaveAttribute('aria-valuenow', '105');
+  await panel.getByRole('radio', { name: 'Glow' }).click();
+  await expect(run).toHaveClass(/vlo-fill-glow/);
+  await page.keyboard.press('Escape');
+  await expect(scene(page)).toBeFocused();
+
+  // Typing at the end of the run joins it, and the caret keeps the theme text color (Review Focus 1).
+  await selectWord(page, 'harbour');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.type('side');
+  await expect(run).toHaveText('harbourside');
+  const caret = await run.evaluate((el) => getComputedStyle(el).caretColor);
+  const text = await scene(page).evaluate((el) => getComputedStyle(el).color);
+  expect(caret).toBe(text);
+
+  await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
+  await page.reload();
+  await expect(run).toHaveText('harbourside');
+  await expect(run).toHaveClass(/vlo-fill-shimmer/);
+  await page.evaluate(() => {
+    document.documentElement.dataset.calm = 'true';
+  });
+  await expect.poll(() => run.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+});
+
+test('a saved look comes back in the gradient editor', async ({ page }) => {
+  await newNovel(page);
+  await selectWord(page, 'lights');
+  await bubble(page).getByRole('button', { name: 'Gradient and shimmer' }).click();
+  const panel = page.getByRole('dialog', { name: 'Gradient and shimmer' });
+  await panel.getByRole('button', { name: 'Aurora' }).click();
+  await panel.getByLabel('Save this look as').fill('Night sea');
+  await panel.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(panel.getByRole('button', { name: 'Use Night sea' })).toBeVisible();
+  await panel.getByRole('button', { name: 'Remove gradient' }).click();
+  await expect(scene(page).locator('span.vlo-fill')).toHaveCount(0);
+  await panel.getByRole('button', { name: 'Use Night sea' }).click();
+  await expect(scene(page).locator('span.vlo-fill-glow')).toHaveText('lights');
+});

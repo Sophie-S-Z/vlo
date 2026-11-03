@@ -5,6 +5,7 @@ import Superscript from '@tiptap/extension-superscript';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { swatchVar } from '../format/palette';
+import { TextFillMark } from './textFill';
 
 /* Formats beyond StarterKit. Inline formats apply to prose and poems; block formats to prose only. */
 
@@ -148,7 +149,7 @@ const ColoredHighlight = Highlight.extend({
   },
 }).configure({ multicolor: true });
 
-/** Inline formats for every editor: superscript, subscript, highlight, font color and font size. */
+/** Inline formats for every editor: superscript, subscript, highlight, font color, font size and fills. */
 export function inlineFormatting(): AnyExtension[] {
   return [
     Superscript.extend({ excludes: 'subscript' }),
@@ -157,6 +158,7 @@ export function inlineFormatting(): AnyExtension[] {
     TextStyle,
     Color,
     FontSize,
+    TextFillMark,
   ];
 }
 

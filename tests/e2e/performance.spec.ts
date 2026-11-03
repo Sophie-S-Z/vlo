@@ -200,3 +200,66 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
   const opened = await page.evaluate(() => [...new Set(window.__itemOpens)]);
   expect(opened).toEqual([`vlo-item-${seeded.longSceneId}`]);
 });
+
+test('typing stays under 50 ms at p95 with 500 shimmering runs on screen, and the shimmer pauses', async ({
+  page,
+  browserName,
+}) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  await page
+    .getByRole('dialog', { name: 'New project' })
+    .getByRole('button', { name: 'Create project' })
+    .click();
+  const editor = page.getByRole('textbox', { name: 'Scene 1' });
+  await expect(editor).toBeFocused();
+
+  // 25 paragraphs of 20 filled words, pasted in one go, as a writer would paste formatted text.
+  await editor.evaluate((root) => {
+    const fill = JSON.stringify({
+      stops: [
+        { color: '#8a6316', at: 0 },
+        { color: '#e8c35a', at: 50 },
+        { color: '#7a5512', at: 100 },
+      ],
+      angle: 90,
+      look: 'metallic',
+      shimmer: true,
+      speed: 4,
+    }).replaceAll('"', '&quot;');
+    const run = `<span data-fill="${fill}">gold</span>`;
+    const html = Array.from(
+      { length: 25 },
+      () => `<p>${Array.from({ length: 20 }, () => run).join(' ')}</p>`,
+    ).join('');
+    const data = new DataTransfer();
+    data.setData('text/html', html);
+    data.setData('text/plain', 'gold');
+    const paste = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+    // Firefox ignores clipboardData in the event's options.
+    Object.defineProperty(paste, 'clipboardData', { value: data });
+    root.dispatchEvent(paste);
+  });
+  const runs = editor.locator('.vlo-fill-shimmer');
+  await expect(runs).toHaveCount(500);
+
+  const playState = () => runs.first().evaluate((el) => getComputedStyle(el).animationPlayState);
+  await expect.poll(playState, { timeout: 4_000 }).toBe('running');
+
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.evaluate(() => {
+    window.__keyDelays = [];
+  });
+  const typed = ' and the lamp swung out over the water'.repeat(3).slice(0, 100);
+  await page.keyboard.type(typed.slice(0, 10), { delay: 30 });
+  // While the writer types, every shimmer waits (plan decision 3).
+  expect(await playState()).toBe('paused');
+  await page.keyboard.type(typed.slice(10), { delay: 30 });
+  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+  const delays = await page.evaluate(() => window.__keyDelays);
+  const sorted = [...delays].sort((a, b) => a - b);
+  const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+  console.log(`[${browserName}] keystroke to paint with 500 shimmer runs, p95: ${p95.toFixed(1)} ms`);
+  expect(p95).toBeLessThan(50);
+  await expect.poll(playState, { timeout: 4_000 }).toBe('running');
+});
