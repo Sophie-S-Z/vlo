@@ -111,8 +111,8 @@ Last update: 2026-11-03
 - Phase 2 pull request A1 (tasks A1 to A5). Next: pull request A2 (math, fonts, page format, scenes and sound,
   and the extras), then pull request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
-- Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand in Phase 6. CI WebKit has a
-  120 ms ceiling for that test.
+- Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand before pull request A1 merges.
+  CI WebKit has a 120 ms ceiling for that test.
 - Known after review, left for later: while the gradient editor is open, the selected words show in plain
   theme color, and the preview shows the look. Each step of a color or gradient drag is one change, and the
   undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
@@ -167,7 +167,7 @@ Last update: 2026-11-03
 | 2026-11-02 | Two tabs on one item sync live through `BroadcastChannel`.                                                                                                      | Better than the planned notice alone. Yjs merges both tabs, so no typing is lost.                                                                                                              |
 | 2026-11-03 | Focus-line dimming uses 70 % opacity, not 40 %.                                                                                                                 | 40 % gave 2.2:1 to 3.3:1 contrast. 70 % meets WCAG AA in every theme (product owner decision).                                                                                                 |
 | 2026-11-03 | CI WebKit holds the open budget to a 700 ms ceiling. Real Safari is checked by hand in Phase 6.                                                                 | Linux WebKit in CI takes 364 to 567 ms and varies by up to 200 ms per run (product owner decision).                                                                                            |
-| 2026-11-03 | CI WebKit holds typing with 500 shimmering runs to a 120 ms ceiling. Real Safari is checked by hand in Phase 6.                                                 | Linux WebKit in CI repaints every visible fill run on each key. A paint layer for texts with fills cut p95 from 141 ms to 65 ms, and runners vary by up to two times (product owner decision). |
+| 2026-11-03 | CI WebKit holds typing with 500 shimmering runs to a 120 ms ceiling. Real Safari is checked by hand before A1 merges.                                           | Linux WebKit in CI repaints every visible fill run on each key. A paint layer for texts with fills cut p95 from 141 ms to 65 ms, and runners vary by up to two times (product owner decision). |
 | 2026-11-02 | Storage health says "Unknown" and "Limit for Vlo", not "Not available" and "Quota".                                                                             | "Limit for Vlo" says what the number means. "Unknown" matches the other rows.                                                                                                                  |
 | 2026-11-03 | New marks beyond section 7: `superscript`, `subscript`, `highlight` (color), `textStyle` (color, font size), `textFill`.                                        | Phase 2 editor tools (plan decision 12).                                                                                                                                                       |
 | 2026-11-03 | New attributes: `textAlign`, `lineSpacing`, `firstLineIndent` and `dropCap` on paragraphs and headings.                                                         | Phase 2 block tools, prose only.                                                                                                                                                               |

@@ -264,7 +264,7 @@ test('typing stays under 50 ms at p95 with 500 shimmering runs on screen, and th
   console.log(`[${browserName}] keystroke to paint with 500 shimmer runs, p95: ${p95.toFixed(1)} ms`);
   // The budget is 50 ms. The Linux WebKit build in CI paints gradient text in software, takes 65 ms with
   // the paint layer and runs up to two times slower on some runners, so it has a 120 ms ceiling. Real Safari
-  // is checked by hand in Phase 6 (product owner decision, 2026-11-03).
+  // is checked by hand before this test's pull request merges (product owner decision, 2026-11-03).
   expect(p95).toBeLessThan(browserName === 'webkit' ? 120 : 50);
   await expect.poll(playState, { timeout: 4_000 }).toBe('running');
 });
