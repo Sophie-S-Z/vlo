@@ -22,8 +22,14 @@ export interface Project {
     goalWordsPerDay?: number;
     streaksEnabled: boolean;
     restDays: number[];
+    /** The project's manuscript font: a Vlo font id or "local:" and an installed font's name. */
+    font?: string;
+    /** Pageless, or a sheet of Letter or A4 paper with page-end lines (plan decision 8). */
+    page?: PageFormat;
   };
 }
+
+export type PageFormat = 'pageless' | 'letter' | 'a4';
 
 export interface Item {
   id: string;

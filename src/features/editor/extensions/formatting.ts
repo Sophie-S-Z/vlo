@@ -4,6 +4,7 @@ import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
+import { cleanFontValue, fontStack, type FontValue } from '../format/fonts';
 import { swatchVar } from '../format/palette';
 import { TextFillMark } from './textFill';
 
@@ -34,6 +35,12 @@ declare module '@tiptap/core' {
       toggleFirstLineIndent: () => ReturnType;
       /** Turns a drop cap on or off for the paragraph at the cursor. */
       toggleDropCap: () => ReturnType;
+    };
+    fontChoice: {
+      /** Sets the font of the selection: a Vlo font id, or "local:" and an installed font's name. */
+      setFont: (value: FontValue) => ReturnType;
+      /** Returns the selection to the project's font. */
+      unsetFont: () => ReturnType;
     };
     clearFormatting: {
       /** Removes every mark from the selection, and resets alignment, spacing, indent and drop caps. */
@@ -140,6 +147,48 @@ export const ClearFormatting = Extension.create<{ blocks: boolean }>({
   },
 });
 
+/**
+ * The font of a run of text, on the textStyle mark. It stores a Vlo font id or an installed font's name,
+ * never a CSS list, so a later font list or export can map it.
+ */
+export const FontChoice = Extension.create({
+  name: 'fontChoice',
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['textStyle'],
+        attributes: {
+          font: {
+            default: null,
+            parseHTML: (element) => cleanFontValue(element.dataset.font),
+            renderHTML: (attributes) => {
+              const value = cleanFontValue(attributes.font);
+              if (value === null) return {};
+              return { 'data-font': value, style: `font-family: ${fontStack(value)}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+
+  addCommands() {
+    return {
+      setFont:
+        (value) =>
+        ({ chain }) => {
+          const clean = cleanFontValue(value);
+          return clean === null ? false : chain().setMark('textStyle', { font: clean }).run();
+        },
+      unsetFont:
+        () =>
+        ({ chain }) =>
+          chain().setMark('textStyle', { font: null }).removeEmptyTextStyle().run(),
+    };
+  },
+});
+
 const ColoredHighlight = Highlight.extend({
   // Mod-Shift-H marks the selection yellow, the first swatch, so the shortcut gives a visible result.
   addKeyboardShortcuts() {
@@ -149,7 +198,7 @@ const ColoredHighlight = Highlight.extend({
   },
 }).configure({ multicolor: true });
 
-/** Inline formats for every editor: superscript, subscript, highlight, font color, font size and fills. */
+/** Inline formats for every editor: superscript, subscript, highlight, font, font color, font size and fills. */
 export function inlineFormatting(): AnyExtension[] {
   return [
     Superscript.extend({ excludes: 'subscript' }),
@@ -158,6 +207,7 @@ export function inlineFormatting(): AnyExtension[] {
     TextStyle,
     Color,
     FontSize,
+    FontChoice,
     TextFillMark,
   ];
 }

@@ -88,6 +88,17 @@ async function recordPersistence(): Promise<void> {
   }
 }
 
+/** Changes some of a project's settings, such as its font or page format, and keeps the rest. */
+export async function updateProjectSettings(id: string, change: Partial<Project['settings']>): Promise<void> {
+  await db.projects
+    .where('id')
+    .equals(id)
+    .modify((project) => {
+      project.settings = { ...project.settings, ...change };
+      project.updatedAt = clock.now();
+    });
+}
+
 export async function renameProject(id: string, title: string): Promise<void> {
   await db.projects.update(id, { title: cleanTitle(title), updatedAt: clock.now() });
 }
