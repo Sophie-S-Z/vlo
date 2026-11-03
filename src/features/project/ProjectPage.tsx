@@ -1,9 +1,12 @@
 import { Search } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Binder } from '@/features/binder/Binder';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
+import { runCommand, useActiveEditor } from '@/features/editor/commands/editorBus';
+import { shortcutLabel } from '@/features/editor/commands/keys';
+import { commandsFor } from '@/features/editor/commands/registry';
 import { EditorPane } from '@/features/editor/EditorPane';
 import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
@@ -24,9 +27,11 @@ import { useDocumentTitle } from '@/app/useDocumentTitle';
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
 const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
 
-/** True while a dialog or menu is open, so Escape belongs to it. */
+/** True while a dialog, a menu or the / tool list is open, so Escape belongs to it. */
 function layerOpen(): boolean {
-  return document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"]') !== null;
+  return (
+    document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], [data-vlo-layer]') !== null
+  );
 }
 
 /** The item to open: the one in the address, else the first item that has an editor. */
@@ -54,6 +59,9 @@ export function ProjectPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const motion = useMotionAllowed();
   const navigate = useNavigate();
+  const activeEditor = useActiveEditor();
+  // A format action runs after the command menu closes, so focus goes back to the text first.
+  const afterMenu = useRef<(() => void) | null>(null);
 
   const changeFocusMode = (on: boolean) => {
     withViewTransition(motion, () => {
@@ -159,6 +167,18 @@ export function ProjectPage() {
         void navigate('/settings');
       },
     },
+    ...(activeEditor
+      ? commandsFor(activeEditor.form).map((cmd): CommandAction => ({
+          id: cmd.id,
+          label: cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label,
+          group: 'format',
+          ...(cmd.keywords ? { keywords: cmd.keywords } : {}),
+          ...(cmd.keys ? { hint: shortcutLabel(cmd.keys) } : {}),
+          run: () => {
+            afterMenu.current = () => runCommand(activeEditor.editor, cmd, 'caret');
+          },
+        }))
+      : []),
   ];
 
   return (
@@ -236,7 +256,16 @@ export function ProjectPage() {
           }
         />
         <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
-          <DialogContent className="top-[12vh] max-w-xl translate-y-0 gap-2 p-3">
+          <DialogContent
+            className="top-[12vh] max-w-xl translate-y-0 gap-2 p-3"
+            onCloseAutoFocus={(event) => {
+              const next = afterMenu.current;
+              afterMenu.current = null;
+              if (!next) return;
+              event.preventDefault();
+              next();
+            }}
+          >
             <DialogTitle className="sr-only">Command menu</DialogTitle>
             <DialogDescription className="sr-only">
               Type to find an item by title or by its text, or to run an action. Use the arrow keys, then

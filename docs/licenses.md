@@ -11,6 +11,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @dnd-kit/sortable | 10.0.0 | MIT | runtime |
 | @dnd-kit/utilities | 3.2.2 | MIT | runtime |
 | @eslint/js | 9.39.5 | MIT | build and test |
+| @floating-ui/dom | 1.8.0 | MIT | runtime |
 | @fontsource-variable/fraunces | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/newsreader | 5.3.0 | OFL-1.1 | runtime |
@@ -20,7 +21,14 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @testing-library/dom | 10.4.2 | MIT | build and test |
 | @testing-library/react | 16.3.3 | MIT | build and test |
 | @tiptap/core | 3.32.2 | MIT | runtime |
+| @tiptap/extension-bubble-menu | 3.32.2 | MIT | runtime |
 | @tiptap/extension-collaboration | 3.32.2 | MIT | runtime |
+| @tiptap/extension-highlight | 3.32.2 | MIT | runtime |
+| @tiptap/extension-subscript | 3.32.2 | MIT | runtime |
+| @tiptap/extension-superscript | 3.32.2 | MIT | runtime |
+| @tiptap/extension-text-align | 3.32.2 | MIT | runtime |
+| @tiptap/extension-text-style | 3.32.2 | MIT | runtime |
+| @tiptap/extension-typography | 3.32.2 | MIT | runtime |
 | @tiptap/pm | 3.32.2 | MIT | runtime |
 | @tiptap/react | 3.32.2 | MIT | runtime |
 | @tiptap/starter-kit | 3.32.2 | MIT | runtime |

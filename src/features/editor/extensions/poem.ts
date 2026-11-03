@@ -7,6 +7,7 @@ import type * as Y from 'yjs';
 import { YFRAGMENT } from '@/lib/ydocs';
 import { parsePoemText, poemDataToText, type PoemData } from '../poemText';
 import { EscapeTab } from './escapeTab';
+import { ClearFormatting, inlineFormatting } from './formatting';
 
 /* The poem schema: doc > stanza+ > poemLine+ > text. Every space is content, and lines keep layout. */
 
@@ -254,7 +255,7 @@ const PoemLine = Node.create<PoemOptions>({
   },
 });
 
-/** The poem schema with bold, italic, underline and strike. Collaboration keeps undo history. */
+/** The poem schema with every inline format. Block formats stay out, so lines keep their layout. */
 export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
   return [
     StarterKit.configure({
@@ -279,6 +280,8 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     PoemDocument,
     Stanza,
     PoemLine.configure(opts),
+    ...inlineFormatting(),
+    ClearFormatting.configure({ blocks: false }),
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

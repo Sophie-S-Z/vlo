@@ -102,3 +102,38 @@
 .vlo-typewriter .vlo-manuscript {
   padding-bottom: 50vh;
 }
+
+/* Formats from the toolbar. Sizes are in em, so they follow the manuscript size and page zoom. */
+.vlo-manuscript mark {
+  border-radius: 0.15em;
+  padding: 0 0.08em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.vlo-manuscript sup,
+.vlo-manuscript sub {
+  font-size: 0.7em;
+  line-height: 0;
+}
+
+.vlo-prose p[data-indent='first'] {
+  text-indent: 2em;
+}
+
+/* A drop cap spans about three lines and keeps the paragraph's own font. */
+.vlo-prose p[data-drop-cap='true']::first-letter {
+  float: left;
+  font-family: var(--font-display);
+  font-size: 3.4em;
+  font-weight: 600;
+  line-height: 0.85;
+  padding: 0.08em 0.1em 0 0;
+  color: var(--accent-text);
+}
+
+/* The selection stays marked while a tool panel has focus. */
+.vlo-manuscript .vlo-held-selection {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  border-radius: 0.1em;
+}
