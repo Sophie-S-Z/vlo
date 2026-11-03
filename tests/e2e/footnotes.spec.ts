@@ -168,3 +168,18 @@ test('the note panel and the notes list have no serious axe issues', async ({ pa
   await expect(notes(page)).toBeVisible();
   expect(await seriousIssues(page)).toEqual([]);
 });
+
+test('the command menu inserts a footnote and opens its note', async ({ page }) => {
+  await newProject(page, 'novel');
+  await page.keyboard.type('Gulls over the pier.');
+  await page.keyboard.press(`${mod}+k`);
+  const menu = page.getByRole('dialog', { name: 'Command menu' });
+  await menu.getByRole('combobox').fill('footnote');
+  await menu.getByRole('option', { name: /^Footnote/ }).click();
+  await expect(menu).toBeHidden();
+  await expect(panel(page).getByRole('textbox', { name: 'Footnote 1' })).toBeFocused();
+  await page.keyboard.type('Herring gulls.');
+  await page.keyboard.press('Enter');
+  await expect(scene(page)).toBeFocused();
+  await expect(notes(page).getByRole('button')).toHaveText(['Edit footnote 1: Herring gulls.']);
+});
