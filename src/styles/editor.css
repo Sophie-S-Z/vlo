@@ -91,9 +91,10 @@
   tab-size: 4;
 }
 
-/* Focus-line dimming. Only opacity changes, so text does not move. */
+/* Focus-line dimming. Only opacity changes, so text does not move. At 0.7 the dimmed text still meets
+   WCAG AA (4.5:1) in every theme; tests/unit/contrast.test.ts checks it. */
 .vlo-manuscript .vlo-dim {
-  opacity: 0.4;
+  opacity: 0.7;
   transition: opacity 0.2s var(--ease-reveal, ease-out);
 }
 

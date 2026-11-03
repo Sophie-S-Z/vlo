@@ -172,7 +172,10 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
       `editor built at ${open.built.toFixed(0)} ms, first frame with it at ${open.editor.toFixed(0)} ms, ` +
       `content-visibility ${contentVisibility ? 'supported' : 'not supported'})`,
   );
-  expect(open.total).toBeLessThan(300);
+  // The budget is 300 ms. The Linux WebKit build in CI is slower than Safari and varies by up to 200 ms
+  // between runs, so it has a 700 ms ceiling that still catches a real slowdown. Real Safari is checked by
+  // hand in Phase 6 (product owner decision, 2026-11-03).
+  expect(open.total).toBeLessThan(browserName === 'webkit' ? 700 : 300);
   await expect(editor).toBeVisible();
 
   await editor.click();
