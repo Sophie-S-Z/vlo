@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from '@/ui/dialog';
 import { Editor } from './Editor';
-import { docText, writeItemText } from './itemText';
+import { docBody, docText, writeItemText } from './itemText';
 import { SaveStatus } from './SaveStatus';
 import { trackSaves, type SaveState } from './saveTracker';
 import { TAB_ORIGIN } from './tabSync';
@@ -71,7 +71,8 @@ export function EditorPane({ item, kind, width, snapshotEveryMinutes }: EditorPa
       ignoreOrigins: [open.persistence, TAB_ORIGIN],
       confirm: () => open.confirmSaved(clock.now()),
       onPause: async () => {
-        if (latest.current) await writeItemText(target, docText(latest.current, kind), kind);
+        const doc = latest.current;
+        if (doc) await writeItemText(target, docText(doc, kind), kind, docBody(doc, kind));
       },
       onState: setSave,
     });

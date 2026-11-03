@@ -13,8 +13,10 @@ import {
 } from '../commands/editorBus';
 import type { EditorForm, PanelId } from '../commands/registry';
 import { heldKey } from '../extensions/editorTools';
+import { leaveFootnote, selectedFootnote } from '../extensions/footnote';
 import { CharactersPanel } from './panels/CharactersPanel';
 import { ColorPanel } from './panels/ColorPanel';
+import { FootnotePanel } from './panels/FootnotePanel';
 import { LinkPanel } from './panels/LinkPanel';
 import { SizePanel } from './panels/SizePanel';
 import { SpacingPanel } from './panels/SpacingPanel';
@@ -64,6 +66,8 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
       return <LinkPanel editor={editor} onDone={closePanel} />;
     case 'characters':
       return <CharactersPanel editor={editor} />;
+    case 'footnote':
+      return <FootnotePanel editor={editor} />;
     case 'gradient':
       return (
         <Suspense fallback={<p className="text-sm text-muted">Loading the gradient editor.</p>}>
@@ -81,6 +85,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   spacing: 'Line spacing',
   link: 'Link',
   characters: 'Special characters',
+  footnote: 'Footnote',
   gradient: 'Gradient and shimmer',
 };
 
@@ -108,6 +113,13 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
     [editor],
   );
 
+  // A closing note panel leaves the caret after its reference, so the next key does not replace it.
+  const leaveNote = () => {
+    if (popover?.panel !== 'footnote') return;
+    const at = selectedFootnote(editor.state);
+    if (at !== null) leaveFootnote(editor, at);
+  };
+
   const backToText = (event: Event) => {
     event.preventDefault();
     focusText(editor);
@@ -124,7 +136,9 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
       <Popover
         open={popover !== null}
         onOpenChange={(open) => {
-          if (!open) closePanel();
+          if (open) return;
+          leaveNote();
+          closePanel();
         }}
       >
         {anchor && <PopoverAnchor virtualRef={anchor} />}
@@ -141,6 +155,7 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
             onCloseAutoFocus={backIfLost}
             onEscapeKeyDown={() => {
               // Back to the text at once, so keys typed during the closing fade reach it.
+              leaveNote();
               focusText(editor);
             }}
           >

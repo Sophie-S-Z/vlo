@@ -50,7 +50,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['bold', 'italic'] },
       { tools: ['underline', 'strike'], wide: true },
       { tools: ['color', 'highlight', 'gradient'], wide: true },
-      { tools: ['link', 'characters'], wide: true },
+      { tools: ['link', 'characters', 'footnote'], wide: true },
     ],
     more: [
       'superscript',
@@ -71,7 +71,8 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['undo', 'redo'] },
       { tools: ['bold', 'italic'], wide: true },
       { tools: ['underline', 'strike'], wide: true },
-      { tools: ['color', 'highlight', 'gradient', 'characters'], wide: true },
+      { tools: ['color', 'highlight', 'gradient'], wide: true },
+      { tools: ['characters', 'footnote'], wide: true },
     ],
     more: ['superscript', 'subscript', 'size', 'clear', 'shortcuts'],
   },

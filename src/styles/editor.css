@@ -132,6 +132,37 @@
   color: var(--accent-text);
 }
 
+/*
+ * A footnote reference. The number comes from data-n, which a plugin sets in document order, so it is
+ * never stale. It keeps the accent color inside gradient text, and it never breaks a poem line's spaces.
+ */
+.vlo-manuscript .vlo-footnote-ref {
+  cursor: pointer;
+  padding: 0 0.1em;
+  border-radius: 0.2em;
+  color: var(--accent-text);
+  -webkit-text-fill-color: var(--accent-text);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-variant-numeric: lining-nums;
+  white-space: nowrap;
+}
+
+.vlo-manuscript .vlo-footnote-ref::after {
+  content: attr(data-n);
+  /* Screen readers hear "Footnote 2". A browser without CSS alt text keeps the line above. */
+  content: attr(data-n) / 'Footnote ' attr(data-n);
+}
+
+.vlo-manuscript .vlo-footnote-ref:hover {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.vlo-manuscript .vlo-footnote-ref.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 /* The selection stays marked while a tool panel has focus. */
 .vlo-manuscript .vlo-held-selection {
   background: color-mix(in oklab, var(--accent) 22%, transparent);

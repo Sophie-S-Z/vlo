@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import type * as Y from 'yjs';
 import { YFRAGMENT } from '@/lib/ydocs';
 import { EscapeTab } from './escapeTab';
+import { Footnote } from './footnote';
 import { blockFormatting, ClearFormatting, inlineFormatting } from './formatting';
 import { SceneBreak } from './sceneBreak';
 
@@ -22,6 +23,7 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     ...blockFormatting(),
     ClearFormatting,
     SceneBreak,
+    Footnote,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

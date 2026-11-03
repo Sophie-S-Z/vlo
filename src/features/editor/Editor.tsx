@@ -9,6 +9,7 @@ import { cn } from '@/ui/cn';
 import { openPanel, runCommand, setActiveEditor, getActiveEditor } from './commands/editorBus';
 import { commandsFor, matchesCommand, type EditorCommand } from './commands/registry';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
+import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
@@ -148,6 +149,7 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
     <div className="grid gap-3" data-vlo-editor="">
       <Toolbar editor={editor} kind={kind} />
       <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+      <FootnoteList editor={editor} />
       <SelectionMenu editor={editor} form={kind} />
       <SlashMenuList editor={editor} listId={listId} />
       <PanelHost editor={editor} form={kind} />

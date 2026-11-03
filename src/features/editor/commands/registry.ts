@@ -5,6 +5,7 @@ import {
   TextAlignStart,
   TextAlignEnd,
   ALargeSmall,
+  Asterisk,
   Baseline,
   Bold,
   Heading2,
@@ -35,6 +36,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { MAX_HANGING_EM } from '../extensions/poem';
+import { openPanel } from './editorBus';
 import { swatchVar } from '../format/palette';
 
 /*
@@ -46,7 +48,7 @@ export type EditorForm = 'prose' | 'poem';
 
 /** Tools that open a small panel instead of acting at once. */
 export type PanelId =
-  'link' | 'color' | 'highlight' | 'gradient' | 'size' | 'spacing' | 'characters' | 'shortcuts';
+  'link' | 'color' | 'highlight' | 'gradient' | 'size' | 'spacing' | 'characters' | 'footnote' | 'shortcuts';
 
 export type CommandGroup =
   'history' | 'style' | 'color' | 'block' | 'align' | 'paragraph' | 'indent' | 'insert' | 'clear' | 'help';
@@ -536,6 +538,24 @@ export const COMMANDS: readonly EditorCommand[] = [
     keywords: ['symbol', 'emoji', 'accent', 'greek', 'math', 'arrow', 'currency', 'fraction', 'dash'],
     panel: 'characters',
     slash: true,
+  },
+  {
+    kind: 'run',
+    id: 'footnote',
+    label: 'Footnote',
+    icon: Asterisk,
+    group: 'insert',
+    forms: BOTH,
+    keys: 'Mod-Alt-f',
+    keywords: ['note', 'endnote', 'citation', 'reference', 'source'],
+    slash: true,
+    // Inserts the reference, then opens its note, so the writer types the note at once.
+    run: (e) => {
+      if (!e.commands.insertFootnote()) return false;
+      openPanel({ editor: e, panel: 'footnote', anchor: 'caret' });
+      return true;
+    },
+    isEnabled: (e) => e.can().insertFootnote(),
   },
   ...QUICK_CHARACTERS.map(([id, char, label, keywords]): RunCommand => ({
     kind: 'run',
