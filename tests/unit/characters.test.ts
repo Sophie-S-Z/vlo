@@ -41,7 +41,8 @@ describe('the character list', () => {
     expect(greek).toHaveLength(49);
     expect(greek.map((e) => e.char).join('')).toContain('αβγδεζηθικλμνξοπρςστυφχψω');
     const letters = CHARACTER_CATEGORIES.find((c) => c.id === 'letters')?.entries.map((e) => e.char) ?? [];
-    for (const ch of ['é', 'È', 'ñ', 'ü', 'Å', 'ç', 'ő', 'ž', 'ā', 'ę', 'ż', 'ß', 'æ', 'Ø']) expect(letters).toContain(ch);
+    for (const ch of ['é', 'È', 'ñ', 'ü', 'Å', 'ç', 'ő', 'ž', 'ā', 'ę', 'ż', 'ß', 'æ', 'Ø'])
+      expect(letters).toContain(ch);
   });
 
   test('the emoji list holds about 300 entries', () => {
