@@ -138,11 +138,22 @@ Last update: 2026-11-03
   - Measuring page ends on the 10,000-word scene takes about 1 ms on local Chromium (budget 16 ms).
 - Initial JavaScript after A7: 191,229 bytes gzip (budget 250,000). The writing fonts add 5.7 MB of files that
   load one font at a time and are not in the install cache.
+- Phase 2 task A8 built on the same branch: cozy scenes.
+  - Six scenes around the page: Rainy window, Fireplace, Night sky, Forest, Snowy cabin and Ocean at dusk. The
+    Scene button above the text picks one or "No scene". The choice belongs to the project.
+  - The page sits on the scene with its own theme background, so the text keeps its contrast. The scene fills
+    the space around the page, is never taller than the window, and stays in view while a long text scrolls.
+  - Each scene is drawn on a canvas in a worker (OffscreenCanvas), at 30 frames a second, at most 1.5 device
+    pixels for each CSS pixel. A browser without OffscreenCanvas draws on the main thread at the same rate.
+  - The scene moves only while the writer rests. It stops from the first key until 1.5 s after the last key,
+    in a hidden tab, when it is off screen, and in Calm mode or with reduced motion. A CSS picture of each scene
+    shows at once and stays when motion is off.
+  - Keystroke to paint with a moving scene: p95 about 24 ms on local Chromium (budget 50 ms).
 
 ## In progress
 
-- Phase 2 pull request A2: tasks A6 and A7 are built. Next: scenes (A8), sound (A9), and find and replace, read
-  aloud and writing stats (A10). Then pull request B (exports, backup and import, Gate 2).
+- Phase 2 pull request A2: tasks A6, A7 and A8 are built. Next: sound (A9), and find and replace, read aloud
+  and writing stats (A10). Then pull request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
 - Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
@@ -213,6 +224,9 @@ Last update: 2026-11-03
 | 2026-11-03 | The writing fonts are not in the install cache. The service worker caches each font file on its first load.                                                     | 20 fonts add 5.7 MB. A font the writer never used is not offline; its text shows in the project font until the device is online once.                                                          |
 | 2026-11-03 | Page format text is 12 point, and every block lays out at once on the sheet.                                                                                    | Page ends then match a printed page, and the measure reads each block's real height. Pageless keeps skipping the layout of blocks far off screen.                                              |
 | 2026-11-03 | Page zoom (E7) and page format sit in a Page button above the text. Zoom is per device; the page format is per project.                                         | Zoom suits the screen. The page format suits the manuscript, so every item and every tab follow it.                                                                                            |
+| 2026-11-03 | New project setting: `scene`, a scene id or `none`. An unknown value shows no scene.                                                                            | Cozy scenes (plan Task A8). The scene suits the project, so every item and every tab follow it.                                                                                                |
+| 2026-11-03 | Scenes draw in a worker on an OffscreenCanvas and stop while the writer types.                                                                                  | Scene motion then never competes with typing. The CSS picture covers Calm mode, reduced motion and the first frame.                                                                            |
+| 2026-11-03 | The Scene button sits next to the Page button above the text, not in the toolbar.                                                                               | The toolbar holds tools for the words. A scene, like the page format, is a setting for the whole project.                                                                                      |
 | 2026-11-03 | A tool chosen from a toolbar menu runs after the menu closes.                                                                                                   | On a phone, the closing menu took focus from the equation panel and closed it. Footnote had the same risk.                                                                                     |
 | 2026-11-03 | Footnote numbers are not stored. A plugin counts them in text order.                                                                                            | A stored number goes stale after a cut, a paste, an undo or a change in another tab.                                                                                                           |
 | 2026-11-03 | An item's plain-text copy ends with its notes under "Notes". Word and line counts leave the notes out.                                                          | Search finds notes and readable backups keep them. Counts match the writing itself.                                                                                                            |

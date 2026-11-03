@@ -272,6 +272,7 @@ export function ProjectPage() {
                   snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
                   font={project.settings.font}
                   page={project.settings.page}
+                  scene={project.settings.scene}
                   onSettings={changeSettings}
                 />
               </>

@@ -1,0 +1,185 @@
+import { expect, test, type Page } from '@playwright/test';
+import { seriousIssues } from './support/axe';
+import { skipOnboarding } from './support/onboarding';
+
+/*
+ * Task A8: cozy scenes. A scene fills the space around the page, moves only while the writer rests, stays
+ * still in Calm mode and with reduced motion, and belongs to the project.
+ */
+
+declare global {
+  interface Window {
+    __keyDelays: number[];
+  }
+}
+
+const text = (page: Page) => page.getByRole('textbox', { name: 'Scene 1' });
+const backdrop = (page: Page) => page.locator('.vlo-scene');
+const picker = (page: Page) => page.getByRole('button', { name: /^Scene:/ });
+
+async function newNovel(page: Page) {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  await page
+    .getByRole('dialog', { name: 'New project' })
+    .getByRole('button', { name: 'Create project' })
+    .click();
+  await expect(text(page)).toBeFocused();
+}
+
+async function pickScene(page: Page, name: string) {
+  await picker(page).click();
+  await page.getByRole('radiogroup', { name: 'Scene' }).getByRole('radio', { name }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
+}
+
+test('a scene shows around the page, rests while the writer types, and stays after a reload', async ({
+  page,
+}) => {
+  const workers: string[] = [];
+  page.on('worker', (worker) => workers.push(worker.url()));
+  await newNovel(page);
+  await page.keyboard.type('The rain began.');
+  await expect(backdrop(page)).toHaveCount(0);
+
+  await pickScene(page, 'Rainy window');
+  await expect(picker(page)).toHaveAccessibleName('Scene: Rainy window');
+  await expect(backdrop(page)).toHaveAttribute('data-scene', 'rain');
+  await expect(backdrop(page)).toHaveAttribute('aria-hidden', 'true');
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
+  // Browsers that can hand a canvas to a worker draw the scene off the main thread.
+  const offscreen = await page.evaluate(() => 'transferControlToOffscreen' in HTMLCanvasElement.prototype);
+  if (offscreen) expect(workers.some((url) => url.includes('scene.worker'))).toBe(true);
+
+  // The scene rests from the first key until the writer pauses.
+  await text(page).click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type(' It kept on.');
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
+
+  // The page sits on the scene and stays readable: its own background, above the scene.
+  const layers = await page.evaluate(() => {
+    const sheet = document.querySelector('.vlo-scene-page');
+    const art = document.querySelector('.vlo-scene');
+    if (!sheet || !art) return null;
+    const box = sheet.getBoundingClientRect();
+    const top = document.elementFromPoint(box.left + box.width / 2, box.top + 20);
+    return { pageOnTop: sheet.contains(top), background: getComputedStyle(sheet).backgroundColor };
+  });
+  expect(layers?.pageOnTop).toBe(true);
+  expect(layers?.background).not.toBe('rgba(0, 0, 0, 0)');
+
+  await page.reload();
+  await expect(text(page)).toContainText('The rain began. It kept on.');
+  await expect(backdrop(page)).toHaveAttribute('data-scene', 'rain');
+  await expect(picker(page)).toHaveAccessibleName('Scene: Rainy window');
+
+  await pickScene(page, 'No scene');
+  await expect(backdrop(page)).toHaveCount(0);
+  await expect(picker(page)).toHaveAccessibleName('Scene: No scene');
+  await page.reload();
+  await expect(text(page)).toBeVisible();
+  await expect(backdrop(page)).toHaveCount(0);
+});
+
+test('with reduced motion or a hidden tab the scene stays still, and it moves again after', async ({
+  page,
+}) => {
+  await newNovel(page);
+  await pickScene(page, 'Night sky');
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
+  await picker(page).click();
+  await expect(page.getByText('Calm mode or reduced motion is on, so the scene stays still.')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
+
+  // A hidden tab stops the scene too.
+  const setHidden = (hidden: boolean) =>
+    page.evaluate((value) => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => value });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, hidden);
+  await setHidden(true);
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
+  await setHidden(false);
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true');
+});
+
+test('in Calm mode the scene is a still picture', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('vlo:preferences', JSON.stringify({ theme: 'system', calm: true }));
+  });
+  await newNovel(page);
+  await pickScene(page, 'Forest');
+  await expect(backdrop(page)).toHaveAttribute('data-scene', 'forest');
+  // Wait past the typing pause, so only Calm mode can hold the scene still.
+  await page.waitForTimeout(2_000);
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
+  // The still picture shows at once, before and under the canvas.
+  expect(await backdrop(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/gradient/);
+});
+
+test('the scene picker has no serious axe issues, and a scene adds no horizontal scroll at 360 px', async ({
+  page,
+}) => {
+  await newNovel(page);
+  await page.keyboard.type('Ink and paper.');
+  // The word count rolls in after the save, so axe waits for it.
+  await expect(page.getByText('3 words', { exact: true })).toBeVisible();
+  await pickScene(page, 'Ocean at dusk');
+  await picker(page).click();
+  await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeVisible();
+  expect(await seriousIssues(page)).toEqual([]);
+  await page.keyboard.press('Escape');
+
+  await page.setViewportSize({ width: 360, height: 740 });
+  await expect(backdrop(page)).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('typing with a moving scene stays under 50 ms at p95', async ({ page, browserName }) => {
+  await page.addInitScript(() => {
+    window.__keyDelays = [];
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key.length !== 1) return;
+        const start = event.timeStamp;
+        // A message posted in the frame callback runs after that frame's style, layout and paint.
+        requestAnimationFrame(() => {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = () => {
+            window.__keyDelays.push(performance.now() - start);
+          };
+          channel.port2.postMessage(null);
+        });
+      },
+      true,
+    );
+  });
+  await newNovel(page);
+  await pickScene(page, 'Fireplace');
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
+
+  await text(page).click();
+  await page.evaluate(() => {
+    window.__keyDelays = [];
+  });
+  const typed = 'The fire settled and the room went gold at the edges. '.repeat(2).slice(0, 100);
+  await page.keyboard.type(typed, { delay: 30 });
+  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+  const sorted = (await page.evaluate(() => window.__keyDelays)).sort((a, b) => a - b);
+  const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+  console.log(`[${browserName}] keystroke to paint with a scene, p95: ${p95.toFixed(1)} ms`);
+  expect(p95).toBeLessThan(50);
+});

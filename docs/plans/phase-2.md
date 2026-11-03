@@ -147,9 +147,9 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task A8: Cozy scenes
 
-- [ ] Six scenes (Decision 11) with a still fallback image drawn in CSS for Calm mode and reduced motion.
-- [ ] Scene picker in the toolbar. The choice saves per project.
-- [ ] Tests: motion stops under Calm mode, reduced motion and a hidden tab; keystroke budget with a scene on; axe.
+- [x] Six scenes (Decision 11) with a still fallback image drawn in CSS for Calm mode and reduced motion.
+- [x] Scene picker in the toolbar. The choice saves per project.
+- [x] Tests: motion stops under Calm mode, reduced motion and a hidden tab; keystroke budget with a scene on; axe.
 
 ### Task A9: Sound: nature, lofi and own music
 

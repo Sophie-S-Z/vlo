@@ -495,3 +495,52 @@ html[data-calm='true'] .vlo-fill-shimmer {
     transition: none;
   }
 }
+
+/*
+ * Cozy scenes (plan Task A8, decision 11). The scene is artwork around the page: it fills the manuscript
+ * column and stays in view while the text scrolls. The page is a card on its theme color, so text
+ * contrast never depends on the scene.
+ */
+.vlo-scene-stage {
+  --vlo-stage-pad: clamp(0.75rem, 3vw, 2.5rem);
+  --vlo-stage-y: clamp(0.75rem, 4vw, 4rem);
+  --vlo-stage-x: clamp(0.5rem, 3vw, 3rem);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: clip;
+  padding: var(--vlo-stage-y) var(--vlo-stage-x);
+  border-radius: var(--radius-card);
+}
+
+/*
+ * The scene and the page share one grid cell. The scene stretches over the padding as well, and it is never
+ * taller than the window. On a long text it stays in view while the page scrolls past.
+ */
+.vlo-scene {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  grid-area: 1 / 1;
+  max-height: 100dvh;
+  margin: calc(-1 * var(--vlo-stage-y)) calc(-1 * var(--vlo-stage-x));
+  pointer-events: none;
+}
+
+.vlo-scene-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.vlo-scene-page {
+  position: relative;
+  grid-area: 1 / 1;
+  z-index: 1;
+  padding: var(--vlo-stage-pad);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+  box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55);
+}

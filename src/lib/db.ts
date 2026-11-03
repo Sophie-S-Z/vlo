@@ -26,6 +26,8 @@ export interface Project {
     font?: string;
     /** Pageless, or a sheet of Letter or A4 paper with page-end lines (plan decision 8). */
     page?: PageFormat;
+    /** The cozy scene around the page, or "none" (plan decision 11). */
+    scene?: string;
   };
 }
 
