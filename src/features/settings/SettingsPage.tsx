@@ -1,9 +1,11 @@
-import { useId, useState } from 'react';
-import { usePreferences } from '@/app/PreferencesProvider';
+import { useId, useRef, useState } from 'react';
+import { useMotionAllowed, usePreferences } from '@/app/PreferencesProvider';
 import type { ThemeChoice } from '@/app/preferences';
+import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { StorageHealth } from './StorageHealth';
+import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 const THEME_LABELS: Record<ThemeChoice, string> = {
   system: 'System',
@@ -29,10 +31,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function SettingsPage() {
+  useDocumentTitle('Settings');
   const { prefs, resolvedTheme, setTheme, setCalm } = usePreferences();
+  const motion = useMotionAllowed();
   const [announcement, setAnnouncement] = useState('');
   const calmId = useId();
   const calmHintId = useId();
+  const themes = useRef<HTMLDivElement>(null);
 
   return (
     <div className="max-w-2xl">
@@ -44,11 +49,26 @@ export function SettingsPage() {
       <div className="mt-6">
         <Section title="Theme">
           <RadioGroup
+            ref={themes}
             aria-label="Theme"
             value={prefs.theme}
             onValueChange={(value) => {
               const choice = value as ThemeChoice;
-              setTheme(choice);
+              // The new theme grows from the radio the writer chose. Safari does not focus a clicked
+              // button, so the radio comes from the group, by its value, for a click and a key alike.
+              const rect = themes.current
+                ?.querySelector(`[role="radio"][value="${CSS.escape(choice)}"]`)
+                ?.getBoundingClientRect();
+              const origin = rect
+                ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+                : undefined;
+              withViewTransition(
+                motion,
+                () => {
+                  setTheme(choice);
+                },
+                { origin, className: 'vlo-theme-reveal' },
+              );
               setAnnouncement(`Theme set to ${THEME_LABELS[choice]}.`);
             }}
           >
@@ -57,12 +77,14 @@ export function SettingsPage() {
               return (
                 <div key={choice} className="flex min-h-11 items-start gap-3">
                   <RadioGroupItem id={id} value={choice} aria-describedby={`${id}-hint`} className="mt-0.5" />
-                  <label htmlFor={id} className="grid cursor-pointer gap-0.5">
-                    <span>{THEME_LABELS[choice]}</span>
+                  <div className="grid gap-0.5">
+                    <label htmlFor={id} className="cursor-pointer">
+                      {THEME_LABELS[choice]}
+                    </label>
                     <span id={`${id}-hint`} className="text-sm text-muted">
                       {THEME_HINTS[choice]}
                     </span>
-                  </label>
+                  </div>
                 </div>
               );
             })}

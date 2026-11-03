@@ -1,6 +1,6 @@
 import { PenLine } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
-import { useEffect, useId, useRef, useState, ViewTransition } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { createProject } from '@/features/library/projects';
 import { TemplatePicker } from '@/features/library/TemplatePicker';
@@ -11,10 +11,13 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { markOnboarded } from './firstVisit';
 import { HoldButton } from './HoldButton';
+import { MotionViewTransition } from '@/ui/MotionViewTransition';
+import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 const STEPS = ['What do you write?', 'Your words stay yours', 'Name it'] as const;
 
 export function WelcomePage() {
+  useDocumentTitle('Welcome');
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [template, setTemplate] = useState<Template>('novel');
@@ -61,7 +64,7 @@ export function WelcomePage() {
   }
 
   return (
-    <ViewTransition exit="vlo-zoom-through">
+    <MotionViewTransition exit="vlo-zoom-through">
       <div className="grain flex min-h-dvh flex-col">
         <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-3">
           <span className="font-display text-2xl font-semibold [font-variation-settings:'SOFT'_50,'opsz'_72]">
@@ -159,6 +162,6 @@ export function WelcomePage() {
           </div>
         </main>
       </div>
-    </ViewTransition>
+    </MotionViewTransition>
   );
 }

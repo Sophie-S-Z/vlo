@@ -1,6 +1,10 @@
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type * as Y from 'yjs';
+import { FocusTools } from '@/features/focus/focusExtension';
+import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
+import { useFocusPrefs } from '@/features/focus/focusPrefs';
+import { cn } from '@/ui/cn';
 import { poemExtensions } from './extensions/poem';
 import { proseExtensions } from './extensions/prose';
 import { Toolbar } from './Toolbar';
@@ -22,29 +26,53 @@ const HELP = {
   poem: 'Tab adds four spaces and Shift-Tab removes them. Enter on an empty line starts a new stanza. Press Escape, then Tab, to leave the poem.',
 };
 
+/** The editor element's attributes. A rename passes a new label. */
+function editorAttributes(label: string, kind: EditorProps['kind'], helpId: string): Record<string, string> {
+  return {
+    'aria-label': label,
+    'aria-multiline': 'true',
+    'aria-describedby': helpId,
+    role: 'textbox',
+    spellcheck: 'true',
+    class: kind === 'poem' ? 'vlo-manuscript vlo-poem' : 'vlo-manuscript vlo-prose',
+  };
+}
+
 export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: EditorProps) {
   const helpId = useId();
   const editor = useEditor(
     {
-      extensions: kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc),
+      extensions: [
+        ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
+        FocusTools,
+      ],
       enableInputRules: kind === 'prose',
       enablePasteRules: kind === 'prose',
       autofocus: focusOnOpen ? 'end' : false,
       // The toolbar reads editor state on its own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
-      editorProps: {
-        attributes: {
-          'aria-label': label,
-          'aria-multiline': 'true',
-          'aria-describedby': helpId,
-          role: 'textbox',
-          spellcheck: 'true',
-          class: kind === 'poem' ? 'vlo-manuscript vlo-poem' : 'vlo-manuscript vlo-prose',
-        },
-      },
+      editorProps: { attributes: editorAttributes(label, kind, helpId) },
     },
     [doc, kind],
   );
+
+  // A rename changes the editor's accessible name at once, without reopening the item.
+  const namedAs = useRef(label);
+  useEffect(() => {
+    if (editor.isDestroyed || namedAs.current === label) return;
+    namedAs.current = label;
+    editor.setOptions({
+      editorProps: { ...editor.options.editorProps, attributes: editorAttributes(label, kind, helpId) },
+    });
+  }, [editor, label, kind, helpId]);
+
+  const focus = useFocusPrefs();
+  // A focus switch changed: redraw the dimming and center the caret at once.
+  useEffect(() => {
+    if (editor.isDestroyed) return;
+    editor.view.dispatch(refreshFocus(editor.state.tr));
+    if (focus.typewriter && editor.view.hasFocus()) centerCaret(editor.view);
+  }, [editor, focus]);
 
   useEffect(() => {
     onEditor?.(editor);
@@ -54,7 +82,7 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
   return (
     <div className="grid gap-3">
       <Toolbar editor={editor} kind={kind} />
-      <EditorContent editor={editor} />
+      <EditorContent editor={editor} className={cn(focus.typewriter && 'vlo-typewriter')} />
       <p id={helpId} className="text-xs text-muted">
         {HELP[kind]}
       </p>

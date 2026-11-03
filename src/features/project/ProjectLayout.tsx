@@ -1,4 +1,4 @@
-import { PanelLeft, PanelRight } from 'lucide-react';
+import { Minimize2, PanelLeft, PanelRight } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 import { safeStorage } from '@/app/preferences';
 import { useMediaQuery } from '@/app/useMediaQuery';
@@ -24,6 +24,13 @@ interface ProjectLayoutProps {
   manuscript: (width: number) => ReactNode;
   binderOpen: boolean;
   onBinderOpen: (open: boolean) => void;
+  /** The session timer. It stays mounted in focus mode, so a running session keeps going. */
+  timer: ReactNode;
+  /** Search, focus and other tools. Hidden in focus mode. */
+  tools: ReactNode;
+  /** Focus mode shows only the manuscript. */
+  focusMode: boolean;
+  onLeaveFocus: () => void;
 }
 
 /** Binder, manuscript and details columns. Each side column collapses. Under 600 px the binder is a drawer. */
@@ -34,6 +41,10 @@ export function ProjectLayout({
   manuscript,
   binderOpen,
   onBinderOpen,
+  timer,
+  tools,
+  focusMode,
+  onLeaveFocus,
 }: ProjectLayoutProps) {
   const small = useMediaQuery('(max-width: 599px)');
   const [showBinder, setShowBinder] = useState(true);
@@ -45,15 +56,24 @@ export function ProjectLayout({
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        {title}
+      <div className={cn('flex flex-wrap items-end gap-3', focusMode ? 'justify-end' : 'justify-between')}>
+        {!focusMode && title}
         <div className="flex flex-wrap items-center gap-2">
-          {small ? (
+          {timer}
+          {focusMode ? (
+            <Button variant="ghost" aria-keyshortcuts="Escape" onClick={onLeaveFocus}>
+              <Minimize2 aria-hidden="true" className="size-4" />
+              Leave focus mode
+            </Button>
+          ) : (
+            tools
+          )}
+          {focusMode ? null : small ? (
             <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="max-sm:min-w-11 max-sm:px-0">
                   <PanelLeft aria-hidden="true" className="size-4" />
-                  Binder
+                  <span className="max-sm:sr-only">Binder</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="top-0 left-0 h-dvh max-h-dvh w-[min(22rem,calc(100vw-2rem))] translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0">
@@ -77,35 +97,38 @@ export function ProjectLayout({
               {showBinder ? 'Hide binder' : 'Show binder'}
             </Button>
           )}
-          <Button
-            variant="outline"
-            aria-expanded={showDetails}
-            aria-controls={detailsId}
-            onClick={() => {
-              setShowDetails(!showDetails);
-            }}
-          >
-            <PanelRight aria-hidden="true" className="size-4" />
-            {showDetails ? 'Hide details' : 'Show details'}
-          </Button>
+          {!focusMode && (
+            <Button
+              variant="outline"
+              className="max-sm:min-w-11 max-sm:px-0"
+              aria-expanded={showDetails}
+              aria-controls={detailsId}
+              onClick={() => {
+                setShowDetails(!showDetails);
+              }}
+            >
+              <PanelRight aria-hidden="true" className="size-4" />
+              <span className="max-sm:sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
+            </Button>
+          )}
         </div>
       </div>
 
       <div
         className={cn(
           'grid gap-6',
-          !small && showBinder && showDetails && 'grid-cols-[17rem_minmax(0,1fr)_16rem]',
-          !small && showBinder && !showDetails && 'grid-cols-[17rem_minmax(0,1fr)]',
-          !small && !showBinder && showDetails && 'grid-cols-[minmax(0,1fr)_16rem]',
+          !focusMode && !small && showBinder && showDetails && 'grid-cols-[17rem_minmax(0,1fr)_16rem]',
+          !focusMode && !small && showBinder && !showDetails && 'grid-cols-[17rem_minmax(0,1fr)]',
+          !focusMode && !small && !showBinder && showDetails && 'grid-cols-[minmax(0,1fr)_16rem]',
         )}
       >
-        {!small && showBinder && (
+        {!focusMode && !small && showBinder && (
           <aside id={binderId} className="min-w-0">
             {binder}
           </aside>
         )}
         <div className="min-w-0">{manuscript(width)}</div>
-        {showDetails && (
+        {!focusMode && showDetails && (
           <aside id={detailsId} aria-label="Details" className="grid content-start gap-6 min-w-0">
             {details}
             <div className="grid gap-2">

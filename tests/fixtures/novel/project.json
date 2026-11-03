@@ -1,0 +1,40 @@
+{
+  "title": "The Keeper's Debt",
+  "template": "novel",
+  "chapters": [
+    {
+      "title": "Chapter 1",
+      "scenes": [
+        { "title": "The ledger", "file": "1-1.md", "threads": ["Mira's debt"] },
+        { "title": "The dark tower", "file": "1-2.md", "threads": ["The lighthouse"] }
+      ]
+    },
+    {
+      "title": "Chapter 2",
+      "scenes": [
+        { "title": "Friday week", "file": "2-1.md", "threads": ["Mira's debt"] },
+        { "title": "The key", "file": "2-2.md", "threads": ["The lighthouse"] }
+      ]
+    },
+    {
+      "title": "Chapter 3",
+      "scenes": [
+        { "title": "Fog", "file": "3-1.md", "threads": ["The lighthouse"] },
+        { "title": "The lamp", "file": "3-2.md", "threads": ["Mira's debt", "The lighthouse"] }
+      ]
+    }
+  ],
+  "threads": [
+    { "name": "Mira's debt", "color": "amber" },
+    { "name": "The lighthouse", "color": "blue" }
+  ],
+  "cards": [
+    { "title": "Mira is forty short", "scene": "1-1.md" },
+    { "title": "Hal says the lamp works", "scene": "1-2.md" },
+    { "title": "One week more", "scene": "2-1.md" },
+    { "title": "The stair count", "scene": "2-2.md" },
+    { "title": "Boats lost in the fog", "scene": "3-1.md" },
+    { "title": "The harbour master comes alone", "scene": "3-2.md" }
+  ],
+  "sceneBreak": "A line of *** inside a scene is a scene break."
+}

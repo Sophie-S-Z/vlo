@@ -16,7 +16,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @fontsource-variable/newsreader | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |
 | @playwright/test | 1.63.0 | Apache-2.0 | build and test |
-| @tailwindcss/vite | 4.3.3 | MIT | runtime |
+| @tailwindcss/vite | 4.3.3 | MIT | build and test |
 | @testing-library/dom | 10.4.2 | MIT | build and test |
 | @testing-library/react | 16.3.3 | MIT | build and test |
 | @tiptap/core | 3.32.2 | MIT | runtime |
@@ -31,8 +31,10 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @vitejs/plugin-react | 6.2.1 | MIT | build and test |
 | class-variance-authority | 0.7.1 | Apache-2.0 | runtime |
 | clsx | 2.1.1 | MIT | runtime |
+| cmdk | 1.1.1 | MIT | runtime |
 | dexie | 4.4.7 | Apache-2.0 | runtime |
 | dexie-react-hooks | 4.4.0 | Apache-2.0 | runtime |
+| diff | 9.0.0 | BSD-3-Clause | runtime |
 | eslint | 9.39.5 | MIT | build and test |
 | eslint-plugin-jsx-a11y | 6.10.2 | MIT | build and test |
 | eslint-plugin-react-hooks | 7.1.1 | MIT | build and test |
@@ -41,6 +43,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | globals | 17.14.0 | MIT | build and test |
 | jsdom | 30.1.3 | MIT | build and test |
 | lucide-react | 1.66.0 | ISC | runtime |
+| minisearch | 7.2.0 | MIT | runtime |
 | playwright-core | 1.63.0 | Apache-2.0 | build and test |
 | prettier | 3.9.10 | MIT | build and test |
 | radix-ui | 1.8.1 | MIT | runtime |
@@ -48,7 +51,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | react-dom | 19.3.1 | MIT | runtime |
 | react-router | 8.5.1 | MIT | runtime |
 | tailwind-merge | 3.7.0 | MIT | runtime |
-| tailwindcss | 4.3.3 | MIT | runtime |
+| tailwindcss | 4.3.3 | MIT | build and test |
 | tw-animate-css | 1.4.0 | MIT | runtime |
 | typescript | 6.0.3 | Apache-2.0 | build and test |
 | typescript-eslint | 8.72.1 | MIT | build and test |

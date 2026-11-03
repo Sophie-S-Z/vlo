@@ -62,3 +62,39 @@ test('spec colors are present unchanged', () => {
   });
   expect(themeBlock('sepia')).toMatchObject({ bg: '#efe3cc', text: '#3a2e22', accent: '#a8432a' });
 });
+
+test('an unchecked switch has a --muted border, which meets 3:1 for controls in every theme', () => {
+  const switchSource = readFileSync('src/ui/switch.tsx', 'utf8');
+  expect(switchSource).toMatch(/rounded-full border border-muted bg-rule/);
+  for (const theme of ['ink', 'paper', 'sepia']) {
+    const vars = themeBlock(theme);
+    expect(contrast(vars.muted ?? '', vars.surface ?? '')).toBeGreaterThanOrEqual(3);
+    expect(contrast(vars.muted ?? '', vars.bg ?? '')).toBeGreaterThanOrEqual(3);
+  }
+});
+
+/** The color seen when `fg` is drawn at `alpha` opacity over `bg`. */
+function blend(fg: string, bg: string, alpha: number): string {
+  const channel = (hex: string, i: number) => parseInt(hex.slice(i, i + 2), 16);
+  return `#${[1, 3, 5]
+    .map((i) =>
+      Math.round(alpha * channel(fg, i) + (1 - alpha) * channel(bg, i))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+}
+
+test('dimmed lines in focus mode still meet WCAG AA in every theme', () => {
+  const editorCss = readFileSync('src/styles/editor.css', 'utf8');
+  const opacity = Number(/\.vlo-dim\s*\{[^}]*opacity:\s*([\d.]+)/.exec(editorCss)?.[1]);
+  expect(opacity).toBeGreaterThan(0);
+  for (const theme of ['ink', 'paper', 'sepia']) {
+    const vars = themeBlock(theme);
+    for (const bg of ['bg', 'surface']) {
+      const back = vars[bg] ?? '';
+      const seen = blend(vars.text ?? '', back, opacity);
+      expect(contrast(seen, back), `${theme} on --${bg}`).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});

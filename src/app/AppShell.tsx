@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { NavLink, Outlet, useMatch } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { NavLink, Outlet, useLocation, useMatch } from 'react-router';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -15,6 +15,29 @@ export function AppShell() {
   // The project screen has up to three columns, so it uses the full window width.
   const wide = useMatch('/p/:projectId') !== null;
   const width = wide ? 'max-w-[110rem]' : 'max-w-5xl';
+  const { pathname } = useLocation();
+  const firstPath = useRef(true);
+
+  // After moving to another screen, focus goes to its heading, so a screen reader starts there. When the
+  // new screen already put focus inside the page, such as the editor, it stays.
+  useEffect(() => {
+    if (firstPath.current) {
+      firstPath.current = false;
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      const main = mainRef.current;
+      const active = document.activeElement;
+      if (!main || (active && active !== document.body && main.contains(active))) return;
+      const heading = main.querySelector('h1');
+      if (!heading) return;
+      heading.setAttribute('tabindex', '-1');
+      heading.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [pathname]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -28,7 +51,7 @@ export function AppShell() {
       >
         Skip to content
       </a>
-      <header className="border-b border-rule">
+      <header data-chrome className="border-b border-rule">
         <div className={cn('mx-auto flex items-center justify-between gap-4 px-4 py-2', width)}>
           <NavLink
             to="/"
@@ -60,7 +83,7 @@ export function AppShell() {
       >
         <Outlet />
       </main>
-      <footer className="border-t border-rule">
+      <footer data-chrome className="border-t border-rule">
         <div
           className={cn(
             'mx-auto flex flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm text-muted',

@@ -11,6 +11,15 @@
   overflow-wrap: break-word;
 }
 
+/*
+ * Blocks far off screen skip layout and paint until they come near, so a 10,000-word item opens and
+ * types fast. The browser keeps each block's last measured height, so the scroll bar stays steady.
+ */
+.vlo-manuscript > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 6lh;
+}
+
 .vlo-manuscript:focus-visible {
   outline: none;
 }
@@ -80,4 +89,16 @@
   margin: 0;
   white-space: pre-wrap;
   tab-size: 4;
+}
+
+/* Focus-line dimming. Only opacity changes, so text does not move. At 0.7 the dimmed text still meets
+   WCAG AA (4.5:1) in every theme; tests/unit/contrast.test.ts checks it. */
+.vlo-manuscript .vlo-dim {
+  opacity: 0.7;
+  transition: opacity 0.2s var(--ease-reveal, ease-out);
+}
+
+/* Typewriter scrolling needs room below the last line to bring it to the middle. */
+.vlo-typewriter .vlo-manuscript {
+  padding-bottom: 50vh;
 }
