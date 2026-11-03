@@ -38,20 +38,59 @@ export function pageTextHeight(size: PageSize): number {
   return size.height - 2 * size.margin;
 }
 
-/**
- * The page-end offsets, from the top of the text, for text of `height` pixels. Text that fills exactly one
- * page has no page end inside it.
- */
-export function pageEnds(height: number, size: PageSize): number[] {
-  const page = pageTextHeight(size);
-  if (!(height > 0) || !(page > 0)) return [];
-  const count = Math.ceil(height / page) - 1;
-  return Array.from({ length: Math.max(count, 0) }, (_, i) => (i + 1) * page);
+/** One block of text as the page measure sees it, in pixels from the top of the text. */
+export interface BlockBox {
+  top: number;
+  bottom: number;
+  /**
+   * The line height for a block of text lines, which a page end can split between two lines. Null for a
+   * block that never splits, such as an equation or a scene break.
+   */
+  line: number | null;
 }
 
-/** The number of pages for text of `height` pixels. Empty text still has one page. */
-export function pageCount(height: number, size: PageSize): number {
-  return pageEnds(height, size).length + 1;
+/**
+ * The offsets where each new page starts, from the top of the text. A page end that falls inside a block
+ * of text lines moves up to the last whole line, so that line starts the next page. A block that never
+ * splits moves whole to the next page, unless it is taller than a page.
+ */
+export function pageBreaks(blocks: readonly BlockBox[], pageHeight: number): number[] {
+  if (!(pageHeight > 0)) return [];
+  const breaks: number[] = [];
+  let start = 0;
+  for (const block of blocks) {
+    if (!(block.bottom > block.top)) continue;
+    while (block.bottom > start + pageHeight) {
+      const end = start + pageHeight;
+      let next = end;
+      if (block.top >= end) {
+        // The page ends in the gap above the block, so the block starts the next page.
+        next = block.top < end + pageHeight ? block.top : end;
+      } else if (block.line !== null && block.line > 0) {
+        const lines = Math.floor((end - block.top) / block.line + 1e-6);
+        next = block.top + lines * block.line;
+      } else if (block.top > start) {
+        next = block.top;
+      }
+      // A line or block taller than a page is cut at the page end, so the measure always moves on.
+      if (!(next > start)) next = end;
+      breaks.push(next);
+      start = next;
+    }
+  }
+  return breaks;
+}
+
+/** The sheet shrinks to fit a narrow window down to this zoom. Below it, the text shows pageless. */
+export const MIN_SHEET_ZOOM = 0.75;
+
+/**
+ * The zoom for a sheet of `size` in `available` pixels at the writer's zoom (in percent): the writer's zoom,
+ * or less when the window is narrow. Null when the sheet would be too small to read.
+ */
+export function sheetZoom(available: number, size: PageSize, zoom: number): number | null {
+  const fit = Math.min(zoom / 100, available / size.width);
+  return fit >= MIN_SHEET_ZOOM ? fit : null;
 }
 
 /** Page zoom (E7), in percent. */

@@ -32,6 +32,7 @@ import {
   Subscript,
   Superscript,
   TextQuote,
+  Type,
   Underline,
   Undo2,
   UnfoldVertical,
@@ -51,6 +52,7 @@ export type EditorForm = 'prose' | 'poem';
 /** Tools that open a small panel instead of acting at once. */
 export type PanelId =
   | 'link'
+  | 'font'
   | 'color'
   | 'highlight'
   | 'gradient'
@@ -67,7 +69,7 @@ export type CommandGroup =
 export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   history: 'Undo and redo',
   style: 'Text style',
-  color: 'Color and size',
+  color: 'Font, color and size',
   block: 'Blocks',
   align: 'Alignment',
   paragraph: 'Paragraph',
@@ -250,6 +252,19 @@ export const COMMANDS: readonly EditorCommand[] = [
     selection: true,
     run: (e) => e.commands.toggleSubscript(),
     isActive: (e) => e.isActive('subscript'),
+  },
+  {
+    kind: 'panel',
+    id: 'font',
+    label: 'Font',
+    icon: Type,
+    group: 'color',
+    forms: BOTH,
+    keywords: ['typeface', 'serif', 'sans', 'typewriter', 'handwriting', 'garamond', 'family'],
+    panel: 'font',
+    slash: true,
+    selection: true,
+    isActive: (e) => Boolean(e.getAttributes('textStyle').font),
   },
   {
     kind: 'panel',

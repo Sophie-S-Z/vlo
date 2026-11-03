@@ -3,7 +3,8 @@
 .vlo-manuscript {
   min-height: 50vh;
   font-family: var(--font-manuscript);
-  font-size: 1.25rem;
+  /* Page zoom (E7) scales the text. Every size inside is in em, so it follows. */
+  font-size: calc(1.25rem * var(--vlo-zoom, 1));
   line-height: 1.7;
   color: var(--text);
   outline: none;
@@ -30,14 +31,14 @@
 
 .vlo-prose h2 {
   font-family: var(--font-display);
-  font-size: 1.6rem;
+  font-size: 1.28em;
   font-weight: 600;
   margin: 1.4em 0 0.5em;
 }
 
 .vlo-prose h3 {
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: 1.04em;
   font-weight: 600;
   margin: 1.2em 0 0.4em;
 }
@@ -433,5 +434,64 @@ html[data-calm='true'] .vlo-fill-shimmer {
 @media (prefers-reduced-motion: reduce) {
   .vlo-fill-shimmer {
     animation: none;
+  }
+}
+
+/*
+ * Page format (plan Task A7, decision 8). The sheet is paper on the page around it. Its text is 12 point,
+ * the size the PDF export uses, so the page-end lines match a printed page. Page zoom scales the whole
+ * sheet. Every block lays out at once here, because the page measure needs every block's real height.
+ */
+.vlo-sheet {
+  position: relative;
+  margin-inline: auto;
+  background: var(--surface);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px var(--rule),
+    0 18px 40px -28px color-mix(in oklab, var(--text) 45%, transparent);
+  cursor: text;
+}
+
+.vlo-sheet .vlo-manuscript {
+  min-height: 0;
+  font-size: calc(12pt * var(--vlo-zoom, 1));
+}
+
+.vlo-sheet .vlo-manuscript > * {
+  content-visibility: visible;
+}
+
+.vlo-page-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+
+/* While the writer types, the lines hide, because the text below them moves. */
+.vlo-page-lines[data-stale] {
+  opacity: 0;
+  transition: none;
+}
+
+.vlo-page-end {
+  position: absolute;
+  height: 0;
+  border-top: 1px dashed color-mix(in oklab, var(--muted) 55%, transparent);
+}
+
+.vlo-page-number {
+  position: absolute;
+  bottom: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vlo-page-lines {
+    transition: none;
   }
 }

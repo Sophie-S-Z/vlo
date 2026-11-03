@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Binder } from '@/features/binder/Binder';
@@ -12,6 +12,7 @@ import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
+import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
 import type { Item, Project } from '@/lib/db';
@@ -62,6 +63,20 @@ export function ProjectPage() {
   const activeEditor = useActiveEditor();
   // A format action runs after the command menu closes, so focus goes back to the text first.
   const afterMenu = useRef<(() => void) | null>(null);
+
+  const [settingsError, setSettingsError] = useState('');
+  // The font and the page format belong to the project, so every item and every tab follows them.
+  const changeSettings = useCallback(
+    (change: Partial<Project['settings']>) => {
+      setSettingsError('');
+      updateProjectSettings(projectId, change).catch(() => {
+        setSettingsError(
+          'Vlo could not save that setting. Check the storage space on this device and try again.',
+        );
+      });
+    },
+    [projectId],
+  );
 
   const changeFocusMode = (on: boolean) => {
     withViewTransition(motion, () => {
@@ -243,13 +258,23 @@ export function ProjectPage() {
           }
           manuscript={(width) =>
             item && kind ? (
-              <EditorPane
-                key={item.id}
-                item={item}
-                kind={kind}
-                width={width}
-                snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
-              />
+              <>
+                {settingsError && (
+                  <p role="alert" className="mx-auto mb-3 max-w-prose text-sm text-accent-text">
+                    {settingsError}
+                  </p>
+                )}
+                <EditorPane
+                  key={item.id}
+                  item={item}
+                  kind={kind}
+                  width={width}
+                  snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
+                  font={project.settings.font}
+                  page={project.settings.page}
+                  onSettings={changeSettings}
+                />
+              </>
             ) : (
               <p className="text-muted">Add an item from the binder to start writing.</p>
             )

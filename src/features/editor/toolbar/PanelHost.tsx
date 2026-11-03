@@ -19,6 +19,7 @@ import { useMathKeyboard } from '../math/keyboard';
 import { saveOpenField } from '../math/openField';
 import { CharactersPanel } from './panels/CharactersPanel';
 import { ColorPanel } from './panels/ColorPanel';
+import { FontPanel } from './panels/FontPanel';
 import { FootnotePanel } from './panels/FootnotePanel';
 import { LinkPanel } from './panels/LinkPanel';
 import { SizePanel } from './panels/SizePanel';
@@ -59,6 +60,8 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
   switch (panel) {
     case 'shortcuts':
       return null;
+    case 'font':
+      return <FontPanel editor={editor} />;
     case 'color':
       return <ColorPanel editor={editor} kind="text" />;
     case 'highlight':
@@ -90,6 +93,7 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
 
 const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   shortcuts: 'Keyboard shortcuts',
+  font: 'Font',
   color: 'Font color',
   highlight: 'Highlight',
   size: 'Font size',
@@ -174,7 +178,10 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
             side="bottom"
             align="start"
             className={
-              popover.panel === 'characters' || popover.panel === 'gradient' || popover.panel === 'math'
+              popover.panel === 'characters' ||
+              popover.panel === 'font' ||
+              popover.panel === 'gradient' ||
+              popover.panel === 'math'
                 ? 'w-[min(24rem,calc(100vw-1.5rem))]'
                 : undefined
             }

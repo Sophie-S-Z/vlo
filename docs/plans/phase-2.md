@@ -140,10 +140,10 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task A7: Fonts and page format
 
-- [ ] Font menu: 20 Vlo fonts grouped as Book serifs, Display, Sans, Typewriter, Handwriting, Reading-friendly. Each font loads on first use. A project default font and a per-selection font.
-- [ ] Own fonts: Local Font Access in Chrome and Edge after the writer allows it; a "Type a font name" field elsewhere (Decision 7).
-- [ ] Page format setting per project: Pageless (default), Letter, A4. Sheet, margins and page-end lines with page numbers (Decision 8). Page zoom (E7).
-- [ ] Tests: font loads only when picked; page lines appear after a pause and not during typing; measuring time on the 10,000-word scene (Review Focus 5).
+- [x] Font menu: 20 Vlo fonts grouped as Book serifs, Display, Sans, Typewriter, Handwriting, Reading-friendly. Each font loads on first use. A project default font and a per-selection font.
+- [x] Own fonts: Local Font Access in Chrome and Edge after the writer allows it; a "Type a font name" field elsewhere (Decision 7).
+- [x] Page format setting per project: Pageless (default), Letter, A4. Sheet, margins and page-end lines with page numbers (Decision 8). Page zoom (E7).
+- [x] Tests: font loads only when picked; page lines appear after a pause and not during typing; measuring time on the 10,000-word scene (Review Focus 5).
 
 ### Task A8: Cozy scenes
 

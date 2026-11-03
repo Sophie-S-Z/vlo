@@ -1,5 +1,6 @@
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, type CSSProperties } from 'react';
+import type { PageFormat } from '@/lib/db';
 import type * as Y from 'yjs';
 import { FocusTools } from '@/features/focus/focusExtension';
 import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
@@ -14,13 +15,16 @@ import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
 import { TypingState } from './extensions/textFill';
+import { BASE_STACK, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
+import { PageFrame } from './PageFrame';
 import { PanelHost } from './toolbar/PanelHost';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
 import { Toolbar } from './toolbar/Toolbar';
 import { useWritingPrefs } from './writingPrefs';
 import '@/styles/editor.css';
+import '@/styles/fonts.css';
 
 // The theme colors behind each palette swatch. The editor chunk adds them once.
 ensurePaletteStyles();
@@ -34,6 +38,14 @@ interface EditorProps {
   focusOnOpen?: boolean;
   /** Receives the editor once it exists, and null when it goes. */
   onEditor?: (editor: TiptapEditor | null) => void;
+  /** The project font. */
+  font?: FontValue;
+  /** Pageless, or a Letter or A4 sheet with page-end lines. */
+  page?: PageFormat;
+  /** Page zoom in percent. */
+  zoom?: number;
+  /** Receives the page count, or null when no sheet shows. */
+  onPages?: (pages: number | null) => void;
 }
 
 const HELP = {
@@ -76,7 +88,17 @@ function focusTools(editor: TiptapEditor): boolean {
   return true;
 }
 
-export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: EditorProps) {
+export function Editor({
+  doc,
+  kind,
+  label,
+  focusOnOpen = false,
+  onEditor,
+  font = DEFAULT_FONT,
+  page = 'pageless',
+  zoom = 100,
+  onPages,
+}: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
   const writing = useWritingPrefs();
@@ -145,11 +167,17 @@ export function Editor({ doc, kind, label, focusOnOpen = false, onEditor }: Edit
     };
   }, [editor, kind]);
 
+  // The project font is the manuscript font for the text, the notes and the panels' samples.
+  const stack = fontStack(font, BASE_STACK);
+  const rootStyle = { '--font-manuscript': stack } as CSSProperties;
+
   return (
-    <div className="grid gap-3" data-vlo-editor="">
+    <div className="grid gap-3" data-vlo-editor="" style={rootStyle}>
       <Toolbar editor={editor} kind={kind} />
-      <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
-      <FootnoteList editor={editor} />
+      <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={stack} onPages={onPages}>
+        <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+        <FootnoteList editor={editor} />
+      </PageFrame>
       <SelectionMenu editor={editor} form={kind} />
       <SlashMenuList editor={editor} listId={listId} />
       <PanelHost editor={editor} form={kind} />

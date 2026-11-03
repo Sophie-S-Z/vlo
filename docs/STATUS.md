@@ -118,11 +118,31 @@ Last update: 2026-11-03
   - A tool chosen from a toolbar menu now runs after the menu closes, so a panel it opens keeps its focus.
 - Initial JavaScript: 187,284 bytes gzip (budget 250,000). Project route chunk: 196,417 bytes gzip. Command
   menu: 11,087 bytes. History panel: 5,201 bytes. Diff worker: 3,205 bytes.
+- Phase 2 task A7 built on the same branch: fonts, page format and page zoom.
+  - A font menu (toolbar, selection menu, `/` menu and command menu) with 20 Vlo fonts in six groups: Book
+    serifs, Reading-friendly, Display, Sans, Typewriter and Handwriting. A search field, and a preview that
+    shows the font under the pointer or focus in a sentence and in italic. A font without its own italic says
+    so.
+  - The font goes on the selected text, or on the whole project. With no selected text the menu starts on the
+    whole project. The project font is the manuscript font for every item in the project.
+  - Own fonts: "Show fonts on this device" lists installed fonts in Chrome and Edge after the browser asks the
+    writer. Every browser has a "Type a font name" field. A typed name that the device lacks shows a warning
+    and a "Use the name anyway" button. The last 8 own fonts stay on this device.
+  - Each font file loads the first time text or the preview uses it. Font files sit under `assets/fonts/`,
+    out of the install cache, and the service worker keeps each one after its first load.
+  - Page format per project: Pageless (default), Letter or A4, from the Page button above the text. The sheet
+    has 1 inch margins and 12 point text. After a 600 ms typing pause Vlo draws a dashed line and a page number
+    at each page end; the lines hide while the writer types. A page end inside a paragraph moves to the last
+    whole line. A window too narrow for readable pages shows the text pageless and says so.
+  - Page zoom from 80 to 200 percent on this device, in pageless and page format.
+  - Measuring page ends on the 10,000-word scene takes about 1 ms on local Chromium (budget 16 ms).
+- Initial JavaScript after A7: 191,229 bytes gzip (budget 250,000). The writing fonts add 5.7 MB of files that
+  load one font at a time and are not in the install cache.
 
 ## In progress
 
-- Phase 2 pull request A2: task A6 is built. Next: fonts and page format (A7), scenes (A8), sound (A9), and find
-  and replace, read aloud and writing stats (A10). Then pull request B (exports, backup and import, Gate 2).
+- Phase 2 pull request A2: tasks A6 and A7 are built. Next: scenes (A8), sound (A9), and find and replace, read
+  aloud and writing stats (A10). Then pull request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
 - Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
@@ -188,6 +208,11 @@ Last update: 2026-11-03
 | 2026-11-03 | Item documents store a schema version (`vlo` map, key `schema`, now 2). Tabs share edits only with tabs of the same schema, on a channel named for it.          | A Phase 1 tab drops formats it cannot show, and Yjs saves that loss. The guard keeps each later schema change safe.                                                                            |
 | 2026-11-03 | New nodes: `mathInline` (prose and poems) and `mathBlock` (prose only), atoms with the LaTeX in `latex`. Item document schema is now 3.                         | Equations (plan Task A6). A build with schema 2 does not open a document that has equations, so it cannot drop them.                                                                           |
 | 2026-11-03 | New package: `mathlive` 0.111.4 (MIT), loaded on first use. Its fonts and keyboard are in the offline cache, which adds about 1.1 MB to the first install.      | Approved with the Phase 2 plan. Equations work offline, and Pen mode sends no request outside the app.                                                                                         |
+| 2026-11-03 | Fonts use the variable `@fontsource-variable` packages where they exist, and `@fontsource` for Spectral, IM Fell English, Courier Prime and Kalam.              | Rule 11: the plan named `@fontsource`. One variable file per style covers every weight, so a bold word loads no second file.                                                                   |
+| 2026-11-03 | New attribute: `font` on `textStyle`, a Vlo font id or `local:` and an installed font's name. New project settings: `font` and `page`. Schema stays 3.          | Fonts and page format (plan Task A7). Schema 3 is new in this same pull request, so no released build lacks the attribute.                                                                     |
+| 2026-11-03 | The writing fonts are not in the install cache. The service worker caches each font file on its first load.                                                     | 20 fonts add 5.7 MB. A font the writer never used is not offline; its text shows in the project font until the device is online once.                                                          |
+| 2026-11-03 | Page format text is 12 point, and every block lays out at once on the sheet.                                                                                    | Page ends then match a printed page, and the measure reads each block's real height. Pageless keeps skipping the layout of blocks far off screen.                                              |
+| 2026-11-03 | Page zoom (E7) and page format sit in a Page button above the text. Zoom is per device; the page format is per project.                                         | Zoom suits the screen. The page format suits the manuscript, so every item and every tab follow it.                                                                                            |
 | 2026-11-03 | A tool chosen from a toolbar menu runs after the menu closes.                                                                                                   | On a phone, the closing menu took focus from the equation panel and closed it. Footnote had the same risk.                                                                                     |
 | 2026-11-03 | Footnote numbers are not stored. A plugin counts them in text order.                                                                                            | A stored number goes stale after a cut, a paste, an undo or a change in another tab.                                                                                                           |
 | 2026-11-03 | An item's plain-text copy ends with its notes under "Notes". Word and line counts leave the notes out.                                                          | Search finds notes and readable backups keep them. Counts match the writing itself.                                                                                                            |
