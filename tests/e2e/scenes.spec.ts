@@ -31,7 +31,21 @@ async function pickScene(page: Page, name: string) {
   await picker(page).click();
   await page.getByRole('radiogroup', { name: 'Scene' }).getByRole('radio', { name }).click();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
+  try {
+    await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
+  } catch (error) {
+    // A record for the CI log: why the panel stayed open.
+    const state = await page.evaluate(() => {
+      const panel = document.querySelector('[role="dialog"]');
+      return {
+        state: panel?.getAttribute('data-state'),
+        animations: panel?.getAnimations().map((a) => `${a.playState} ${String(a.currentTime)}`),
+        focus: `${document.activeElement?.tagName ?? ''} ${document.activeElement?.getAttribute('aria-label') ?? ''}`,
+      };
+    });
+    console.log(`scene panel after Escape: ${JSON.stringify(state)}`);
+    throw error;
+  }
 }
 
 test('a scene shows around the page, rests while the writer types, and stays after a reload', async ({
@@ -170,6 +184,31 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
   await newNovel(page);
   await pickScene(page, 'Fireplace');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
+  // A record for the CI log: how long main-thread frames take while the scene moves.
+  const frames = await page.evaluate(
+    () =>
+      new Promise<{ median: number; worst: number; offscreen: boolean }>((resolve) => {
+        const gaps: number[] = [];
+        let last = performance.now();
+        const step = (now: number) => {
+          gaps.push(now - last);
+          last = now;
+          if (gaps.length < 60) requestAnimationFrame(step);
+          else {
+            gaps.sort((a, b) => a - b);
+            resolve({
+              median: gaps[30] ?? 0,
+              worst: gaps[59] ?? 0,
+              offscreen: 'transferControlToOffscreen' in HTMLCanvasElement.prototype,
+            });
+          }
+        };
+        requestAnimationFrame(step);
+      }),
+  );
+  console.log(
+    `[${browserName}] frames with a moving scene: median ${frames.median.toFixed(1)} ms, worst ${frames.worst.toFixed(1)} ms, worker canvas ${String(frames.offscreen)}`,
+  );
 
   await text(page).click();
   await page.evaluate(() => {

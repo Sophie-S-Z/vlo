@@ -81,6 +81,19 @@ export interface ItemText {
   updatedAt: number;
 }
 
+/** A music file the writer added (plan decision 10). It stays on this device and plays from a blob: URL. */
+export interface AudioFile {
+  id: string;
+  /** The file name without its extension. */
+  name: string;
+  type: string;
+  size: number;
+  /** Seconds, or 0 when the browser could not tell. */
+  duration: number;
+  addedAt: number;
+  data: Blob;
+}
+
 /** Small app-wide values, such as the first-visit flag. */
 export interface AppMeta {
   key: string;
@@ -94,6 +107,7 @@ export class VloDb extends Dexie {
   sessions!: Table<Session, string>;
   itemTexts!: Table<ItemText, string>;
   appMeta!: Table<AppMeta, string>;
+  audioFiles!: Table<AudioFile, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -105,6 +119,8 @@ export class VloDb extends Dexie {
       itemTexts: 'itemId, projectId',
       appMeta: 'key',
     });
+    // Version 2 (Phase 2, Task A9): the writer's own music. The other tables do not change.
+    this.version(2).stores({ audioFiles: 'id, addedAt' });
   }
 }
 

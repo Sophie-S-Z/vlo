@@ -73,6 +73,7 @@ describe('vercel.json', () => {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self'",
+      "media-src 'self' blob:",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",

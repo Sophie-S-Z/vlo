@@ -8,6 +8,7 @@ import { runCommand, useActiveEditor } from '@/features/editor/commands/editorBu
 import { shortcutLabel } from '@/features/editor/commands/keys';
 import { commandsFor } from '@/features/editor/commands/registry';
 import { EditorPane } from '@/features/editor/EditorPane';
+import { pause as stopSound } from '@/features/sound/controller';
 import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
@@ -83,6 +84,14 @@ export function ProjectPage() {
       setFocusMode(on);
     });
   };
+
+  // Sound belongs to the writing space: leaving the project stops it.
+  useEffect(
+    () => () => {
+      stopSound();
+    },
+    [],
+  );
 
   // Mod-K opens the command menu from anywhere on the project screen, the editor included.
   // Over another dialog or menu, the key does nothing, so two dialogs never stack.

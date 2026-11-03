@@ -2,6 +2,7 @@ import { Extension, Mark, mergeAttributes } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { fillStyle, parseFill, type TextFill } from '../format/fill';
+import { keyPressed } from '../keyEvents';
 
 /*
  * The textFill mark: gradient, metallic, prismatic or glowing text. The data lives in data-fill as JSON,
@@ -134,8 +135,9 @@ export const TypingState = Extension.create({
         key: new PluginKey('typingState'),
         props: {
           handleDOMEvents: {
-            keydown: () => {
+            keydown: (_view, event) => {
               touch();
+              keyPressed(event);
               return false;
             },
             beforeinput: () => {

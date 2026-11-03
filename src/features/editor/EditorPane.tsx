@@ -8,6 +8,7 @@ import { clock } from '@/lib/clock';
 import type { Item, PageFormat } from '@/lib/db';
 import { SceneBackdrop } from '@/features/scenes/SceneBackdrop';
 import { ScenePicker } from '@/features/scenes/ScenePicker';
+import { SoundControl } from '@/features/sound/SoundPanel';
 import { cleanScene, NO_SCENE, type SceneChoice } from '@/features/scenes/scenes';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -159,7 +160,7 @@ export function EditorPane({
         >
           <header className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{item.title}</h2>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-4">
               <WordCount words={item.wordCount} lines={kind === 'poem' ? (item.lineCount ?? 0) : undefined} />
               <SaveStatus state={save} />
               <PageControl
@@ -172,6 +173,7 @@ export function EditorPane({
                 pages={pages}
               />
               <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />
+              <SoundControl scene={scene} />
               <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
                 <DialogTrigger asChild>
                   <Button variant="ghost" disabled={!editor || !open}>

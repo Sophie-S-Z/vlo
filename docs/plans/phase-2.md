@@ -153,12 +153,12 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task A9: Sound: nature, lofi and own music
 
-- [ ] Web Audio engine, loaded on first Play: rain, waves, wind, stream, fire, café murmur, forest birds and a night chorus, each from filtered noise and simple synthesis.
-- [ ] Generative lofi: a soft drum kit made from noise and oscillators, warm chords from a set of progressions, bass, vinyl crackle, tempo 70 to 90. Moods: Lofi, Melancholic, Soulful, Deep house, Dream pop. Each mood changes chords, tempo and drum pattern.
-- [ ] Mixer with a volume per layer, a master volume and a sleep timer.
-- [ ] Own music: add files, a playlist, shuffle and repeat, kept in Dexie table `audioFiles` (Decision 10). Schema version bump with an upgrade test.
-- [ ] Typewriter key sounds (E8).
-- [ ] Tests: nothing plays before Play; Calm mode stops scene sound from starting; a broken or very large file shows a message (Review Focus 6); US09 with music on.
+- [x] Web Audio engine, loaded on first Play: rain, waves, wind, stream, fire, café murmur, forest birds and a night chorus, each from filtered noise and simple synthesis.
+- [x] Generative lofi: a soft drum kit made from noise and oscillators, warm chords from a set of progressions, bass, vinyl crackle, tempo 70 to 90. Moods: Lofi, Melancholic, Soulful, Deep house, Dream pop. Each mood changes chords, tempo and drum pattern.
+- [x] Mixer with a volume per layer, a master volume and a sleep timer.
+- [x] Own music: add files, a playlist, shuffle and repeat, kept in Dexie table `audioFiles` (Decision 10). Schema version bump with an upgrade test.
+- [x] Typewriter key sounds (E8).
+- [x] Tests: nothing plays before Play; Calm mode stops scene sound from starting; a broken or very large file shows a message (Review Focus 6); US09 with music on.
 
 ### Task A10: Find and replace, read aloud, writing stats
 

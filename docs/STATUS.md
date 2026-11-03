@@ -149,11 +149,28 @@ Last update: 2026-11-03
     in a hidden tab, when it is off screen, and in Calm mode or with reduced motion. A CSS picture of each scene
     shows at once and stays when motion is off.
   - Keystroke to paint with a moving scene: p95 about 24 ms on local Chromium (budget 50 ms).
+- Phase 2 task A9 built on the same branch: sound.
+  - The Sound button above the text opens the sound panel. Nothing plays and no audio context exists until the
+    writer presses Play. Pause, the sleep timer and leaving the project stop the sound. A reload is silent.
+  - Vlo makes all of its sound as it plays, with Web Audio. Eight nature layers: rain, waves, wind, stream,
+    fire, café murmur, forest birds and a night chorus. Five music moods: Lofi, Melancholic, Soulful, Deep
+    house and Dream pop, each with its own chords, tempo, swing, drums, bass and room echo.
+  - "Match the scene" lets the project's scene set the nature sounds. A slider the writer moves turns it off
+    and keeps the mix. In Calm mode a scene starts no sound, and key sounds stay off.
+  - Your music: the writer adds music files (MP3, M4A, AAC, OGG, Opus, WAV, FLAC or WebM, up to 50 MB each).
+    They stay on the device in IndexedDB and play from a blob: URL, with shuffle, repeat, previous and next.
+    A file that is not music, is empty, is too large or does not play gets a message with the reason.
+  - A volume for the music, each nature layer and all sound, and a sleep timer of 15 to 90 minutes that fades
+    out over 10 s.
+  - Typewriter keys (E8): a soft click for each key and a bell for Enter, off by default.
+  - The settings stay on the device. No sound sends a request (US09 test with music, nature, own files and
+    key sounds on).
+  - The sound engine loads on the first Play: initial JavaScript stays at 186,511 bytes gzip.
 
 ## In progress
 
-- Phase 2 pull request A2: tasks A6, A7 and A8 are built. Next: sound (A9), and find and replace, read aloud
-  and writing stats (A10). Then pull request B (exports, backup and import, Gate 2).
+- Phase 2 pull request A2: tasks A6 to A9 are built. Next: find and replace, read aloud and writing stats
+  (A10). Then pull request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
 - Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
@@ -233,5 +250,11 @@ Last update: 2026-11-03
 | 2026-11-03 | A copy from a Vlo poem pastes into a poem with its styles and footnotes. Text from other apps still pastes as plain text.                                       | Phase 2 gives poems inline styles, and the plain-text paste dropped them. A copy inside one line now stays one line in plain text too.                                                         |
 | 2026-11-03 | Gradient text is allowed in the writer's own words, and the toolbar never uses it.                                                                              | The product owner asked for gradient and metallic text. Interface surfaces keep plain colors.                                                                                                  |
 | 2026-11-03 | Scenes count as artwork, not interface surfaces, so they can use gradients and motion.                                                                          | Section 13 bans gradients on interface surfaces (plan decision 12).                                                                                                                            |
+| 2026-11-03 | New Dexie table `audioFiles` (database version 2) for the writer's own music files.                                                                             | Plan decision 10. Music files stay on the device. The upgrade keeps every row of version 1 (upgrade test).                                                                                     |
+| 2026-11-03 | The CSP adds `media-src 'self' blob:`.                                                                                                                          | The writer's own music plays from a blob: URL. No outside host is allowed.                                                                                                                     |
+| 2026-11-03 | The sound engine is a separate chunk that loads on the first Play.                                                                                              | Initial JavaScript stays inside the budget, and a writer who never plays sound never loads it.                                                                                                 |
+| 2026-11-03 | Sound stops when the writer leaves the project.                                                                                                                 | The sound belongs to the writing session, and the next project can have another scene.                                                                                                         |
+| 2026-11-03 | The Sound button sits next to the Scene button above the text, not in the toolbar.                                                                              | The toolbar holds tools for the words. Sound, like the scene, is a setting for the writing room.                                                                                               |
+| 2026-11-03 | Music tempos run from 68 to 120 beats a minute, outside the plan's 70 to 90.                                                                                    | Deep house needs its pulse near 120 to sound like house. Melancholic at 68 leaves more space. The lofi moods stay inside 70 to 90.                                                             |
 | 2026-11-03 | Ambient sound (F22) moves from Phase 3 to Phase 2.                                                                                                              | The product owner asked for music and nature sounds with the editor upgrade.                                                                                                                   |
 | 2026-11-03 | New packages: `@floating-ui/dom` and the TipTap `bubble-menu`, `highlight`, `subscript`, `superscript`, `text-align`, `text-style` and `typography` extensions. | Approved with the Phase 2 plan. All MIT. `docs/licenses.md` lists them.                                                                                                                        |
