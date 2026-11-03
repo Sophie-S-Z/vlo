@@ -101,14 +101,6 @@ test('keyboard only: Alt-F10 reaches the selection menu, Escape returns, and the
   await page.keyboard.press(`${mod}+End`);
   // The menu hides once the editor reads the new caret. Chrome on Android leaves Enter to the browser,
   // so an Enter sent before that splits the line at the old selection.
-  // DIAGNOSTIC, temporary: where the caret is after Mod+End in CI.
-  console.log(
-    'after Mod+End:',
-    await page.evaluate(() => {
-      const s = getSelection();
-      return `${s?.focusNode?.textContent?.slice(-24) ?? ''} @ ${String(s?.focusOffset)} collapsed=${String(s?.isCollapsed)} active=${document.activeElement?.className ?? ''}`;
-    }),
-  );
   await expect(bubble(page)).toBeHidden();
   await page.keyboard.press('Enter');
   await page.keyboard.type('/quo');

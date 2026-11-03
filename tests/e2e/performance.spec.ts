@@ -303,23 +303,13 @@ test('diagnostic: shimmer cost by style part', async ({ page, browserName }) => 
   await expect(editor.locator('.vlo-fill-shimmer')).toHaveCount(500);
   const variants: Record<string, string> = {
     baseline: '',
-    noFilter: '.vlo-fill { filter: none !important; }',
-    noAnimation: '.vlo-fill-shimmer { animation: none !important; }',
-    noFilterNoAnimation:
-      '.vlo-fill { filter: none !important; } .vlo-fill-shimmer { animation: none !important; }',
-    noClipText:
-      '.vlo-fill { filter: none !important; -webkit-background-clip: border-box !important; background-clip: border-box !important; -webkit-text-fill-color: currentColor !important; }',
-    noBackground:
-      '.vlo-fill { filter: none !important; background: none !important; -webkit-text-fill-color: currentColor !important; animation: none !important; }',
-    sliceDecoration:
-      '.vlo-fill { box-decoration-break: slice !important; -webkit-box-decoration-break: slice !important; }',
-    lastParagraphPlain:
-      '.ProseMirror > p:last-child .vlo-fill { filter: none !important; background: none !important; -webkit-text-fill-color: currentColor !important; animation: none !important; }',
-    othersPlain:
-      '.ProseMirror > p:not(:last-child) .vlo-fill { filter: none !important; background: none !important; -webkit-text-fill-color: currentColor !important; animation: none !important; }',
-    oneLayerFill:
-      '.vlo-fill-metallic { background-image: var(--vlo-fill) !important; background-size: 100% 100% !important; }',
+    editorLayer: '.vlo-manuscript { will-change: transform; }',
+    blockLayers: '.vlo-manuscript > * { will-change: transform; }',
+    fillBlockLayers: '.vlo-manuscript > :has(.vlo-fill) { will-change: transform; }',
+    fillLayers: '.vlo-fill { will-change: transform; }',
+    noContentVisibility: '.vlo-manuscript > * { content-visibility: visible !important; }',
   };
+
   await page.keyboard.press('ControlOrMeta+End');
   for (const [name, css] of Object.entries(variants)) {
     await page.evaluate((text) => {
