@@ -192,6 +192,14 @@
   -webkit-box-decoration-break: clone;
 }
 
+/*
+ * WebKit repaints every visible run of a fill on each key. In its own layer, a text with fills typed
+ * three times faster in the CI WebKit, and Chromium did not change. Texts without fills get no layer.
+ */
+.vlo-manuscript.vlo-has-fill {
+  will-change: transform;
+}
+
 .vlo-fill::selection,
 .vlo-fill *::selection {
   -webkit-text-fill-color: var(--text);

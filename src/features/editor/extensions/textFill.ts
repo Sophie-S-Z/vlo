@@ -1,4 +1,5 @@
 import { Extension, Mark, mergeAttributes } from '@tiptap/core';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { fillStyle, parseFill, type TextFill } from '../format/fill';
 
@@ -17,6 +18,8 @@ declare module '@tiptap/core' {
     };
   }
 }
+
+const hasFillKey = new PluginKey<boolean>('textFillPresent');
 
 export const TextFillMark = Mark.create({
   name: 'textFill',
@@ -64,6 +67,25 @@ export const TextFillMark = Mark.create({
 
   renderHTML({ HTMLAttributes }) {
     return ['span', mergeAttributes(HTMLAttributes), 0];
+  },
+
+  // A text with fills gets the `vlo-has-fill` class, and editor.css gives it its own paint layer.
+  addProseMirrorPlugins() {
+    const type = this.type;
+    const hasFill = (doc: ProseMirrorNode) => doc.rangeHasMark(0, doc.content.size, type);
+    return [
+      new Plugin<boolean>({
+        key: hasFillKey,
+        state: {
+          init: (_config, state) => hasFill(state.doc),
+          apply: (tr, value) => (tr.docChanged ? hasFill(tr.doc) : value),
+        },
+        props: {
+          attributes: (state): Record<string, string> =>
+            hasFillKey.getState(state) ? { class: 'vlo-has-fill' } : {},
+        },
+      }),
+    ];
   },
 
   addCommands() {

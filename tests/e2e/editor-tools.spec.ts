@@ -99,8 +99,8 @@ test('keyboard only: Alt-F10 reaches the selection menu, Escape returns, and the
 
   // The end of the text, not of the line: on a phone the sentence wraps.
   await page.keyboard.press(`${mod}+End`);
-  // The menu hides once the editor reads the new caret. Chrome on Android leaves Enter to the browser,
-  // so an Enter sent before that splits the line at the old selection.
+  // The menu hides once the editor reads the new caret. An Enter sent before that splits the line at
+  // the old selection.
   await expect(bubble(page)).toBeHidden();
   await page.keyboard.press('Enter');
   await page.keyboard.type('/quo');

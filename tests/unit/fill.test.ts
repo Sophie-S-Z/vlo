@@ -140,6 +140,18 @@ describe('the textFill mark', () => {
     expect(e.view.dom.querySelector('span[data-fill]')?.textContent).toBe('golden');
   });
 
+  test('the text gets its own paint layer class only while it has a fill', () => {
+    const e = mount('prose');
+    e.commands.setContent('<p>gold leaf</p>');
+    expect(e.view.dom.classList.contains('vlo-has-fill')).toBe(false);
+    e.commands.setTextSelection({ from: 1, to: 5 });
+    e.commands.setTextFill(GOLD);
+    expect(e.view.dom.classList.contains('vlo-has-fill')).toBe(true);
+    e.commands.selectAll();
+    e.commands.unsetTextFill();
+    expect(e.view.dom.classList.contains('vlo-has-fill')).toBe(false);
+  });
+
   test('pasted HTML with a broken fill keeps the text and drops the fill', () => {
     const e = mount('prose');
     e.commands.setContent('<p><span data-fill="{&quot;stops&quot;:1}">plain</span></p>');
