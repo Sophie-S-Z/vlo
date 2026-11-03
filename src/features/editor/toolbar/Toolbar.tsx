@@ -63,6 +63,9 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'scene-break',
       'math',
       'math-block',
+      'find',
+      'replace',
+      'read-aloud',
       'clear',
       'shortcuts',
     ],
@@ -77,7 +80,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['font', 'color', 'highlight', 'gradient'], wide: true },
       { tools: ['characters', 'footnote', 'math'], wide: true },
     ],
-    more: ['superscript', 'subscript', 'size', 'clear', 'shortcuts'],
+    more: ['superscript', 'subscript', 'size', 'find', 'replace', 'read-aloud', 'clear', 'shortcuts'],
   },
 };
 
@@ -180,7 +183,7 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
         aria-label="Formatting"
         data-chrome=""
         data-vlo-toolbar=""
-        className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-0.5 border-b border-rule bg-bg px-1 py-1"
+        className="flex flex-wrap items-center gap-0.5 border-b border-rule bg-bg px-1 py-1"
       >
         {layout.segments[0] && <SegmentButtons segment={layout.segments[0]} at={at} onRun={run} />}
 

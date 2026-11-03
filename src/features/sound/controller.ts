@@ -24,6 +24,12 @@ export interface SoundState {
   message: string | null;
 }
 
+/** How long Play waits for the browser to start the sound, in ms. */
+const START_WAIT_MS = 3000;
+
+export const SOUND_BLOCKED =
+  'The browser kept the sound off. Press Play again. If the sound stays off, allow sound for this site in the browser settings.';
+
 /** How long the sleep timer fades the sound out, in seconds. */
 export const SLEEP_FADE_SECONDS = 10;
 
@@ -103,8 +109,13 @@ let played = new Set<number>();
 /** The volume the sleep fade scales the own music by, 0 to 1. */
 let fade = 1;
 
+/** The share of the volume that plays while Vlo reads aloud. */
+export const DUCK_LEVEL = 0.3;
+/** 1, or DUCK_LEVEL while Vlo reads aloud. */
+let duck = 1;
+
 function ownVolume(settings: SoundSettings): number {
-  return settings.master * settings.musicVolume * fade;
+  return settings.master * settings.musicVolume * fade * duck;
 }
 
 function clearAudio(): void {
@@ -167,6 +178,10 @@ async function playOwn(index: number | null): Promise<void> {
     // A pause during the start is not a problem. Anything else is a file this browser does not play.
     if (error instanceof DOMException && error.name === 'AbortError') return;
     clearAudio();
+    if (error instanceof DOMException && error.name === 'NotAllowedError') {
+      setState({ track: null, message: SOUND_BLOCKED });
+      return;
+    }
     setState({
       track: null,
       message: `Vlo cannot play “${info.name}”. The file may be damaged, or this browser may not play its format.`,
@@ -218,7 +233,7 @@ async function apply(): Promise<void> {
   const settings = getSoundSettings();
   const current = await getEngine();
   if (!state.playing) return;
-  current.setMaster(settings.master * fade);
+  current.setMaster(settings.master * fade * duck);
   current.setNature(currentNature(settings));
   const mood = settings.music === 'own' || settings.music === 'off' ? null : settings.music;
   current.setMusic(mood, settings.musicVolume);
@@ -239,7 +254,21 @@ export async function play(): Promise<void> {
   setState({ playing: true, message: null });
   try {
     const current = await getEngine();
-    await current.start();
+    // A browser can keep the sound off, for example by its autoplay rule. Then Vlo says so and does not
+    // claim that sound plays.
+    const started = await Promise.race([
+      current.start().then(() => true),
+      new Promise<false>((resolve) =>
+        setTimeout(() => {
+          resolve(false);
+        }, START_WAIT_MS),
+      ),
+    ]);
+    if (!started || current.ctx.state !== 'running') {
+      current.stopAll();
+      setState({ playing: false, message: SOUND_BLOCKED });
+      return;
+    }
     await apply();
   } catch {
     setState({ playing: false, message: 'This browser did not start the sound. Press Play to try again.' });
@@ -252,6 +281,14 @@ export function pause(): void {
   engine?.stopAll();
   clearAudio();
   setState({ playing: false, sleepEndsAt: null, sleepMinutes: 0, track: null });
+}
+
+/** Plays the sound more quietly while Vlo reads aloud, so the voice is clear. */
+export function setDucked(on: boolean): void {
+  const next = on ? DUCK_LEVEL : 1;
+  if (next === duck) return;
+  duck = next;
+  if (state.playing) void apply();
 }
 
 /** Fades the sound out after `minutes`, or turns the sleep timer off with 0. */

@@ -23,9 +23,12 @@ import {
   ListOrdered,
   Pilcrow,
   Quote,
+  Replace,
   Redo2,
   RemoveFormatting,
   Sigma,
+  Speech,
+  TextSearch,
   Sparkles,
   SquareSigma,
   Strikethrough,
@@ -39,7 +42,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { MAX_HANGING_EM } from '../extensions/poem';
-import { openPanel } from './editorBus';
+import { openFind, openPanel } from './editorBus';
+import { isReading } from '../readAloud/reader';
 import { swatchVar } from '../format/palette';
 
 /*
@@ -61,10 +65,21 @@ export type PanelId =
   | 'characters'
   | 'footnote'
   | 'math'
+  | 'read-aloud'
   | 'shortcuts';
 
 export type CommandGroup =
-  'history' | 'style' | 'color' | 'block' | 'align' | 'paragraph' | 'indent' | 'insert' | 'clear' | 'help';
+  | 'history'
+  | 'style'
+  | 'color'
+  | 'block'
+  | 'align'
+  | 'paragraph'
+  | 'indent'
+  | 'insert'
+  | 'review'
+  | 'clear'
+  | 'help';
 
 export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   history: 'Undo and redo',
@@ -75,6 +90,7 @@ export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   paragraph: 'Paragraph',
   indent: 'Indent',
   insert: 'Insert',
+  review: 'Find and read aloud',
   clear: 'Clear',
   help: 'Help',
 };
@@ -639,6 +655,46 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     run: (e) => insertText(e, char),
   })),
+  {
+    kind: 'run',
+    id: 'find',
+    label: 'Find',
+    icon: TextSearch,
+    group: 'review',
+    forms: BOTH,
+    keys: 'Mod-f',
+    keywords: ['search', 'look for'],
+    run: (e) => {
+      openFind(e, 'find');
+      return true;
+    },
+  },
+  {
+    kind: 'run',
+    id: 'replace',
+    label: 'Find and replace',
+    icon: Replace,
+    group: 'review',
+    forms: BOTH,
+    keys: 'Mod-h',
+    keywords: ['change', 'swap', 'substitute'],
+    run: (e) => {
+      openFind(e, 'replace');
+      return true;
+    },
+  },
+  {
+    kind: 'panel',
+    id: 'read-aloud',
+    label: 'Read aloud',
+    icon: Speech,
+    group: 'review',
+    forms: BOTH,
+    keywords: ['speak', 'listen', 'voice', 'proofread', 'text to speech'],
+    slash: true,
+    panel: 'read-aloud',
+    isActive: (e) => isReading(e),
+  },
   {
     kind: 'run',
     id: 'clear',

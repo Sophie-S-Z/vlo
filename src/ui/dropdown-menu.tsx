@@ -3,6 +3,11 @@ import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
 import { cn } from './cn';
 
+/*
+ * Opening fades in. Closing is at once, with no fade-out: Radix keeps a closing layer until its
+ * animationend event, and WebKit did not send that event while a scene moved, so the layer stayed.
+ */
+
 export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
@@ -16,7 +21,7 @@ export function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          'z-50 min-w-40 rounded-md border border-rule bg-surface p-1 text-text shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+          'z-50 min-w-40 rounded-md border border-rule bg-surface p-1 text-text shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0',
           className,
         )}
         {...props}

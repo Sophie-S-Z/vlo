@@ -194,7 +194,13 @@ test('own music: a file plays from the device and stays after a reload; bad file
   const input = panel(page).getByLabel('Music files', { exact: true });
   await input.setInputFiles({ name: 'Rain tape.wav', mimeType: 'audio/wav', buffer: wav(2) });
   const files = panel(page).getByRole('list', { name: 'Your music files' });
-  await expect(files.getByRole('listitem')).toHaveCount(1);
+  // A refusal shows its reason in the failure, so a browser that cannot play the file says why.
+  await expect
+    .poll(async () => {
+      const alert = panel(page).getByRole('alert');
+      return (await alert.count()) > 0 ? await alert.innerText() : await files.getByRole('listitem').count();
+    })
+    .toBe(1);
   await expect(files).toContainText('Rain tape');
   await expect(files).toContainText('0:02');
 

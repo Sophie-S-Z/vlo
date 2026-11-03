@@ -297,6 +297,37 @@
   border-radius: 0.1em;
 }
 
+/* Find and replace (E1): every match gets a light wash, and the current match a stronger one with a ring. */
+.vlo-manuscript .vlo-find-match {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  border-radius: 0.1em;
+}
+
+.vlo-manuscript .vlo-find-current {
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Read aloud (E2): the sentence that is spoken. */
+.vlo-manuscript .vlo-reading {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--accent) 70%, transparent);
+}
+
+@media (forced-colors: active) {
+  .vlo-manuscript .vlo-find-match,
+  .vlo-manuscript .vlo-reading {
+    background: Mark;
+    color: MarkText;
+  }
+
+  .vlo-manuscript .vlo-find-current {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+  }
+}
+
 /*
  * Gradient, metallic, prismatic and glowing text (the textFill mark). The fill paints the glyphs, and the
  * caret and lines keep theme colors. Shimmer is CSS only. It pauses while the writer types
@@ -328,7 +359,8 @@
 }
 
 /* While a tool panel holds the selection, the held text shows in plain theme color so it stays readable. */
-.vlo-fill .vlo-held-selection {
+.vlo-fill .vlo-held-selection,
+.vlo-fill .vlo-find-current {
   -webkit-text-fill-color: var(--text);
 }
 

@@ -166,14 +166,30 @@ Last update: 2026-11-03
   - The settings stay on the device. No sound sends a request (US09 test with music, nature, own files and
     key sounds on).
   - The sound engine loads on the first Play: initial JavaScript stays at 186,511 bytes gzip.
+- Phase 2 task A10 built on the same branch: find and replace, read aloud and writing stats.
+  - Find and replace (E1): Ctrl+F (⌘F) opens a bar under the toolbar, and Ctrl+H opens it at Replace. It
+    counts the matches ("2 of 7"), marks every match and the current one, and steps with Enter and
+    Shift+Enter. Match case and Whole word work in any script. Replace keeps the styles of the words, and
+    Replace all is one Undo step. A match stays inside one paragraph or poem line, and an equation or a note
+    marker breaks it, so a replacement never changes them. Escape returns to the text with the match selected.
+  - Read aloud (E2): reads the selection, or from the sentence at the cursor to the end. It speaks one
+    sentence at a time and marks it. A bar under the toolbar holds Pause, Resume and Stop. The voice and the
+    speed stay on the device. Vlo lists and uses on-device voices only (`localService`), so no text leaves
+    the device, and says so when the device has none. Background sound plays at 30% while it reads.
+  - Writing stats (E4) in the details panel: words written today in the project (words added less words
+    removed, from the first look each day), and for the open item its words, selected words, characters
+    with and without spaces, paragraphs or lines, sentences, reading time (238 words a minute) and read
+    aloud time (150 words a minute).
 
 ## In progress
 
-- Phase 2 pull request A2: tasks A6 to A9 are built. Next: find and replace, read aloud and writing stats
-  (A10). Then pull request B (exports, backup and import, Gate 2).
+- Phase 2 pull request A2: tasks A6 to A10 are built. Next: the design audit of the editor, then pull
+  request B (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
 - Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
+- Real Safari: check plain typing on the 10,000-word scene (budget 50 ms) by hand in Phase 6. CI WebKit has a
+  100 ms ceiling for that test.
 - Known after review, left for later: while the gradient editor is open, the selected words show in plain
   theme color, and the preview shows the look. Each step of a color or gradient drag is one change, and the
   undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
@@ -228,6 +244,7 @@ Last update: 2026-11-03
 | 2026-11-02 | Two tabs on one item sync live through `BroadcastChannel`.                                                                                                      | Better than the planned notice alone. Yjs merges both tabs, so no typing is lost.                                                                                                              |
 | 2026-11-03 | Focus-line dimming uses 70 % opacity, not 40 %.                                                                                                                 | 40 % gave 2.2:1 to 3.3:1 contrast. 70 % meets WCAG AA in every theme (product owner decision).                                                                                                 |
 | 2026-11-03 | CI WebKit holds the open budget to a 700 ms ceiling. Real Safari is checked by hand in Phase 6.                                                                 | Linux WebKit in CI takes 364 to 567 ms and varies by up to 200 ms per run (product owner decision).                                                                                            |
+| 2026-11-03 | CI WebKit holds plain typing on the 10,000-word scene to a 100 ms ceiling. Real Safari is checked by hand in Phase 6.                                           | Linux WebKit in CI takes 58 to 65 ms at p95 for this test. Chromium and Firefox stay under 50 ms (product owner decision).                                                                     |
 | 2026-11-03 | CI WebKit holds typing with 500 shimmering runs to a 120 ms ceiling. Real Safari is checked by hand before A1 merges.                                           | Linux WebKit in CI repaints every visible fill run on each key. A paint layer for texts with fills cut p95 from 141 ms to 65 ms, and runners vary by up to two times (product owner decision). |
 | 2026-11-02 | Storage health says "Unknown" and "Limit for Vlo", not "Not available" and "Quota".                                                                             | "Limit for Vlo" says what the number means. "Unknown" matches the other rows.                                                                                                                  |
 | 2026-11-03 | New marks beyond section 7: `superscript`, `subscript`, `highlight` (color), `textStyle` (color, font size), `textFill`.                                        | Phase 2 editor tools (plan decision 12).                                                                                                                                                       |
@@ -256,5 +273,12 @@ Last update: 2026-11-03
 | 2026-11-03 | Sound stops when the writer leaves the project.                                                                                                                 | The sound belongs to the writing session, and the next project can have another scene.                                                                                                         |
 | 2026-11-03 | The Sound button sits next to the Scene button above the text, not in the toolbar.                                                                              | The toolbar holds tools for the words. Sound, like the scene, is a setting for the writing room.                                                                                               |
 | 2026-11-03 | Music tempos run from 68 to 120 beats a minute, outside the plan's 70 to 90.                                                                                    | Deep house needs its pulse near 120 to sound like house. Melancholic at 68 leaves more space. The lofi moods stay inside 70 to 90.                                                             |
+| 2026-11-03 | Find, Find and replace and Read aloud sit in the More menu, not on the toolbar row. Ctrl+F and Ctrl+H open the find bar.                                        | The toolbar row is full at the narrowest desktop column (binder and details open). A new button there wraps the bar to two rows.                                                               |
+| 2026-11-03 | On a Mac, ⌘H hides the browser before Vlo sees it. Mac writers press ⌘F, then Tab, to reach Replace.                                                            | The plan's Mod-H is kept for other systems. The find bar shows both fields, so Replace is one Tab away.                                                                                        |
+| 2026-11-03 | Read aloud pauses by stopping the voice and starts the same sentence again on Resume.                                                                           | Browsers differ on pause and resume of speech, and some stop for good. A new start of the sentence works the same in each.                                                                     |
+| 2026-11-03 | Words written today start from the project total at the first look each day, kept in `appMeta`.                                                                 | No new table is needed. Deleting a project deletes its record.                                                                                                                                 |
+| 2026-11-03 | Popovers, menus and dialogs fade in and close at once, with no fade-out.                                                                                        | Radix removes a closing layer only after its animationend event. With a scene on, WebKit did not send it, so a closed panel stayed on screen.                                                  |
+| 2026-11-03 | Firefox in CI plays sound to a silent output (`media.cubeb.force_null_context`).                                                                                | The CI machines have no sound device, and Firefox keeps every audio context suspended without one. Chromium uses a silent output there already.                                                |
+| 2026-11-03 | Play waits up to 3 s for the browser to start the sound. If the browser keeps it off, Vlo says so and shows Play again.                                         | A browser's autoplay rule can keep sound off. The panel must not say that sound plays when it does not.                                                                                        |
 | 2026-11-03 | Ambient sound (F22) moves from Phase 3 to Phase 2.                                                                                                              | The product owner asked for music and nature sounds with the editor upgrade.                                                                                                                   |
 | 2026-11-03 | New packages: `@floating-ui/dom` and the TipTap `bubble-menu`, `highlight`, `subscript`, `superscript`, `text-align`, `text-style` and `typography` extensions. | Approved with the Phase 2 plan. All MIT. `docs/licenses.md` lists them.                                                                                                                        |

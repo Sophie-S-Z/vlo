@@ -8,6 +8,8 @@ import { runCommand, useActiveEditor } from '@/features/editor/commands/editorBu
 import { shortcutLabel } from '@/features/editor/commands/keys';
 import { commandsFor } from '@/features/editor/commands/registry';
 import { EditorPane } from '@/features/editor/EditorPane';
+import { wordsToday } from '@/features/editor/stats/stats';
+import { WritingStats } from '@/features/editor/stats/WritingStats';
 import { pause as stopSound } from '@/features/sound/controller';
 import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
@@ -84,6 +86,13 @@ export function ProjectPage() {
       setFocusMode(on);
     });
   };
+
+  // The day's word count starts from the project total at the first look each day, so it starts when
+  // the project opens and not when the writer first shows the details.
+  const readyTotal = state.status === 'ready' ? state.items.reduce((sum, i) => sum + i.wordCount, 0) : null;
+  useEffect(() => {
+    if (readyTotal !== null) void wordsToday(projectId, readyTotal);
+  }, [projectId, readyTotal]);
 
   // Sound belongs to the writing space: leaving the project stops it.
   useEffect(
@@ -246,24 +255,27 @@ export function ProjectPage() {
           }
           binder={<Binder project={project} items={items} openItemId={item?.id ?? null} onOpen={open} />}
           details={
-            <dl className="grid gap-3 text-sm">
-              <div>
-                <dt className="text-muted">Project</dt>
-                <dd className="font-mono">{formatWords(totalWords)}</dd>
-              </div>
-              {item && (
-                <>
-                  <div>
-                    <dt className="text-muted">{template.kindLabel[item.kind] ?? item.kind}</dt>
-                    <dd>{STATUS_LABEL[item.status]}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Synopsis</dt>
-                    <dd>{item.synopsis ?? 'None yet. Add one from the binder item menu.'}</dd>
-                  </div>
-                </>
-              )}
-            </dl>
+            <>
+              <dl className="grid gap-3 text-sm">
+                <div>
+                  <dt className="text-muted">Project</dt>
+                  <dd className="font-mono">{formatWords(totalWords)}</dd>
+                </div>
+                {item && (
+                  <>
+                    <div>
+                      <dt className="text-muted">{template.kindLabel[item.kind] ?? item.kind}</dt>
+                      <dd>{STATUS_LABEL[item.status]}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted">Synopsis</dt>
+                      <dd>{item.synopsis ?? 'None yet. Add one from the binder item menu.'}</dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+              {item && kind && <WritingStats projectId={project.id} totalWords={totalWords} />}
+            </>
           }
           manuscript={(width) =>
             item && kind ? (

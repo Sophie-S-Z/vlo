@@ -2,6 +2,11 @@ import { Popover as PopoverPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
 import { cn } from './cn';
 
+/*
+ * Opening fades in. Closing is at once, with no fade-out: Radix keeps a closing layer until its
+ * animationend event, and WebKit did not send that event while a scene moved, so the layer stayed.
+ */
+
 export const Popover = PopoverPrimitive.Root;
 export const PopoverAnchor = PopoverPrimitive.Anchor;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
@@ -19,7 +24,7 @@ export function PopoverContent({
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
         className={cn(
-          'z-50 max-h-[var(--radix-popover-content-available-height)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[var(--radius-card)] border border-rule bg-surface p-3 text-text shadow-lg outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+          'z-50 max-h-[var(--radix-popover-content-available-height)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[var(--radius-card)] border border-rule bg-surface p-3 text-text shadow-lg outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0',
           className,
         )}
         {...props}

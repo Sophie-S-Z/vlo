@@ -1,4 +1,5 @@
 import { clock } from '@/lib/clock';
+import { dayStartKey } from '@/features/editor/stats/dayStart';
 import { db, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
@@ -107,7 +108,7 @@ export async function renameProject(id: string, title: string): Promise<void> {
 export async function deleteProject(id: string): Promise<void> {
   const itemIds = await db.transaction(
     'rw',
-    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts],
+    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.appMeta],
     async () => {
       // Read the ids in the same transaction, so an item added from another tab cannot be left behind.
       const ids = await db.items.where('projectId').equals(id).primaryKeys();
@@ -115,6 +116,8 @@ export async function deleteProject(id: string): Promise<void> {
       await db.snapshots.where('projectId').equals(id).delete();
       await db.sessions.where('projectId').equals(id).delete();
       await db.itemTexts.where('projectId').equals(id).delete();
+      // The start of today's word count (writing stats).
+      await db.appMeta.delete(dayStartKey(id));
       await db.projects.delete(id);
       return ids;
     },

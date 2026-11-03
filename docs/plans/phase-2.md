@@ -162,9 +162,9 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task A10: Find and replace, read aloud, writing stats
 
-- [ ] Find and replace (E1) with decorations, match case and whole word.
-- [ ] Read aloud (E2) with device voices only (`localService === true`), and a message when the device has none.
-- [ ] Writing stats (E4) in the details panel.
+- [x] Find and replace (E1) with decorations, match case and whole word.
+- [x] Read aloud (E2) with device voices only (`localService === true`), and a message when the device has none.
+- [x] Writing stats (E4) in the details panel.
 - [ ] Tests for each, and the impeccable audit of the editor (section 13).
 
 **Pull request A1:** Tasks A1 to A5. **Pull request A2:** Tasks A6 to A10.

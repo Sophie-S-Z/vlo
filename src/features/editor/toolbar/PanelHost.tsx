@@ -22,6 +22,7 @@ import { ColorPanel } from './panels/ColorPanel';
 import { FontPanel } from './panels/FontPanel';
 import { FootnotePanel } from './panels/FootnotePanel';
 import { LinkPanel } from './panels/LinkPanel';
+import { ReadAloudPanel } from './panels/ReadAloudPanel';
 import { SizePanel } from './panels/SizePanel';
 import { SpacingPanel } from './panels/SpacingPanel';
 import { ShortcutSheet } from './ShortcutSheet';
@@ -76,6 +77,8 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
       return <CharactersPanel editor={editor} />;
     case 'footnote':
       return <FootnotePanel editor={editor} />;
+    case 'read-aloud':
+      return <ReadAloudPanel editor={editor} />;
     case 'gradient':
       return (
         <Suspense fallback={<p className="text-sm text-muted">Loading the gradient editor.</p>}>
@@ -103,6 +106,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   footnote: 'Footnote',
   gradient: 'Gradient and shimmer',
   math: 'Equation',
+  'read-aloud': 'Read aloud',
 };
 
 /** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */
@@ -181,7 +185,8 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
               popover.panel === 'characters' ||
               popover.panel === 'font' ||
               popover.panel === 'gradient' ||
-              popover.panel === 'math'
+              popover.panel === 'math' ||
+              popover.panel === 'read-aloud'
                 ? 'w-[min(24rem,calc(100vw-1.5rem))]'
                 : undefined
             }
@@ -192,7 +197,7 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
             }}
             onCloseAutoFocus={backIfLost}
             onEscapeKeyDown={() => {
-              // Back to the text at once, so keys typed during the closing fade reach it.
+              // Back to the text at once, so the next key reaches it.
               leaveNote();
               focusText(editor);
             }}

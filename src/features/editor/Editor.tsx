@@ -6,9 +6,19 @@ import { FocusTools } from '@/features/focus/focusExtension';
 import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
 import { useFocusPrefs } from '@/features/focus/focusPrefs';
 import { cn } from '@/ui/cn';
-import { openPanel, runCommand, setActiveEditor, getActiveEditor } from './commands/editorBus';
+import {
+  closeFind,
+  getActiveEditor,
+  getFindRequest,
+  openFind,
+  openPanel,
+  runCommand,
+  setActiveEditor,
+  useFindRequest,
+} from './commands/editorBus';
 import { commandsFor, matchesCommand, type EditorCommand } from './commands/registry';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
+import { FindReplace } from './extensions/findReplace';
 import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { proseExtensions } from './extensions/prose';
@@ -18,7 +28,10 @@ import { TypingState } from './extensions/textFill';
 import { BASE_STACK, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
 import { PageFrame } from './PageFrame';
+import { ReadAloudMark, stopReadingFor } from './readAloud/reader';
+import { FindBar } from './toolbar/FindBar';
 import { PanelHost } from './toolbar/PanelHost';
+import { ReadAloudBar } from './toolbar/ReadAloudBar';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
 import { Toolbar } from './toolbar/Toolbar';
@@ -111,11 +124,17 @@ export function Editor({
         FocusTools,
         TypingState,
         HeldSelection,
+        ReadAloudMark,
         SlashMenu.configure({
           items: slashItems(kind),
           listId,
           onChoose: (cmd, e) => {
             runCommand(e, cmd, 'caret');
+          },
+        }),
+        FindReplace.configure({
+          onOpen: (e, field) => {
+            openFind(e, field);
           },
         }),
         ToolKeys.configure({
@@ -167,13 +186,28 @@ export function Editor({
     };
   }, [editor, kind]);
 
+  // The find bar closes with its editor, and a reading stops.
+  const find = useFindRequest();
+  useEffect(
+    () => () => {
+      if (getFindRequest()?.editor === editor) closeFind();
+      stopReadingFor(editor);
+    },
+    [editor],
+  );
+
   // The project font is the manuscript font for the text, the notes and the panels' samples.
   const stack = fontStack(font, BASE_STACK);
   const rootStyle = { '--font-manuscript': stack } as CSSProperties;
 
   return (
     <div className="grid gap-3" data-vlo-editor="" style={rootStyle}>
-      <Toolbar editor={editor} kind={kind} />
+      {/* The toolbar, the find bar and the read aloud bar stay at the top while the text scrolls. */}
+      <div className="sticky top-0 z-10 -mx-1 grid bg-bg">
+        <Toolbar editor={editor} kind={kind} />
+        {find?.editor === editor && <FindBar editor={editor} request={find} />}
+        <ReadAloudBar editor={editor} />
+      </div>
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={stack} onPages={onPages}>
         <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
         <FootnoteList editor={editor} />
