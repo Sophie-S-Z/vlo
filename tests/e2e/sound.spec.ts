@@ -37,14 +37,14 @@ async function watchAudio(page: Page) {
         seen(this);
       }
     };
-    // WebKit can keep its own AudioContext for `new AudioContext()`, so the node calls count the context too.
-    // The wrappers below call the real methods with the same `this`.
+    // WebKit can keep its own AudioContext and its own node methods, so every connected node counts its
+    // context too. The wrappers below call the real methods with the same `this` and arguments.
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    const createGain = BaseAudioContext.prototype.createGain;
-    BaseAudioContext.prototype.createGain = function (this: BaseAudioContext) {
-      seen(this);
-      return createGain.call(this);
-    };
+    const connect = AudioNode.prototype.connect;
+    AudioNode.prototype.connect = function (this: AudioNode, ...args: unknown[]) {
+      seen(this.context);
+      return (connect as (...a: unknown[]) => unknown).apply(this, args);
+    } as typeof AudioNode.prototype.connect;
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const createOscillator = BaseAudioContext.prototype.createOscillator;
     BaseAudioContext.prototype.createOscillator = function (this: BaseAudioContext) {

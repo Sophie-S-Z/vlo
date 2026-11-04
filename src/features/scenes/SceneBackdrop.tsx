@@ -83,6 +83,22 @@ function workerDriver(canvas: HTMLCanvasElement, scene: SceneId, onFail: () => v
     worker.postMessage(message, transfer);
   };
   post({ type: 'start', canvas: offscreen, scene, width: 1, height: 1, moving: false }, [offscreen]);
+  // While the scene moves, the page tells the worker after each frame it shows. The message waits for a
+  // task after the frame, so keys and other work queued before it run first.
+  let frame = 0;
+  let task: ReturnType<typeof setTimeout> | undefined;
+  const stopShown = () => {
+    cancelAnimationFrame(frame);
+    clearTimeout(task);
+  };
+  const tellShown = () => {
+    frame = requestAnimationFrame(() => {
+      task = setTimeout(() => {
+        post({ type: 'shown' });
+        tellShown();
+      }, 0);
+    });
+  };
   return {
     scene: (next) => {
       post({ type: 'scene', scene: next });
@@ -91,9 +107,12 @@ function workerDriver(canvas: HTMLCanvasElement, scene: SceneId, onFail: () => v
       post({ type: 'resize', width, height });
     },
     moving: (moving) => {
+      stopShown();
       post({ type: 'moving', moving });
+      if (moving) tellShown();
     },
     stop: () => {
+      stopShown();
       worker.terminate();
     },
   };
