@@ -30,43 +30,29 @@ const pickRainyWindow = async (page: Page) => {
   await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
 };
 
-const cases: { name: string; rounds: number; log?: boolean; step: (page: Page) => Promise<void> }[] = [
+/** Adds a style rule to the page, to turn the caret block rule off or to turn content-visibility off. */
+const addRule = (rule: string) => async (page: Page) => {
+  await page.addStyleTag({ content: rule });
+};
+
+const cases: {
+  name: string;
+  rounds: number;
+  log?: boolean;
+  before?: (page: Page) => Promise<void>;
+  step: (page: Page) => Promise<void>;
+}[] = [
+  { name: 'scene picked, with the caret block rule', rounds: 3, step: pickRainyWindow },
   {
-    name: 'Letter page picked, Escape',
+    name: 'scene picked, caret block rule turned off',
     rounds: 2,
-    step: async (page) => {
-      await page.getByRole('button', { name: /^Page:/ }).click();
-      const control = page.getByRole('dialog', { name: 'Page' });
-      await control.getByRole('radio', { name: /^Letter/ }).click();
-      await expect(control.getByRole('radio', { name: /^Letter/ })).toBeChecked();
-      await page.keyboard.press('Escape');
-      await expect(control).toBeHidden();
-    },
+    before: addRule('.vlo-manuscript > .vlo-caret-block { content-visibility: auto !important; }'),
+    step: pickRainyWindow,
   },
   {
-    name: 'zoom in, Escape',
+    name: 'scene picked, every block without content-visibility',
     rounds: 2,
-    step: async (page) => {
-      await page.getByRole('button', { name: /^Page:/ }).click();
-      const control = page.getByRole('dialog', { name: 'Page' });
-      await control.getByRole('button', { name: 'Zoom in' }).click();
-      await page.keyboard.press('Escape');
-      await expect(control).toBeHidden();
-    },
-  },
-  {
-    name: 'editor setOptions only, no panel',
-    rounds: 2,
-    step: async (page) => {
-      await text(page).evaluate((element) => {
-        (element as unknown as { editor: { setOptions: (o: object) => void } }).editor.setOptions({});
-      });
-    },
-  },
-  {
-    name: 'scene picked, click on the page, with an event log',
-    rounds: 2,
-    log: true,
+    before: addRule('.vlo-manuscript > * { content-visibility: visible !important; }'),
     step: pickRainyWindow,
   },
 ];
@@ -135,6 +121,7 @@ for (const probe of cases) {
     test(`probe: ${probe.name}, round ${String(round)}`, async ({ page, browserName }) => {
       test.skip(browserName !== 'webkit', 'The probe is for WebKit only.');
       await start(page);
+      if (probe.before) await probe.before(page);
       if (probe.log) await watchEvents(page);
       await probe.step(page);
       await text(page).focus();

@@ -21,6 +21,11 @@
   contain-intrinsic-size: auto 6lh;
 }
 
+/* The block with the caret always renders, so WebKit's editing never sees its text as not drawn. */
+.vlo-manuscript > .vlo-caret-block {
+  content-visibility: visible;
+}
+
 .vlo-manuscript:focus-visible {
   outline: none;
 }

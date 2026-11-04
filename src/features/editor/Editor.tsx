@@ -17,6 +17,7 @@ import {
   useFindRequest,
 } from './commands/editorBus';
 import { commandsFor, matchesCommand, type EditorCommand } from './commands/registry';
+import { CaretBlock } from './extensions/caretBlock';
 import { ClickBelow } from './extensions/clickBelow';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
@@ -124,6 +125,7 @@ export function Editor({
         ...(smart ? [SmartPunctuation] : []),
         FocusTools,
         ClickBelow,
+        CaretBlock,
         TypingState,
         HeldSelection,
         ReadAloudMark,
