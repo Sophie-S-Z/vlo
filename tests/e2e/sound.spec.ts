@@ -248,11 +248,16 @@ test('own music: a file plays from the device and stays after a reload; bad file
 
 test('US09 with sound on: music, nature sounds and own files send no request off the app', async ({
   page,
+  baseURL,
 }) => {
   const outside: string[] = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (url.protocol !== 'blob:' && url.protocol !== 'data:' && url.origin !== 'http://localhost:4173') {
+    if (
+      url.protocol !== 'blob:' &&
+      url.protocol !== 'data:' &&
+      url.origin !== new URL(baseURL ?? '/').origin
+    ) {
       outside.push(request.url());
     }
   });

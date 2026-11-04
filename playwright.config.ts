@@ -10,12 +10,14 @@ export default defineConfig({
   retries: isCI ? 1 : 0,
   reporter: isCI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: 'http://localhost:4173',
+    // An IP address, not localhost: in CI Firefox about one first page load in twenty never reached
+    // DOMContentLoaded. One fixed address takes the name lookup out of the page load.
+    baseURL: 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run build && npm run preview',
-    url: 'http://localhost:4173',
+    command: 'npm run build && npm run preview -- --host 127.0.0.1',
+    url: 'http://127.0.0.1:4173',
     reuseExistingServer: !isCI,
     timeout: 120_000,
   },

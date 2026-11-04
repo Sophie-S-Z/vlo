@@ -188,11 +188,16 @@ test('find works in a poem and keeps its spaces', async ({ page }) => {
 
 test('read aloud uses on-device voices only, marks each sentence, and Pause and Stop work', async ({
   page,
+  baseURL,
 }) => {
   const outside: string[] = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (url.protocol !== 'data:' && url.protocol !== 'blob:' && url.origin !== 'http://localhost:4173') {
+    if (
+      url.protocol !== 'data:' &&
+      url.protocol !== 'blob:' &&
+      url.origin !== new URL(baseURL ?? '/').origin
+    ) {
       outside.push(request.url());
     }
   });

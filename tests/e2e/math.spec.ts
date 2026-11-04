@@ -47,7 +47,7 @@ test('a writer builds a fraction with the Fraction button and number keys, and i
   page,
   baseURL,
 }) => {
-  const outside = watchOutside(page, baseURL ?? 'http://localhost:4173');
+  const outside = watchOutside(page, baseURL ?? 'http://127.0.0.1:4173');
   await page.addInitScript(() => {
     document.addEventListener('securitypolicyviolation', (e) => {
       console.error(`CSP violation: ${e.violatedDirective} ${e.blockedURI}`);
