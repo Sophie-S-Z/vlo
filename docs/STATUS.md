@@ -205,6 +205,12 @@ Last update: 2026-11-03
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
 - Real Safari: check plain typing on the 10,000-word scene (budget 50 ms) by hand in Phase 6. CI WebKit has a
   100 ms ceiling for that test.
+- CI WebKit: typing with a scene takes 104 to 192 ms at p95, and the budget is 50 ms. The scene goes still
+  there, as on any slow device. Timing each part alone showed the page shadow and the scene layer cost the
+  most. A scene image and a shadow layer did not help, so they were taken back. Product owner choice pending.
+- CI WebKit: the first scene test sometimes loses its first sentence. After a click under the text, the first
+  space replaced the line while the editor held the caret at the end. The test logs the page selection when
+  this happens, so the next failure shows the cause.
 - Known after review, left for later: while the gradient editor is open, the selected words show in plain
   theme color, and the preview shows the look. Each step of a color or gradient drag is one change, and the
   undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
@@ -296,6 +302,7 @@ Last update: 2026-11-03
 | 2026-11-04 | CI gives Firefox and WebKit a silent PulseAudio output (apt packages `pulseaudio` and `gstreamer1.0-pulseaudio` in the CI job only).                                                      | The runners have no sound card, and Firefox and WebKit keep Web Audio suspended without an output. Firefox's null audio setting kept the context suspended. No app package changes.            |
 | 2026-11-04 | A moving scene goes still for the rest of the visit when the device draws it slowly (middle frame over 50 ms in a 2 s sample). The Scene panel says so and offers "Try the motion again". | The CI WebKit drew a moving scene at about 3 frames a second, and keys then waited 210 ms. A weak device can do the same. Recommended option, product owner choice pending.                    |
 | 2026-11-04 | Own music files are stored as ArrayBuffer bytes, not Blob.                                                                                                                                | Safari cannot store a Blob in IndexedDB in a private window, and the CI WebKit could not keep a file.                                                                                          |
+| 2026-11-04 | A plain click on the blank page under the last block puts the caret after the last word, in every browser.                                                                                | WebKit put the caret before the first word, so the next words went to the wrong place.                                                                                                         |
 | 2026-11-03 | Play waits up to 3 s for the browser to start the sound. If the browser keeps it off, Vlo says so and shows Play again.                                                                   | A browser's autoplay rule can keep sound off. The panel must not say that sound plays when it does not.                                                                                        |
 | 2026-11-03 | Ambient sound (F22) moves from Phase 3 to Phase 2.                                                                                                                                        | The product owner asked for music and nature sounds with the editor upgrade.                                                                                                                   |
 | 2026-11-03 | New packages: `@floating-ui/dom` and the TipTap `bubble-menu`, `highlight`, `subscript`, `superscript`, `text-align`, `text-style` and `typography` extensions.                           | Approved with the Phase 2 plan. All MIT. `docs/licenses.md` lists them.                                                                                                                        |
