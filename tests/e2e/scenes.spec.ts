@@ -99,7 +99,7 @@ test('a scene shows around the page, rests while the writer types, and stays aft
         }
       ).editor;
       const dom = window.getSelection();
-      return `html ${element.innerHTML} | doc ${JSON.stringify(state.doc.textContent)} | caret ${String(state.selection.from)}-${String(state.selection.to)} | dom caret ${dom?.anchorNode?.nodeName ?? 'none'}@${String(dom?.anchorOffset)}`;
+      return `html ${element.innerHTML} | doc ${JSON.stringify(state.doc.textContent)} | caret ${String(state.selection.from)}-${String(state.selection.to)} | dom ${dom?.type ?? 'none'} ${dom?.anchorNode?.nodeName ?? 'none'}@${String(dom?.anchorOffset)} to ${dom?.focusNode?.nodeName ?? 'none'}@${String(dom?.focusOffset)} ${JSON.stringify(dom?.toString() ?? '')} | active ${document.activeElement === element ? 'editor' : (document.activeElement?.tagName ?? 'none')}`;
     });
     steps.push(`${label}: ${seen}`);
   };
