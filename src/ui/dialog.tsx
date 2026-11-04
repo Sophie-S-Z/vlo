@@ -12,7 +12,7 @@ export const DialogClose = DialogPrimitive.Close;
 export const DialogTrigger = DialogPrimitive.Trigger;
 
 export const dialogOverlayClass =
-  'fixed inset-0 z-40 bg-black/50 data-[state=open]:animate-in data-[state=open]:fade-in-0';
+  'fixed inset-0 z-40 bg-[oklch(0.17_0.008_60/0.55)] data-[state=open]:animate-in data-[state=open]:fade-in-0';
 
 /** The panel class shared with AlertDialog, so both dialogs look the same. */
 export const dialogPanelClass =

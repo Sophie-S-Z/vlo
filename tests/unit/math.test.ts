@@ -15,6 +15,7 @@ import {
   MATH_TEMPLATES,
   MAX_LATEX_LENGTH,
   mathText,
+  selectionLatex,
 } from '@/features/editor/format/math';
 import { docBody, docText } from '@/features/editor/itemText';
 import { poemDataFromDoc, poemDataToJSON } from '@/features/editor/poemText';
@@ -170,6 +171,22 @@ describe('equations in prose', () => {
     expect(e.commands.insertMath()).toBe(true);
     expect(equations(e)).toEqual([[MATH_INLINE, 'E=mc^2']]);
     expect(e.getText()).toBe('Energy: $E=mc^2$ always.');
+  });
+
+  test('selected words keep their spaces and their % sign in the equation', () => {
+    const e = mount('prose');
+    e.commands.setContent('<p>Note: sin x is 50% of 2 y here.</p>');
+    const from = after(e, 'Note: ');
+    e.commands.setTextSelection({ from, to: from + 'sin x is 50% of 2 y'.length });
+    expect(e.commands.insertMath()).toBe(true);
+    expect(equations(e)).toEqual([[MATH_INLINE, 'sin\\ x\\ is\\ 50\\%\\ of\\ 2\\ y']]);
+  });
+
+  test('selected LaTeX keeps its meaning, and spaces around signs drop as LaTeX drops them', () => {
+    expect(selectionLatex('a + b = c')).toBe('a + b = c');
+    expect(selectionLatex('x^2 + y_1')).toBe('x^2 + y_1');
+    expect(selectionLatex('\\frac{a}{b}')).toBe('\\frac{a}{b}');
+    expect(selectionLatex(' cost $5 & tax #2 ')).toBe('cost\\ \\$5\\ \\&\\ tax\\ \\#2');
   });
 
   test('the LaTeX changes in place, and plain text, search text and HTML carry it', () => {

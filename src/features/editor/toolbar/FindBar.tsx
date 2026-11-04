@@ -41,6 +41,10 @@ function scrollToCurrent(editor: Editor): void {
   element?.scrollIntoView({ block: 'center', inline: 'nearest' });
 }
 
+function fieldToFocus(field: FindRequest['field'], findText: string): FindRequest['field'] {
+  return field === 'replace' && findText !== '' ? 'replace' : 'find';
+}
+
 function countText(count: number, current: number, text: string): string {
   if (text === '') return '';
   if (count === 0) return 'No matches';
@@ -59,6 +63,10 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
   });
   const [replacement, setReplacement] = useState(lastReplacement);
   const [message, setMessage] = useState('');
+  // Mod-H goes to Replace only when there is something to find. With an empty Find, it goes there first.
+  const [focusField, setFocusField] = useState<FindRequest['field']>(() =>
+    fieldToFocus(request.field, query.text),
+  );
   const result = useEditorState({
     editor,
     selector: ({ editor: e }) => {
@@ -74,14 +82,15 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
     setSeen(request.at);
     const picked = request.field === 'find' ? selectedWords(editor) : null;
     if (picked !== null) setQuery({ ...query, text: picked });
+    setFocusField(fieldToFocus(request.field, picked ?? query.text));
   }
 
   // Each request (Mod-F, Mod-H or the toolbar) moves focus to its field and selects the text there.
   useLayoutEffect(() => {
-    const input = request.field === 'replace' ? replaceInput.current : findInput.current;
+    const input = focusField === 'replace' ? replaceInput.current : findInput.current;
     input?.focus();
     input?.select();
-  }, [request]);
+  }, [request, focusField]);
 
   // The search runs as the writer types it.
   useEffect(() => {
@@ -219,30 +228,6 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
         </div>
         <button
           type="button"
-          aria-label="Match case"
-          aria-pressed={query.caseSensitive}
-          title="Match case"
-          className={toggle(query.caseSensitive)}
-          onClick={() => {
-            setQuery({ ...query, caseSensitive: !query.caseSensitive });
-          }}
-        >
-          <CaseSensitive aria-hidden="true" className="size-4" />
-        </button>
-        <button
-          type="button"
-          aria-label="Whole word"
-          aria-pressed={query.wholeWord}
-          title="Whole word"
-          className={toggle(query.wholeWord)}
-          onClick={() => {
-            setQuery({ ...query, wholeWord: !query.wholeWord });
-          }}
-        >
-          <WholeWord aria-hidden="true" className="size-4" />
-        </button>
-        <button
-          type="button"
           aria-label="Previous match"
           title="Previous match (Shift+Enter)"
           disabled={result.count === 0}
@@ -275,7 +260,32 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
           <X aria-hidden="true" className="size-4" />
         </button>
       </div>
+      {/* The search options sit under Find, before Replace, so the keyboard order follows the screen. */}
       <div className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          aria-label="Match case"
+          aria-pressed={query.caseSensitive}
+          title="Match case"
+          className={toggle(query.caseSensitive)}
+          onClick={() => {
+            setQuery({ ...query, caseSensitive: !query.caseSensitive });
+          }}
+        >
+          <CaseSensitive aria-hidden="true" className="size-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Whole word"
+          aria-pressed={query.wholeWord}
+          title="Whole word"
+          className={toggle(query.wholeWord)}
+          onClick={() => {
+            setQuery({ ...query, wholeWord: !query.wholeWord });
+          }}
+        >
+          <WholeWord aria-hidden="true" className="size-4" />
+        </button>
         <label htmlFor={replaceId} className="sr-only">
           Replace with
         </label>

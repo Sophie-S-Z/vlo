@@ -26,9 +26,6 @@ export default defineConfig({
           name: 'firefox',
           use: {
             ...devices['Desktop Firefox'],
-            // The CI machine has no sound device. Firefox then keeps every audio context suspended, so it
-            // plays to a silent output instead, as Chromium does.
-            launchOptions: { firefoxUserPrefs: { 'media.cubeb.force_null_context': true } },
           },
         },
         { name: 'webkit', use: { ...devices['Desktop Safari'] } },

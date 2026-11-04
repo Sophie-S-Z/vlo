@@ -150,7 +150,7 @@ export function FontPanel({ editor }: { editor: Editor }) {
   const noMatch = groups.length === 0;
 
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <h2 className="text-sm font-medium">Font</h2>
 
       {manuscript && (
@@ -260,7 +260,7 @@ export function FontPanel({ editor }: { editor: Editor }) {
         )}
       </figure>
 
-      <div className="grid gap-2 border-t border-rule pt-3">
+      <div className="grid grid-cols-1 gap-2 border-t border-rule pt-3">
         <h3 className="text-xs text-muted">Your own fonts</h3>
         {canListFonts() && device === null && (
           <Button

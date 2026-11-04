@@ -91,7 +91,11 @@ export interface AudioFile {
   /** Seconds, or 0 when the browser could not tell. */
   duration: number;
   addedAt: number;
-  data: Blob;
+  /**
+   * The file's bytes. Vlo stores an ArrayBuffer, because Safari cannot store a Blob in IndexedDB in a
+   * private window. A Blob can come from an earlier build of this version.
+   */
+  data: ArrayBuffer | Blob;
 }
 
 /** Small app-wide values, such as the first-visit flag. */

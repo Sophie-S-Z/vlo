@@ -51,7 +51,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   const id = useId();
   return (
     <section aria-labelledby={id} className="grid gap-2 border-t border-rule pt-3">
-      <h3 id={id} className="text-xs font-medium tracking-wide text-muted">
+      <h3 id={id} className="text-xs font-medium text-muted">
         {title}
       </h3>
       {children}

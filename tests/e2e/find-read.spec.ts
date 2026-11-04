@@ -28,6 +28,7 @@ async function newNovel(page: Page, words: string) {
     .click();
   await expect(text(page)).toBeFocused();
   await page.keyboard.insertText(words);
+  await expect(text(page)).toContainText(words);
 }
 
 /** A speech engine with two voices on the device and one that would send the text to a server. */
@@ -141,9 +142,13 @@ test('Mod-H opens the bar at Replace; selected words become the search; Escape s
   page,
 }) => {
   await newNovel(page, 'Desk, a lamp, a lamp again.');
-  // Select "Desk" with the keyboard.
-  await page.keyboard.press('ControlOrMeta+Home');
-  for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
+  // Select "Desk" with the keyboard. The editor reads inserted text a moment later and then puts the caret
+  // after it, which can undo a Ctrl+Home pressed at once, so the keys repeat until "Desk" is selected.
+  await expect(async () => {
+    await page.keyboard.press('ControlOrMeta+Home');
+    for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
+    expect(await page.evaluate(() => String(window.getSelection()))).toBe('Desk');
+  }).toPass();
   await page.keyboard.press('ControlOrMeta+f');
   await expect(findField(page)).toHaveValue('Desk');
   await expect(count(page)).toHaveText('1 of 1');

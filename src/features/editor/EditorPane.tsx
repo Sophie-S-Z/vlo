@@ -178,7 +178,7 @@ export function EditorPane({
                 <DialogTrigger asChild>
                   <Button variant="ghost" disabled={!editor || !open}>
                     <History aria-hidden="true" className="size-4" />
-                    History
+                    <span className="max-sm:sr-only">History</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="top-0 right-0 left-auto h-dvh max-h-dvh w-[min(36rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 content-start rounded-none border-y-0 border-r-0">

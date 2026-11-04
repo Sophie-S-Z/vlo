@@ -291,6 +291,11 @@
   padding: 0;
 }
 
+/* The writer's selection uses a wash of the theme accent, the same as a held selection, not the system blue. */
+.vlo-manuscript ::selection {
+  background-color: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
 /* The selection stays marked while a tool panel has focus. */
 .vlo-manuscript .vlo-held-selection {
   background: color-mix(in oklab, var(--accent) 22%, transparent);
@@ -557,6 +562,12 @@ html[data-calm='true'] .vlo-fill-shimmer {
   max-height: 100dvh;
   margin: calc(-1 * var(--vlo-stage-y)) calc(-1 * var(--vlo-stage-x));
   pointer-events: none;
+  /*
+   * The scene gets its own layer, and the page over it then gets one too, so a new scene frame does not
+   * repaint the page, its text and its wide shadow. Without it, the CI WebKit, which paints in software,
+   * took 230 ms a frame. The page itself takes no transform, so the / menu stays fixed to the window.
+   */
+  will-change: transform;
 }
 
 .vlo-scene-canvas {

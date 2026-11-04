@@ -79,7 +79,7 @@ describe('Vlo database', () => {
       size: 4,
       duration: 1,
       addedAt: 2,
-      data: new Blob(['RIFF'], { type: 'audio/wav' }),
+      data: new TextEncoder().encode('RIFF').buffer,
     });
     expect((await upgraded.audioFiles.orderBy('addedAt').first())?.name).toBe('Rain tape');
     await upgraded.delete();

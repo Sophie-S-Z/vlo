@@ -61,6 +61,7 @@ export async function addAudioFiles(files: readonly File[]): Promise<string[]> {
     }
     try {
       const duration = await probeAudio(file, file.name);
+      const data = await file.arrayBuffer();
       await db.audioFiles.add({
         id: crypto.randomUUID(),
         name: file.name.replace(/\.[^.]+$/, '') || file.name,
@@ -68,7 +69,7 @@ export async function addAudioFiles(files: readonly File[]): Promise<string[]> {
         size: file.size,
         duration,
         addedAt: at++,
-        data: file,
+        data,
       });
     } catch (error) {
       problems.push(

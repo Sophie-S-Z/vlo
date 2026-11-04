@@ -167,7 +167,7 @@ async function playOwn(index: number | null): Promise<void> {
   clearAudio();
   trackIndex = files.indexOf(info);
   played.add(trackIndex);
-  audioUrl = URL.createObjectURL(file.data);
+  audioUrl = URL.createObjectURL(new Blob([file.data], { type: file.type }));
   const element = getAudio();
   element.src = audioUrl;
   element.volume = ownVolume(getSoundSettings());

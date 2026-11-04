@@ -84,10 +84,9 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
   },
 };
 
-function Separator({ wide = false }: { wide?: boolean }) {
-  return (
-    <ToolbarPrimitive.Separator className={cn('mx-0.5 h-6 w-px shrink-0 bg-rule', wide && 'max-sm:hidden')} />
-  );
+/** Phones show no separators: the six phone tools then fit one row at 360 px. */
+function Separator() {
+  return <ToolbarPrimitive.Separator className="mx-0.5 h-6 w-px shrink-0 bg-rule max-sm:hidden" />;
 }
 
 /** The formatting toolbar. */
@@ -222,14 +221,14 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
 
         {layout.segments.slice(1).map((segment) => (
           <Fragment key={segment.tools.join()}>
-            <Separator wide={segment.wide ?? false} />
+            <Separator />
             <SegmentButtons segment={segment} at={at} onRun={run} />
           </Fragment>
         ))}
 
         {layout.alignMenu.length > 0 && (
           <>
-            <Separator wide />
+            <Separator />
             <DropdownMenu modal={false}>
               <ToolbarPrimitive.Button asChild>
                 <DropdownMenuTrigger

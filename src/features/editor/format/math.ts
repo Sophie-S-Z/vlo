@@ -24,6 +24,20 @@ export function cleanLatex(value: unknown): string {
   );
 }
 
+/**
+ * Selected text that becomes an equation. LaTeX math drops spaces and reads % as the start of a comment, so a
+ * space between two words or numbers stays a visible space, and % # & $ stay as the signs the writer typed.
+ * Signs that build an equation, such as ^ _ \ { }, keep their LaTeX meaning.
+ */
+export function selectionLatex(text: string): string {
+  // One pass, so each lookaround reads the text as the writer typed it.
+  return cleanLatex(text)
+    .trim()
+    .replace(/(?<=[\p{L}\p{N}%#&$]) +(?=[\p{L}\p{N}%#&$])|[%#&$]/gu, (part) =>
+      part.startsWith(' ') ? '\\ ' : `\\${part}`,
+    );
+}
+
 /** The plain-text form for search, backups and plain-text copies: $...$ in a line, $$...$$ on its own. */
 export function mathText(latex: string, display: boolean): string {
   const clean = cleanLatex(latex).trim();

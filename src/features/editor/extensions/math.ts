@@ -10,7 +10,7 @@ import {
 } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { openPanel } from '../commands/editorBus';
-import { cleanLatex, MATH_BLOCK, MATH_INLINE, mathText } from '../format/math';
+import { cleanLatex, MATH_BLOCK, MATH_INLINE, mathText, selectionLatex } from '../format/math';
 import { loadedMath, loadMath, type MathModule } from '../math/load';
 
 /*
@@ -230,7 +230,7 @@ export const MathInline = Node.create<MathOptions>({
             return false;
           }
           if (dispatch) {
-            const text = latex ?? (oneLine ? state.doc.textBetween(from, to, ' ') : '');
+            const text = latex ?? (oneLine ? selectionLatex(state.doc.textBetween(from, to, ' ')) : '');
             insertAndSelect(tr, type, start, oneLine ? to : start, text);
           }
           return true;

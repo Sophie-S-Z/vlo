@@ -180,11 +180,26 @@ Last update: 2026-11-03
     removed, from the first look each day), and for the open item its words, selected words, characters
     with and without spaces, paragraphs or lines, sentences, reading time (238 words a minute) and read
     aloud time (150 words a minute).
+- Design audit of the editor (section 13, impeccable rules applied by hand, because the skill's scripts are
+  not in the workspace). A script opened each of the 18 tool surfaces in Ink, Paper and Sepia at 1280 px and
+  360 px, and checked axe, page overflow and content wider than its panel. Axe found no serious issue.
+  Fixed:
+  - On phones the toolbar took two rows. It now fits one row at 360 px, with no separators on phones.
+  - On phones History took its own row. It shows as an icon there, like Page, Scene and Sound, and the word
+    Saving no longer shows on phones, so the row does not jump on each save.
+  - The selection menu scrolled sideways on phones with no sign of more tools. It now wraps to two rows.
+  - The find bar wrapped untidily on phones. Find, Previous, Next and Close share the first row, and the
+    match options sit before Replace with. Ctrl+H with an empty search goes to Find first.
+  - The font panel was 32 px wider than the screen at 360 px. It now fits.
+  - Selected text used the system blue. It uses the theme accent, the same as a held selection.
+  - Selected words that became an equation lost their spaces, and a % cut off the rest. Spaces between
+    words and numbers now stay, and % # & $ stay as typed.
+  - The dialog backdrop is a warm tint, and the sound panel headings have no letter spacing.
 
 ## In progress
 
-- Phase 2 pull request A2: tasks A6 to A10 are built. Next: the design audit of the editor, then pull
-  request B (exports, backup and import, Gate 2).
+- Phase 2 pull request A2: tasks A6 to A10 and the editor design audit are done. Next: pull request B
+  (exports, backup and import, Gate 2).
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
 - Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
@@ -278,7 +293,8 @@ Last update: 2026-11-03
 | 2026-11-03 | Read aloud pauses by stopping the voice and starts the same sentence again on Resume.                                                                           | Browsers differ on pause and resume of speech, and some stop for good. A new start of the sentence works the same in each.                                                                     |
 | 2026-11-03 | Words written today start from the project total at the first look each day, kept in `appMeta`.                                                                 | No new table is needed. Deleting a project deletes its record.                                                                                                                                 |
 | 2026-11-03 | Popovers, menus and dialogs fade in and close at once, with no fade-out.                                                                                        | Radix removes a closing layer only after its animationend event. With a scene on, WebKit did not send it, so a closed panel stayed on screen.                                                  |
-| 2026-11-03 | Firefox in CI plays sound to a silent output (`media.cubeb.force_null_context`).                                                                                | The CI machines have no sound device, and Firefox keeps every audio context suspended without one. Chromium uses a silent output there already.                                                |
+| 2026-11-04 | CI gives Firefox and WebKit a silent PulseAudio output (apt packages `pulseaudio` and `gstreamer1.0-pulseaudio` in the CI job only).                            | The runners have no sound card, and Firefox and WebKit keep Web Audio suspended without an output. Firefox's null audio setting kept the context suspended. No app package changes.            |
+| 2026-11-04 | Own music files are stored as ArrayBuffer bytes, not Blob.                                                                                                      | Safari cannot store a Blob in IndexedDB in a private window, and the CI WebKit could not keep a file.                                                                                          |
 | 2026-11-03 | Play waits up to 3 s for the browser to start the sound. If the browser keeps it off, Vlo says so and shows Play again.                                         | A browser's autoplay rule can keep sound off. The panel must not say that sound plays when it does not.                                                                                        |
 | 2026-11-03 | Ambient sound (F22) moves from Phase 3 to Phase 2.                                                                                                              | The product owner asked for music and nature sounds with the editor upgrade.                                                                                                                   |
 | 2026-11-03 | New packages: `@floating-ui/dom` and the TipTap `bubble-menu`, `highlight`, `subscript`, `superscript`, `text-align`, `text-style` and `typography` extensions. | Approved with the Phase 2 plan. All MIT. `docs/licenses.md` lists them.                                                                                                                        |

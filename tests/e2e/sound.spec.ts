@@ -25,17 +25,30 @@ const status = (page: Page) => panel(page).getByRole('status');
 async function watchAudio(page: Page) {
   await page.addInitScript(() => {
     window.__audio = { contexts: [], plays: [], oscillators: 0 };
+    const seen = (context: BaseAudioContext) => {
+      if (context instanceof AudioContext && !window.__audio.contexts.includes(context)) {
+        window.__audio.contexts.push(context);
+      }
+    };
     const Real = window.AudioContext;
     window.AudioContext = class extends Real {
       constructor(options?: AudioContextOptions) {
         super(options);
-        window.__audio.contexts.push(this);
+        seen(this);
       }
     };
+    // WebKit can keep its own AudioContext for `new AudioContext()`, so the node calls count the context too.
     // The wrappers below call the real methods with the same `this`.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const createGain = BaseAudioContext.prototype.createGain;
+    BaseAudioContext.prototype.createGain = function (this: BaseAudioContext) {
+      seen(this);
+      return createGain.call(this);
+    };
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const createOscillator = BaseAudioContext.prototype.createOscillator;
     BaseAudioContext.prototype.createOscillator = function (this: BaseAudioContext) {
+      seen(this);
       window.__audio.oscillators += 1;
       return createOscillator.call(this);
     };
