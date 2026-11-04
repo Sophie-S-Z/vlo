@@ -35,16 +35,26 @@ function canUseWorker(): boolean {
   );
 }
 
-/** True while the writer types: the editor sets `data-typing` on the root element. */
+/**
+ * True while the writer types: the editor sets `data-typing` on the root element. The editor sets it in
+ * the keydown handler, before the browser puts the letter in. The scene reads it in a later task, so no
+ * scene work runs between the key and the letter. In CI WebKit, a scene update at that moment made the
+ * first letter replace the whole line.
+ */
 function useTyping(): boolean {
   const [typing, setTyping] = useState(() => document.documentElement.dataset.typing === 'true');
   useEffect(() => {
     const root = document.documentElement;
+    let later: ReturnType<typeof setTimeout> | undefined;
     const observer = new MutationObserver(() => {
-      setTyping(root.dataset.typing === 'true');
+      clearTimeout(later);
+      later = setTimeout(() => {
+        setTyping(root.dataset.typing === 'true');
+      }, 0);
     });
     observer.observe(root, { attributes: true, attributeFilter: ['data-typing'] });
     return () => {
+      clearTimeout(later);
       observer.disconnect();
     };
   }, []);

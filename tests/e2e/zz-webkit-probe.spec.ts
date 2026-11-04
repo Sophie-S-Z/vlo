@@ -31,26 +31,23 @@ async function start(page: Page, scene: string | null) {
   }
 }
 
-const cases: { name: string; scene: string | null; css?: string; still?: boolean; wait?: number }[] = [
-  { name: 'no scene', scene: null },
-  { name: 'scene as it is', scene: 'Rainy window' },
-  { name: 'scene hidden', scene: 'Rainy window', css: '.vlo-scene { display: none !important; }' },
-  {
-    name: 'scene without its layer',
-    scene: 'Rainy window',
-    css: '.vlo-scene { will-change: auto !important; }',
-  },
-  {
-    name: 'page without its stacking',
-    scene: 'Rainy window',
-    css: '.vlo-scene-page { position: static !important; z-index: auto !important; }',
-  },
-  { name: 'still scene (reduced motion)', scene: 'Rainy window', still: true },
-  { name: 'scene after 6 s', scene: 'Rainy window', wait: 6_000 },
+const cases: {
+  name: string;
+  scene: string | null;
+  css?: string;
+  still?: boolean;
+  wait?: number;
+  off?: boolean;
+  rounds: number;
+}[] = [
+  { name: 'no scene', scene: null, rounds: 1 },
+  { name: 'scene as it is', scene: 'Rainy window', rounds: 4 },
+  { name: 'still scene (reduced motion)', scene: 'Rainy window', still: true, rounds: 2 },
+  { name: 'scene picked, then No scene', scene: 'Rainy window', off: true, rounds: 3 },
 ];
 
 for (const probe of cases) {
-  for (const round of [1, 2]) {
+  for (let round = 1; round <= probe.rounds; round += 1) {
     test(`probe: ${probe.name}, round ${String(round)}`, async ({ page, browserName }) => {
       test.skip(browserName !== 'webkit', 'The probe is for WebKit only.');
       await start(page, probe.scene);
@@ -62,6 +59,15 @@ for (const probe of cases) {
         await expect(page.locator('.vlo-scene')).toHaveAttribute('data-moving', 'false');
       }
       if (probe.wait) await page.waitForTimeout(probe.wait);
+      if (probe.off) {
+        await page.getByRole('button', { name: /^Scene:/ }).click();
+        await page
+          .getByRole('radiogroup', { name: 'Scene' })
+          .getByRole('radio', { name: 'No scene' })
+          .click();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('.vlo-scene')).toHaveCount(0);
+      }
       await text(page).focus();
       await page.keyboard.press('ControlOrMeta+End');
       await page.waitForTimeout(500);
