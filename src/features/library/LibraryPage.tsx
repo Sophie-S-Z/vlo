@@ -4,7 +4,13 @@ import { startTransition, useState } from 'react';
 import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
+import { BackupDialog } from '@/features/backup/BackupDialog';
+import { ImportBackup } from '@/features/backup/ImportBackup';
+import { backupDue } from '@/features/backup/reminder';
+import { SafariSteps } from '@/features/backup/SafariSteps';
+import { clock } from '@/lib/clock';
 import type { Project } from '@/lib/db';
+import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { DeleteDialog } from './DeleteDialog';
 import { NewProjectDialog } from './NewProjectDialog';
@@ -49,6 +55,11 @@ export function LibraryPage() {
   };
   const [renaming, setRenaming] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
+  const [backingUp, setBackingUp] = useState<Project | null>(null);
+  // The time the Library opened, for the backup dates on the cards.
+  const [now] = useState(() => clock.now());
+  const due =
+    library.status === 'ready' ? library.projects.filter(({ project }) => backupDue(project, now)) : [];
 
   return (
     <section className="grain">
@@ -75,9 +86,44 @@ export function LibraryPage() {
               </ToggleGroup.Item>
             </ToggleGroup.Root>
           )}
+          <ImportBackup />
           <NewProjectDialog />
         </div>
       </div>
+
+      {due.length > 0 && (
+        <section
+          aria-labelledby="backup-reminder"
+          className="mt-8 grid gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-5"
+        >
+          <h2 id="backup-reminder" className="font-display text-xl font-semibold">
+            Time for a backup
+          </h2>
+          <p className="text-sm text-muted">
+            {due.length === 1 ? 'This project has' : 'These projects have'} no backup from the last 7 days.
+            Browsers can clear the data of a website, and a backup file keeps a copy of your work.
+          </p>
+          <ul className="grid gap-2">
+            {due.map(({ project }) => (
+              <li key={project.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <span className="font-medium [overflow-wrap:anywhere]">{project.title}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label={`Back up ${project.title}`}
+                  onClick={() => {
+                    setBackingUp(project);
+                  }}
+                >
+                  Back up
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <SafariSteps closable className="mt-8" />
 
       {library.status === 'error' && (
         <div role="alert" className="mt-8 rounded-[var(--radius-card)] border border-rule bg-surface p-6">
@@ -118,6 +164,10 @@ export function LibraryPage() {
               wordCount={wordCount}
               layout={layout}
               index={index}
+              now={now}
+              onBackUp={() => {
+                setBackingUp(project);
+              }}
               onRename={() => {
                 setRenaming(project);
               }}
@@ -139,6 +189,12 @@ export function LibraryPage() {
         project={deleting}
         onClose={() => {
           setDeleting(null);
+        }}
+      />
+      <BackupDialog
+        project={backingUp}
+        onClose={() => {
+          setBackingUp(null);
         }}
       />
     </section>

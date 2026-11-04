@@ -1,10 +1,11 @@
-import { Ellipsis } from 'lucide-react';
+import { CircleAlert, Ellipsis } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
 import type { Project } from '@/lib/db';
 import { cn } from '@/ui/cn';
 import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
+import { backupDue, backupLabel } from '@/features/backup/reminder';
 import { formatWords } from './format';
 import { TEMPLATES } from './templates';
 
@@ -16,6 +17,9 @@ interface ProjectCardProps {
   layout: LibraryLayout;
   /** Place in the list, for the staggered entrance. */
   index: number;
+  /** The time the Library was drawn, for the backup date. */
+  now: number;
+  onBackUp: () => void;
   onRename: () => void;
   onDelete: () => void;
 }
@@ -24,8 +28,18 @@ export function projectTransitionName(id: string): string {
   return `project-${id}`;
 }
 
-export function ProjectCard({ project, wordCount, layout, index, onRename, onDelete }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  wordCount,
+  layout,
+  index,
+  now,
+  onBackUp,
+  onRename,
+  onDelete,
+}: ProjectCardProps) {
   const list = layout === 'list';
+  const due = backupDue(project, now);
   return (
     // The card morphs into the project screen, and between grid and list.
     <MotionViewTransition name={projectTransitionName(project.id)}>
@@ -53,6 +67,17 @@ export function ProjectCard({ project, wordCount, layout, index, onRename, onDel
         <p className={cn('font-mono text-sm text-muted', list ? 'order-3' : 'mt-auto pt-6')}>
           {formatWords(wordCount)}
         </p>
+        <p
+          className={cn(
+            'flex items-center gap-1.5 text-sm',
+            due ? 'text-accent-text' : 'text-muted',
+            list ? 'order-4' : 'mt-1',
+          )}
+        >
+          {due && <CircleAlert aria-hidden="true" className="size-4 shrink-0" />}
+          {backupLabel(project, now)}
+          {due && <span className="sr-only">. Time for a backup.</span>}
+        </p>
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={`Options for ${project.title}`}
@@ -64,6 +89,7 @@ export function ProjectCard({ project, wordCount, layout, index, onRename, onDel
             <Ellipsis aria-hidden="true" className="size-5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={onBackUp}>Back up</DropdownMenuItem>
             <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
             <DropdownMenuItem onSelect={onDelete} className="text-accent-text">
               Delete

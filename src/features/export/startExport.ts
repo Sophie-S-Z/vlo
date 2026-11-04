@@ -1,4 +1,5 @@
-import { encodeDoc, openItemDoc } from '@/lib/ydocs';
+import { downloadBytes } from '@/lib/download';
+import { readItemUpdate } from '@/lib/ydocs';
 import { scopeItems } from './build';
 import { localFontName } from '@/features/editor/format/fonts';
 import type { ExportMessage, ExportResponse } from './export.worker';
@@ -13,16 +14,6 @@ import type { ExportFile, ExportRequest } from './run';
 /** Items read at the same time, so a long book does not open hundreds of databases at once. */
 const READ_AT_ONCE = 6;
 
-async function readUpdate(itemId: string): Promise<Uint8Array> {
-  const open = openItemDoc(itemId);
-  try {
-    await open.ready;
-    return encodeDoc(open.doc);
-  } finally {
-    await open.close();
-  }
-}
-
 /** The stored update of each item that the export holds. */
 export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Promise<[string, Uint8Array][]> {
   const ids = scopeItems(request.items, request.scope)
@@ -32,7 +23,7 @@ export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Prom
   const out: [string, Uint8Array][] = [];
   for (let i = 0; i < ids.length; i += READ_AT_ONCE) {
     const batch = ids.slice(i, i + READ_AT_ONCE);
-    const updates = await Promise.all(batch.map(readUpdate));
+    const updates = await Promise.all(batch.map(readItemUpdate));
     batch.forEach((id, j) => {
       const update = updates[j];
       if (update) out.push([id, update]);
@@ -118,18 +109,7 @@ export async function readOwnFonts(values: readonly string[]): Promise<Map<strin
   return out;
 }
 
-/** Saves a file to the device's downloads through a link with a download name. */
+/** Saves a file to the device's downloads. */
 export function saveFile(file: ExportFile): void {
-  const url = URL.createObjectURL(new Blob([file.bytes as BlobPart], { type: file.type }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = file.name;
-  link.rel = 'noopener';
-  document.body.append(link);
-  link.click();
-  link.remove();
-  // The browser reads the file after the click returns, so the address stays valid a little longer.
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 60_000);
+  downloadBytes(file.name, file.type, file.bytes);
 }

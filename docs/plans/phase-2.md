@@ -194,9 +194,9 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task B8: Full-project backup and import, reminder, Safari steps
 
-- [ ] `.vlo.zip` with `project.json`, `items/<id>.yjs`, `items/<id>.md`, `snapshots/`, and the new `audioFiles` only when the writer ticks "Include my music".
-- [ ] Import as a new project, or replace after a confirm. US04 passes.
-- [ ] Last backup date on each card, a reminder after 7 days, Safari install steps.
+- [x] `.vlo.zip` with `project.json`, `items/<id>.yjs`, `items/<id>.md`, `snapshots/`, and the new `audioFiles` only when the writer ticks "Include my music".
+- [x] Import as a new project, or replace after a confirm. US04 passes.
+- [x] Last backup date on each card, a reminder after 7 days, Safari install steps.
 
 ### Task B9: Folder save for Chromium (F29), if time allows
 

@@ -91,6 +91,8 @@ test('the history panel has no serious axe issues', async ({ page }) => {
   await page.keyboard.type('The tide goes out');
   await saveSnapshotNow(page);
   await rewrite(page, 'The sea comes in');
+  // The word count rolls into place after the save. Axe must not read it half faded in.
+  await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
   await page.getByRole('button', { name: 'History' }).click();
   await history(page)
     .getByRole('radio', { name: /^Saved by you/ })
