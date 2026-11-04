@@ -103,12 +103,52 @@ test('a scene shows around the page, rests while the writer types, and stays aft
     });
     steps.push(`${label}: ${seen}`);
   };
+  // A record for the CI log: each change the editor makes while the keys go in, and where it came from.
+  await text(page).evaluate((element) => {
+    const { editor } = element as unknown as {
+      editor: {
+        on: (
+          event: 'transaction',
+          run: (props: {
+            transaction: {
+              steps: { toJSON: () => unknown }[];
+              docChanged: boolean;
+              getMeta: (key: string) => unknown;
+            };
+          }) => void,
+        ) => void;
+      };
+    };
+    const w = window as unknown as { __sceneChanges: string[] };
+    w.__sceneChanges = [];
+    editor.on('transaction', ({ transaction }) => {
+      if (!transaction.docChanged) return;
+      w.__sceneChanges.push(
+        `${JSON.stringify(transaction.steps.map((step) => step.toJSON()))} meta ${JSON.stringify(
+          [
+            'uiEvent',
+            'y-sync$',
+            'addToHistory',
+            'paste',
+            'composition',
+            'pointer',
+            'appendedTransaction',
+          ].map((key) => [key, Boolean(transaction.getMeta(key))]),
+        )}`,
+      );
+    });
+  });
   await record('before');
   for (const key of ' It kept on.') {
     await page.keyboard.type(key);
     await record(JSON.stringify(key));
   }
-  if (!(await text(page).innerText()).includes('The rain began. It kept on.')) console.log(steps.join('\n'));
+  if (!(await text(page).innerText()).includes('The rain began. It kept on.')) {
+    console.log(steps.join('\n'));
+    console.log(
+      `scene test changes:\n${(await page.evaluate(() => (window as unknown as { __sceneChanges: string[] }).__sceneChanges)).join('\n')}`,
+    );
+  }
   await expect(text(page)).toContainText('The rain began. It kept on.');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
