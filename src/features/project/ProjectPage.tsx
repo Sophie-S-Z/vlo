@@ -1,4 +1,5 @@
 import { BackupDialog } from '@/features/backup/BackupDialog';
+import { FOLDER_KEY } from '@/features/backup/folderKeys';
 import { Download, Search } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -19,7 +20,7 @@ import { formatWords } from '@/features/library/format';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
-import type { Item, Project } from '@/lib/db';
+import { db, type Item, type Project } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { withViewTransition } from '@/ui/motion';
@@ -108,6 +109,29 @@ export function ProjectPage() {
     },
     [],
   );
+
+  // Folder save (F29): when the writer leaves the project or the tab, Vlo writes the project to the
+  // folder the writer picked, if the writing changed. The code loads only when a save may run.
+  useEffect(() => {
+    const save = () => {
+      void db.appMeta
+        .get(FOLDER_KEY)
+        .then(async (row) => {
+          if (!row) return;
+          const { saveToFolderIfChanged } = await import('@/features/backup/folder');
+          await saveToFolderIfChanged(projectId);
+        })
+        .catch(() => undefined);
+    };
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') save();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      save();
+    };
+  }, [projectId]);
 
   // Mod-K opens the command menu from anywhere on the project screen, the editor included.
   // Over another dialog or menu, the key does nothing, so two dialogs never stack.

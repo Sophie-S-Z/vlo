@@ -267,10 +267,28 @@ Last update: 2026-11-04
     check. Browser tests back up, import in a fresh profile (US04), keep both, replace, refuse a wrong
     file, show and end the reminder, and show and close the Safari steps.
 
+- Phase 2 pull request B4: folder save in Chromium browsers (plan Task B9, F29).
+  - Settings > Backups > Save to a folder: the writer picks a folder once. Vlo keeps the folder in
+    `appMeta` and the browser keeps the permission.
+  - When the writer leaves a project, or leaves the tab, and the project changed after its last backup, Vlo
+    writes two files to a subfolder named after the project: the `.vlo.zip` backup (no music) and one
+    Markdown copy of the whole project. Each save replaces the two files. Vlo never deletes a file there.
+  - A save to the folder counts as a backup, so the card date and the reminder use it. Settings shows the
+    last save, or the save that failed. A failed save never stops the writer, and the text stays in the
+    browser.
+  - After a browser restart, Chrome asks again. The Library and Settings show "Allow saving to <folder>",
+    because the browser takes the answer only from a click.
+  - Firefox and Safari have no folder picker, so Settings shows no folder controls there.
+  - Checks: unit tests write to a folder in memory (the files, no folder, no permission, no change, a full
+    disk). The browser test picks a folder in the private file system of the browser, leaves a project and
+    reads the two files back.
+
 ## In progress
 
-- Phase 2 pull request B: B1 and B2 merged. B3 (backup and import) is in review. Next: B9, folder save for
-  Chromium (F29), if time allows.
+- Phase 2 pull request B: B1, B2 and B3 merged. B4 (folder save) is in review. Gate 2 follows.
+- Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
+  contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
+  window by hand.
 - Left for later: an EPUBCheck run in CI. EPUBCheck needs Java and a download from outside npm, so B2 uses
   its own structure test.
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
@@ -398,3 +416,6 @@ Last update: 2026-11-04
 | 2026-11-04 | The reminder needs changes since the last backup. A project with no backup counts from the day it was made.                                                                                                                                                                    | A project that did not change since its backup is still safe.                                                                                                                                                       |
 | 2026-11-04 | Import offers Replace or Keep both when the project is on this device.                                                                                                                                                                                                         | The spec says replace after a confirm. Keep both is safer when the writer is not sure which copy is newer.                                                                                                          |
 | 2026-11-04 | Music files are not part of a project, so a backup holds them only when the writer asks, and an import adds only the files that are not on the device.                                                                                                                         | Music files are large and every project shares them.                                                                                                                                                                |
+| 2026-11-04 | Folder save writes one Markdown file for the whole project, beside the backup.                                                                                                                                                                                                 | One file per project is easier to read in a cloud drive than one file per item, and the backup already holds each item.                                                                                             |
+| 2026-11-04 | Folder save runs when the writer leaves a project or the tab, and only after a change.                                                                                                                                                                                         | The spec says "after each session". Leaving is the end of a session, and the browser has no other safe moment.                                                                                                      |
+| 2026-11-04 | A save to the folder counts as a backup for the card date and the reminder.                                                                                                                                                                                                    | The folder holds the same `.vlo.zip` file that Back up makes.                                                                                                                                                       |

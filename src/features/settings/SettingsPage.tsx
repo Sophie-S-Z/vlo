@@ -5,6 +5,7 @@ import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { StorageHealth } from './StorageHealth';
+import { FolderSave } from '@/features/backup/FolderSave';
 import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
@@ -182,6 +183,7 @@ export function SettingsPage() {
             the Library, or with Back up project in the command menu. To move a project to another device,
             choose Import backup in the Library there.
           </p>
+          <FolderSave />
           <SafariSteps closable={false} className="mt-4" />
         </Section>
       </div>

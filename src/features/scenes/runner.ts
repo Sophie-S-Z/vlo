@@ -1,4 +1,4 @@
-import { createArt, STILL_TIME, type SceneArt } from './art';
+import { context2d, createArt, STILL_TIME, type SceneArt } from './art';
 import type { SceneId } from './scenes';
 
 /*
@@ -42,7 +42,7 @@ export class SceneRunner {
   setScene(scene: SceneId): void {
     if (scene === this.scene) return;
     this.scene = scene;
-    const ctx = this.canvas.getContext('2d');
+    const ctx = context2d(this.canvas);
     if (!ctx) return;
     this.art = createArt(scene, ctx);
     this.art.resize(this.width, this.height);

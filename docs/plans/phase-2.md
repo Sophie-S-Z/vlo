@@ -200,4 +200,7 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task B9: Folder save for Chromium (F29), if time allows
 
+- [x] The writer picks a folder in Settings. Leaving a changed project writes its backup and a Markdown copy to a subfolder named after it.
+- [x] After a browser restart, the Library and Settings ask for the folder again. Other browsers show no folder controls.
+
 **Gate 2:** US01 and US04 pass. The export fidelity suite passes at 100 % for every format and every new format. Each export opens in a reader by script where possible. Keystroke and open budgets still pass with a scene and shimmer on screen.

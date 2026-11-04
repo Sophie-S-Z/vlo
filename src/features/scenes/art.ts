@@ -35,8 +35,16 @@ function surface(width: number, height: number): Surface {
   return canvas;
 }
 
+/**
+ * The 2D context of a canvas or an offscreen canvas. Each type gets its own call, because TypeScript can
+ * pick the wrong getContext overload on the union, depending on the order it checks files.
+ */
+export function context2d(target: Surface): Ctx | null {
+  return 'transferControlToOffscreen' in target ? target.getContext('2d') : target.getContext('2d');
+}
+
 function context(target: Surface): Ctx {
-  const ctx = target.getContext('2d');
+  const ctx = context2d(target);
   if (!ctx) throw new Error('No 2D canvas context');
   return ctx;
 }
