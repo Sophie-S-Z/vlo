@@ -324,8 +324,11 @@ test('a saved look comes back in the gradient editor', async ({ page }) => {
 
 test('a click on the blank page under the text puts the caret after the last word', async ({ page }) => {
   await newNovel(page);
-  await page.keyboard.press('ControlOrMeta+Home');
-  await expect.poll(async () => (await editorSelection(scene(page))).from).toBe(1);
+  // The caret starts before the first word. See editorSelection.
+  await expect(async () => {
+    await page.keyboard.press('ControlOrMeta+Home');
+    await expect.poll(async () => (await editorSelection(scene(page))).from, { timeout: 1_000 }).toBe(1);
+  }).toPass();
   await scene(page).evaluate((root) => {
     root.blur();
   });
