@@ -169,9 +169,6 @@ test('on a device that draws the scene slowly, the scene goes still, says why, a
   });
   await expect(backdrop(page)).toHaveAttribute('data-still', 'slow', { timeout: 10_000 });
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
-  // The still scene shows as an image, so the device paints no canvas under the page.
-  await expect(backdrop(page)).toHaveAttribute('data-picture', 'true');
-  await expect(backdrop(page).locator('canvas')).toBeHidden();
   await page.evaluate(() => {
     (window as unknown as { __slowFrames: boolean }).__slowFrames = false;
   });
@@ -184,8 +181,6 @@ test('on a device that draws the scene slowly, the scene goes still, says why, a
   await scenePanel.getByRole('button', { name: 'Try the motion again' }).click();
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true');
   await expect(backdrop(page)).not.toHaveAttribute('data-still', 'slow');
-  await expect(backdrop(page)).not.toHaveAttribute('data-picture', 'true');
-  await expect(backdrop(page).locator('canvas')).toBeVisible();
   await expect(scenePanel.getByRole('status')).toHaveCount(0);
 });
 
@@ -201,12 +196,6 @@ test('in Calm mode the scene is a still picture', async ({ page }) => {
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
   // The still picture shows at once, before and under the canvas.
   expect(await backdrop(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/gradient/);
-  // Then the drawn scene shows as an image over it, and the canvas hides.
-  await expect(backdrop(page)).toHaveAttribute('data-picture', 'true');
-  expect(await backdrop(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(
-    /^url\("blob:.*gradient/,
-  );
-  await expect(backdrop(page).locator('canvas')).toBeHidden();
 });
 
 test('the scene picker has no serious axe issues, and a scene adds no horizontal scroll at 360 px', async ({
@@ -279,10 +268,6 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
     `[${browserName}] frames with a moving scene: median ${frames.median.toFixed(1)} ms, worst ${frames.worst.toFixed(1)} ms, worker canvas ${String(frames.offscreen)}`,
   );
 
-  // A record for the CI log: whether the scene went still on this device before the typing starts.
-  console.log(
-    `[${browserName}] scene still before typing: ${String(await backdrop(page).getAttribute('data-still'))}, picture ${String(await backdrop(page).getAttribute('data-picture'))}`,
-  );
   await text(page).click();
   await page.evaluate(() => {
     window.__keyDelays = [];
@@ -292,52 +277,5 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
   const sorted = [...delays].sort((a, b) => a - b);
   const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
   console.log(`[${browserName}] keystroke to paint with a scene, p95: ${p95.toFixed(1)} ms`);
-  // A record for the CI log: which keys were slow, in the order the writer typed them.
-  const slowKeys = delays.flatMap((delay, index) =>
-    delay >= 50 ? [`${String(index)}:${delay.toFixed(0)}`] : [],
-  );
-  console.log(`[${browserName}] slow keys with a scene: ${slowKeys.join(' ') || 'none'}`);
-  if (p95 >= 50) {
-    // A record for the CI log: the part of the scene that makes the frames slow on this device.
-    const variants: Record<string, string> = {
-      'as it is': '',
-      'shadow on the page itself':
-        '.vlo-scene-page::before { display: none !important; } .vlo-scene-page { box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55); }',
-      'page without its shadow': '.vlo-scene-page::before { display: none !important; }',
-      'scene hidden': '.vlo-scene { display: none !important; }',
-    };
-    for (const [name, css] of Object.entries(variants)) {
-      const style = await page.evaluate((rules) => {
-        const element = document.createElement('style');
-        element.textContent = rules;
-        document.head.append(element);
-        return true;
-      }, css);
-      expect(style).toBe(true);
-      await page.waitForTimeout(500);
-      const idle = await page.evaluate(
-        () =>
-          new Promise<number>((resolve) => {
-            const gaps: number[] = [];
-            let last = performance.now();
-            const step = (now: number) => {
-              gaps.push(now - last);
-              last = now;
-              if (gaps.length < 20) requestAnimationFrame(step);
-              else resolve([...gaps].sort((a, b) => a - b)[10] ?? 0);
-            };
-            requestAnimationFrame(step);
-          }),
-      );
-      const timed = [...(await typeAndTime(page, 'and the room went gold at the edges '))].sort(
-        (a, b) => a - b,
-      );
-      const variantP95 = timed[Math.ceil(timed.length * 0.95) - 1] ?? Infinity;
-      console.log(
-        `[${browserName}] scene variant "${name}": idle frame median ${idle.toFixed(0)} ms, keystroke p95 ${variantP95.toFixed(0)} ms`,
-      );
-      await page.evaluate(() => document.head.lastElementChild?.remove());
-    }
-  }
   expect(p95).toBeLessThan(50);
 });

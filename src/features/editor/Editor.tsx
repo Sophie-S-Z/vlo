@@ -17,6 +17,7 @@ import {
   useFindRequest,
 } from './commands/editorBus';
 import { commandsFor, matchesCommand, type EditorCommand } from './commands/registry';
+import { ClickBelow } from './extensions/clickBelow';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
 import { FootnoteList } from './FootnoteList';
@@ -122,6 +123,7 @@ export function Editor({
         ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
         ...(smart ? [SmartPunctuation] : []),
         FocusTools,
+        ClickBelow,
         TypingState,
         HeldSelection,
         ReadAloudMark,

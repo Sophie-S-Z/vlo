@@ -15,21 +15,11 @@ export type SceneMessage =
   | { type: 'scene'; scene: string }
   | { type: 'moving'; moving: boolean }
   /** The page showed a frame and has had a turn for its other work. */
-  | { type: 'shown' }
-  /** The page asks for the scene as it stands, as an image file, to show while the scene stays still. */
-  | { type: 'picture'; id: number };
-
-/** The worker's answer to a `picture` request. The blob is null when the canvas cannot make a file. */
-export interface ScenePicture {
-  type: 'picture';
-  id: number;
-  blob: Blob | null;
-}
+  | { type: 'shown' };
 
 declare const self: DedicatedWorkerGlobalScope;
 
 let runner: SceneRunner | null = null;
-let canvas: OffscreenCanvas | null = null;
 let shown = true;
 let waiting: (() => void) | null = null;
 
@@ -62,20 +52,7 @@ self.onmessage = (event: MessageEvent<SceneMessage>) => {
     next?.();
     return;
   }
-  if (message.type === 'picture') {
-    const answer = (blob: Blob | null) => {
-      const reply: ScenePicture = { type: 'picture', id: message.id, blob };
-      self.postMessage(reply);
-    };
-    if (!canvas) answer(null);
-    else
-      canvas.convertToBlob({ type: 'image/png' }).then(answer, () => {
-        answer(null);
-      });
-    return;
-  }
   if (message.type === 'start') {
-    canvas = message.canvas;
     runner = new SceneRunner(message.canvas, pagedSchedule);
     runner.resize(message.width, message.height);
     const scene = cleanScene(message.scene);

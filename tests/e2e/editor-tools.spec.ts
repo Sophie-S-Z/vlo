@@ -321,3 +321,26 @@ test('a saved look comes back in the gradient editor', async ({ page }) => {
   await panel.getByRole('button', { name: 'Use Night sea' }).click();
   await expect(scene(page).locator('span.vlo-fill-glow')).toHaveText('lights');
 });
+
+test('a click on the blank page under the text puts the caret after the last word', async ({ page }) => {
+  await newNovel(page);
+  await page.keyboard.press('ControlOrMeta+Home');
+  await expect.poll(async () => (await editorSelection(scene(page))).from).toBe(1);
+  await scene(page).evaluate((root) => {
+    root.blur();
+  });
+
+  // A point under the last line, inside the editor.
+  const box = await scene(page).evaluate((root) => {
+    const line = root.lastElementChild?.getBoundingClientRect();
+    const all = root.getBoundingClientRect();
+    // Near the left edge, where a browser would put the caret at the start of the last line.
+    return { x: all.left + 4, y: (line?.bottom ?? all.top) + 40, bottom: all.bottom };
+  });
+  expect(box.y).toBeLessThan(box.bottom);
+  await page.mouse.click(box.x, box.y);
+  await expect(scene(page)).toBeFocused();
+  await expect.poll(async () => (await editorSelection(scene(page))).from).toBe(LINE.length + 1);
+  await page.keyboard.type(' The tide turned.');
+  await expect(scene(page)).toHaveText(`${LINE} The tide turned.`);
+});
