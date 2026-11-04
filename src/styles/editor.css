@@ -358,6 +358,15 @@
   will-change: transform;
 }
 
+/* A scene that stays still shows as an image, so it needs no canvas and no layer of its own. */
+.vlo-scene[data-picture] {
+  will-change: auto;
+}
+
+.vlo-scene[data-picture] .vlo-scene-canvas {
+  display: none;
+}
+
 .vlo-fill::selection,
 .vlo-fill *::selection {
   -webkit-text-fill-color: var(--text);
@@ -585,5 +594,20 @@ html[data-calm='true'] .vlo-fill-shimmer {
   padding: var(--vlo-stage-pad);
   border-radius: var(--radius-card);
   background: var(--bg);
+}
+
+/*
+ * The page's wide soft shadow is on a layer of its own, behind the text. A key then repaints only the text,
+ * and not the shadow. With the shadow on the page itself, the CI WebKit, which paints in software, took
+ * about 65 ms more for each key.
+ */
+.vlo-scene-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
   box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55);
+  pointer-events: none;
+  will-change: transform;
 }

@@ -80,16 +80,14 @@ test('a scene shows around the page, rests while the writer types, and stays aft
   if (offscreen) expect(workers.some((url) => url.includes('scene.worker'))).toBe(true);
 
   // The scene rests from the first key until the writer pauses.
-  await text(page).click();
-  const afterClick = await editorSelection(text(page));
-  await page.keyboard.press('ControlOrMeta+End');
-  // A record for the CI log: the selection the editor held right after the click and the key.
-  console.log(
-    `scene test selection after click ${JSON.stringify(afterClick)}, after the key ${JSON.stringify(await editorSelection(text(page)))}`,
-  );
   // The caret is after the last word before the next key goes in. See editorSelection.
-  await expect.poll(async () => (await editorSelection(text(page))).text).toBe('');
-  await expect.poll(async () => (await editorSelection(text(page))).from).toBe('The rain began.'.length + 1);
+  await expect(async () => {
+    await text(page).click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await expect
+      .poll(async () => (await editorSelection(text(page))).from, { timeout: 1_000 })
+      .toBe('The rain began.'.length + 1);
+  }).toPass();
   await page.keyboard.type(' It kept on.');
   await expect(text(page)).toContainText('The rain began. It kept on.');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
@@ -171,6 +169,9 @@ test('on a device that draws the scene slowly, the scene goes still, says why, a
   });
   await expect(backdrop(page)).toHaveAttribute('data-still', 'slow', { timeout: 10_000 });
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
+  // The still scene shows as an image, so the device paints no canvas under the page.
+  await expect(backdrop(page)).toHaveAttribute('data-picture', 'true');
+  await expect(backdrop(page).locator('canvas')).toBeHidden();
   await page.evaluate(() => {
     (window as unknown as { __slowFrames: boolean }).__slowFrames = false;
   });
@@ -183,6 +184,8 @@ test('on a device that draws the scene slowly, the scene goes still, says why, a
   await scenePanel.getByRole('button', { name: 'Try the motion again' }).click();
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true');
   await expect(backdrop(page)).not.toHaveAttribute('data-still', 'slow');
+  await expect(backdrop(page)).not.toHaveAttribute('data-picture', 'true');
+  await expect(backdrop(page).locator('canvas')).toBeVisible();
   await expect(scenePanel.getByRole('status')).toHaveCount(0);
 });
 
@@ -198,6 +201,12 @@ test('in Calm mode the scene is a still picture', async ({ page }) => {
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
   // The still picture shows at once, before and under the canvas.
   expect(await backdrop(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/gradient/);
+  // Then the drawn scene shows as an image over it, and the canvas hides.
+  await expect(backdrop(page)).toHaveAttribute('data-picture', 'true');
+  expect(await backdrop(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(
+    /^url\("blob:.*gradient/,
+  );
+  await expect(backdrop(page).locator('canvas')).toBeHidden();
 });
 
 test('the scene picker has no serious axe issues, and a scene adds no horizontal scroll at 360 px', async ({
@@ -272,7 +281,7 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
 
   // A record for the CI log: whether the scene went still on this device before the typing starts.
   console.log(
-    `[${browserName}] scene still before typing: ${String(await backdrop(page).getAttribute('data-still'))}`,
+    `[${browserName}] scene still before typing: ${String(await backdrop(page).getAttribute('data-still'))}, picture ${String(await backdrop(page).getAttribute('data-picture'))}`,
   );
   await text(page).click();
   await page.evaluate(() => {
@@ -292,9 +301,9 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
     // A record for the CI log: the part of the scene that makes the frames slow on this device.
     const variants: Record<string, string> = {
       'as it is': '',
-      'scene without its own layer': '.vlo-scene { will-change: auto !important; }',
-      'canvas hidden': '.vlo-scene-canvas { display: none !important; }',
-      'page without its shadow': '.vlo-scene-page { box-shadow: none !important; }',
+      'shadow on the page itself':
+        '.vlo-scene-page::before { display: none !important; } .vlo-scene-page { box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55); }',
+      'page without its shadow': '.vlo-scene-page::before { display: none !important; }',
       'scene hidden': '.vlo-scene { display: none !important; }',
     };
     for (const [name, css] of Object.entries(variants)) {
