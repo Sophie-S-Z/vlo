@@ -31,23 +31,45 @@ async function start(page: Page, scene: string | null) {
   }
 }
 
-const cases: { name: string; scene: string | null; click: boolean; end: boolean }[] = [
-  { name: 'no scene, click, Ctrl+End', scene: null, click: true, end: true },
-  { name: 'scene, click, no Ctrl+End', scene: 'Rainy window', click: true, end: false },
-  { name: 'scene, focus, Ctrl+End', scene: 'Rainy window', click: false, end: true },
-  { name: 'scene, click, Ctrl+End', scene: 'Rainy window', click: true, end: true },
+const cases: { name: string; scene: string | null; css?: string; still?: boolean; wait?: number }[] = [
+  { name: 'no scene', scene: null },
+  { name: 'scene as it is', scene: 'Rainy window' },
+  { name: 'scene hidden', scene: 'Rainy window', css: '.vlo-scene { display: none !important; }' },
+  {
+    name: 'scene without its layer',
+    scene: 'Rainy window',
+    css: '.vlo-scene { will-change: auto !important; }',
+  },
+  {
+    name: 'page without its stacking',
+    scene: 'Rainy window',
+    css: '.vlo-scene-page { position: static !important; z-index: auto !important; }',
+  },
+  { name: 'still scene (reduced motion)', scene: 'Rainy window', still: true },
+  { name: 'scene after 6 s', scene: 'Rainy window', wait: 6_000 },
 ];
 
 for (const probe of cases) {
-  test(`probe: ${probe.name}`, async ({ page, browserName }) => {
-    test.skip(browserName !== 'webkit', 'The probe is for WebKit only.');
-    await start(page, probe.scene);
-    if (probe.click) await text(page).click();
-    else await text(page).focus();
-    if (probe.end) await page.keyboard.press('ControlOrMeta+End');
-    await page.waitForTimeout(500);
-    await page.keyboard.type(' It kept on.');
-    await page.waitForTimeout(300);
-    console.log(`[probe] ${probe.name}: ${JSON.stringify(await text(page).innerText())}`);
-  });
+  for (const round of [1, 2]) {
+    test(`probe: ${probe.name}, round ${String(round)}`, async ({ page, browserName }) => {
+      test.skip(browserName !== 'webkit', 'The probe is for WebKit only.');
+      await start(page, probe.scene);
+      if (probe.css) {
+        await page.addStyleTag({ content: probe.css });
+      }
+      if (probe.still) {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await expect(page.locator('.vlo-scene')).toHaveAttribute('data-moving', 'false');
+      }
+      if (probe.wait) await page.waitForTimeout(probe.wait);
+      await text(page).focus();
+      await page.keyboard.press('ControlOrMeta+End');
+      await page.waitForTimeout(500);
+      await page.keyboard.type(' It kept on.');
+      await page.waitForTimeout(300);
+      console.log(
+        `[probe] ${probe.name}, round ${String(round)}: ${JSON.stringify(await text(page).innerText())}`,
+      );
+    });
+  }
 }
