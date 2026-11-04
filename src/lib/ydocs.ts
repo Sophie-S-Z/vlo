@@ -96,6 +96,29 @@ function markSaved(persistence: IndexeddbPersistence, now: number): Promise<void
   });
 }
 
+/** The stored text of an item, as one Yjs update. An item with no stored text gives an empty document. */
+export async function readItemUpdate(itemId: string): Promise<Uint8Array> {
+  const open = openItemDoc(itemId);
+  try {
+    await open.ready;
+    return encodeDoc(open.doc);
+  } finally {
+    await open.close();
+  }
+}
+
+/** Stores a Yjs update as an item's text, and resolves when IndexedDB holds it. */
+export async function writeItemUpdate(itemId: string, update: Uint8Array, now: number): Promise<void> {
+  const open = openItemDoc(itemId);
+  try {
+    await open.ready;
+    Y.applyUpdate(open.doc, update);
+    await open.confirmSaved(now);
+  } finally {
+    await open.close();
+  }
+}
+
 export function encodeDoc(doc: Y.Doc): Uint8Array {
   return Y.encodeStateAsUpdate(doc);
 }

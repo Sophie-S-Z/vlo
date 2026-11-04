@@ -5,6 +5,7 @@ import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { StorageHealth } from './StorageHealth';
+import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 
@@ -173,6 +174,15 @@ export function SettingsPage() {
 
         <Section title="Storage">
           <StorageHealth />
+        </Section>
+
+        <Section title="Backups">
+          <p className="text-muted">
+            A backup is one .vlo.zip file with a whole project. Back up a project from the menu on its card in
+            the Library, or with Back up project in the command menu. To move a project to another device,
+            choose Import backup in the Library there.
+          </p>
+          <SafariSteps closable={false} className="mt-4" />
         </Section>
       </div>
     </div>

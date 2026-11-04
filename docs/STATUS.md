@@ -246,10 +246,31 @@ Last update: 2026-11-04
     spaces. The CI job "Export files open in other apps" installs LibreOffice and Poppler and runs them all.
     The browser tests download a PDF, an EPUB and a manuscript Word file.
 
+- Phase 2 pull request B3: full-project backup and import, the backup reminder and the Safari install steps
+  (plan Task B8, F06, US04).
+  - A backup (`features/backup/file.ts`) is one `.vlo.zip` file: `project.json` with every Dexie row of the
+    project, `items/<id>.yjs` with each item's text, `items/<id>.md` with a readable Markdown copy,
+    `snapshots/<id>.yjs`, and `music/<id>` only when the writer switches on "Include my music".
+  - Back up from the card menu in the Library, from the reminder, or with "Back up project…" in the
+    command menu. The card shows the last backup date. After 7 days without a backup, and with changes
+    since the last one, the card turns to the accent color and the Library shows "Time for a backup".
+  - Import backup (Library) checks the whole file before it stores anything: the format and its version,
+    each row, each id, each order key, the item tree, and each Yjs update and its schema. A backup of a
+    project that is not on this device goes in with its own ids. A backup of a project that is here asks
+    first: Replace, or Keep both (new ids and "(copy)" after the title). A failed import removes the text it
+    stored.
+  - Safari on a Mac, iPhone or iPad shows the steps to install Vlo as an app, in the Library (the writer can
+    close them) and in Settings. The steps say that the app has its own storage, so projects move to it
+    through backups.
+  - Checks: unit tests for the file, the round trip (identical rows and text after a delete and an
+    import), replace, copy, music, a failed import, each damaged-file case, the reminder and the Safari
+    check. Browser tests back up, import in a fresh profile (US04), keep both, replace, refuse a wrong
+    file, show and end the reminder, and show and close the Safari steps.
+
 ## In progress
 
-- Phase 2 pull request B: B1 merged. B2 (PDF, EPUB, standard manuscript format, font check) is in review.
-  Next: B3 (backup and import).
+- Phase 2 pull request B: B1 and B2 merged. B3 (backup and import) is in review. Next: B9, folder save for
+  Chromium (F29), if time allows.
 - Left for later: an EPUBCheck run in CI. EPUBCheck needs Java and a download from outside npm, so B2 uses
   its own structure test.
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
@@ -372,3 +393,8 @@ Last update: 2026-11-04
 | 2026-11-04 | PDF equations are drawn as text and lines from MathML, not as images.                                                                                                                                                                                                          | The words stay sharp and selectable at every zoom.                                                                                                                                                                  |
 | 2026-11-04 | `/fonts/*` gets `Cache-Control: public, max-age=86400`, and the SPA rewrite skips `/fonts/`.                                                                                                                                                                                   | File names carry no hash, so they cannot be immutable. A missing font must return 404.                                                                                                                              |
 | 2026-11-04 | The CI job `word-export` becomes `export-files` ("Export files open in other apps") and installs `poppler-utils`.                                                                                                                                                              | It now checks PDF and EPUB files too.                                                                                                                                                                               |
+| 2026-11-04 | The backup file has a `format`, a `version` and the item `docSchema` in `project.json`. Import refuses a newer version or a newer schema.                                                                                                                                      | An older build would drop formats it cannot show, and Yjs would save that loss.                                                                                                                                     |
+| 2026-11-04 | An imported project counts as backed up at the time its file was made.                                                                                                                                                                                                         | The file on the device is a backup of exactly that state.                                                                                                                                                           |
+| 2026-11-04 | The reminder needs changes since the last backup. A project with no backup counts from the day it was made.                                                                                                                                                                    | A project that did not change since its backup is still safe.                                                                                                                                                       |
+| 2026-11-04 | Import offers Replace or Keep both when the project is on this device.                                                                                                                                                                                                         | The spec says replace after a confirm. Keep both is safer when the writer is not sure which copy is newer.                                                                                                          |
+| 2026-11-04 | Music files are not part of a project, so a backup holds them only when the writer asks, and an import adds only the files that are not on the device.                                                                                                                         | Music files are large and every project shares them.                                                                                                                                                                |

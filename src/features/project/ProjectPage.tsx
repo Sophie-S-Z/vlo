@@ -1,3 +1,4 @@
+import { BackupDialog } from '@/features/backup/BackupDialog';
 import { Download, Search } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -66,6 +67,7 @@ export function ProjectPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
   const motion = useMotionAllowed();
   const navigate = useNavigate();
   const activeEditor = useActiveEditor();
@@ -199,6 +201,16 @@ export function ProjectPage() {
         // The export dialog opens after the menu closes, so the two dialogs never hold focus at once.
         afterMenu.current = () => {
           setExportOpen(true);
+        };
+      },
+    },
+    {
+      id: 'backup',
+      label: 'Back up project…',
+      keywords: ['backup', 'save', 'zip', 'copy', 'move', 'another device'],
+      run: () => {
+        afterMenu.current = () => {
+          setBackupOpen(true);
         };
       },
     },
@@ -360,6 +372,12 @@ export function ProjectPage() {
             )}
           </DialogContent>
         </Dialog>
+        <BackupDialog
+          project={backupOpen ? project : null}
+          onClose={() => {
+            setBackupOpen(false);
+          }}
+        />
         {exportOpen && (
           <Suspense fallback={null}>
             <ExportDialog

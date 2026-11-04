@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
+import { formatBytes } from '@/lib/bytes';
 import { db } from '@/lib/db';
 
 type Reading<T> = { status: 'checking' } | { status: 'known'; value: T } | { status: 'unknown' };
@@ -15,17 +16,6 @@ const CHECKING: StorageState = {
   quota: { status: 'checking' },
   persisted: { status: 'checking' },
 };
-
-function formatBytes(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit] ?? 'B'}`;
-}
 
 function show<T>(reading: Reading<T>, format: (value: T) => string): string {
   if (reading.status === 'checking') return 'Checking';
