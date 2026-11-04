@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
+import { editorSelection } from './support/selection';
 import { skipOnboarding } from './support/onboarding';
 
 /*
@@ -25,6 +26,16 @@ async function newNovel(page: Page) {
     .getByRole('button', { name: 'Create project' })
     .click();
   await expect(text(page)).toBeFocused();
+}
+
+/** Types the text one key every 30 ms and returns each key's time from keydown to paint. */
+async function typeAndTime(page: Page, typed: string): Promise<number[]> {
+  await page.evaluate(() => {
+    window.__keyDelays = [];
+  });
+  await page.keyboard.type(typed, { delay: 30 });
+  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+  return page.evaluate(() => window.__keyDelays);
 }
 
 async function pickScene(page: Page, name: string) {
@@ -70,7 +81,15 @@ test('a scene shows around the page, rests while the writer types, and stays aft
 
   // The scene rests from the first key until the writer pauses.
   await text(page).click();
+  const afterClick = await editorSelection(text(page));
   await page.keyboard.press('ControlOrMeta+End');
+  // A record for the CI log: the selection the editor held right after the click and the key.
+  console.log(
+    `scene test selection after click ${JSON.stringify(afterClick)}, after the key ${JSON.stringify(await editorSelection(text(page)))}`,
+  );
+  // The caret is after the last word before the next key goes in. See editorSelection.
+  await expect.poll(async () => (await editorSelection(text(page))).text).toBe('');
+  await expect.poll(async () => (await editorSelection(text(page))).from).toBe('The rain began.'.length + 1);
   await page.keyboard.type(' It kept on.');
   await expect(text(page)).toContainText('The rain began. It kept on.');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
@@ -260,9 +279,7 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
     window.__keyDelays = [];
   });
   const typed = 'The fire settled and the room went gold at the edges. '.repeat(2).slice(0, 100);
-  await page.keyboard.type(typed, { delay: 30 });
-  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
-  const delays = await page.evaluate(() => window.__keyDelays);
+  const delays = await typeAndTime(page, typed);
   const sorted = [...delays].sort((a, b) => a - b);
   const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
   console.log(`[${browserName}] keystroke to paint with a scene, p95: ${p95.toFixed(1)} ms`);
@@ -271,5 +288,47 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
     delay >= 50 ? [`${String(index)}:${delay.toFixed(0)}`] : [],
   );
   console.log(`[${browserName}] slow keys with a scene: ${slowKeys.join(' ') || 'none'}`);
+  if (p95 >= 50) {
+    // A record for the CI log: the part of the scene that makes the frames slow on this device.
+    const variants: Record<string, string> = {
+      'as it is': '',
+      'scene without its own layer': '.vlo-scene { will-change: auto !important; }',
+      'canvas hidden': '.vlo-scene-canvas { display: none !important; }',
+      'page without its shadow': '.vlo-scene-page { box-shadow: none !important; }',
+      'scene hidden': '.vlo-scene { display: none !important; }',
+    };
+    for (const [name, css] of Object.entries(variants)) {
+      const style = await page.evaluate((rules) => {
+        const element = document.createElement('style');
+        element.textContent = rules;
+        document.head.append(element);
+        return true;
+      }, css);
+      expect(style).toBe(true);
+      await page.waitForTimeout(500);
+      const idle = await page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            const gaps: number[] = [];
+            let last = performance.now();
+            const step = (now: number) => {
+              gaps.push(now - last);
+              last = now;
+              if (gaps.length < 20) requestAnimationFrame(step);
+              else resolve([...gaps].sort((a, b) => a - b)[10] ?? 0);
+            };
+            requestAnimationFrame(step);
+          }),
+      );
+      const timed = [...(await typeAndTime(page, 'and the room went gold at the edges '))].sort(
+        (a, b) => a - b,
+      );
+      const variantP95 = timed[Math.ceil(timed.length * 0.95) - 1] ?? Infinity;
+      console.log(
+        `[${browserName}] scene variant "${name}": idle frame median ${idle.toFixed(0)} ms, keystroke p95 ${variantP95.toFixed(0)} ms`,
+      );
+      await page.evaluate(() => document.head.lastElementChild?.remove());
+    }
+  }
   expect(p95).toBeLessThan(50);
 });
