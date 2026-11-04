@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
+import { editorSelection } from './support/selection';
 import { skipOnboarding } from './support/onboarding';
 import { useTool } from './support/tools';
 
@@ -106,6 +107,28 @@ test('keyboard only: Alt-F10 reaches the selection menu, Escape returns, and the
   await page.keyboard.type('/quo');
   await expect(scene(page)).toHaveAttribute('aria-activedescendant', /.+/);
   await page.keyboard.press('Enter');
+  // The caret is in the new quote before the next keys.
+  await expect
+    .poll(async () => {
+      const at = await editorSelection(scene(page));
+      return scene(page).evaluate((element, pos) => {
+        const { state } = (
+          element as unknown as {
+            editor: {
+              state: {
+                doc: {
+                  resolve: (p: number) => { node: (d: number) => { type: { name: string } }; depth: number };
+                };
+              };
+            };
+          }
+        ).editor;
+        const $pos = state.doc.resolve(pos);
+        for (let d = $pos.depth; d > 0; d--) if ($pos.node(d).type.name === 'blockquote') return true;
+        return false;
+      }, at.from);
+    })
+    .toBe(true);
   await page.keyboard.type('An epigraph.');
   await expect(scene(page).locator('blockquote')).toHaveText('An epigraph.');
 

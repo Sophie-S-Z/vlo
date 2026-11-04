@@ -25,12 +25,12 @@ const status = (page: Page) => panel(page).getByRole('status');
 async function watchAudio(page: Page) {
   await page.addInitScript(() => {
     window.__audio = { contexts: [], plays: [], oscillators: 0 };
+    const Real = window.AudioContext;
     const seen = (context: BaseAudioContext) => {
-      if (context instanceof AudioContext && !window.__audio.contexts.includes(context)) {
+      if (context instanceof Real && !window.__audio.contexts.includes(context)) {
         window.__audio.contexts.push(context);
       }
     };
-    const Real = window.AudioContext;
     window.AudioContext = class extends Real {
       constructor(options?: AudioContextOptions) {
         super(options);

@@ -3,11 +3,12 @@ import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { SCENE_FPS, SceneRunner, type Schedule } from './runner';
 import type { SceneMessage } from './scene.worker';
 import { sceneInfo, type SceneId } from './scenes';
+import { markSceneSlow, useSceneSlow, watchSceneFrames } from './slowScene';
 
 /*
  * The scene behind the manuscript column (plan Task A8). It stays in view while the text scrolls. Motion
  * runs only while the writer is not typing, the tab shows, the scene is on screen, and Calm mode and
- * reduced motion are off. Otherwise the scene is a still picture.
+ * reduced motion are off, and the device draws it fast enough. Otherwise the scene is a still picture.
  */
 
 /** The most device pixels per CSS pixel the scene draws at. The art is soft, so more costs without gain. */
@@ -126,7 +127,8 @@ export function SceneBackdrop({ scene }: { scene: SceneId }) {
   const motion = useMotionAllowed();
   const typing = useTyping();
   const shown = useTabShown();
-  const moving = motion && shown && onScreen && !typing;
+  const slow = useSceneSlow();
+  const moving = motion && shown && onScreen && !typing && !slow;
   // The latest scene and motion, for a driver that starts after a render. Effects run in order, so this one
   // runs before the driver effect below.
   const latest = useRef({ scene, moving });
@@ -185,6 +187,12 @@ export function SceneBackdrop({ scene }: { scene: SceneId }) {
     driver.current?.moving(moving);
   }, [moving]);
 
+  // Each time the scene starts to move, Vlo checks that the device keeps up.
+  useEffect(() => {
+    if (!moving) return;
+    return watchSceneFrames(markSceneSlow);
+  }, [moving]);
+
   return (
     <div
       ref={frame}
@@ -192,6 +200,7 @@ export function SceneBackdrop({ scene }: { scene: SceneId }) {
       className="vlo-scene"
       data-scene={scene}
       data-moving={moving ? 'true' : 'false'}
+      data-still={slow ? 'slow' : undefined}
       style={{ background: sceneInfo(scene).still }}
     >
       <canvas key={mode} ref={canvas} className="vlo-scene-canvas" />

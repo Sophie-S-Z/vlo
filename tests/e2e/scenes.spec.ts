@@ -126,6 +126,44 @@ test('with reduced motion or a hidden tab the scene stays still, and it moves ag
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true');
 });
 
+test('on a device that draws the scene slowly, the scene goes still, says why, and can try again', async ({
+  page,
+}) => {
+  await newNovel(page);
+  await pickScene(page, 'Night sky');
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
+
+  // Each frame takes 120 ms of main-thread work, as on a slow device.
+  await page.evaluate(() => {
+    const w = window as unknown as { __slowFrames: boolean };
+    w.__slowFrames = true;
+    const busy = () => {
+      if (!w.__slowFrames) return;
+      const end = performance.now() + 120;
+      while (performance.now() < end) {
+        // Hold the main thread.
+      }
+      requestAnimationFrame(busy);
+    };
+    requestAnimationFrame(busy);
+  });
+  await expect(backdrop(page)).toHaveAttribute('data-still', 'slow', { timeout: 10_000 });
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
+  await page.evaluate(() => {
+    (window as unknown as { __slowFrames: boolean }).__slowFrames = false;
+  });
+
+  await picker(page).click();
+  const scenePanel = page.getByRole('dialog', { name: 'Scene' });
+  await expect(scenePanel.getByRole('status')).toHaveText(
+    /This device drew the moving scene slowly, so the scene stays still and your typing stays quick\./,
+  );
+  await scenePanel.getByRole('button', { name: 'Try the motion again' }).click();
+  await expect(backdrop(page)).toHaveAttribute('data-moving', 'true');
+  await expect(backdrop(page)).not.toHaveAttribute('data-still', 'slow');
+  await expect(scenePanel.getByRole('status')).toHaveCount(0);
+});
+
 test('in Calm mode the scene is a still picture', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('vlo:preferences', JSON.stringify({ theme: 'system', calm: true }));

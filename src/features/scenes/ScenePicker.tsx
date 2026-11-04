@@ -6,6 +6,7 @@ import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { NO_SCENE, SCENES, type SceneChoice } from './scenes';
+import { retrySceneMotion, useSceneSlow } from './slowScene';
 
 const tileClass =
   'group grid gap-1.5 rounded-md p-1 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-accent';
@@ -20,6 +21,7 @@ export function ScenePicker({
 }) {
   const titleId = useId();
   const motion = useMotionAllowed();
+  const slow = useSceneSlow();
   const label = SCENES.find((s) => s.id === scene)?.label ?? 'No scene';
 
   return (
@@ -77,6 +79,20 @@ export function ScenePicker({
             ? 'The scene moves gently and rests while you type.'
             : 'Calm mode or reduced motion is on, so the scene stays still.'}
         </p>
+        {motion && slow && scene !== NO_SCENE && (
+          <div role="status" className="grid gap-2 rounded-md border border-rule bg-bg p-2 text-xs">
+            <p>
+              This device drew the moving scene slowly, so the scene stays still and your typing stays quick.
+            </p>
+            <Button
+              variant="ghost"
+              className="justify-self-start px-2 pointer-fine:min-h-8"
+              onClick={retrySceneMotion}
+            >
+              Try the motion again
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

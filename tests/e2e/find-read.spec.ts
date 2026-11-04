@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { editorSelection } from './support/selection';
 
 /*
  * Task A10: find and replace (E1), read aloud (E2) and writing stats (E4).
@@ -142,12 +143,12 @@ test('Mod-H opens the bar at Replace; selected words become the search; Escape s
   page,
 }) => {
   await newNovel(page, 'Desk, a lamp, a lamp again.');
-  // Select "Desk" with the keyboard. The editor reads inserted text a moment later and then puts the caret
-  // after it, which can undo a Ctrl+Home pressed at once, so the keys repeat until "Desk" is selected.
+  // Select "Desk" with the keyboard. A caret move right after inserted text can be lost, so the keys repeat
+  // until the editor holds the selection.
   await expect(async () => {
     await page.keyboard.press('ControlOrMeta+Home');
     for (let i = 0; i < 4; i++) await page.keyboard.press('Shift+ArrowRight');
-    expect(await page.evaluate(() => String(window.getSelection()))).toBe('Desk');
+    await expect.poll(async () => (await editorSelection(text(page))).text, { timeout: 1000 }).toBe('Desk');
   }).toPass();
   await page.keyboard.press('ControlOrMeta+f');
   await expect(findField(page)).toHaveValue('Desk');
@@ -199,7 +200,11 @@ test('read aloud uses on-device voices only, marks each sentence, and Pause and 
   await newNovel(page, 'The tide came in. The gulls went quiet.');
   await page.keyboard.press('Enter');
   await page.keyboard.insertText('Night fell.');
-  await page.keyboard.press('ControlOrMeta+Home');
+  // A caret move right after inserted text can be lost, so the key repeats until the editor holds it.
+  await expect(async () => {
+    await page.keyboard.press('ControlOrMeta+Home');
+    await expect.poll(async () => (await editorSelection(text(page))).from, { timeout: 1000 }).toBe(1);
+  }).toPass();
 
   const panel = await openReadAloud(page);
   const voice = panel.getByRole('combobox', { name: 'Voice' });
