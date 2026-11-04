@@ -219,7 +219,10 @@ test('the scene picker has no serious axe issues, and a scene adds no horizontal
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
+// The budget is 50 ms. The CI WebKit paints in software and gets a 150 ms ceiling (product owner choice,
+// 2026-11-04). Real Safari is checked by hand against 50 ms.
 test('typing with a moving scene stays under 50 ms at p95', async ({ page, browserName }) => {
+  const ceiling = browserName === 'webkit' ? 150 : 50;
   await page.addInitScript(() => {
     window.__keyDelays = [];
     window.addEventListener(
@@ -277,5 +280,12 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
   const sorted = [...delays].sort((a, b) => a - b);
   const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
   console.log(`[${browserName}] keystroke to paint with a scene, p95: ${p95.toFixed(1)} ms`);
-  expect(p95).toBeLessThan(50);
+  // A record for the CI log: the slowest keys and where they fell in the typing.
+  const slowest = delays
+    .map((delay, index) => ({ delay, index }))
+    .sort((a, b) => b.delay - a.delay)
+    .slice(0, 8)
+    .map(({ delay, index }) => `#${String(index)} ${delay.toFixed(0)} ms`);
+  console.log(`[${browserName}] slowest keys with a scene: ${slowest.join(', ')}`);
+  expect(p95).toBeLessThan(ceiling);
 });

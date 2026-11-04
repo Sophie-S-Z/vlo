@@ -207,9 +207,9 @@ Last update: 2026-11-03
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
 - Real Safari: check plain typing on the 10,000-word scene (budget 50 ms) by hand in Phase 6. CI WebKit has a
   100 ms ceiling for that test.
-- CI WebKit: typing with a scene takes 104 to 192 ms at p95, and the budget is 50 ms. The scene goes still
-  there, as on any slow device. Timing each part alone showed the page shadow and the scene layer cost the
-  most. A scene image and a shadow layer did not help, so they were taken back. Product owner choice pending.
+- Real Safari: check typing with a moving scene (budget 50 ms) by hand in Phase 6. CI WebKit has a 150 ms
+  ceiling for that test. It takes 122 to 207 ms there. Timing each part alone showed the page shadow and the
+  scene layer cost the most. A scene image and a shadow layer did not help, so they were taken back.
 - CI Firefox: 3 to 9 tests a run time out in their first page.goto, on every run since the first phases. Each
   one passes on its retry. The stuck load never reaches DOMContentLoaded, so the stall is before the page
   runs. A wait for the HTML first and a fixed 127.0.0.1 address did not change it, so both were taken back.
@@ -269,6 +269,7 @@ Last update: 2026-11-03
 | 2026-11-03 | CI WebKit holds the open budget to a 700 ms ceiling. Real Safari is checked by hand in Phase 6.                                                                                           | Linux WebKit in CI takes 364 to 567 ms and varies by up to 200 ms per run (product owner decision).                                                                                            |
 | 2026-11-03 | CI WebKit holds plain typing on the 10,000-word scene to a 100 ms ceiling. Real Safari is checked by hand in Phase 6.                                                                     | Linux WebKit in CI takes 58 to 65 ms at p95 for this test. Chromium and Firefox stay under 50 ms (product owner decision).                                                                     |
 | 2026-11-03 | CI WebKit holds typing with 500 shimmering runs to a 120 ms ceiling. Real Safari is checked by hand before A1 merges.                                                                     | Linux WebKit in CI repaints every visible fill run on each key. A paint layer for texts with fills cut p95 from 141 ms to 65 ms, and runners vary by up to two times (product owner decision). |
+| 2026-11-04 | CI WebKit holds typing with a moving scene to a 150 ms ceiling. Real Safari is checked by hand in Phase 6.                                                                                | Linux WebKit in CI paints in software and takes 122 to 207 ms at p95 for this test. Chromium and Firefox stay under 50 ms (product owner decision).                                            |
 | 2026-11-02 | Storage health says "Unknown" and "Limit for Vlo", not "Not available" and "Quota".                                                                                                       | "Limit for Vlo" says what the number means. "Unknown" matches the other rows.                                                                                                                  |
 | 2026-11-03 | New marks beyond section 7: `superscript`, `subscript`, `highlight` (color), `textStyle` (color, font size), `textFill`.                                                                  | Phase 2 editor tools (plan decision 12).                                                                                                                                                       |
 | 2026-11-03 | New attributes: `textAlign`, `lineSpacing`, `firstLineIndent` and `dropCap` on paragraphs and headings.                                                                                   | Phase 2 block tools, prose only.                                                                                                                                                               |
