@@ -97,7 +97,9 @@ async function watchEvents(page: Page) {
           .getTargetRanges()
           .map((r) => `${where(r.startContainer, r.startOffset)}-${where(r.endContainer, r.endOffset)}`)
           .join(', ');
-        log.push(`beforeinput ${input.inputType} ${JSON.stringify(input.data)} ranges [${ranges}] | sel ${sel()}`);
+        log.push(
+          `beforeinput ${input.inputType} ${JSON.stringify(input.data)} ranges [${ranges}] | sel ${sel()}`,
+        );
       },
       true,
     );
@@ -139,7 +141,9 @@ for (const probe of cases) {
       await page.keyboard.press('ControlOrMeta+End');
       await page.waitForTimeout(500);
       if (probe.log) {
-        await page.evaluate(() => (window as unknown as { __probe: string[] }).__probe.push('--- typing ---'));
+        await page.evaluate(() =>
+          (window as unknown as { __probe: string[] }).__probe.push('--- typing ---'),
+        );
         await page.keyboard.type(' I');
         await page.waitForTimeout(200);
         const log = await page.evaluate(() => (window as unknown as { __probe: string[] }).__probe);
