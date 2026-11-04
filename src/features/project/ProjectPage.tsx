@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Binder } from '@/features/binder/Binder';
@@ -8,10 +8,14 @@ import { runCommand, useActiveEditor } from '@/features/editor/commands/editorBu
 import { shortcutLabel } from '@/features/editor/commands/keys';
 import { commandsFor } from '@/features/editor/commands/registry';
 import { EditorPane } from '@/features/editor/EditorPane';
+import { wordsToday } from '@/features/editor/stats/stats';
+import { WritingStats } from '@/features/editor/stats/WritingStats';
+import { pause as stopSound } from '@/features/sound/controller';
 import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
+import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
 import type { Item, Project } from '@/lib/db';
@@ -63,11 +67,40 @@ export function ProjectPage() {
   // A format action runs after the command menu closes, so focus goes back to the text first.
   const afterMenu = useRef<(() => void) | null>(null);
 
+  const [settingsError, setSettingsError] = useState('');
+  // The font and the page format belong to the project, so every item and every tab follows them.
+  const changeSettings = useCallback(
+    (change: Partial<Project['settings']>) => {
+      setSettingsError('');
+      updateProjectSettings(projectId, change).catch(() => {
+        setSettingsError(
+          'Vlo could not save that setting. Check the storage space on this device and try again.',
+        );
+      });
+    },
+    [projectId],
+  );
+
   const changeFocusMode = (on: boolean) => {
     withViewTransition(motion, () => {
       setFocusMode(on);
     });
   };
+
+  // The day's word count starts from the project total at the first look each day, so it starts when
+  // the project opens and not when the writer first shows the details.
+  const readyTotal = state.status === 'ready' ? state.items.reduce((sum, i) => sum + i.wordCount, 0) : null;
+  useEffect(() => {
+    if (readyTotal !== null) void wordsToday(projectId, readyTotal);
+  }, [projectId, readyTotal]);
+
+  // Sound belongs to the writing space: leaving the project stops it.
+  useEffect(
+    () => () => {
+      stopSound();
+    },
+    [],
+  );
 
   // Mod-K opens the command menu from anywhere on the project screen, the editor included.
   // Over another dialog or menu, the key does nothing, so two dialogs never stack.
@@ -222,34 +255,48 @@ export function ProjectPage() {
           }
           binder={<Binder project={project} items={items} openItemId={item?.id ?? null} onOpen={open} />}
           details={
-            <dl className="grid gap-3 text-sm">
-              <div>
-                <dt className="text-muted">Project</dt>
-                <dd className="font-mono">{formatWords(totalWords)}</dd>
-              </div>
-              {item && (
-                <>
-                  <div>
-                    <dt className="text-muted">{template.kindLabel[item.kind] ?? item.kind}</dt>
-                    <dd>{STATUS_LABEL[item.status]}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Synopsis</dt>
-                    <dd>{item.synopsis ?? 'None yet. Add one from the binder item menu.'}</dd>
-                  </div>
-                </>
-              )}
-            </dl>
+            <>
+              <dl className="grid gap-3 text-sm">
+                <div>
+                  <dt className="text-muted">Project</dt>
+                  <dd className="font-mono">{formatWords(totalWords)}</dd>
+                </div>
+                {item && (
+                  <>
+                    <div>
+                      <dt className="text-muted">{template.kindLabel[item.kind] ?? item.kind}</dt>
+                      <dd>{STATUS_LABEL[item.status]}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted">Synopsis</dt>
+                      <dd>{item.synopsis ?? 'None yet. Add one from the binder item menu.'}</dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+              {item && kind && <WritingStats projectId={project.id} totalWords={totalWords} />}
+            </>
           }
           manuscript={(width) =>
             item && kind ? (
-              <EditorPane
-                key={item.id}
-                item={item}
-                kind={kind}
-                width={width}
-                snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
-              />
+              <>
+                {settingsError && (
+                  <p role="alert" className="mx-auto mb-3 max-w-prose text-sm text-accent-text">
+                    {settingsError}
+                  </p>
+                )}
+                <EditorPane
+                  key={item.id}
+                  item={item}
+                  kind={kind}
+                  width={width}
+                  snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
+                  font={project.settings.font}
+                  page={project.settings.page}
+                  scene={project.settings.scene}
+                  onSettings={changeSettings}
+                />
+              </>
             ) : (
               <p className="text-muted">Add an item from the binder to start writing.</p>
             )

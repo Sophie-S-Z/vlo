@@ -44,6 +44,34 @@ function createStore<T>(initial: T) {
 const active = createStore<ActiveEditor | null>(null);
 const panel = createStore<PanelRequest | null>(null);
 
+/** An open find bar: its editor and the field that takes focus. `at` changes on each request. */
+export interface FindRequest {
+  editor: Editor;
+  field: 'find' | 'replace';
+  at: number;
+}
+
+const find = createStore<FindRequest | null>(null);
+let findRequests = 0;
+
+/** Opens the find bar of this editor, or moves focus to the field again when it is open. */
+export function openFind(editor: Editor, field: 'find' | 'replace'): void {
+  findRequests += 1;
+  find.set({ editor, field, at: findRequests });
+}
+
+export function closeFind(): void {
+  find.set(null);
+}
+
+export function getFindRequest(): FindRequest | null {
+  return find.get();
+}
+
+export function useFindRequest(): FindRequest | null {
+  return useSyncExternalStore(find.subscribe, find.get, find.get);
+}
+
 export function setActiveEditor(next: ActiveEditor | null): void {
   active.set(next);
 }

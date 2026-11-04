@@ -3,7 +3,7 @@ import { formatWords } from '@/features/library/format';
 /** The item's word count (and line count for poems). It changes only after a typing pause. */
 export function WordCount({ words, lines }: { words: number; lines?: number | undefined }) {
   return (
-    <p className="overflow-hidden font-mono text-sm text-muted">
+    <p className="overflow-hidden font-mono whitespace-nowrap text-sm text-muted">
       {/* The key restarts the roll each time the count changes. Calm mode makes it instant. */}
       <span key={words} className="vlo-roll inline-block">
         {formatWords(words)}

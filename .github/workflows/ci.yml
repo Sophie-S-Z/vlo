@@ -50,6 +50,15 @@ jobs:
       - run: npm ci
       - name: Install the browser
         run: npx playwright install --with-deps ${{ matrix.project == 'mobile-chrome' && 'chromium' || matrix.project }}
+      # The runner has no sound card. Firefox and WebKit play Web Audio only to a real output, so a
+      # PulseAudio null sink gives them a silent one, as a computer with speakers would.
+      - name: Start a silent sound output
+        if: matrix.project == 'firefox' || matrix.project == 'webkit'
+        run: |
+          sudo apt-get install -y --no-install-recommends pulseaudio gstreamer1.0-pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=silent
+          pactl set-default-sink silent
       - run: npx playwright test --project=${{ matrix.project }}
         env:
           CI: 'true'

@@ -133,39 +133,39 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task A6: Math with MathLive
 
-- [ ] Nodes `mathInline` and `mathBlock` (block only in prose) with attribute `latex`.
-- [ ] A popover with `<math-field>` and the MathLive virtual keyboard. Templates for fractions, roots, powers, sums, integrals, matrices and chemistry. The writer never needs to see LaTeX, and a "Show LaTeX" switch shows it for writers who want it.
-- [ ] Static render in the node view with MathLive markup. MathLive loads on first use only.
-- [ ] Tests: insert a fraction with buttons only; reload keeps it; a poem line with math keeps its hanging indent (Review Focus 4); Pen mode test shows no new origin.
+- [x] Nodes `mathInline` and `mathBlock` (block only in prose) with attribute `latex`.
+- [x] A popover with `<math-field>` and the MathLive virtual keyboard. Templates for fractions, roots, powers, sums, integrals, matrices and chemistry. The writer never needs to see LaTeX, and a "Show LaTeX" switch shows it for writers who want it.
+- [x] Static render in the node view with MathLive markup. MathLive loads on first use only.
+- [x] Tests: insert a fraction with buttons only; reload keeps it; a poem line with math keeps its hanging indent (Review Focus 4); Pen mode test shows no new origin.
 
 ### Task A7: Fonts and page format
 
-- [ ] Font menu: 20 Vlo fonts grouped as Book serifs, Display, Sans, Typewriter, Handwriting, Reading-friendly. Each font loads on first use. A project default font and a per-selection font.
-- [ ] Own fonts: Local Font Access in Chrome and Edge after the writer allows it; a "Type a font name" field elsewhere (Decision 7).
-- [ ] Page format setting per project: Pageless (default), Letter, A4. Sheet, margins and page-end lines with page numbers (Decision 8). Page zoom (E7).
-- [ ] Tests: font loads only when picked; page lines appear after a pause and not during typing; measuring time on the 10,000-word scene (Review Focus 5).
+- [x] Font menu: 20 Vlo fonts grouped as Book serifs, Display, Sans, Typewriter, Handwriting, Reading-friendly. Each font loads on first use. A project default font and a per-selection font.
+- [x] Own fonts: Local Font Access in Chrome and Edge after the writer allows it; a "Type a font name" field elsewhere (Decision 7).
+- [x] Page format setting per project: Pageless (default), Letter, A4. Sheet, margins and page-end lines with page numbers (Decision 8). Page zoom (E7).
+- [x] Tests: font loads only when picked; page lines appear after a pause and not during typing; measuring time on the 10,000-word scene (Review Focus 5).
 
 ### Task A8: Cozy scenes
 
-- [ ] Six scenes (Decision 11) with a still fallback image drawn in CSS for Calm mode and reduced motion.
-- [ ] Scene picker in the toolbar. The choice saves per project.
-- [ ] Tests: motion stops under Calm mode, reduced motion and a hidden tab; keystroke budget with a scene on; axe.
+- [x] Six scenes (Decision 11) with a still fallback image drawn in CSS for Calm mode and reduced motion.
+- [x] Scene picker in the toolbar. The choice saves per project.
+- [x] Tests: motion stops under Calm mode, reduced motion and a hidden tab; keystroke budget with a scene on; axe.
 
 ### Task A9: Sound: nature, lofi and own music
 
-- [ ] Web Audio engine, loaded on first Play: rain, waves, wind, stream, fire, café murmur, forest birds and a night chorus, each from filtered noise and simple synthesis.
-- [ ] Generative lofi: a soft drum kit made from noise and oscillators, warm chords from a set of progressions, bass, vinyl crackle, tempo 70 to 90. Moods: Lofi, Melancholic, Soulful, Deep house, Dream pop. Each mood changes chords, tempo and drum pattern.
-- [ ] Mixer with a volume per layer, a master volume and a sleep timer.
-- [ ] Own music: add files, a playlist, shuffle and repeat, kept in Dexie table `audioFiles` (Decision 10). Schema version bump with an upgrade test.
-- [ ] Typewriter key sounds (E8).
-- [ ] Tests: nothing plays before Play; Calm mode stops scene sound from starting; a broken or very large file shows a message (Review Focus 6); US09 with music on.
+- [x] Web Audio engine, loaded on first Play: rain, waves, wind, stream, fire, café murmur, forest birds and a night chorus, each from filtered noise and simple synthesis.
+- [x] Generative lofi: a soft drum kit made from noise and oscillators, warm chords from a set of progressions, bass, vinyl crackle, tempo 70 to 90. Moods: Lofi, Melancholic, Soulful, Deep house, Dream pop. Each mood changes chords, tempo and drum pattern.
+- [x] Mixer with a volume per layer, a master volume and a sleep timer.
+- [x] Own music: add files, a playlist, shuffle and repeat, kept in Dexie table `audioFiles` (Decision 10). Schema version bump with an upgrade test.
+- [x] Typewriter key sounds (E8).
+- [x] Tests: nothing plays before Play; Calm mode stops scene sound from starting; a broken or very large file shows a message (Review Focus 6); US09 with music on.
 
 ### Task A10: Find and replace, read aloud, writing stats
 
-- [ ] Find and replace (E1) with decorations, match case and whole word.
-- [ ] Read aloud (E2) with device voices only (`localService === true`), and a message when the device has none.
-- [ ] Writing stats (E4) in the details panel.
-- [ ] Tests for each, and the impeccable audit of the editor (section 13).
+- [x] Find and replace (E1) with decorations, match case and whole word.
+- [x] Read aloud (E2) with device voices only (`localService === true`), and a message when the device has none.
+- [x] Writing stats (E4) in the details panel.
+- [x] Tests for each, and the impeccable audit of the editor (section 13).
 
 **Pull request A1:** Tasks A1 to A5. **Pull request A2:** Tasks A6 to A10.
 

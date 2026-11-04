@@ -49,10 +49,11 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['undo', 'redo'] },
       { tools: ['bold', 'italic'] },
       { tools: ['underline', 'strike'], wide: true },
-      { tools: ['color', 'highlight', 'gradient'], wide: true },
-      { tools: ['link', 'characters', 'footnote'], wide: true },
+      { tools: ['font', 'color', 'highlight', 'gradient'], wide: true },
+      { tools: ['characters', 'footnote'], wide: true },
     ],
     more: [
+      'link',
       'superscript',
       'subscript',
       'size',
@@ -60,6 +61,11 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'first-line-indent',
       'drop-cap',
       'scene-break',
+      'math',
+      'math-block',
+      'find',
+      'replace',
+      'read-aloud',
       'clear',
       'shortcuts',
     ],
@@ -71,17 +77,16 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['undo', 'redo'] },
       { tools: ['bold', 'italic'], wide: true },
       { tools: ['underline', 'strike'], wide: true },
-      { tools: ['color', 'highlight', 'gradient'], wide: true },
-      { tools: ['characters', 'footnote'], wide: true },
+      { tools: ['font', 'color', 'highlight', 'gradient'], wide: true },
+      { tools: ['characters', 'footnote', 'math'], wide: true },
     ],
-    more: ['superscript', 'subscript', 'size', 'clear', 'shortcuts'],
+    more: ['superscript', 'subscript', 'size', 'find', 'replace', 'read-aloud', 'clear', 'shortcuts'],
   },
 };
 
-function Separator({ wide = false }: { wide?: boolean }) {
-  return (
-    <ToolbarPrimitive.Separator className={cn('mx-0.5 h-6 w-px shrink-0 bg-rule', wide && 'max-sm:hidden')} />
-  );
+/** Phones show no separators: the six phone tools then fit one row at 360 px. */
+function Separator() {
+  return <ToolbarPrimitive.Separator className="mx-0.5 h-6 w-px shrink-0 bg-rule max-sm:hidden" />;
 }
 
 /** The formatting toolbar. */
@@ -100,7 +105,7 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
   const state = useCommandState(editor, all);
   const at = (id: string) => state[id] ?? NO_STATE;
   const more = useRef<HTMLButtonElement>(null);
-  // A panel chosen from a menu opens after the menu has closed and given focus back.
+  // A tool chosen from a menu runs after the menu has closed and given focus back.
   const pending = useRef<EditorCommand | null>(null);
 
   const run = (cmd: EditorCommand, anchor: PanelAnchor) => {
@@ -111,7 +116,7 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
     pending.current = null;
     event.preventDefault();
     if (next) run(next, anchor ?? 'caret');
-    // A tool that opened a panel as it ran, such as Footnote, keeps the focus it gave the panel.
+    // A menu closed with no choice gives focus back to the text, unless a panel is open.
     else if (getPanelRequest()?.editor !== editor) focusText(editor);
   };
 
@@ -147,10 +152,10 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
         )}
       </>
     );
+    // Every tool waits until the menu has closed and given focus back. A tool that opens a panel, such as
+    // Equation, would otherwise lose that panel when the closing menu takes focus.
     const select = () => {
-      // Run tools act at once. A panel waits until the menu has closed, so the two never fight for focus.
-      if (cmd.kind === 'run') runCommand(editor, cmd);
-      else pending.current = cmd;
+      pending.current = cmd;
     };
     const className = cn(narrow && 'sm:hidden');
     // Toggles show a check, so the menu says which formats are on.
@@ -177,7 +182,7 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
         aria-label="Formatting"
         data-chrome=""
         data-vlo-toolbar=""
-        className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-0.5 border-b border-rule bg-bg px-1 py-1"
+        className="flex flex-wrap items-center gap-0.5 border-b border-rule bg-bg px-1 py-1"
       >
         {layout.segments[0] && <SegmentButtons segment={layout.segments[0]} at={at} onRun={run} />}
 
@@ -216,14 +221,14 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
 
         {layout.segments.slice(1).map((segment) => (
           <Fragment key={segment.tools.join()}>
-            <Separator wide={segment.wide ?? false} />
+            <Separator />
             <SegmentButtons segment={segment} at={at} onRun={run} />
           </Fragment>
         ))}
 
         {layout.alignMenu.length > 0 && (
           <>
-            <Separator wide />
+            <Separator />
             <DropdownMenu modal={false}>
               <ToolbarPrimitive.Button asChild>
                 <DropdownMenuTrigger

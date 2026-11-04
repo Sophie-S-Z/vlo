@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { db, type Item, type Project, type Snapshot } from '@/lib/db';
+import { Dexie } from 'dexie';
+import { db, VloDb, type Item, type Project, type Snapshot } from '@/lib/db';
 
 function project(id: string): Project {
   return {
@@ -36,17 +37,52 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 1 has exactly the six Phase 1 tables', () => {
+  test('version 2 has the six Phase 1 tables and the music files table', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(1);
+    expect(db.verno).toBe(2);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
+      'audioFiles',
       'itemTexts',
       'items',
       'projects',
       'sessions',
       'snapshots',
     ]);
+  });
+
+  test('opening a version 1 database keeps its rows and adds the music files table', async () => {
+    const name = 'vlo-upgrade-test';
+    const old = new Dexie(name);
+    old.version(1).stores({
+      projects: 'id, updatedAt',
+      items: 'id, projectId, [projectId+parentId]',
+      snapshots: 'id, itemId, [itemId+createdAt], projectId',
+      sessions: 'id, projectId',
+      itemTexts: 'itemId, projectId',
+      appMeta: 'key',
+    });
+    await old.open();
+    await old.table('projects').add(project('kept'));
+    await old.table('items').add(item('a', 'kept', null, 'a0'));
+    old.close();
+
+    const upgraded = new VloDb(name);
+    await upgraded.open();
+    expect(upgraded.verno).toBe(2);
+    expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
+    expect(await upgraded.items.count()).toBe(1);
+    await upgraded.audioFiles.add({
+      id: 'f1',
+      name: 'Rain tape',
+      type: 'audio/wav',
+      size: 4,
+      duration: 1,
+      addedAt: 2,
+      data: new TextEncoder().encode('RIFF').buffer,
+    });
+    expect((await upgraded.audioFiles.orderBy('addedAt').first())?.name).toBe('Rain tape');
+    await upgraded.delete();
   });
 
   test('children of a parent come back by project and parent', async () => {

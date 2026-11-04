@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
+import { editorSelection } from './support/selection';
 import { skipOnboarding } from './support/onboarding';
 import { useTool } from './support/tools';
 
@@ -106,6 +107,28 @@ test('keyboard only: Alt-F10 reaches the selection menu, Escape returns, and the
   await page.keyboard.type('/quo');
   await expect(scene(page)).toHaveAttribute('aria-activedescendant', /.+/);
   await page.keyboard.press('Enter');
+  // The caret is in the new quote before the next keys.
+  await expect
+    .poll(async () => {
+      const at = await editorSelection(scene(page));
+      return scene(page).evaluate((element, pos) => {
+        const { state } = (
+          element as unknown as {
+            editor: {
+              state: {
+                doc: {
+                  resolve: (p: number) => { node: (d: number) => { type: { name: string } }; depth: number };
+                };
+              };
+            };
+          }
+        ).editor;
+        const $pos = state.doc.resolve(pos);
+        for (let d = $pos.depth; d > 0; d--) if ($pos.node(d).type.name === 'blockquote') return true;
+        return false;
+      }, at.from);
+    })
+    .toBe(true);
   await page.keyboard.type('An epigraph.');
   await expect(scene(page).locator('blockquote')).toHaveText('An epigraph.');
 
@@ -297,4 +320,30 @@ test('a saved look comes back in the gradient editor', async ({ page }) => {
   await expect(scene(page).locator('span.vlo-fill')).toHaveCount(0);
   await panel.getByRole('button', { name: 'Use Night sea' }).click();
   await expect(scene(page).locator('span.vlo-fill-glow')).toHaveText('lights');
+});
+
+test('a click on the blank page under the text puts the caret after the last word', async ({ page }) => {
+  await newNovel(page);
+  // The caret starts before the first word. See editorSelection.
+  await expect(async () => {
+    await page.keyboard.press('ControlOrMeta+Home');
+    await expect.poll(async () => (await editorSelection(scene(page))).from, { timeout: 1_000 }).toBe(1);
+  }).toPass();
+  await scene(page).evaluate((root) => {
+    root.blur();
+  });
+
+  // A point under the last line, inside the editor.
+  const box = await scene(page).evaluate((root) => {
+    const line = root.lastElementChild?.getBoundingClientRect();
+    const all = root.getBoundingClientRect();
+    // Near the left edge, where a browser would put the caret at the start of the last line.
+    return { x: all.left + 4, y: (line?.bottom ?? all.top) + 40, bottom: all.bottom };
+  });
+  expect(box.y).toBeLessThan(box.bottom);
+  await page.mouse.click(box.x, box.y);
+  await expect(scene(page)).toBeFocused();
+  await expect.poll(async () => (await editorSelection(scene(page))).from).toBe(LINE.length + 1);
+  await page.keyboard.type(' The tide turned.');
+  await expect(scene(page)).toHaveText(`${LINE} The tide turned.`);
 });

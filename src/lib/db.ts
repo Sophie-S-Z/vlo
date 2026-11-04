@@ -22,8 +22,16 @@ export interface Project {
     goalWordsPerDay?: number;
     streaksEnabled: boolean;
     restDays: number[];
+    /** The project's manuscript font: a Vlo font id or "local:" and an installed font's name. */
+    font?: string;
+    /** Pageless, or a sheet of Letter or A4 paper with page-end lines (plan decision 8). */
+    page?: PageFormat;
+    /** The cozy scene around the page, or "none" (plan decision 11). */
+    scene?: string;
   };
 }
+
+export type PageFormat = 'pageless' | 'letter' | 'a4';
 
 export interface Item {
   id: string;
@@ -73,6 +81,23 @@ export interface ItemText {
   updatedAt: number;
 }
 
+/** A music file the writer added (plan decision 10). It stays on this device and plays from a blob: URL. */
+export interface AudioFile {
+  id: string;
+  /** The file name without its extension. */
+  name: string;
+  type: string;
+  size: number;
+  /** Seconds, or 0 when the browser could not tell. */
+  duration: number;
+  addedAt: number;
+  /**
+   * The file's bytes. Vlo stores an ArrayBuffer, because Safari cannot store a Blob in IndexedDB in a
+   * private window. A Blob can come from an earlier build of this version.
+   */
+  data: ArrayBuffer | Blob;
+}
+
 /** Small app-wide values, such as the first-visit flag. */
 export interface AppMeta {
   key: string;
@@ -86,6 +111,7 @@ export class VloDb extends Dexie {
   sessions!: Table<Session, string>;
   itemTexts!: Table<ItemText, string>;
   appMeta!: Table<AppMeta, string>;
+  audioFiles!: Table<AudioFile, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -97,6 +123,8 @@ export class VloDb extends Dexie {
       itemTexts: 'itemId, projectId',
       appMeta: 'key',
     });
+    // Version 2 (Phase 2, Task A9): the writer's own music. The other tables do not change.
+    this.version(2).stores({ audioFiles: 'id, addedAt' });
   }
 }
 

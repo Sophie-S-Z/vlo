@@ -5,6 +5,7 @@ import type * as Y from 'yjs';
 import { YFRAGMENT } from '@/lib/ydocs';
 import { EscapeTab } from './escapeTab';
 import { Footnote } from './footnote';
+import { MathBlock, MathInline } from './math';
 import { blockFormatting, ClearFormatting, inlineFormatting } from './formatting';
 import { SceneBreak } from './sceneBreak';
 
@@ -24,6 +25,8 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     ClearFormatting,
     SceneBreak,
     Footnote,
+    MathInline,
+    MathBlock,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

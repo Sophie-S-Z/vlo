@@ -12,10 +12,26 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @dnd-kit/utilities | 3.2.2 | MIT | runtime |
 | @eslint/js | 9.39.5 | MIT | build and test |
 | @floating-ui/dom | 1.8.0 | MIT | runtime |
+| @fontsource-variable/atkinson-hyperlegible-next | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/caveat | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/cinzel | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/cormorant-garamond | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/crimson-pro | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/eb-garamond | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/fraunces | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/libre-baskerville | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/literata | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/lora | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/merriweather | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/newsreader | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/nunito | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/playfair-display | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/courier-prime | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/im-fell-english | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/kalam | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/spectral | 5.3.0 | OFL-1.1 | runtime |
 | @playwright/test | 1.63.0 | Apache-2.0 | build and test |
 | @tailwindcss/vite | 4.3.3 | MIT | build and test |
 | @testing-library/dom | 10.4.2 | MIT | build and test |
@@ -51,6 +67,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | globals | 17.14.0 | MIT | build and test |
 | jsdom | 30.1.3 | MIT | build and test |
 | lucide-react | 1.66.0 | ISC | runtime |
+| mathlive | 0.111.4 | MIT | runtime |
 | minisearch | 7.2.0 | MIT | runtime |
 | playwright-core | 1.63.0 | Apache-2.0 | build and test |
 | prettier | 3.9.10 | MIT | build and test |

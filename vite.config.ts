@@ -16,6 +16,18 @@ function productionHeaders(): Record<string, string> {
   return Object.fromEntries((all?.headers ?? []).map((h) => [h.key, h.value]));
 }
 
+/**
+ * The interface fonts, which every page needs and the service worker installs: Fraunces, Newsreader, Inter
+ * and JetBrains Mono as `styles/index.css` imports them, and MathLive's KaTeX fonts. Every other font file
+ * is a writing font that loads on first use.
+ */
+const APP_FONT =
+  /^(newsreader-|fraunces-.+-full-normal|inter-.+-opsz-normal|jetbrains-mono-.+-400-normal|KaTeX_)/;
+
+function isWritingFont(name: string): boolean {
+  return /\.(woff2?)$/.test(name) && !APP_FONT.test(name);
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -44,6 +56,20 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,png,woff2,webmanifest}'],
+        // The writing fonts are not in the install cache. Each one is cached the first time it loads.
+        globIgnores: ['assets/fonts/**'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/fonts\/[^/]+\.woff2?$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-writing-fonts',
+              // File names carry a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 400 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
         cleanupOutdatedCaches: true,
       },
     }),
@@ -56,6 +82,15 @@ export default defineConfig({
     sourcemap: true,
     // Fonts stay as files: the CSP allows fonts only from 'self', not from data: URLs.
     assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
+    rolldownOptions: {
+      output: {
+        // The writing fonts go under assets/fonts/, so the service worker can leave them out of its install.
+        assetFileNames: (asset) =>
+          isWritingFont(asset.names[0] ?? '')
+            ? 'assets/fonts/[name]-[hash][extname]'
+            : 'assets/[name]-[hash][extname]',
+      },
+    },
   },
   preview: { headers: productionHeaders() },
 });

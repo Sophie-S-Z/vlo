@@ -23,20 +23,27 @@ import {
   ListOrdered,
   Pilcrow,
   Quote,
+  Replace,
   Redo2,
   RemoveFormatting,
+  Sigma,
+  Speech,
+  TextSearch,
   Sparkles,
+  SquareSigma,
   Strikethrough,
   Subscript,
   Superscript,
   TextQuote,
+  Type,
   Underline,
   Undo2,
   UnfoldVertical,
   type LucideIcon,
 } from 'lucide-react';
 import { MAX_HANGING_EM } from '../extensions/poem';
-import { openPanel } from './editorBus';
+import { openFind, openPanel } from './editorBus';
+import { isReading } from '../readAloud/reader';
 import { swatchVar } from '../format/palette';
 
 /*
@@ -48,20 +55,42 @@ export type EditorForm = 'prose' | 'poem';
 
 /** Tools that open a small panel instead of acting at once. */
 export type PanelId =
-  'link' | 'color' | 'highlight' | 'gradient' | 'size' | 'spacing' | 'characters' | 'footnote' | 'shortcuts';
+  | 'link'
+  | 'font'
+  | 'color'
+  | 'highlight'
+  | 'gradient'
+  | 'size'
+  | 'spacing'
+  | 'characters'
+  | 'footnote'
+  | 'math'
+  | 'read-aloud'
+  | 'shortcuts';
 
 export type CommandGroup =
-  'history' | 'style' | 'color' | 'block' | 'align' | 'paragraph' | 'indent' | 'insert' | 'clear' | 'help';
+  | 'history'
+  | 'style'
+  | 'color'
+  | 'block'
+  | 'align'
+  | 'paragraph'
+  | 'indent'
+  | 'insert'
+  | 'review'
+  | 'clear'
+  | 'help';
 
 export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   history: 'Undo and redo',
   style: 'Text style',
-  color: 'Color and size',
+  color: 'Font, color and size',
   block: 'Blocks',
   align: 'Alignment',
   paragraph: 'Paragraph',
   indent: 'Indent',
   insert: 'Insert',
+  review: 'Find and read aloud',
   clear: 'Clear',
   help: 'Help',
 };
@@ -239,6 +268,19 @@ export const COMMANDS: readonly EditorCommand[] = [
     selection: true,
     run: (e) => e.commands.toggleSubscript(),
     isActive: (e) => e.isActive('subscript'),
+  },
+  {
+    kind: 'panel',
+    id: 'font',
+    label: 'Font',
+    icon: Type,
+    group: 'color',
+    forms: BOTH,
+    keywords: ['typeface', 'serif', 'sans', 'typewriter', 'handwriting', 'garamond', 'family'],
+    panel: 'font',
+    slash: true,
+    selection: true,
+    isActive: (e) => Boolean(e.getAttributes('textStyle').font),
   },
   {
     kind: 'panel',
@@ -557,6 +599,50 @@ export const COMMANDS: readonly EditorCommand[] = [
     },
     isEnabled: (e) => e.can().insertFootnote(),
   },
+  {
+    kind: 'run',
+    id: 'math',
+    label: 'Equation',
+    icon: Sigma,
+    group: 'insert',
+    forms: BOTH,
+    keywords: [
+      'math',
+      'formula',
+      'latex',
+      'fraction',
+      'square root',
+      'exponent',
+      'integral',
+      'sum',
+      'matrix',
+      'chemistry',
+    ],
+    slash: true,
+    // Adds the equation, then opens it, so the writer builds it at once.
+    run: (e) => {
+      if (!e.commands.insertMath()) return false;
+      openPanel({ editor: e, panel: 'math', anchor: 'caret' });
+      return true;
+    },
+    isEnabled: (e) => e.can().insertMath(),
+  },
+  {
+    kind: 'run',
+    id: 'math-block',
+    label: 'Equation on its own line',
+    icon: SquareSigma,
+    group: 'insert',
+    forms: PROSE,
+    keywords: ['math', 'formula', 'latex', 'display', 'centered equation', 'block'],
+    slash: true,
+    run: (e) => {
+      if (!e.commands.insertMathBlock()) return false;
+      openPanel({ editor: e, panel: 'math', anchor: 'caret' });
+      return true;
+    },
+    isEnabled: (e) => e.can().insertMathBlock(),
+  },
   ...QUICK_CHARACTERS.map(([id, char, label, keywords]): RunCommand => ({
     kind: 'run',
     id: `char-${id}`,
@@ -569,6 +655,46 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     run: (e) => insertText(e, char),
   })),
+  {
+    kind: 'run',
+    id: 'find',
+    label: 'Find',
+    icon: TextSearch,
+    group: 'review',
+    forms: BOTH,
+    keys: 'Mod-f',
+    keywords: ['search', 'look for'],
+    run: (e) => {
+      openFind(e, 'find');
+      return true;
+    },
+  },
+  {
+    kind: 'run',
+    id: 'replace',
+    label: 'Find and replace',
+    icon: Replace,
+    group: 'review',
+    forms: BOTH,
+    keys: 'Mod-h',
+    keywords: ['change', 'swap', 'substitute'],
+    run: (e) => {
+      openFind(e, 'replace');
+      return true;
+    },
+  },
+  {
+    kind: 'panel',
+    id: 'read-aloud',
+    label: 'Read aloud',
+    icon: Speech,
+    group: 'review',
+    forms: BOTH,
+    keywords: ['speak', 'listen', 'voice', 'proofread', 'text to speech'],
+    slash: true,
+    panel: 'read-aloud',
+    isActive: (e) => isReading(e),
+  },
   {
     kind: 'run',
     id: 'clear',

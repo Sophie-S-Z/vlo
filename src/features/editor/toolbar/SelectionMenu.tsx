@@ -53,12 +53,13 @@ export function SelectionMenu({ editor, form }: { editor: Editor; form: EditorFo
             focusText(editor);
           }
         }}
-        className="flex max-w-[calc(100vw-1rem)] items-center gap-0.5 overflow-x-auto rounded-[var(--radius-card)] border border-rule bg-surface p-1 shadow-lg"
+        // On a phone the tools wrap to a second row, so each one shows without a sideways scroll.
+        className="flex max-w-[calc(100vw-1rem)] flex-wrap items-center justify-center gap-0.5 rounded-[var(--radius-card)] border border-rule bg-surface p-1 shadow-lg"
       >
         {commands.map((cmd, i) => (
           <Fragment key={cmd.id}>
             {i > 0 && commands[i - 1]?.group !== cmd.group && (
-              <ToolbarPrimitive.Separator className="mx-0.5 h-6 w-px shrink-0 bg-rule" />
+              <ToolbarPrimitive.Separator className="mx-0.5 h-6 w-px shrink-0 bg-rule max-sm:hidden" />
             )}
             <ToolButton
               cmd={cmd}

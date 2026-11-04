@@ -3,7 +3,8 @@
 .vlo-manuscript {
   min-height: 50vh;
   font-family: var(--font-manuscript);
-  font-size: 1.25rem;
+  /* Page zoom (E7) scales the text. Every size inside is in em, so it follows. */
+  font-size: calc(1.25rem * var(--vlo-zoom, 1));
   line-height: 1.7;
   color: var(--text);
   outline: none;
@@ -20,6 +21,11 @@
   contain-intrinsic-size: auto 6lh;
 }
 
+/* The block with the caret always renders, so WebKit's editing never sees its text as not drawn. */
+.vlo-manuscript > .vlo-caret-block {
+  content-visibility: visible;
+}
+
 .vlo-manuscript:focus-visible {
   outline: none;
 }
@@ -30,14 +36,14 @@
 
 .vlo-prose h2 {
   font-family: var(--font-display);
-  font-size: 1.6rem;
+  font-size: 1.28em;
   font-weight: 600;
   margin: 1.4em 0 0.5em;
 }
 
 .vlo-prose h3 {
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: 1.04em;
   font-weight: 600;
   margin: 1.2em 0 0.4em;
 }
@@ -163,16 +169,173 @@
   outline-offset: 1px;
 }
 
-/* In a poem, spaces set the layout, so highlights and references add no width of their own. */
+/*
+ * An equation. MathLive draws it after it loads; until then the LaTeX shows in its place. It keeps solid
+ * ink inside gradient text, so the drawing never turns clear.
+ */
+.vlo-manuscript .vlo-math {
+  cursor: pointer;
+  border-radius: 0.2em;
+  -webkit-text-fill-color: currentColor;
+  white-space: nowrap;
+}
+
+.vlo-manuscript .vlo-math:hover {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.vlo-manuscript .vlo-math.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.vlo-manuscript .vlo-math-pending,
+.vlo-manuscript .vlo-math-error {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+}
+
+.vlo-manuscript .vlo-math-error {
+  text-decoration: underline wavy var(--accent);
+  text-underline-offset: 0.2em;
+}
+
+/* An equation the writer is still building: a small dashed box to aim at. */
+.vlo-manuscript .vlo-math-empty {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px dashed var(--muted);
+  font-family: var(--font-ui);
+  font-size: 0.8em;
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+}
+
+/* An equation on its own line sits centered. A wide one scrolls inside its line. */
+.vlo-prose .vlo-math-block {
+  display: block;
+  margin: 1em 0;
+  padding: 0.25em 0;
+  overflow-x: auto;
+  text-align: center;
+  white-space: normal;
+}
+
+.vlo-prose .vlo-math-block.vlo-math-empty {
+  display: block;
+  width: fit-content;
+  margin: 1em auto;
+}
+
+/* MathLive's field in the equation panel follows the theme. Its own keyboard button gives way to the
+ * panel's labelled one. */
+.vlo-math-field {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 1.25rem;
+  outline: none;
+  --caret-color: var(--accent);
+  --selection-background-color: color-mix(in oklab, var(--accent) 25%, transparent);
+  --contains-highlight-background-color: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.vlo-math-field::part(virtual-keyboard-toggle) {
+  display: none;
+}
+
+.vlo-math-field::part(menu-toggle) {
+  color: var(--muted);
+}
+
+.vlo-math-field::part(menu-toggle):hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* MathLive's symbol keyboard wears the current theme. */
+.ML__keyboard {
+  --keyboard-background: var(--surface);
+  --keyboard-border: var(--rule);
+  --keyboard-horizontal-rule: var(--rule);
+  --keyboard-accent-color: var(--accent);
+  --keyboard-toolbar-text: var(--muted);
+  --keyboard-toolbar-text-active: var(--accent-text);
+  --keyboard-toolbar-background: transparent;
+  --keyboard-toolbar-background-hover: var(--bg);
+  --keyboard-toolbar-background-selected: var(--bg);
+  --keycap-background: var(--bg);
+  --keycap-background-hover: color-mix(in oklab, var(--accent) 12%, var(--bg));
+  --keycap-background-active: color-mix(in oklab, var(--accent) 22%, var(--bg));
+  --keycap-background-pressed: color-mix(in oklab, var(--accent) 22%, var(--bg));
+  --keycap-border: var(--rule);
+  --keycap-border-bottom: var(--rule);
+  --keycap-text: var(--text);
+  --keycap-text-active: var(--text);
+  --keycap-text-hover: var(--text);
+  --keycap-text-pressed: var(--text);
+  --keycap-secondary-background: color-mix(in oklab, var(--rule) 70%, var(--bg));
+  --keycap-secondary-background-hover: var(--rule);
+  --keycap-secondary-border: var(--rule);
+  --keycap-secondary-border-bottom: var(--rule);
+  --keycap-secondary-text: var(--text);
+  --keycap-primary-background: var(--accent);
+  --keycap-primary-background-hover: var(--accent);
+  --keycap-primary-text: var(--on-accent);
+}
+
+/* In a poem, spaces set the layout, so highlights, references and equations add no width of their own. */
 .vlo-poem mark,
-.vlo-poem .vlo-footnote-ref {
+.vlo-poem .vlo-footnote-ref,
+.vlo-poem .vlo-math {
   padding: 0;
+}
+
+/* The writer's selection uses a wash of the theme accent, the same as a held selection, not the system blue. */
+.vlo-manuscript ::selection {
+  background-color: color-mix(in oklab, var(--accent) 28%, transparent);
 }
 
 /* The selection stays marked while a tool panel has focus. */
 .vlo-manuscript .vlo-held-selection {
   background: color-mix(in oklab, var(--accent) 22%, transparent);
   border-radius: 0.1em;
+}
+
+/* Find and replace (E1): every match gets a light wash, and the current match a stronger one with a ring. */
+.vlo-manuscript .vlo-find-match {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  border-radius: 0.1em;
+}
+
+.vlo-manuscript .vlo-find-current {
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Read aloud (E2): the sentence that is spoken. */
+.vlo-manuscript .vlo-reading {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--accent) 70%, transparent);
+}
+
+@media (forced-colors: active) {
+  .vlo-manuscript .vlo-find-match,
+  .vlo-manuscript .vlo-reading {
+    background: Mark;
+    color: MarkText;
+  }
+
+  .vlo-manuscript .vlo-find-current {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+  }
 }
 
 /*
@@ -206,7 +369,8 @@
 }
 
 /* While a tool panel holds the selection, the held text shows in plain theme color so it stays readable. */
-.vlo-fill .vlo-held-selection {
+.vlo-fill .vlo-held-selection,
+.vlo-fill .vlo-find-current {
   -webkit-text-fill-color: var(--text);
 }
 
@@ -313,4 +477,118 @@ html[data-calm='true'] .vlo-fill-shimmer {
   .vlo-fill-shimmer {
     animation: none;
   }
+}
+
+/*
+ * Page format (plan Task A7, decision 8). The sheet is paper on the page around it. Its text is 12 point,
+ * the size the PDF export uses, so the page-end lines match a printed page. Page zoom scales the whole
+ * sheet. Every block lays out at once here, because the page measure needs every block's real height.
+ */
+.vlo-sheet {
+  position: relative;
+  margin-inline: auto;
+  background: var(--surface);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px var(--rule),
+    0 18px 40px -28px color-mix(in oklab, var(--text) 45%, transparent);
+  cursor: text;
+}
+
+.vlo-sheet .vlo-manuscript {
+  min-height: 0;
+  font-size: calc(12pt * var(--vlo-zoom, 1));
+}
+
+.vlo-sheet .vlo-manuscript > * {
+  content-visibility: visible;
+}
+
+.vlo-page-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+
+/* While the writer types, the lines hide, because the text below them moves. */
+.vlo-page-lines[data-stale] {
+  opacity: 0;
+  transition: none;
+}
+
+.vlo-page-end {
+  position: absolute;
+  height: 0;
+  border-top: 1px dashed color-mix(in oklab, var(--muted) 55%, transparent);
+}
+
+.vlo-page-number {
+  position: absolute;
+  bottom: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vlo-page-lines {
+    transition: none;
+  }
+}
+
+/*
+ * Cozy scenes (plan Task A8, decision 11). The scene is artwork around the page: it fills the manuscript
+ * column and stays in view while the text scrolls. The page is a card on its theme color, so text
+ * contrast never depends on the scene.
+ */
+.vlo-scene-stage {
+  --vlo-stage-pad: clamp(0.75rem, 3vw, 2.5rem);
+  --vlo-stage-y: clamp(0.75rem, 4vw, 4rem);
+  --vlo-stage-x: clamp(0.5rem, 3vw, 3rem);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: clip;
+  padding: var(--vlo-stage-y) var(--vlo-stage-x);
+  border-radius: var(--radius-card);
+}
+
+/*
+ * The scene and the page share one grid cell. The scene stretches over the padding as well, and it is never
+ * taller than the window. On a long text it stays in view while the page scrolls past.
+ */
+.vlo-scene {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  grid-area: 1 / 1;
+  max-height: 100dvh;
+  margin: calc(-1 * var(--vlo-stage-y)) calc(-1 * var(--vlo-stage-x));
+  pointer-events: none;
+  /*
+   * The scene gets its own layer, and the page over it then gets one too, so a new scene frame does not
+   * repaint the page, its text and its wide shadow. Without it, the CI WebKit, which paints in software,
+   * took 230 ms a frame. The page itself takes no transform, so the / menu stays fixed to the window.
+   */
+  will-change: transform;
+}
+
+.vlo-scene-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.vlo-scene-page {
+  position: relative;
+  grid-area: 1 / 1;
+  z-index: 1;
+  padding: var(--vlo-stage-pad);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+  box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55);
 }

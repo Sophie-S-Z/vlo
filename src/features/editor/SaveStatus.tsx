@@ -27,7 +27,12 @@ export function SaveStatus({ state }: { state: SaveState }) {
           />
         </svg>
       )}
-      {state === 'saving' && <span aria-hidden="true">Saving</span>}
+      {/* On a phone only the check mark shows, so the row does not jump on each save. */}
+      {state === 'saving' && (
+        <span aria-hidden="true" className="max-sm:hidden">
+          Saving
+        </span>
+      )}
       <span role="status" aria-live="polite" className={cn(state === 'saved' && 'sr-only sm:not-sr-only')}>
         {state === 'saving' ? '' : SAVE_MESSAGES[state]}
       </span>
