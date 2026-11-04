@@ -3,12 +3,15 @@ import { skipOnboarding } from './support/onboarding';
 
 /*
  * A short-lived probe for the CI log. It finds which step makes WebKit replace the first sentence when
- * the writer types after a click. It logs and does not fail. It goes away once the cause is fixed.
+ * the writer types after using a panel. It logs and does not fail. It goes away once the cause is fixed.
  */
 
 const text = (page: Page) => page.getByRole('textbox', { name: 'Scene 1' });
+const scenePicker = (page: Page) => page.getByRole('button', { name: /^Scene:/ });
+const sceneRadio = (page: Page, name: string) =>
+  page.getByRole('radiogroup', { name: 'Scene' }).getByRole('radio', { name });
 
-async function start(page: Page, scene: string | null) {
+async function start(page: Page) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   await page
@@ -18,50 +21,68 @@ async function start(page: Page, scene: string | null) {
   await expect(text(page)).toBeFocused();
   await page.keyboard.type('The rain began.');
   await expect(text(page)).toContainText('The rain began.');
-  if (scene) {
-    await page.getByRole('button', { name: /^Scene:/ }).click();
-    await page.getByRole('radiogroup', { name: 'Scene' }).getByRole('radio', { name: scene }).click();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
-    await expect(page.locator('.vlo-scene')).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
-  } else {
-    await text(page).evaluate((element) => {
-      element.blur();
-    });
-  }
 }
 
-const cases: { name: string; scene: string | null; css?: string; still?: boolean; wait?: number }[] = [
-  { name: 'no scene', scene: null },
-  { name: 'scene as it is', scene: 'Rainy window' },
-  { name: 'scene hidden', scene: 'Rainy window', css: '.vlo-scene { display: none !important; }' },
+const cases: { name: string; rounds: number; step: (page: Page) => Promise<void> }[] = [
   {
-    name: 'scene without its layer',
-    scene: 'Rainy window',
-    css: '.vlo-scene { will-change: auto !important; }',
+    name: 'scene panel opened, Escape, no pick',
+    rounds: 3,
+    step: async (page) => {
+      await scenePicker(page).click();
+      await expect(sceneRadio(page, 'Rainy window')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
+    },
   },
   {
-    name: 'page without its stacking',
-    scene: 'Rainy window',
-    css: '.vlo-scene-page { position: static !important; z-index: auto !important; }',
+    name: 'page panel opened, Escape',
+    rounds: 3,
+    step: async (page) => {
+      await page.getByRole('button', { name: /^Page:/ }).click();
+      await expect(page.getByRole('dialog', { name: 'Page' })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: 'Page' })).toBeHidden();
+    },
   },
-  { name: 'still scene (reduced motion)', scene: 'Rainy window', still: true },
-  { name: 'scene after 6 s', scene: 'Rainy window', wait: 6_000 },
+  {
+    name: 'scene picked, panel closed by a click on the page',
+    rounds: 3,
+    step: async (page) => {
+      await scenePicker(page).click();
+      await sceneRadio(page, 'Rainy window').click();
+      await page.mouse.click(5, 5);
+      await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
+    },
+  },
+  {
+    name: 'scene picked, Escape, then a reload',
+    rounds: 2,
+    step: async (page) => {
+      await scenePicker(page).click();
+      await sceneRadio(page, 'Rainy window').click();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('radiogroup', { name: 'Scene' })).toBeHidden();
+      await page.reload();
+      await expect(text(page)).toContainText('The rain began.');
+    },
+  },
+  {
+    name: 'Escape and Tab out of the editor',
+    rounds: 2,
+    step: async (page) => {
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Tab');
+      await expect(text(page)).not.toBeFocused();
+    },
+  },
 ];
 
 for (const probe of cases) {
-  for (const round of [1, 2]) {
+  for (let round = 1; round <= probe.rounds; round += 1) {
     test(`probe: ${probe.name}, round ${String(round)}`, async ({ page, browserName }) => {
       test.skip(browserName !== 'webkit', 'The probe is for WebKit only.');
-      await start(page, probe.scene);
-      if (probe.css) {
-        await page.addStyleTag({ content: probe.css });
-      }
-      if (probe.still) {
-        await page.emulateMedia({ reducedMotion: 'reduce' });
-        await expect(page.locator('.vlo-scene')).toHaveAttribute('data-moving', 'false');
-      }
-      if (probe.wait) await page.waitForTimeout(probe.wait);
+      await start(page);
+      await probe.step(page);
       await text(page).focus();
       await page.keyboard.press('ControlOrMeta+End');
       await page.waitForTimeout(500);
