@@ -210,6 +210,9 @@ Last update: 2026-11-03
 - CI WebKit: typing with a scene takes 104 to 192 ms at p95, and the budget is 50 ms. The scene goes still
   there, as on any slow device. Timing each part alone showed the page shadow and the scene layer cost the
   most. A scene image and a shadow layer did not help, so they were taken back. Product owner choice pending.
+- CI Firefox: 3 to 9 tests a run time out in their first page.goto, on every run since the first phases. Each
+  one passes on its retry. The stuck load never reaches DOMContentLoaded, so the stall is before the page
+  runs. A wait for the HTML first and a fixed 127.0.0.1 address did not change it, so both were taken back.
 - Known after review, left for later: while the gradient editor is open, the selected words show in plain
   theme color, and the preview shows the look. Each step of a color or gradient drag is one change, and the
   undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
