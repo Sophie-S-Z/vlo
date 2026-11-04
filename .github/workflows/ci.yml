@@ -33,6 +33,26 @@ jobs:
       - name: Licenses are allowed and docs/licenses.md is current
         run: npm run licenses && git diff --exit-code docs/licenses.md
 
+  word-export:
+    name: Word export opens in LibreOffice
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Writer opens the file. Math reads its equations.
+      - name: Install LibreOffice Writer and Math
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-math
+      - run: npx vitest run tests/unit/docx-libreoffice.test.ts
+        env:
+          VLO_REQUIRE_LIBREOFFICE: '1'
+
   e2e:
     name: Playwright (${{ matrix.project }})
     runs-on: ubuntu-latest

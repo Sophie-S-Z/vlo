@@ -49,6 +49,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @tiptap/react | 3.32.2 | MIT | runtime |
 | @tiptap/starter-kit | 3.32.2 | MIT | runtime |
 | @tiptap/y-tiptap | 3.0.12 | MIT | runtime |
+| @types/markdown-it | 14.2.0 | MIT | build and test |
 | @types/node | 22.20.5 | MIT | build and test |
 | @types/react | 19.3.0 | MIT | build and test |
 | @types/react-dom | 19.3.0 | MIT | build and test |
@@ -59,6 +60,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | dexie | 4.4.7 | Apache-2.0 | runtime |
 | dexie-react-hooks | 4.4.0 | Apache-2.0 | runtime |
 | diff | 9.0.0 | BSD-3-Clause | runtime |
+| docx | 9.15.2 | MIT | runtime |
 | eslint | 9.39.5 | MIT | build and test |
 | eslint-plugin-jsx-a11y | 6.10.2 | MIT | build and test |
 | eslint-plugin-react-hooks | 7.1.1 | MIT | build and test |
@@ -66,7 +68,9 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | fractional-indexing | 4.0.0 | CC0-1.0 | runtime |
 | globals | 17.14.0 | MIT | build and test |
 | jsdom | 30.1.3 | MIT | build and test |
+| jszip | 3.10.2 | (MIT OR GPL-3.0-or-later) | runtime |
 | lucide-react | 1.66.0 | ISC | runtime |
+| markdown-it | 15.0.3 | MIT | build and test |
 | mathlive | 0.111.4 | MIT | runtime |
 | minisearch | 7.2.0 | MIT | runtime |
 | playwright-core | 1.63.0 | Apache-2.0 | build and test |

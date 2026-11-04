@@ -77,6 +77,8 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  // Module workers, so the export worker loads each format's code only when the writer picks it.
+  worker: { format: 'es' },
   build: {
     manifest: true,
     sourcemap: true,

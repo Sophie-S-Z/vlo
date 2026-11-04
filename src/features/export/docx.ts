@@ -1,0 +1,460 @@
+import {
+  AlignmentType,
+  Document,
+  DropCapType,
+  ExternalHyperlink,
+  FootnoteReferenceRun,
+  FrameAnchorType,
+  FrameWrap,
+  HeadingLevel,
+  LevelFormat,
+  LineRuleType,
+  Math as MathBlock,
+  MathRun,
+  Packer,
+  Paragraph,
+  ShadingType,
+  TextRun,
+  type IRunOptions,
+  type NumberingDefinition,
+  type ParagraphChild,
+} from 'docx';
+import JSZip from 'jszip';
+import type { TextFill } from '@/features/editor/format/fill';
+import { localFontName, vloFont } from '@/features/editor/format/fonts';
+import type { NoteContent } from '@/features/editor/format/notes';
+import { parseMathml } from './mathml';
+import { repeatsTitle, type Align, type Block, type ExportDoc, type Run, type RunStyle } from './model';
+import { ommlOf } from './omml';
+
+/*
+ * Word export (spec section 9). Every text run keeps its spaces (docx writes xml:space="preserve"). A poem
+ * line is one paragraph with a hanging indent, an empty paragraph separates stanzas, and a scene break is a
+ * centered "#". Footnotes are Word footnotes. Each equation is a Word equation, built from MathLive's
+ * MathML. A gradient becomes a Word gradient text fill (w14:textFill, Word 2010 and later), and its first
+ * color is the plain color for readers that have no text fills, such as Google Docs and LibreOffice.
+ */
+
+/** Word sizes are in half-points. The text size is 12 pt. */
+const TEXT_SIZE = 24;
+/** One em at the text size, in twentieths of a point (twips). */
+const EM = 240;
+const INCH = 1440;
+/** The indent of each list level and each quote. */
+const STEP = 720;
+
+/** Converts LaTeX to MathML. The export loads MathLive's converter only when the export has math. */
+export type LatexToMathml = (latex: string) => string;
+
+export interface DocxOptions {
+  /** A converter for tests. By default the export loads MathLive's converter, which needs no DOM. */
+  toMathml?: LatexToMathml;
+}
+
+/** The Word name of a stored font value: the font's own name, which Word looks for on the computer. */
+export function wordFontName(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return vloFont(value)?.label ?? localFontName(value) ?? undefined;
+}
+
+const ALIGNMENT: Readonly<Record<Align, (typeof AlignmentType)[keyof typeof AlignmentType]>> = {
+  left: AlignmentType.LEFT,
+  center: AlignmentType.CENTER,
+  right: AlignmentType.RIGHT,
+  justify: AlignmentType.JUSTIFIED,
+};
+
+const HEADINGS = [
+  HeadingLevel.HEADING_1,
+  HeadingLevel.HEADING_2,
+  HeadingLevel.HEADING_3,
+  HeadingLevel.HEADING_4,
+];
+
+const BULLETS = ['•', '◦', '▪'];
+
+/** The marker style that names a text fill. It never reaches the file: `applyFills` swaps it for the fill. */
+const FILL_STYLE = 'VloFill';
+
+function hex(color: string): string {
+  return color.replace('#', '').toUpperCase();
+}
+
+/** The DrawingML text fill for a Vlo fill. CSS 90deg runs left to right, which is 0 in DrawingML. */
+export function textFillXml(fill: TextFill): string {
+  const angle = (((fill.angle - 90) % 360) + 360) % 360;
+  const stops = fill.stops
+    .map((s) => `<w14:gs w14:pos="${String(s.at * 1000)}"><w14:srgbClr w14:val="${hex(s.color)}"/></w14:gs>`)
+    .join('');
+  const gradient = `<w14:textFill><w14:gradFill><w14:gsLst>${stops}</w14:gsLst><w14:lin w14:ang="${String(angle * 60000)}" w14:scaled="0"/></w14:gradFill></w14:textFill>`;
+  if (fill.look !== 'glow') return gradient;
+  const glow = fill.stops[0]?.color ?? '#ffffff';
+  // A glow is a soft halo of the first color around the letters, as in the editor.
+  return `<w14:glow w14:rad="101600"><w14:srgbClr w14:val="${hex(glow)}"><w14:alpha w14:val="40000"/></w14:srgbClr></w14:glow>${gradient}`;
+}
+
+interface Context {
+  /** The fills in the export, by the number in their marker style. */
+  fills: TextFill[];
+  toMathml: LatexToMathml;
+  /** The next list number for Word, so each list starts again at its own first number. */
+  nextList: () => number;
+}
+
+function runOptions(style: RunStyle, ctx: Context): IRunOptions {
+  const font = wordFontName(style.font);
+  let fillStyle: string | undefined;
+  if (style.fill) {
+    ctx.fills.push(style.fill);
+    fillStyle = `${FILL_STYLE}${String(ctx.fills.length - 1)}`;
+  }
+  const color = style.fill?.stops[0]?.color ?? style.color;
+  return {
+    ...(style.bold ? { bold: true } : {}),
+    ...(style.italic ? { italics: true } : {}),
+    ...(style.underline ? { underline: {} } : {}),
+    ...(style.strike ? { strike: true } : {}),
+    ...(style.superscript ? { superScript: true } : {}),
+    ...(style.subscript ? { subScript: true } : {}),
+    ...(color ? { color: hex(color) } : {}),
+    ...(style.highlight
+      ? { shading: { type: ShadingType.CLEAR, color: 'auto', fill: hex(style.highlight) } }
+      : {}),
+    ...(font ? { font } : {}),
+    ...(style.size !== undefined ? { size: Math.round(TEXT_SIZE * style.size) } : {}),
+    ...(fillStyle ? { style: fillStyle } : style.link ? { style: 'Hyperlink' } : {}),
+  };
+}
+
+function equation(latex: string, ctx: Context): MathBlock {
+  const parts = ommlOf(parseMathml(ctx.toMathml(latex)));
+  // MathLive cannot read every command. Word reads LaTeX typed into an equation, so the source stays there.
+  return new MathBlock({ children: parts.length > 0 ? parts : [new MathRun(latex)] });
+}
+
+function noteRuns(note: NoteContent): TextRun[] {
+  return note.map((run) => {
+    const marks = new Set(run.marks?.map((m) => m.type));
+    const options: IRunOptions = {
+      text: run.text,
+      ...(marks.has('bold') ? { bold: true } : {}),
+      ...(marks.has('italic') ? { italics: true } : {}),
+      ...(marks.has('underline') ? { underline: {} } : {}),
+      ...(marks.has('strike') ? { strike: true } : {}),
+      ...(marks.has('superscript') ? { superScript: true } : {}),
+      ...(marks.has('subscript') ? { subScript: true } : {}),
+    };
+    return new TextRun(options);
+  });
+}
+
+function inline(runs: readonly Run[], ctx: Context): ParagraphChild[] {
+  const out: ParagraphChild[] = [];
+  for (const run of runs) {
+    if (run.type === 'text') {
+      const text = new TextRun({ text: run.text, ...runOptions(run.style, ctx) });
+      out.push(run.style.link ? new ExternalHyperlink({ link: run.style.link, children: [text] }) : text);
+    } else if (run.type === 'break') {
+      out.push(new TextRun({ break: 1 }));
+    } else if (run.type === 'math') {
+      out.push(equation(run.latex, ctx));
+    } else {
+      out.push(new FootnoteReferenceRun({ children: [new Paragraph({ children: noteRuns(run.note) })] }));
+    }
+  }
+  return out;
+}
+
+interface Place {
+  /** The left indent from lists and quotes, in twips. */
+  left: number;
+  /** Set for the first paragraph of a list item. */
+  numbering?: { reference: string; level: number; instance: number };
+}
+
+/** The first letter of a paragraph that opens with a drop cap, and the runs after it. */
+function splitDropCap(runs: readonly Run[]): { letter: Extract<Run, { type: 'text' }>; rest: Run[] } | null {
+  const [first, ...others] = runs;
+  if (first?.type !== 'text' || /^\s/.test(first.text)) return null;
+  const letter = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(first.text)][0]
+    ?.segment;
+  if (!letter) return null;
+  const tail = first.text.slice(letter.length);
+  return {
+    letter: { ...first, text: letter },
+    rest: tail === '' ? others : [{ ...first, text: tail }, ...others],
+  };
+}
+
+function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] {
+  const indent = place.left > 0 ? { left: place.left } : undefined;
+  const numbering = place.numbering ? { numbering: place.numbering } : {};
+  switch (block.type) {
+    case 'paragraph': {
+      const options = {
+        ...numbering,
+        ...(block.align ? { alignment: ALIGNMENT[block.align] } : {}),
+        ...(block.lineSpacing !== undefined
+          ? { spacing: { line: Math.round(EM * block.lineSpacing), lineRule: LineRuleType.AUTO } }
+          : {}),
+      };
+      const firstLine = block.firstLineIndent ? { firstLine: 2 * EM } : {};
+      const paragraphIndent = indent || block.firstLineIndent ? { indent: { ...indent, ...firstLine } } : {};
+      const drop = block.dropCap && !place.numbering ? splitDropCap(block.runs) : null;
+      if (drop) {
+        // Word draws a drop cap as a framed paragraph that holds the letter, three lines tall. Word's own
+        // drop caps set the letter a little under the height of the lines it spans.
+        const letterPoints = 3 * (TEXT_SIZE / 2) * (block.lineSpacing ?? 1.15) * 0.95;
+        const cap = new Paragraph({
+          frame: {
+            type: 'absolute',
+            position: { x: 0, y: 0 },
+            anchor: { horizontal: FrameAnchorType.TEXT, vertical: FrameAnchorType.TEXT },
+            dropCap: DropCapType.DROP,
+            lines: 3,
+            wrap: FrameWrap.AROUND,
+          },
+          spacing: { after: 0, line: Math.round(letterPoints * 20), lineRule: LineRuleType.EXACT },
+          children: [
+            new TextRun({
+              text: drop.letter.text,
+              ...runOptions(drop.letter.style, ctx),
+              size: Math.round(letterPoints * 2),
+            }),
+          ],
+        });
+        return [cap, new Paragraph({ ...options, ...paragraphIndent, children: inline(drop.rest, ctx) })];
+      }
+      return [new Paragraph({ ...options, ...paragraphIndent, children: inline(block.runs, ctx) })];
+    }
+    case 'heading':
+      return [
+        new Paragraph({
+          heading: HEADINGS[block.level - 1] ?? HeadingLevel.HEADING_2,
+          ...(block.align ? { alignment: ALIGNMENT[block.align] } : {}),
+          ...(indent ? { indent } : {}),
+          ...numbering,
+          children: inline(block.runs, ctx),
+        }),
+      ];
+    case 'sceneBreak':
+      return [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: EM, after: EM },
+          children: [new TextRun('#')],
+        }),
+      ];
+    case 'math':
+      return [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          ...(indent ? { indent } : {}),
+          ...numbering,
+          children: [equation(block.latex, ctx)],
+        }),
+      ];
+    case 'quote':
+      return blocksParagraphs(block.blocks, { ...place, left: place.left + STEP }, ctx);
+    case 'list': {
+      const instance = ctx.nextList();
+      const reference = block.ordered ? `vlo-ordered-${String(block.start)}` : 'vlo-bullet';
+      const level = Math.min(Math.round(place.left / STEP), 8);
+      return block.items.flatMap((item) => {
+        const inner: Place = { left: (level + 1) * STEP };
+        const [first, ...rest] = item;
+        const head = first
+          ? blockParagraphs(first, { ...inner, numbering: { reference, level, instance } }, ctx)
+          : [new Paragraph({ numbering: { reference, level, instance }, children: [] })];
+        return [...head, ...blocksParagraphs(rest, inner, ctx)];
+      });
+    }
+    case 'stanza':
+      return block.lines.map((line) => {
+        const hanging = Math.round(line.hanging * EM);
+        return new Paragraph({
+          style: 'VloPoemLine',
+          ...(hanging > 0 || place.left > 0
+            ? { indent: { left: place.left + hanging, ...(hanging > 0 ? { hanging } : {}) } }
+            : {}),
+          children: inline(line.runs, ctx),
+        });
+      });
+  }
+}
+
+function blocksParagraphs(blocks: readonly Block[], place: Place, ctx: Context): Paragraph[] {
+  const out: Paragraph[] = [];
+  blocks.forEach((block, i) => {
+    // An empty paragraph separates two stanzas, so the poem keeps its breaks in every reader.
+    if (block.type === 'stanza' && blocks[i - 1]?.type === 'stanza') {
+      out.push(new Paragraph({ style: 'VloPoemLine', children: [] }));
+    }
+    out.push(...blockParagraphs(block, place, ctx));
+  });
+  return out;
+}
+
+/** The list definitions: one bullet list, and one numbered list for each first number in the export. */
+function numberingConfig(doc: ExportDoc): NumberingDefinition[] {
+  const starts = new Set<number>();
+  const visit = (blocks: readonly Block[]) => {
+    for (const block of blocks) {
+      if (block.type === 'list') {
+        if (block.ordered) starts.add(block.start);
+        block.items.forEach(visit);
+      } else if (block.type === 'quote') visit(block.blocks);
+    }
+  };
+  doc.sections.forEach((s) => {
+    visit(s.blocks);
+  });
+  const levels = (ordered: boolean, start: number) =>
+    Array.from({ length: 9 }, (_, level) => ({
+      level,
+      format: ordered ? LevelFormat.DECIMAL : LevelFormat.BULLET,
+      text: ordered ? `%${String(level + 1)}.` : (BULLETS[level % BULLETS.length] ?? '•'),
+      alignment: AlignmentType.LEFT,
+      ...(ordered && level === 0 ? { start } : {}),
+      style: { paragraph: { indent: { left: (level + 1) * STEP, hanging: STEP / 2 } } },
+    }));
+  return [
+    { reference: 'vlo-bullet', levels: levels(false, 1) },
+    ...[...starts].map((start) => ({
+      reference: `vlo-ordered-${String(start)}`,
+      levels: levels(true, start),
+    })),
+  ];
+}
+
+function hasMath(doc: ExportDoc): boolean {
+  const inRuns = (runs: readonly Run[]) => runs.some((r) => r.type === 'math');
+  const visit = (blocks: readonly Block[]): boolean =>
+    blocks.some((block) => {
+      switch (block.type) {
+        case 'math':
+          return true;
+        case 'paragraph':
+        case 'heading':
+          return inRuns(block.runs);
+        case 'list':
+          return block.items.some(visit);
+        case 'quote':
+          return visit(block.blocks);
+        case 'stanza':
+          return block.lines.some((line) => inRuns(line.runs));
+        default:
+          return false;
+      }
+    });
+  return doc.sections.some((s) => visit(s.blocks));
+}
+
+async function defaultToMathml(): Promise<LatexToMathml> {
+  const { convertLatexToMathMl } = await import('mathlive/ssr');
+  return (latex) => convertLatexToMathMl(latex);
+}
+
+/** Swaps each fill marker style in the document for its Word text fill. */
+async function applyFills(bytes: Uint8Array, fills: readonly TextFill[]): Promise<Uint8Array> {
+  if (fills.length === 0) return bytes;
+  const zip = await JSZip.loadAsync(bytes);
+  const file = zip.file('word/document.xml');
+  if (!file) return bytes;
+  const xml = await file.async('string');
+  const marker = new RegExp(`<w:rStyle w:val="${FILL_STYLE}(\\d+)"/>([\\s\\S]*?)</w:rPr>`, 'g');
+  // The w14 parts close the run properties, after every w: part (ECMA-376 and MS-DOCX order).
+  const out = xml.replace(marker, (all, index: string, rest: string) => {
+    const fill = fills[Number(index)];
+    return fill ? `${rest}${textFillXml(fill)}</w:rPr>` : all;
+  });
+  zip.file('word/document.xml', out);
+  return zip.generateAsync({
+    type: 'uint8array',
+    compression: 'DEFLATE',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
+}
+
+/** The Word file of an export. */
+export async function toDocx(doc: ExportDoc, options: DocxOptions = {}): Promise<Uint8Array> {
+  const toMathml = options.toMathml ?? (hasMath(doc) ? await defaultToMathml() : () => '');
+  let list = 0;
+  const ctx: Context = { fills: [], toMathml, nextList: () => (list += 1) };
+  const font = wordFontName(doc.font) ?? 'Newsreader';
+
+  const children: Paragraph[] = [
+    new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(doc.title)] }),
+  ];
+  if (doc.author) {
+    const authorRun: IRunOptions = { text: doc.author, italics: true };
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 2 * EM },
+        children: [new TextRun(authorRun)],
+      }),
+    );
+  }
+  for (const section of doc.sections) {
+    children.push(
+      ...blocksParagraphs(
+        section.blocks.filter((block) => !repeatsTitle(doc, section, block)),
+        { left: 0 },
+        ctx,
+      ),
+    );
+  }
+
+  const page =
+    doc.paper === 'a4'
+      ? { width: 11906, height: 16838 }
+      : { width: Math.round(8.5 * INCH), height: 11 * INCH };
+  const document = new Document({
+    title: doc.title,
+    ...(doc.author ? { creator: doc.author } : {}),
+    styles: {
+      default: {
+        document: { run: { font, size: TEXT_SIZE }, paragraph: { spacing: { after: 160, line: 276 } } },
+        title: {
+          run: { font, size: 56, color: '1F1D1B' },
+          paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 2 * EM, after: EM } },
+        },
+        heading1: {
+          run: { font, size: 40, bold: true, color: '1F1D1B' },
+          paragraph: { spacing: { before: 3 * EM, after: EM }, keepNext: true },
+        },
+        heading2: {
+          run: { font, size: 32, bold: true, color: '1F1D1B' },
+          paragraph: { spacing: { before: 2 * EM, after: EM }, keepNext: true },
+        },
+        heading3: {
+          run: { font, size: 28, bold: true, color: '1F1D1B' },
+          paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
+        },
+        heading4: {
+          run: { font, size: 24, bold: true, italics: true, color: '1F1D1B' },
+          paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
+        },
+        hyperlink: { run: { color: '2F5D8A', underline: {} } },
+      },
+      paragraphStyles: [
+        {
+          id: 'VloPoemLine',
+          name: 'Poem Line',
+          basedOn: 'Normal',
+          paragraph: { spacing: { after: 0, line: 276 } },
+        },
+      ],
+    },
+    numbering: { config: numberingConfig(doc) },
+    sections: [
+      {
+        properties: { page: { size: page, margin: { top: INCH, right: INCH, bottom: INCH, left: INCH } } },
+        children,
+      },
+    ],
+  });
+  const bytes = new Uint8Array(await Packer.toArrayBuffer(document));
+  return applyFills(bytes, ctx.fills);
+}

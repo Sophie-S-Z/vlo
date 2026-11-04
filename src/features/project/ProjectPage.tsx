@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
@@ -30,6 +30,10 @@ import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
 const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
+// The export dialog loads the first time the writer opens it. Each format's code loads in the export worker.
+const ExportDialog = lazy(async () => ({
+  default: (await import('@/features/export/ExportDialog')).ExportDialog,
+}));
 
 /** True while a dialog, a menu or the / tool list is open, so Escape belongs to it. */
 function layerOpen(): boolean {
@@ -61,6 +65,7 @@ export function ProjectPage() {
   const [drawer, setDrawer] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const motion = useMotionAllowed();
   const navigate = useNavigate();
   const activeEditor = useActiveEditor();
@@ -187,6 +192,17 @@ export function ProjectPage() {
       },
     },
     {
+      id: 'export',
+      label: 'Export…',
+      keywords: ['download', 'word', 'docx', 'markdown', 'google docs', 'save as', 'share'],
+      run: () => {
+        // The export dialog opens after the menu closes, so the two dialogs never hold focus at once.
+        afterMenu.current = () => {
+          setExportOpen(true);
+        };
+      },
+    },
+    {
       id: 'library',
       label: 'Go to the Library',
       run: () => {
@@ -237,6 +253,16 @@ export function ProjectPage() {
               >
                 <Search aria-hidden="true" className="size-4" />
                 <span className="max-sm:sr-only">Search</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="max-sm:min-w-11 max-sm:px-0"
+                onClick={() => {
+                  setExportOpen(true);
+                }}
+              >
+                <Download aria-hidden="true" className="size-4" />
+                <span className="max-sm:sr-only">Export</span>
               </Button>
               <FocusControls
                 onFocusMode={() => {
@@ -334,6 +360,18 @@ export function ProjectPage() {
             )}
           </DialogContent>
         </Dialog>
+        {exportOpen && (
+          <Suspense fallback={null}>
+            <ExportDialog
+              open
+              onOpenChange={setExportOpen}
+              project={project}
+              items={items}
+              currentItemId={item?.id ?? null}
+              aliases={[]}
+            />
+          </Suspense>
+        )}
       </section>
     </MotionViewTransition>
   );
