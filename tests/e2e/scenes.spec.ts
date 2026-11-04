@@ -88,7 +88,27 @@ test('a scene shows around the page, rests while the writer types, and stays aft
       .poll(async () => (await editorSelection(text(page))).from, { timeout: 1_000 })
       .toBe('The rain began.'.length + 1);
   }).toPass();
-  await page.keyboard.type(' It kept on.');
+  // A record for the CI log: the page and the editor's own text after each key, to find where WebKit
+  // lost the first sentence.
+  const steps: string[] = [];
+  const record = async (label: string) => {
+    const seen = await text(page).evaluate((element) => {
+      const { state } = (
+        element as unknown as {
+          editor: { state: { doc: { textContent: string }; selection: { from: number; to: number } } };
+        }
+      ).editor;
+      const dom = window.getSelection();
+      return `html ${element.innerHTML} | doc ${JSON.stringify(state.doc.textContent)} | caret ${String(state.selection.from)}-${String(state.selection.to)} | dom caret ${dom?.anchorNode?.nodeName ?? 'none'}@${String(dom?.anchorOffset)}`;
+    });
+    steps.push(`${label}: ${seen}`);
+  };
+  await record('before');
+  for (const key of ' It kept on.') {
+    await page.keyboard.type(key);
+    await record(JSON.stringify(key));
+  }
+  if (!(await text(page).innerText()).includes('The rain began. It kept on.')) console.log(steps.join('\n'));
   await expect(text(page)).toContainText('The rain began. It kept on.');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
