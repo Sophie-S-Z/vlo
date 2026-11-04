@@ -69,6 +69,17 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
+          {
+            // The TrueType files that PDF and EPUB exports embed. Their names carry no hash, so the cached
+            // copy serves the export at once and a changed file replaces it in the background.
+            urlPattern: /\/fonts\/[^/]+\/[^/]+\.ttf$/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'vlo-export-fonts',
+              expiration: { maxEntries: 120 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
         ],
         cleanupOutdatedCaches: true,
       },

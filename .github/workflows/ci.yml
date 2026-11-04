@@ -33,8 +33,8 @@ jobs:
       - name: Licenses are allowed and docs/licenses.md is current
         run: npm run licenses && git diff --exit-code docs/licenses.md
 
-  word-export:
-    name: Word export opens in LibreOffice
+  export-files:
+    name: Export files open in other apps
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -44,14 +44,15 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      # Writer opens the file. Math reads its equations.
-      - name: Install LibreOffice Writer and Math
+      # Writer opens the Word files. Math reads their equations. Poppler reads the text and fonts of each PDF.
+      - name: Install LibreOffice Writer and Math, and Poppler
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-math
-      - run: npx vitest run tests/unit/docx-libreoffice.test.ts
+          sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-math poppler-utils
+      - run: npx vitest run tests/unit/docx-libreoffice.test.ts tests/unit/pdf-export.test.ts tests/unit/epub-export.test.ts
         env:
           VLO_REQUIRE_LIBREOFFICE: '1'
+          VLO_REQUIRE_POPPLER: '1'
 
   e2e:
     name: Playwright (${{ matrix.project }})

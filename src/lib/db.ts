@@ -28,10 +28,22 @@ export interface Project {
     page?: PageFormat;
     /** The cozy scene around the page, or "none" (plan decision 11). */
     scene?: string;
+    /** Standard manuscript format for exports of a novel: the switch and the writer's details. */
+    manuscript?: ManuscriptSettings;
   };
 }
 
 export type PageFormat = 'pageless' | 'letter' | 'a4';
+
+export interface ManuscriptSettings {
+  on: boolean;
+  /** The name on the first page and in the page header. */
+  name: string;
+  /** Contact lines: address, email and phone, one per line. */
+  contact: string;
+  /** Courier Prime, the typewriter look, in place of the project font. */
+  typewriter: boolean;
+}
 
 export interface Item {
   id: string;

@@ -6,14 +6,19 @@ import {
   FootnoteReferenceRun,
   FrameAnchorType,
   FrameWrap,
+  Header,
   HeadingLevel,
   LevelFormat,
   LineRuleType,
   Math as MathBlock,
   MathRun,
   Packer,
+  PageBreak,
+  PageNumber,
   Paragraph,
   ShadingType,
+  Tab,
+  TabStopType,
   TextRun,
   type IRunOptions,
   type NumberingDefinition,
@@ -23,9 +28,13 @@ import JSZip from 'jszip';
 import type { TextFill } from '@/features/editor/format/fill';
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
+import { mathmlFor, type LatexToMathml } from './latex';
+import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manuscript';
 import { parseMathml } from './mathml';
 import { repeatsTitle, type Align, type Block, type ExportDoc, type Run, type RunStyle } from './model';
 import { ommlOf } from './omml';
+
+export type { LatexToMathml } from './latex';
 
 /*
  * Word export (spec section 9). Every text run keeps its spaces (docx writes xml:space="preserve"). A poem
@@ -44,12 +53,16 @@ const INCH = 1440;
 const STEP = 720;
 
 /** Converts LaTeX to MathML. The export loads MathLive's converter only when the export has math. */
-export type LatexToMathml = (latex: string) => string;
 
 export interface DocxOptions {
   /** A converter for tests. By default the export loads MathLive's converter, which needs no DOM. */
   toMathml?: LatexToMathml;
+  /** Standard manuscript format, for a novel. */
+  manuscript?: ManuscriptSetup;
 }
+
+/** Double spacing in standard manuscript format, in 240ths of a line. */
+const DOUBLE = 480;
 
 /** The Word name of a stored font value: the font's own name, which Word looks for on the computer. */
 export function wordFontName(value: string | undefined): string | undefined {
@@ -99,6 +112,10 @@ interface Context {
   toMathml: LatexToMathml;
   /** The next list number for Word, so each list starts again at its own first number. */
   nextList: () => number;
+  /** Standard manuscript format: double spacing, indented first lines, chapters on new pages. */
+  manuscript: boolean;
+  /** In standard manuscript format, the space above a chapter title, so it starts a third down the page. */
+  chapterDrop: number;
 }
 
 function runOptions(style: RunStyle, ctx: Context): IRunOptions {
@@ -168,6 +185,8 @@ function inline(runs: readonly Run[], ctx: Context): ParagraphChild[] {
 interface Place {
   /** The left indent from lists and quotes, in twips. */
   left: number;
+  /** True for a part or chapter title, which starts a new page in standard manuscript format. */
+  folder?: boolean;
   /** Set for the first paragraph of a list item. */
   numbering?: { reference: string; level: number; instance: number };
 }
@@ -191,6 +210,16 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
   const numbering = place.numbering ? { numbering: place.numbering } : {};
   switch (block.type) {
     case 'paragraph': {
+      if (ctx.manuscript) {
+        const firstLine = place.numbering ? {} : { firstLine: STEP };
+        return [
+          new Paragraph({
+            ...numbering,
+            indent: { ...indent, ...firstLine },
+            children: inline(block.runs, ctx),
+          }),
+        ];
+      }
       const options = {
         ...numbering,
         ...(block.align ? { alignment: ALIGNMENT[block.align] } : {}),
@@ -228,6 +257,19 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
       return [new Paragraph({ ...options, ...paragraphIndent, children: inline(block.runs, ctx) })];
     }
     case 'heading':
+      if (ctx.manuscript) {
+        return [
+          new Paragraph({
+            heading: HEADINGS[block.level - 1] ?? HeadingLevel.HEADING_2,
+            alignment: block.level <= 2 ? AlignmentType.CENTER : AlignmentType.LEFT,
+            ...(place.folder
+              ? { pageBreakBefore: true, spacing: { before: ctx.chapterDrop, after: DOUBLE } }
+              : {}),
+            ...(indent ? { indent } : {}),
+            children: inline(block.runs, ctx),
+          }),
+        ];
+      }
       return [
         new Paragraph({
           heading: HEADINGS[block.level - 1] ?? HeadingLevel.HEADING_2,
@@ -241,7 +283,7 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
       return [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { before: EM, after: EM },
+          ...(ctx.manuscript ? {} : { spacing: { before: EM, after: EM } }),
           children: [new TextRun('#')],
         }),
       ];
@@ -327,34 +369,6 @@ function numberingConfig(doc: ExportDoc): NumberingDefinition[] {
   ];
 }
 
-function hasMath(doc: ExportDoc): boolean {
-  const inRuns = (runs: readonly Run[]) => runs.some((r) => r.type === 'math');
-  const visit = (blocks: readonly Block[]): boolean =>
-    blocks.some((block) => {
-      switch (block.type) {
-        case 'math':
-          return true;
-        case 'paragraph':
-        case 'heading':
-          return inRuns(block.runs);
-        case 'list':
-          return block.items.some(visit);
-        case 'quote':
-          return visit(block.blocks);
-        case 'stanza':
-          return block.lines.some((line) => inRuns(line.runs));
-        default:
-          return false;
-      }
-    });
-  return doc.sections.some((s) => visit(s.blocks));
-}
-
-async function defaultToMathml(): Promise<LatexToMathml> {
-  const { convertLatexToMathMl } = await import('mathlive/ssr');
-  return (latex) => convertLatexToMathMl(latex);
-}
-
 /** Swaps each fill marker style in the document for its Word text fill. */
 async function applyFills(bytes: Uint8Array, fills: readonly TextFill[]): Promise<Uint8Array> {
   if (fills.length === 0) return bytes;
@@ -376,81 +390,192 @@ async function applyFills(bytes: Uint8Array, fills: readonly TextFill[]): Promis
   });
 }
 
-/** The Word file of an export. */
-export async function toDocx(doc: ExportDoc, options: DocxOptions = {}): Promise<Uint8Array> {
-  const toMathml = options.toMathml ?? (hasMath(doc) ? await defaultToMathml() : () => '');
-  let list = 0;
-  const ctx: Context = { fills: [], toMathml, nextList: () => (list += 1) };
-  const font = wordFontName(doc.font) ?? 'Newsreader';
-
-  const children: Paragraph[] = [
-    new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(doc.title)] }),
-  ];
-  if (doc.author) {
-    const authorRun: IRunOptions = { text: doc.author, italics: true };
-    children.push(
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 2 * EM },
-        children: [new TextRun(authorRun)],
-      }),
-    );
-  }
-  for (const section of doc.sections) {
-    children.push(
-      ...blocksParagraphs(
-        section.blocks.filter((block) => !repeatsTitle(doc, section, block)),
-        { left: 0 },
-        ctx,
-      ),
-    );
-  }
-
-  const page =
-    doc.paper === 'a4'
-      ? { width: 11906, height: 16838 }
-      : { width: Math.round(8.5 * INCH), height: 11 * INCH };
-  const document = new Document({
-    title: doc.title,
-    ...(doc.author ? { creator: doc.author } : {}),
-    styles: {
+/** The heading, run and paragraph styles: Vlo's look, or plain 12 pt text for standard manuscript format. */
+function styles(font: string, manuscript: boolean) {
+  const ink = '1F1D1B';
+  if (manuscript) {
+    const plain = { font, size: TEXT_SIZE, color: '000000' };
+    const heading = {
+      run: { ...plain, bold: false },
+      paragraph: { spacing: { before: 0, after: 0 }, keepNext: true },
+    };
+    return {
       default: {
-        document: { run: { font, size: TEXT_SIZE }, paragraph: { spacing: { after: 160, line: 276 } } },
-        title: {
-          run: { font, size: 56, color: '1F1D1B' },
-          paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 2 * EM, after: EM } },
-        },
-        heading1: {
-          run: { font, size: 40, bold: true, color: '1F1D1B' },
-          paragraph: { spacing: { before: 3 * EM, after: EM }, keepNext: true },
-        },
-        heading2: {
-          run: { font, size: 32, bold: true, color: '1F1D1B' },
-          paragraph: { spacing: { before: 2 * EM, after: EM }, keepNext: true },
-        },
-        heading3: {
-          run: { font, size: 28, bold: true, color: '1F1D1B' },
-          paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
-        },
-        heading4: {
-          run: { font, size: 24, bold: true, italics: true, color: '1F1D1B' },
-          paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
-        },
-        hyperlink: { run: { color: '2F5D8A', underline: {} } },
+        document: { run: plain, paragraph: { spacing: { before: 0, after: 0, line: DOUBLE } } },
+        title: { run: plain, paragraph: { alignment: AlignmentType.CENTER } },
+        heading1: heading,
+        heading2: heading,
+        heading3: { ...heading, run: { ...plain, bold: true } },
+        heading4: { ...heading, run: { ...plain, bold: true, italics: true } },
+        hyperlink: { run: plain },
       },
       paragraphStyles: [
         {
           id: 'VloPoemLine',
           name: 'Poem Line',
           basedOn: 'Normal',
-          paragraph: { spacing: { after: 0, line: 276 } },
+          paragraph: { spacing: { after: 0, line: DOUBLE } },
         },
       ],
+    };
+  }
+  return {
+    default: {
+      document: { run: { font, size: TEXT_SIZE }, paragraph: { spacing: { after: 160, line: 276 } } },
+      title: {
+        run: { font, size: 56, color: ink },
+        paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 2 * EM, after: EM } },
+      },
+      heading1: {
+        run: { font, size: 40, bold: true, color: ink },
+        paragraph: { spacing: { before: 3 * EM, after: EM }, keepNext: true },
+      },
+      heading2: {
+        run: { font, size: 32, bold: true, color: ink },
+        paragraph: { spacing: { before: 2 * EM, after: EM }, keepNext: true },
+      },
+      heading3: {
+        run: { font, size: 28, bold: true, color: ink },
+        paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
+      },
+      heading4: {
+        run: { font, size: 24, bold: true, italics: true, color: ink },
+        paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
+      },
+      hyperlink: { run: { color: '2F5D8A', underline: {} } },
     },
+    paragraphStyles: [
+      {
+        id: 'VloPoemLine',
+        name: 'Poem Line',
+        basedOn: 'Normal',
+        paragraph: { spacing: { after: 0, line: 276 } },
+      },
+    ],
+  };
+}
+
+/**
+ * The first page in standard manuscript format: the name and the word count on one line, the contact lines
+ * under the name, then the title and byline in the middle of the page.
+ */
+function manuscriptOpening(
+  doc: ExportDoc,
+  setup: ManuscriptSetup,
+  textWidth: number,
+  textHeight: number,
+): Paragraph[] {
+  const single = { before: 0, after: 0, line: 240, lineRule: LineRuleType.AUTO };
+  const contact = setup.contact
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  const top = [
+    new Paragraph({
+      spacing: single,
+      tabStops: [{ type: TabStopType.RIGHT, position: textWidth }],
+      children: [new TextRun(setup.name), new TextRun({ children: [new Tab(), roundedWords(setup.words)] })],
+    }),
+    ...contact.map((line) => new Paragraph({ spacing: single, children: [new TextRun(line)] })),
+  ];
+  // The title sits half way down the text area, under the lines above it.
+  const above = (1 + contact.length) * 240;
+  return [
+    ...top,
+    new Paragraph({
+      heading: HeadingLevel.TITLE,
+      spacing: { before: Math.max(EM, Math.round(textHeight / 2 - above)), after: 0, line: DOUBLE },
+      children: [new TextRun(doc.title)],
+    }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun(`by ${setup.name}`)] }),
+  ];
+}
+
+/** The Word file of an export. */
+export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Promise<Uint8Array> {
+  const setup = options.manuscript;
+  const doc = setup ? plainDoc(source, setup.typewriter ? 'courier-prime' : source.font) : source;
+  const toMathml = options.toMathml ?? (await mathmlFor(doc));
+  const page =
+    doc.paper === 'a4'
+      ? { width: 11906, height: 16838 }
+      : { width: Math.round(8.5 * INCH), height: 11 * INCH };
+  const textWidth = page.width - 2 * INCH;
+  const textHeight = page.height - 2 * INCH;
+  let list = 0;
+  const ctx: Context = {
+    fills: [],
+    toMathml,
+    nextList: () => (list += 1),
+    manuscript: setup !== undefined,
+    chapterDrop: Math.round(textHeight / 3),
+  };
+  const font = wordFontName(doc.font) ?? 'Newsreader';
+
+  const children: Paragraph[] = [];
+  if (setup) {
+    children.push(...manuscriptOpening(doc, setup, textWidth, textHeight));
+  } else {
+    children.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(doc.title)] }));
+    if (doc.author) {
+      const authorRun: IRunOptions = { text: doc.author, italics: true };
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 2 * EM },
+          children: [new TextRun(authorRun)],
+        }),
+      );
+    }
+  }
+  for (const [index, section] of doc.sections.entries()) {
+    const blocks = section.blocks.filter((block) => !repeatsTitle(doc, section, block));
+    const paragraphs = blocksParagraphs(
+      blocks,
+      { left: 0, ...(section.form === null ? { folder: true } : {}) },
+      ctx,
+    );
+    // In standard manuscript format the text starts on the page after the title page.
+    if (setup && index === 0 && section.form !== null) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+    }
+    children.push(...paragraphs);
+  }
+
+  const document = new Document({
+    title: doc.title,
+    ...(setup ? { creator: setup.name } : doc.author ? { creator: doc.author } : {}),
+    styles: styles(font, setup !== undefined),
     numbering: { config: numberingConfig(doc) },
     sections: [
       {
-        properties: { page: { size: page, margin: { top: INCH, right: INCH, bottom: INCH, left: INCH } } },
+        properties: {
+          page: {
+            size: page,
+            margin: { top: INCH, right: INCH, bottom: INCH, left: INCH, header: INCH / 2 },
+            ...(setup ? { pageNumbers: { start: 0 } } : {}),
+          },
+          ...(setup ? { titlePage: true } : {}),
+        },
+        ...(setup
+          ? {
+              headers: {
+                first: new Header({ children: [] }),
+                default: new Header({
+                  children: [
+                    new Paragraph({
+                      alignment: AlignmentType.RIGHT,
+                      spacing: { before: 0, after: 0, line: 240 },
+                      children: [
+                        new TextRun(headerText(setup.name, doc.title)),
+                        new TextRun({ children: [PageNumber.CURRENT] }),
+                      ],
+                    }),
+                  ],
+                }),
+              },
+            }
+          : {}),
         children,
       },
     ],

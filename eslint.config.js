@@ -39,7 +39,7 @@ export default tseslint.config(
     extends: [...tseslint.configs.strictTypeChecked, ...tseslint.configs.stylisticTypeChecked],
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ['src/features/x.ts', 'src/lib/net.ts'] },
+        projectService: { allowDefaultProject: ['src/features/x.ts'] },
         tsconfigRootDir: import.meta.dirname,
       },
     },

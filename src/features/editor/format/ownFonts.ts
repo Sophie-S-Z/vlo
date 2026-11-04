@@ -37,6 +37,8 @@ export function rememberOwnFont(name: string): string[] {
 
 interface LocalFontData {
   family: string;
+  style?: string;
+  blob?: () => Promise<Blob>;
 }
 
 type QueryLocalFonts = () => Promise<LocalFontData[]>;
@@ -67,6 +69,27 @@ export async function listInstalledFonts(): Promise<FontListResult> {
     return { fonts: [...families].sort((a, b) => a.localeCompare(b)) };
   } catch {
     return { error: 'denied' };
+  }
+}
+
+/**
+ * The file of an installed font's upright style, for a PDF or EPUB export. Vlo reads it only when the writer
+ * already let Vlo see installed fonts, so an export never asks. Null when Vlo cannot read it.
+ */
+export async function readInstalledFont(name: string): Promise<Uint8Array | null> {
+  const query = localFontQuery();
+  if (!query) return null;
+  try {
+    const status = await navigator.permissions.query({ name: 'local-fonts' as PermissionName });
+    if (status.state !== 'granted') return null;
+    const clean = cleanFontName(name).toLowerCase();
+    const faces = (await query()).filter((font) => cleanFontName(font.family).toLowerCase() === clean);
+    const upright =
+      faces.find((font) => /^(regular|normal|book|roman|medium)$/i.test(font.style ?? '')) ?? faces[0];
+    if (!upright?.blob) return null;
+    return new Uint8Array(await (await upright.blob()).arrayBuffer());
+  } catch {
+    return null;
   }
 }
 

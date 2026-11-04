@@ -6,7 +6,7 @@ import JSZip from 'jszip';
 import { afterAll, describe, expect, test } from 'vitest';
 import { buildExportDoc } from '@/features/export/build';
 import { toDocx } from '@/features/export/docx';
-import { item, POEM_TEXT, poemUpdate, project, RICH_PROSE, singleDoc } from './export-fixtures';
+import { item, POEM_TEXT, poemUpdate, project, proseUpdate, RICH_PROSE, singleDoc } from './export-fixtures';
 
 /*
  * The Word file opens in a second word processor (plan Task B3 to B6). LibreOffice reads each file by
@@ -15,6 +15,7 @@ import { item, POEM_TEXT, poemUpdate, project, RICH_PROSE, singleDoc } from './e
  */
 
 const hasLibreOffice = spawnSync('soffice', ['--version'], { encoding: 'utf8' }).status === 0;
+const hasPoppler = spawnSync('pdftotext', ['-v'], { encoding: 'utf8' }).status === 0;
 if (process.env.VLO_REQUIRE_LIBREOFFICE === '1' && !hasLibreOffice) {
   throw new Error('This run needs LibreOffice (soffice), and it is not installed.');
 }
@@ -73,4 +74,44 @@ describe.runIf(hasLibreOffice)('Word export in LibreOffice', () => {
     // LibreOffice reads the Word equations into its own formula language. It needs its Math module.
     expect(starMath).toEqual(expect.arrayContaining(['{a} over {b}', 'sum from {i = 1} to {n} {{i} ^ {2}}']));
   }, 180_000);
+
+  test.runIf(hasPoppler)(
+    'LibreOffice lays out standard manuscript format with its header and page numbers',
+    async () => {
+      const novel = buildExportDoc({
+        project: project('novel', { authorName: 'Ada Marlow' }),
+        items: [
+          item('c1', 'chapter', 'Chapter One'),
+          item('s1', 'scene', 'Arrival', 'c1'),
+          item('c2', 'chapter', 'Chapter Two'),
+          item('s2', 'scene', 'Night', 'c2'),
+        ],
+        scope: { kind: 'project' },
+        updates: new Map([
+          ['s1', proseUpdate(['The harbor lights came on one by one.'])],
+          ['s2', proseUpdate(['The gulls slept.'])],
+        ]),
+      });
+      const setup = { name: 'Ada Marlow', contact: '12 Quay Street', typewriter: true, words: 2040 };
+      writeFileSync(join(dir, 'manuscript.docx'), await toDocx(novel, { manuscript: setup }));
+      convert([join(dir, 'manuscript.docx')], 'pdf');
+      const page = (n: number) =>
+        execFileSync(
+          'pdftotext',
+          ['-f', String(n), '-l', String(n), '-layout', join(dir, 'manuscript.pdf'), '-'],
+          {
+            encoding: 'utf8',
+          },
+        );
+      // The title page has no header. Each chapter starts a page, and the numbers start at 1 after the title page.
+      expect(page(1)).toContain('about 2,000 words');
+      expect(page(1)).toContain('by Ada Marlow');
+      expect(page(1)).not.toContain('SALT YEAR');
+      expect(page(2)).toMatch(/Marlow \/ SALT YEAR \/ 1\s/);
+      expect(page(2)).toContain('Chapter One');
+      expect(page(3)).toMatch(/Marlow \/ SALT YEAR \/ 2\s/);
+      expect(page(3)).toContain('Chapter Two');
+    },
+    180_000,
+  );
 });

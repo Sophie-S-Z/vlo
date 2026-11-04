@@ -1,6 +1,8 @@
 import { encodeDoc, openItemDoc } from '@/lib/ydocs';
 import { scopeItems } from './build';
-import type { ExportResponse } from './export.worker';
+import { localFontName } from '@/features/editor/format/fonts';
+import type { ExportMessage, ExportResponse } from './export.worker';
+import type { FontSwap } from './fontCheck';
 import type { ExportFile, ExportRequest } from './run';
 
 /*
@@ -39,27 +41,81 @@ export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Prom
   return out;
 }
 
-function inWorker(request: ExportRequest): Promise<ExportFile> {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (event: MessageEvent<ExportResponse>) => {
-      worker.terminate();
-      if (event.data.ok) resolve(event.data.file);
-      else reject(new Error(event.data.message));
+/**
+ * One export in the export worker, step by step: prepare, check the writer's own fonts, make the file.
+ * The dialog asks about font swaps between the check and the file.
+ */
+export class ExportJob {
+  private readonly worker: Worker;
+  private waiting: { resolve: (response: ExportResponse) => void; reject: (error: Error) => void } | null =
+    null;
+
+  private constructor() {
+    this.worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
+    this.worker.onmessage = (event: MessageEvent<ExportResponse>) => {
+      const waiting = this.waiting;
+      this.waiting = null;
+      if (event.data.type === 'error') waiting?.reject(new Error(event.data.message));
+      else waiting?.resolve(event.data);
     };
-    worker.onerror = (event) => {
-      worker.terminate();
-      reject(new Error(event.message || 'The export worker stopped.'));
+    this.worker.onerror = (event) => {
+      const waiting = this.waiting;
+      this.waiting = null;
+      waiting?.reject(new Error(event.message || 'The export worker stopped.'));
     };
+  }
+
+  private send(message: ExportMessage, transfer: Transferable[] = []): Promise<ExportResponse> {
+    return new Promise((resolve, reject) => {
+      this.waiting = { resolve, reject };
+      this.worker.postMessage(message, transfer);
+    });
+  }
+
+  /** Reads the items and prepares the export. The result lists the own fonts that the file needs. */
+  static async start(
+    request: Omit<ExportRequest, 'updates'>,
+  ): Promise<{ job: ExportJob; ownFonts: string[] }> {
+    const updates = await readUpdates(request);
+    const job = new ExportJob();
     // Each buffer moves to the worker once, without a copy. Two updates may share one buffer.
-    const buffers = new Set(request.updates.map(([, update]) => update.buffer as ArrayBuffer));
-    worker.postMessage(request, [...buffers]);
-  });
+    const buffers = new Set(updates.map(([, update]) => update.buffer as ArrayBuffer));
+    try {
+      const response = await job.send({ type: 'prepare', request: { ...request, updates } }, [...buffers]);
+      return { job, ownFonts: response.type === 'prepared' ? response.ownFonts : [] };
+    } catch (error) {
+      job.close();
+      throw error;
+    }
+  }
+
+  /** Checks the own fonts against their files, and lists each font that needs a stand-in. */
+  async check(fonts: ReadonlyMap<string, Uint8Array | null>): Promise<FontSwap[]> {
+    const response = await this.send({ type: 'check', fonts: [...fonts] });
+    return response.type === 'checked' ? response.swaps : [];
+  }
+
+  /** Makes the file. */
+  async make(): Promise<ExportFile> {
+    const response = await this.send({ type: 'make' });
+    if (response.type !== 'file') throw new Error('The export worker sent no file.');
+    return response.file;
+  }
+
+  close(): void {
+    this.worker.terminate();
+    this.waiting?.reject(new Error('The export stopped.'));
+    this.waiting = null;
+  }
 }
 
-/** Reads the items and makes the file in the export worker. */
-export async function startExport(request: Omit<ExportRequest, 'updates'>): Promise<ExportFile> {
-  return inWorker({ ...request, updates: await readUpdates(request) });
+/** The bytes of each own font, or null for a font Vlo cannot read on this device. */
+export async function readOwnFonts(values: readonly string[]): Promise<Map<string, Uint8Array | null>> {
+  const out = new Map<string, Uint8Array | null>();
+  if (values.length === 0) return out;
+  const { readInstalledFont } = await import('@/features/editor/format/ownFonts');
+  for (const value of values) out.set(value, await readInstalledFont(localFontName(value) ?? value));
+  return out;
 }
 
 /** Saves a file to the device's downloads through a link with a download name. */
