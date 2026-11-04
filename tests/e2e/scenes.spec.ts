@@ -55,10 +55,12 @@ test('a scene shows around the page, rests while the writer types, and stays aft
   page.on('worker', (worker) => workers.push(worker.url()));
   await newNovel(page);
   await page.keyboard.type('The rain began.');
+  await expect(text(page)).toContainText('The rain began.');
   await expect(backdrop(page)).toHaveCount(0);
 
   await pickScene(page, 'Rainy window');
   await expect(picker(page)).toHaveAccessibleName('Scene: Rainy window');
+  await expect(text(page)).toContainText('The rain began.');
   await expect(backdrop(page)).toHaveAttribute('data-scene', 'rain');
   await expect(backdrop(page)).toHaveAttribute('aria-hidden', 'true');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
@@ -70,6 +72,7 @@ test('a scene shows around the page, rests while the writer types, and stays aft
   await text(page).click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type(' It kept on.');
+  await expect(text(page)).toContainText('The rain began. It kept on.');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });
 
@@ -248,6 +251,10 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
     `[${browserName}] frames with a moving scene: median ${frames.median.toFixed(1)} ms, worst ${frames.worst.toFixed(1)} ms, worker canvas ${String(frames.offscreen)}`,
   );
 
+  // A record for the CI log: whether the scene went still on this device before the typing starts.
+  console.log(
+    `[${browserName}] scene still before typing: ${String(await backdrop(page).getAttribute('data-still'))}`,
+  );
   await text(page).click();
   await page.evaluate(() => {
     window.__keyDelays = [];
@@ -255,8 +262,14 @@ test('typing with a moving scene stays under 50 ms at p95', async ({ page, brows
   const typed = 'The fire settled and the room went gold at the edges. '.repeat(2).slice(0, 100);
   await page.keyboard.type(typed, { delay: 30 });
   await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
-  const sorted = (await page.evaluate(() => window.__keyDelays)).sort((a, b) => a - b);
+  const delays = await page.evaluate(() => window.__keyDelays);
+  const sorted = [...delays].sort((a, b) => a - b);
   const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
   console.log(`[${browserName}] keystroke to paint with a scene, p95: ${p95.toFixed(1)} ms`);
+  // A record for the CI log: which keys were slow, in the order the writer typed them.
+  const slowKeys = delays.flatMap((delay, index) =>
+    delay >= 50 ? [`${String(index)}:${delay.toFixed(0)}`] : [],
+  );
+  console.log(`[${browserName}] slow keys with a scene: ${slowKeys.join(' ') || 'none'}`);
   expect(p95).toBeLessThan(50);
 });
