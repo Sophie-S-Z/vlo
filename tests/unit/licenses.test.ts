@@ -12,6 +12,14 @@ test('disallowed lists packages outside the license allowlist', () => {
   expect(disallowed(rows).map((r) => r.name)).toEqual(['gpl-thing', 'no-license']);
 });
 
+test('a dual license passes when one of its choices is allowed', () => {
+  const dual = [
+    { name: 'jszip', version: '3.10.2', license: '(MIT OR GPL-3.0-or-later)', dev: false },
+    { name: 'gpl-or-agpl', version: '1.0.0', license: '(GPL-3.0 OR AGPL-3.0)', dev: false },
+  ];
+  expect(disallowed(dual).map((r) => r.name)).toEqual(['gpl-or-agpl']);
+});
+
 test('toMarkdown writes one table row per package, sorted by name', () => {
   const md = toMarkdown(rows.slice(0, 2));
   expect(md).toContain('| lucide-react | 1.66.0 | ISC | runtime |');

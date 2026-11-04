@@ -10,9 +10,18 @@ export const ALLOWED = new Set([
   'CC0-1.0',
 ]);
 
+/**
+ * True when the license is on the allowlist. A dual license such as "(MIT OR GPL-3.0-or-later)" lets the
+ * user pick one, so one allowed choice is enough.
+ */
+export function isAllowed(license) {
+  const choices = license.replace(/^\((.*)\)$/, '$1').split(/\s+OR\s+/);
+  return choices.some((choice) => ALLOWED.has(choice.trim()));
+}
+
 /** Returns the rows whose license is outside the allowlist. */
 export function disallowed(rows) {
-  return rows.filter((r) => !ALLOWED.has(r.license));
+  return rows.filter((r) => !isAllowed(r.license));
 }
 
 /** Renders the rows as the body of docs/licenses.md. */
