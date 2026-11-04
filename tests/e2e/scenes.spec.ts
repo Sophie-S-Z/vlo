@@ -88,67 +88,7 @@ test('a scene shows around the page, rests while the writer types, and stays aft
       .poll(async () => (await editorSelection(text(page))).from, { timeout: 1_000 })
       .toBe('The rain began.'.length + 1);
   }).toPass();
-  // A record for the CI log: the page and the editor's own text after each key, to find where WebKit
-  // lost the first sentence.
-  const steps: string[] = [];
-  const record = async (label: string) => {
-    const seen = await text(page).evaluate((element) => {
-      const { state } = (
-        element as unknown as {
-          editor: { state: { doc: { textContent: string }; selection: { from: number; to: number } } };
-        }
-      ).editor;
-      const dom = window.getSelection();
-      return `html ${element.innerHTML} | doc ${JSON.stringify(state.doc.textContent)} | caret ${String(state.selection.from)}-${String(state.selection.to)} | dom ${dom?.type ?? 'none'} ${dom?.anchorNode?.nodeName ?? 'none'}@${String(dom?.anchorOffset)} to ${dom?.focusNode?.nodeName ?? 'none'}@${String(dom?.focusOffset)} ${JSON.stringify(dom?.toString() ?? '')} | active ${document.activeElement === element ? 'editor' : (document.activeElement?.tagName ?? 'none')}`;
-    });
-    steps.push(`${label}: ${seen}`);
-  };
-  // A record for the CI log: each change the editor makes while the keys go in, and where it came from.
-  await text(page).evaluate((element) => {
-    const { editor } = element as unknown as {
-      editor: {
-        on: (
-          event: 'transaction',
-          run: (props: {
-            transaction: {
-              steps: { toJSON: () => unknown }[];
-              docChanged: boolean;
-              getMeta: (key: string) => unknown;
-            };
-          }) => void,
-        ) => void;
-      };
-    };
-    const w = window as unknown as { __sceneChanges: string[] };
-    w.__sceneChanges = [];
-    editor.on('transaction', ({ transaction }) => {
-      if (!transaction.docChanged) return;
-      w.__sceneChanges.push(
-        `${JSON.stringify(transaction.steps.map((step) => step.toJSON()))} meta ${JSON.stringify(
-          [
-            'uiEvent',
-            'y-sync$',
-            'addToHistory',
-            'paste',
-            'composition',
-            'pointer',
-            'appendedTransaction',
-          ].map((key) => [key, Boolean(transaction.getMeta(key))]),
-        )}`,
-      );
-    });
-  });
-  await record('before');
-  for (const key of ' It kept on.') {
-    await page.keyboard.type(key);
-    await record(JSON.stringify(key));
-  }
-  if (!(await text(page).innerText()).includes('The rain began. It kept on.')) {
-    console.log(steps.join('\n'));
-    console.log(
-      `scene test changes:\n${(await page.evaluate(() => (window as unknown as { __sceneChanges: string[] }).__sceneChanges)).join('\n')}`,
-    );
-  }
+  await page.keyboard.type(' It kept on.');
   await expect(text(page)).toContainText('The rain began. It kept on.');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'true', { timeout: 5_000 });

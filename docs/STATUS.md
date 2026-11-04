@@ -56,6 +56,8 @@ Last update: 2026-11-03
   - A cold page load straight to the scene, app start included: 450 to 500 ms on the desktop layout and about
     370 ms on the phone layout, where the binder is closed. The test logs it and does not hold it to the budget.
   - Manuscript blocks use `content-visibility: auto`, which took about 60 ms off the open.
+  - The block with the caret always renders (`content-visibility: visible`). After a scene change, WebKit
+    kept that block skipped, put the caret before the first word, and the next key deleted the paragraph.
 - Binder speed fix: the drag sensors and the sortable list now keep the same objects between renders. Before,
   opening an item re-rendered all 191 binder rows, and WebKit in CI took 383 to 433 ms to open the long scene.
   Now only the 2 changed rows render.
@@ -208,9 +210,6 @@ Last update: 2026-11-03
 - CI WebKit: typing with a scene takes 104 to 192 ms at p95, and the budget is 50 ms. The scene goes still
   there, as on any slow device. Timing each part alone showed the page shadow and the scene layer cost the
   most. A scene image and a shadow layer did not help, so they were taken back. Product owner choice pending.
-- CI WebKit: the first scene test sometimes loses its first sentence. After a click under the text, the first
-  space replaced the line while the editor held the caret at the end. The test logs the page selection when
-  this happens, so the next failure shows the cause.
 - Known after review, left for later: while the gradient editor is open, the selected words show in plain
   theme color, and the preview shows the look. Each step of a color or gradient drag is one change, and the
   undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
