@@ -5,6 +5,7 @@ import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { BackupDialog } from '@/features/backup/BackupDialog';
+import { FolderAllow } from '@/features/backup/FolderAllow';
 import { ImportBackup } from '@/features/backup/ImportBackup';
 import { backupDue } from '@/features/backup/reminder';
 import { SafariSteps } from '@/features/backup/SafariSteps';
@@ -123,6 +124,7 @@ export function LibraryPage() {
         </section>
       )}
 
+      <FolderAllow />
       <SafariSteps closable className="mt-8" />
 
       {library.status === 'error' && (
