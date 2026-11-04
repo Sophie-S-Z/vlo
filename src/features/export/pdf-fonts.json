@@ -1,0 +1,83 @@
+{
+  "source": "https://fonts.googleapis.com/css2",
+  "license": "https://raw.githubusercontent.com/google/fonts/main/ofl",
+  "fonts": {
+    "newsreader": {
+      "family": "Newsreader",
+      "dir": "newsreader",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "eb-garamond": {
+      "family": "EB Garamond",
+      "dir": "ebgaramond",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "libre-baskerville": {
+      "family": "Libre Baskerville",
+      "dir": "librebaskerville",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "lora": { "family": "Lora", "dir": "lora", "styles": ["regular", "italic", "bold", "boldItalic"] },
+    "crimson-pro": {
+      "family": "Crimson Pro",
+      "dir": "crimsonpro",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "cormorant-garamond": {
+      "family": "Cormorant Garamond",
+      "dir": "cormorantgaramond",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "spectral": {
+      "family": "Spectral",
+      "dir": "spectral",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "atkinson": {
+      "family": "Atkinson Hyperlegible Next",
+      "dir": "atkinsonhyperlegiblenext",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "literata": {
+      "family": "Literata",
+      "dir": "literata",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "merriweather": {
+      "family": "Merriweather",
+      "dir": "merriweather",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "fraunces": {
+      "family": "Fraunces",
+      "dir": "fraunces",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "playfair-display": {
+      "family": "Playfair Display",
+      "dir": "playfairdisplay",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "cinzel": { "family": "Cinzel", "dir": "cinzel", "styles": ["regular", "bold"] },
+    "im-fell-english": {
+      "family": "IM Fell English",
+      "dir": "imfellenglish",
+      "styles": ["regular", "italic"]
+    },
+    "inter": { "family": "Inter", "dir": "inter", "styles": ["regular", "italic", "bold", "boldItalic"] },
+    "nunito": { "family": "Nunito", "dir": "nunito", "styles": ["regular", "italic", "bold", "boldItalic"] },
+    "courier-prime": {
+      "family": "Courier Prime",
+      "dir": "courierprime",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "jetbrains-mono": {
+      "family": "JetBrains Mono",
+      "dir": "jetbrainsmono",
+      "styles": ["regular", "italic", "bold", "boldItalic"]
+    },
+    "caveat": { "family": "Caveat", "dir": "caveat", "styles": ["regular", "bold"] },
+    "kalam": { "family": "Kalam", "dir": "kalam", "styles": ["regular", "bold"] },
+    "noto-sans-math": { "family": "Noto Sans Math", "dir": "notosansmath", "styles": ["regular"] }
+  }
+}

@@ -175,22 +175,22 @@ Bold, italic, underline, strikethrough, superscript, subscript, highlight (palet
 
 ### Task B1: Share-safe text pipeline
 
-- [ ] `lib/privacy.ts`: one tested function turns an item's document into an export tree and applies aliases when "Share-safe export" is on (default on for memoir). People and aliases arrive in Phase 3, so this task builds the function and its tests with the memoir fixture's alias list.
+- [x] `lib/privacy.ts`: one tested function turns an item's document into an export tree and applies aliases when "Share-safe export" is on (default on for memoir). People and aliases arrive in Phase 3, so this task builds the function and its tests with the memoir fixture's alias list.
 
 ### Task B2: Export worker and export dialog
 
-- [ ] `export.worker.ts`, a dialog with format, scope (item, chapter, whole project), share-safe switch, standard manuscript switch (novels), and the notice that lists font swaps and simplified looks (Decisions 5 to 7).
-- [ ] After a DOCX download, the dialog shows the 2 steps to open it in Google Docs.
+- [x] `export.worker.ts`, a dialog with format, scope (item, chapter, whole project), share-safe switch, standard manuscript switch (novels), and the notice that lists font swaps and simplified looks (Decisions 5 to 7).
+- [x] After a DOCX download, the dialog shows the 2 steps to open it in Google Docs.
 
 ### Task B3 to B6: Markdown, DOCX, EPUB 3 and PDF exporters
 
-- [ ] Each follows section 9 and carries every new mark and node (styles, colors, gradients, fonts, footnotes, math, alignment, drop caps).
-- [ ] Each passes the export fidelity suite: the poem fixture keeps every space and hanging indent (US01).
-- [ ] DOCX opens in LibreOffice by script in CI; PDF text and fonts read back by script; EPUB passes a structure check; screenshots of the poem fixture for a check by eye.
+- [x] Each follows section 9 and carries every new mark and node (styles, colors, gradients, fonts, footnotes, math, alignment, drop caps).
+- [x] Each passes the export fidelity suite: the poem fixture keeps every space and hanging indent (US01).
+- [x] DOCX opens in LibreOffice by script in CI; PDF text and fonts read back by script; EPUB passes a structure check; screenshots of the poem fixture for a check by eye.
 
 ### Task B7: Standard manuscript format (novels)
 
-- [ ] Section 9 rules, as a switch in the export dialog for DOCX and PDF.
+- [x] Section 9 rules, as a switch in the export dialog for DOCX and PDF.
 
 ### Task B8: Full-project backup and import, reminder, Safari steps
 

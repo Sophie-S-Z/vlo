@@ -1,6 +1,6 @@
 # Vlo status
 
-Last update: 2026-11-03
+Last update: 2026-11-04
 
 ## Done
 
@@ -221,10 +221,37 @@ Last update: 2026-11-03
   - Checks: unit tests read each file back (Markdown through markdown-it, Word through its XML). A CI job
     installs LibreOffice, opens the Word files by script and checks the poem spaces and both equations.
 
+- Phase 2 pull request B2: PDF, EPUB, standard manuscript format and the font check (plan Tasks B2 to B7).
+  - PDF (`features/export/pdf/`): Vlo lays out each page itself with pdf-lib and puts a subset of each
+    font in the file. Poems keep every space and hanging indent, and a copy from the PDF keeps the spaces.
+    Footnotes sit at the foot of their page, equations are drawn from their MathML, gradients are a shading
+    inside the letters, and only safe links stay. A long project gets a title page and page numbers. The
+    sheet is Letter or A4, from the page format.
+  - The PDF and EPUB fonts are static TrueType files in `public/fonts/`, each with its OFL text.
+    `scripts/fetch-fonts.mjs` downloads them and checks each file against `pdf-fonts.lock.json`. The service
+    worker caches each file on its first export, so exports work offline after that.
+  - EPUB 3 (`features/export/epub.ts`): one XHTML file for each chapter, a contents page, the fonts in the
+    book, footnotes as pop-up notes, equations as MathML and gradients with a first-color fallback. The done
+    screen says how to send the book to a Kindle.
+  - Standard manuscript format (novels, Word and PDF): the name, contact lines and rounded word count on the
+    first page, the title at mid page, a "Surname / TITLE / page" header from page 1, double spacing,
+    indented first lines and each chapter a third of the way down a new page. Newsreader 12 pt, or Courier
+    Prime with the typewriter switch. The details stay with the project, on this device.
+  - The font check: before a PDF or EPUB, the dialog reads the writer's own fonts (only when the browser
+    already allows local fonts) and checks each license. A font that forbids embedding, or that the device
+    cannot read, gets a stand-in of the same kind, and the dialog names each swap before the file is made.
+    After the download, the dialog names each style that the PDF draws by slant or weight.
+  - Checks: unit tests read each PDF back with pdf-lib, and with Poppler for the text, the space widths and
+    the fonts. The EPUB test opens every part as XML and checks the package, the contents and the poem
+    spaces. The CI job "Export files open in other apps" installs LibreOffice and Poppler and runs them all.
+    The browser tests download a PDF, an EPUB and a manuscript Word file.
+
 ## In progress
 
-- Phase 2 pull request B: B1 (export tree, share-safe, Markdown, Word, dialog) is in review. Next: B2 (PDF,
-  EPUB, standard manuscript format, font swap), then B3 (backup and import).
+- Phase 2 pull request B: B1 merged. B2 (PDF, EPUB, standard manuscript format, font check) is in review.
+  Next: B3 (backup and import).
+- Left for later: an EPUBCheck run in CI. EPUBCheck needs Java and a download from outside npm, so B2 uses
+  its own structure test.
 - Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
 - Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
   check has no result yet. CI WebKit has a 120 ms ceiling for that test.
@@ -336,3 +363,12 @@ Last update: 2026-11-03
 | 2026-11-04 | Vite builds workers as ES modules (`worker.format: 'es'`).                                                                                                                                                                                                                     | The export worker loads each format's code only when the writer picks it. Classic workers cannot split code.                                                                                                        |
 | 2026-11-04 | The license check accepts a dual license when one choice is allowed. jszip is `(MIT OR GPL-3.0-or-later)`, and Vlo uses it under MIT.                                                                                                                                          | jszip was approved with the Phase 2 plan.                                                                                                                                                                           |
 | 2026-11-04 | New packages: `docx` and `jszip` (runtime), `markdown-it` and `@types/markdown-it` (tests). `pdf-lib` and `@pdf-lib/fontkit` come with pull request B2.                                                                                                                        | Approved with the Phase 2 plan. `docs/licenses.md` lists them.                                                                                                                                                      |
+| 2026-11-04 | The PDF and EPUB fonts are static 400 and 700 TrueType files from the Google Fonts CSS API, pinned by SHA-256 in `pdf-fonts.lock.json`, not the variable files of the `google/fonts` repository.                                                                               | fontkit makes broken glyphs and wrong default weights from variable fonts.                                                                                                                                          |
+| 2026-11-04 | Vlo pads each subset glyph to an even length before pdf-lib writes the font.                                                                                                                                                                                                   | fontkit writes short `loca` offsets that cannot point at an odd offset, and 8 Vlo fonts then drew no letters.                                                                                                       |
+| 2026-11-04 | A font without a bold or italic file is drawn with a slant or a thicker stroke, and the done screen says which.                                                                                                                                                                | Cinzel, Caveat, Kalam, IM Fell English and Noto Sans Math have no file for some styles.                                                                                                                             |
+| 2026-11-04 | The manuscript word count rounds to the nearest 100 under 1,000 words.                                                                                                                                                                                                         | "About 0 words" helps no one on a short story.                                                                                                                                                                      |
+| 2026-11-04 | `lib/net.ts` holds `appFile`, the one same-origin fetch for the export fonts.                                                                                                                                                                                                  | Only `lib/net.ts` may call `fetch` (lint rule).                                                                                                                                                                     |
+| 2026-11-04 | The EPUB language is `en`.                                                                                                                                                                                                                                                     | Projects have no language setting yet.                                                                                                                                                                              |
+| 2026-11-04 | PDF equations are drawn as text and lines from MathML, not as images.                                                                                                                                                                                                          | The words stay sharp and selectable at every zoom.                                                                                                                                                                  |
+| 2026-11-04 | `/fonts/*` gets `Cache-Control: public, max-age=86400`, and the SPA rewrite skips `/fonts/`.                                                                                                                                                                                   | File names carry no hash, so they cannot be immutable. A missing font must return 404.                                                                                                                              |
+| 2026-11-04 | The CI job `word-export` becomes `export-files` ("Export files open in other apps") and installs `poppler-utils`.                                                                                                                                                              | It now checks PDF and EPUB files too.                                                                                                                                                                               |

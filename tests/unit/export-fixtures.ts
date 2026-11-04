@@ -201,3 +201,25 @@ export const RICH_PROSE: JSONContent = {
     { type: 'paragraph' },
   ],
 };
+
+/** Reads a file under public/, as the export worker does on the site. */
+export function loadPublicFile(path: string): Promise<Uint8Array> {
+  return Promise.resolve(new Uint8Array(readFileSync(`public/${path}`)));
+}
+
+/** A copy of a TrueType font with another OS/2 fsType, the field that says whether it may be embedded. */
+export function withFsType(bytes: Uint8Array, fsType: number): Uint8Array {
+  const copy = new Uint8Array(bytes);
+  const view = new DataView(copy.buffer, copy.byteOffset, copy.byteLength);
+  const tables = view.getUint16(4);
+  for (let i = 0; i < tables; i += 1) {
+    const record = 12 + i * 16;
+    const tag = String.fromCharCode(...copy.slice(record, record + 4));
+    if (tag === 'OS/2') {
+      // version, xAvgCharWidth, usWeightClass and usWidthClass come first: 8 bytes.
+      view.setUint16(view.getUint32(record + 8) + 8, fsType);
+      return copy;
+    }
+  }
+  throw new Error('The font has no OS/2 table.');
+}

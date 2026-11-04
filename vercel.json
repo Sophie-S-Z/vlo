@@ -5,7 +5,7 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/((?!assets/|icons/|workbox-|sw\\.js|manifest\\.webmanifest).*)",
+      "source": "/((?!assets/|icons/|fonts/|workbox-|sw\\.js|manifest\\.webmanifest).*)",
       "destination": "/index.html"
     }
   ],
@@ -41,6 +41,15 @@
         {
           "key": "Cache-Control",
           "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
         }
       ]
     },

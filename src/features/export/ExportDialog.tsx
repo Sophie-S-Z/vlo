@@ -1,30 +1,49 @@
-import { FileText, FileType } from 'lucide-react';
+import { BookOpen, FileText, FileType, Printer } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { TEMPLATES } from '@/features/library/templates';
-import type { Item, Project } from '@/lib/db';
+import { updateProjectSettings } from '@/features/library/projects';
+import type { Item, ManuscriptSettings, Project } from '@/lib/db';
 import type { Alias } from '@/lib/privacy';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
+import { Textarea } from '@/ui/textarea';
 import { folderOf, type ExportScope } from './build';
+import type { FontSwap } from './fontCheck';
 import type { ExportFormat } from './notices';
-import type { ExportFile } from './run';
-import { saveFile, startExport } from './startExport';
+import type { ExportFile, ExportRequest } from './run';
+import { ExportJob, readOwnFonts, saveFile } from './startExport';
 
 /*
- * The export dialog (plan Task B2): the format, what the file holds, and the share-safe switch. After the
- * file is saved, the dialog lists what the format changes and, for Word, the two steps to Google Docs.
+ * The export dialog (plan Task B2): the format, what the file holds, standard manuscript format for a
+ * novel, and the share-safe switch. Before a PDF or EPUB that must swap one of the writer's own fonts,
+ * the dialog names each swap and asks to continue (plan decision 7). After the file is saved, the dialog
+ * lists what the format changes and, for Word, the two steps to Google Docs.
  */
 
 const FORMATS: { id: ExportFormat; label: string; detail: string; icon: typeof FileText }[] = [
   {
     id: 'docx',
     label: 'Word',
-    detail: 'A .docx file. It opens in Word, Google Docs, Pages and LibreOffice.',
+    detail: 'A .docx file to keep editing. It opens in Word, Google Docs, Pages and LibreOffice.',
     icon: FileType,
+  },
+  {
+    id: 'pdf',
+    label: 'PDF',
+    detail: 'Fixed pages with your fonts, ready to print or send.',
+    icon: Printer,
+  },
+  {
+    id: 'epub',
+    label: 'EPUB',
+    detail: 'An e-book for Apple Books, Kobo and other e-readers.',
+    icon: BookOpen,
   },
   {
     id: 'markdown',
@@ -39,6 +58,7 @@ type ScopeChoice = 'item' | 'folder' | 'project';
 type Status =
   | { step: 'choose' }
   | { step: 'working' }
+  | { step: 'swaps'; swaps: FontSwap[]; job: ExportJob }
   | { step: 'done'; file: ExportFile; format: ExportFormat }
   | { step: 'failed' };
 
@@ -71,6 +91,20 @@ function OptionCard({ value, children }: { value: string; children: ReactNode })
   );
 }
 
+const MAX_NAME = 120;
+const MAX_CONTACT = 600;
+
+function startingManuscript(project: Project): ManuscriptSettings {
+  return (
+    project.settings.manuscript ?? {
+      on: false,
+      name: project.authorName ?? '',
+      contact: '',
+      typewriter: false,
+    }
+  );
+}
+
 export function ExportDialog({
   open,
   onOpenChange,
@@ -86,12 +120,35 @@ export function ExportDialog({
   const [format, setFormat] = useState<ExportFormat>('docx');
   const [scope, setScope] = useState<ScopeChoice>(current ? 'item' : 'project');
   const [safe, setSafe] = useState(project.template === 'memoir');
+  const [manuscript, setManuscript] = useState<ManuscriptSettings>(() => startingManuscript(project));
+  const [nameError, setNameError] = useState(false);
   const [status, setStatus] = useState<Status>({ step: 'choose' });
+  const nameRef = useRef<HTMLInputElement>(null);
+  const jobRef = useRef<ExportJob | null>(null);
+
+  // A job left open when the dialog closes stops its worker.
+  useEffect(
+    () => () => {
+      jobRef.current?.close();
+    },
+    [],
+  );
+
+  const offersManuscript = project.template === 'novel' && (format === 'docx' || format === 'pdf');
+  const usesManuscript = offersManuscript && manuscript.on;
+
+  const closeJob = () => {
+    jobRef.current?.close();
+    jobRef.current = null;
+  };
 
   const changeOpen = (next: boolean) => {
     if (!next && status.step === 'working') return;
     onOpenChange(next);
-    if (!next) setStatus({ step: 'choose' });
+    if (!next) {
+      closeJob();
+      setStatus({ step: 'choose' });
+    }
   };
 
   const scopeOf = (choice: ScopeChoice): ExportScope =>
@@ -101,25 +158,116 @@ export function ExportDialog({
         ? { kind: 'folder', itemId: folder.id }
         : { kind: 'project' };
 
-  async function exportNow() {
+  async function finish(job: ExportJob, chosen: ExportFormat) {
     setStatus({ step: 'working' });
     try {
-      const file = await startExport({
-        project,
-        items: [...items],
-        scope: scopeOf(scope),
-        format,
-        aliases: [...aliases],
-        shareSafe: safe,
-      });
+      const file = await job.make();
       saveFile(file);
-      setStatus({ step: 'done', file, format });
+      setStatus({ step: 'done', file, format: chosen });
     } catch {
+      setStatus({ step: 'failed' });
+    } finally {
+      if (jobRef.current === job) closeJob();
+    }
+  }
+
+  async function exportNow() {
+    if (usesManuscript && manuscript.name.trim() === '') {
+      setNameError(true);
+      nameRef.current?.focus();
+      return;
+    }
+    setStatus({ step: 'working' });
+    const details = {
+      name: manuscript.name.trim(),
+      contact: manuscript.contact.trim(),
+      typewriter: manuscript.typewriter,
+    };
+    if (offersManuscript) {
+      // The details stay with the project, so the next export starts with them.
+      void updateProjectSettings(project.id, { manuscript: { ...manuscript, ...details } }).catch(
+        () => undefined,
+      );
+    }
+    const request: Omit<ExportRequest, 'updates'> = {
+      project,
+      items: [...items],
+      scope: scopeOf(scope),
+      format,
+      aliases: [...aliases],
+      shareSafe: safe,
+      ...(usesManuscript ? { manuscript: details } : {}),
+    };
+    closeJob();
+    try {
+      const { job, ownFonts } = await ExportJob.start(request);
+      jobRef.current = job;
+      const swaps = await job.check(await readOwnFonts(ownFonts));
+      if (swaps.length > 0) {
+        setStatus({ step: 'swaps', swaps, job });
+        return;
+      }
+      await finish(job, format);
+    } catch {
+      closeJob();
       setStatus({ step: 'failed' });
     }
   }
 
   const kindLabel = (item: Item) => lower(template.kindLabel[item.kind] ?? item.kind);
+  const formatLabel = FORMATS.find((f) => f.id === format)?.label ?? 'file';
+
+  if (status.step === 'swaps') {
+    const unread = status.swaps.some((s) => s.reason.startsWith('Vlo cannot read'));
+    return (
+      <Dialog open={open} onOpenChange={changeOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogTitle>Some fonts cannot go in the {formatLabel}</DialogTitle>
+          <DialogDescription>
+            A {formatLabel} holds its fonts. Vlo puts the closest of its own fonts in place of these:
+          </DialogDescription>
+          <ul className="grid gap-3">
+            {status.swaps.map((swap) => (
+              <li key={swap.value} className="grid gap-0.5 rounded-[var(--radius-card)] bg-bg p-3 text-sm">
+                <span>
+                  <span className="font-medium">{swap.name}</span> becomes{' '}
+                  <span className="font-medium">{swap.standInName}</span>
+                </span>
+                <span className="text-muted">{swap.reason}</span>
+              </li>
+            ))}
+          </ul>
+          {unread && (
+            <p className="text-sm text-muted">
+              In Chrome or Edge, Vlo can read a font installed on this computer after you let it see your
+              fonts. Choose Font, then Your fonts, then Allow.
+            </p>
+          )}
+          <p className="text-sm text-muted">Word and Markdown files keep each font name, with no swap.</p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                closeJob();
+                setStatus({ step: 'choose' });
+              }}
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                void finish(status.job, format);
+              }}
+            >
+              Use these fonts and export
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
@@ -164,6 +312,12 @@ export function ExportDialog({
                   Nothing leaves this device until you upload the file yourself.
                 </p>
               </section>
+            )}
+            {status.format === 'epub' && (
+              <p className="text-sm text-muted">
+                To read it on a Kindle, send the file with Amazon&apos;s Send to Kindle. Apple Books and Kobo
+                open it as it is.
+              </p>
             )}
             <div className="flex flex-wrap justify-end gap-2">
               <Button
@@ -244,6 +398,83 @@ export function ExportDialog({
                   </label>
                 </RadioGroup>
               </fieldset>
+
+              {offersManuscript && (
+                <div className="grid gap-3">
+                  <div className="grid gap-1">
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id={`${ids}-ms`}
+                        checked={manuscript.on}
+                        onCheckedChange={(on) => {
+                          setManuscript((m) => ({ ...m, on }));
+                        }}
+                        aria-describedby={`${ids}-ms-hint`}
+                      />
+                      <label htmlFor={`${ids}-ms`} className="text-sm font-medium">
+                        Standard manuscript format
+                      </label>
+                    </div>
+                    <p id={`${ids}-ms-hint`} className="pl-14 text-sm text-muted">
+                      The layout agents and publishers ask for: 12 pt, double spacing, your name and a word
+                      count on the first page, and each chapter on a new page.
+                    </p>
+                  </div>
+                  {manuscript.on && (
+                    <div className="grid gap-3 pl-14">
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={`${ids}-ms-name`}>Your name</Label>
+                        <Input
+                          ref={nameRef}
+                          id={`${ids}-ms-name`}
+                          value={manuscript.name}
+                          maxLength={MAX_NAME}
+                          autoComplete="name"
+                          aria-invalid={nameError || undefined}
+                          aria-describedby={nameError ? `${ids}-ms-name-error` : undefined}
+                          onChange={(event) => {
+                            setManuscript((m) => ({ ...m, name: event.target.value }));
+                            setNameError(false);
+                          }}
+                        />
+                        {nameError && (
+                          <p id={`${ids}-ms-name-error`} role="alert" className="text-sm text-accent-text">
+                            Type the name for the first page and the page header.
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={`${ids}-ms-contact`}>Contact lines</Label>
+                        <Textarea
+                          id={`${ids}-ms-contact`}
+                          value={manuscript.contact}
+                          maxLength={MAX_CONTACT}
+                          rows={3}
+                          aria-describedby={`${ids}-ms-contact-hint`}
+                          onChange={(event) => {
+                            setManuscript((m) => ({ ...m, contact: event.target.value }));
+                          }}
+                        />
+                        <p id={`${ids}-ms-contact-hint`} className="text-sm text-muted">
+                          Address, email and phone, one on each line. They stay on this device.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          id={`${ids}-ms-typewriter`}
+                          checked={manuscript.typewriter}
+                          onCheckedChange={(typewriter) => {
+                            setManuscript((m) => ({ ...m, typewriter }));
+                          }}
+                        />
+                        <label htmlFor={`${ids}-ms-typewriter`} className="text-sm">
+                          Typewriter font (Courier Prime)
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid gap-1">
                 <div className="flex items-center gap-3">

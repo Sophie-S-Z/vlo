@@ -1,11 +1,17 @@
+import { appFile } from '@/lib/net';
 import type { Alias } from '@/lib/privacy';
 import { shareSafe } from '@/lib/privacy';
 import { buildExportDoc, exportFileName, type BuildInput } from './build';
+import { checkOwnFonts, ownFontsOf, type FontCheck, type FontSwap } from './fontCheck';
+import { exportWords, type ManuscriptDetails, type ManuscriptSetup } from './manuscript';
+import type { ExportDoc } from './model';
 import { exportNotices, type ExportFormat } from './notices';
+import type { LoadFile } from './pdf/fonts';
 
 /*
- * One export from start to end: the export tree, the share-safe aliases, then the file. The export worker
- * runs this, so a long book never stops the page. Each format's code loads only when the writer picks it.
+ * One export from start to end: the export tree, the share-safe aliases, the check of the writer's own
+ * fonts, then the file. The export worker runs this, so a long book never stops the page. Each format's
+ * code loads only when the writer picks it.
  */
 
 export interface ExportRequest extends Omit<BuildInput, 'updates'> {
@@ -14,6 +20,8 @@ export interface ExportRequest extends Omit<BuildInput, 'updates'> {
   updates: [string, Uint8Array][];
   aliases: Alias[];
   shareSafe: boolean;
+  /** Standard manuscript format, with the writer's details. Only a novel in Word or PDF uses it. */
+  manuscript?: ManuscriptDetails;
 }
 
 export interface ExportFile {
@@ -29,17 +37,95 @@ export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; typ
     extension: 'docx',
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   },
+  pdf: { extension: 'pdf', type: 'application/pdf' },
+  epub: { extension: 'epub', type: 'application/epub+zip' },
   markdown: { extension: 'md', type: 'text/markdown;charset=utf-8' },
 };
 
-export async function runExport(request: ExportRequest): Promise<ExportFile> {
+/** True for the formats that embed fonts, so the writer's own fonts need a check. */
+export function embedsFonts(format: ExportFormat): boolean {
+  return format === 'pdf' || format === 'epub';
+}
+
+/** True when the export uses standard manuscript format: a novel, in Word or PDF, with the switch on. */
+export function usesManuscript(request: Pick<ExportRequest, 'project' | 'format' | 'manuscript'>): boolean {
+  return (
+    request.manuscript !== undefined &&
+    request.project.template === 'novel' &&
+    (request.format === 'docx' || request.format === 'pdf')
+  );
+}
+
+export interface PreparedExport {
+  format: ExportFormat;
+  doc: ExportDoc;
+  manuscript: ManuscriptSetup | undefined;
+  /** The writer's own fonts that the file would embed, by stored value. */
+  ownFonts: string[];
+}
+
+/** Builds the export tree and lists the own fonts that the file needs. */
+export function prepareExport(request: ExportRequest): PreparedExport {
   const built = buildExportDoc({ ...request, updates: new Map(request.updates) });
   const doc = shareSafe(built, request.aliases, request.shareSafe);
-  const file = FORMAT_FILE[request.format];
+  const manuscript =
+    usesManuscript(request) && request.manuscript
+      ? { ...request.manuscript, words: exportWords(doc) }
+      : undefined;
+  let ownFonts: string[] = [];
+  if (embedsFonts(request.format)) {
+    // Standard manuscript format sets every word in one font: the typewriter font or the project font.
+    ownFonts = manuscript
+      ? manuscript.typewriter
+        ? []
+        : ownFontsOf(doc).filter((v) => v === doc.font)
+      : ownFontsOf(doc);
+  }
+  return { format: request.format, doc, manuscript, ownFonts };
+}
+
+/** Sorts the own fonts by whether they may go in the file. Bytes are null for a font Vlo cannot read. */
+export function checkFonts(
+  prepared: PreparedExport,
+  bytes: ReadonlyMap<string, Uint8Array | null>,
+): FontCheck {
+  return checkOwnFonts(prepared.ownFonts, bytes);
+}
+
+export interface MakeOptions {
+  loadFile?: LoadFile;
+}
+
+/** Makes the file. `fonts` comes from `checkFonts`, after the writer agreed to any swap. */
+export async function makeExport(
+  prepared: PreparedExport,
+  fonts: FontCheck = { own: new Map(), swaps: [] },
+  options: MakeOptions = {},
+): Promise<ExportFile> {
+  const { doc, format, manuscript } = prepared;
+  const loadFile = options.loadFile ?? appFile;
+  const swaps = new Map(fonts.swaps.map((s) => [s.value, s.standIn]));
+  const file = FORMAT_FILE[format];
   let bytes: Uint8Array;
-  if (request.format === 'docx') {
+  let drawnStyles: { font: string; style: 'bold' | 'italic' }[] = [];
+  if (format === 'docx') {
     const { toDocx } = await import('./docx');
-    bytes = await toDocx(doc);
+    bytes = await toDocx(doc, manuscript ? { manuscript } : {});
+  } else if (format === 'pdf') {
+    const { toPdf } = await import('./pdf/pdf');
+    const result = await toPdf(doc, {
+      loadFile,
+      own: fonts.own,
+      swaps,
+      ...(manuscript ? { manuscript } : {}),
+    });
+    bytes = result.bytes;
+    drawnStyles = result.drawnStyles;
+  } else if (format === 'epub') {
+    const { toEpub } = await import('./epub');
+    const result = await toEpub(doc, { loadFile, own: fonts.own, swaps });
+    bytes = result.bytes;
+    drawnStyles = result.drawnStyles;
   } else {
     const { toMarkdown } = await import('./markdown');
     bytes = new TextEncoder().encode(toMarkdown(doc));
@@ -48,6 +134,22 @@ export async function runExport(request: ExportRequest): Promise<ExportFile> {
     bytes,
     name: `${exportFileName(doc.title)}.${file.extension}`,
     type: file.type,
-    notices: exportNotices(doc, request.format),
+    notices: exportNotices(doc, format, {
+      swaps: fonts.swaps,
+      drawnStyles,
+      ...(manuscript ? { manuscriptFont: manuscript.typewriter ? 'courier-prime' : doc.font } : {}),
+    }),
   };
 }
+
+/** One export in one call, for tests and scripts: the own fonts get the bytes given here. */
+export async function runExport(
+  request: ExportRequest,
+  ownFontBytes: ReadonlyMap<string, Uint8Array | null> = new Map(),
+  options: MakeOptions = {},
+): Promise<ExportFile> {
+  const prepared = prepareExport(request);
+  return makeExport(prepared, checkFonts(prepared, ownFontBytes), options);
+}
+
+export type { FontSwap };
