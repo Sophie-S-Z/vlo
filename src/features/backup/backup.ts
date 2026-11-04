@@ -1,9 +1,10 @@
 import { clock } from '@/lib/clock';
-import { db, type Item, type Project } from '@/lib/db';
+import { db, readViewRows, viewTables, type Item, type Project } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { readItemUpdate, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
+import { copyViews } from './views';
 import { backupFileName, holdsText, readBackup, writeBackup, type Backup, type BackupMusic } from './file';
 
 /*
@@ -26,7 +27,7 @@ async function inBatches<T, R>(values: readonly T[], run: (value: T) => Promise<
 export async function collectBackup(projectId: string, options: { music: boolean }): Promise<Backup> {
   const rows = await db.transaction(
     'r',
-    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.audioFiles],
+    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.audioFiles, ...viewTables()],
     async () => ({
       project: await db.projects.get(projectId),
       items: await db.items.where('projectId').equals(projectId).toArray(),
@@ -34,6 +35,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       sessions: await db.sessions.where('projectId').equals(projectId).toArray(),
       itemTexts: await db.itemTexts.where('projectId').equals(projectId).toArray(),
       music: options.music ? await db.audioFiles.orderBy('addedAt').toArray() : [],
+      views: await readViewRows(projectId),
     }),
   );
   if (!rows.project) throw new Error('The project is not on this device.');
@@ -58,6 +60,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     itemTexts: rows.itemTexts,
     updates: new Map(updates),
     music,
+    views: rows.views,
   };
 }
 
@@ -96,6 +99,7 @@ function asCopy(backup: Backup): Backup {
   const projectId = newId();
   const ids = new Map(backup.items.map((item) => [item.id, newId()]));
   const itemId = (old: string) => ids.get(old) ?? old;
+  const copied = copyViews(backup.views, projectId, itemId);
   return {
     ...backup,
     project: { ...backup.project, id: projectId, title: `${backup.project.title} (copy)` },
@@ -104,11 +108,15 @@ function asCopy(backup: Backup): Backup {
       id: itemId(item.id),
       projectId,
       parentId: item.parentId === null ? null : itemId(item.parentId),
+      ...(item.memory?.lifeStageId === undefined
+        ? {}
+        : { memory: { ...item.memory, lifeStageId: copied.lifeStageId(item.memory.lifeStageId) } }),
     })),
     snapshots: backup.snapshots.map((s) => ({ ...s, id: newId(), projectId, itemId: itemId(s.itemId) })),
     sessions: backup.sessions.map((s) => ({ ...s, id: newId(), projectId })),
     itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
     updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), update])),
+    views: copied.views,
   };
 }
 
@@ -127,7 +135,7 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
     });
     await db.transaction(
       'rw',
-      [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.audioFiles],
+      [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.audioFiles, ...viewTables()],
       async () => {
         // The file is a backup of this state, so the project counts as backed up when the file was made.
         await db.projects.add({ ...backup.project, lastBackupAt: backup.createdAt || now });
@@ -135,6 +143,13 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
         await db.snapshots.bulkAdd(backup.snapshots);
         await db.sessions.bulkAdd(backup.sessions);
         await db.itemTexts.bulkPut(backup.itemTexts);
+        await db.cards.bulkAdd(backup.views.cards);
+        await db.threads.bulkAdd(backup.views.threads);
+        await db.cardLinks.bulkAdd(backup.views.cardLinks);
+        await db.lifeStages.bulkAdd(backup.views.lifeStages);
+        await db.sequences.bulkAdd(backup.views.sequences);
+        await db.people.bulkAdd(backup.views.people);
+        await db.submissions.bulkAdd(backup.views.submissions);
         // Music belongs to the device, not the project. A file that is already here stays as it is.
         const known = new Set(await db.audioFiles.toCollection().primaryKeys());
         await db.audioFiles.bulkAdd(

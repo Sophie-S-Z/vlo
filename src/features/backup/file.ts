@@ -1,11 +1,35 @@
-import { generateKeyBetween } from 'fractional-indexing';
 import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
 import { TEMPLATES } from '@/features/library/templates';
-import type { AudioFile, Item, ItemKind, ItemText, Project, Session, Snapshot, Status } from '@/lib/db';
+import {
+  BackupError,
+  checkOrder,
+  checkRows,
+  count,
+  DAMAGED,
+  fail,
+  id,
+  isObject,
+  list,
+  optionalText,
+  text,
+  type Json,
+} from './check';
+import { checkViews } from './views';
+import type {
+  AudioFile,
+  Item,
+  ItemKind,
+  ItemText,
+  Project,
+  Session,
+  Snapshot,
+  Status,
+  ViewRows,
+} from '@/lib/db';
 
 /*
  * The full-project backup file (spec section 9, plan Task B8). One `.vlo.zip` holds:
@@ -14,12 +38,13 @@ import type { AudioFile, Item, ItemKind, ItemText, Project, Session, Snapshot, S
  * - `items/<id>.md`: a readable copy of each item, for a writer who has no Vlo at hand;
  * - `snapshots/<id>.yjs`: the Yjs update of each snapshot;
  * - `music/<id>`: each of the writer's music files, only when the writer asks for them.
+ * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Vlo still reads version 1.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -40,19 +65,14 @@ export interface Backup {
   /** The Yjs update of each item that holds text, by item id. */
   updates: Map<string, Uint8Array>;
   music: BackupMusic[];
-}
-
-/** A problem with a backup file, in words for the writer. */
-export class BackupError extends Error {
-  override name = 'BackupError';
+  /** Board cards, threads, life stages, poem orders, people and submissions (Phase 3). */
+  views: ViewRows;
 }
 
 const KINDS: readonly ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'note'];
 const STATUSES: readonly Status[] = ['idea', 'draft', 'revised', 'done'];
 const TEMPLATE_IDS = Object.keys(TEMPLATES);
 const AI_MODES = ['pen', 'reader', 'cowriter'];
-/** Ids name files in the zip and databases in the browser, so they hold only safe characters. */
-const ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 /** The file name for a backup made on `date`, such as "Salt Year backup 2026-11-04.vlo.zip". */
 export function backupFileName(title: string, date: Date): string {
@@ -87,6 +107,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     sessions: backup.sessions,
     itemTexts: backup.itemTexts,
     music: backup.music.map((m) => m.info),
+    ...backup.views,
   };
   zip.file('project.json', JSON.stringify(manifest, null, 2));
   for (const item of backup.items) {
@@ -110,46 +131,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
 // ---------------------------------------------------------------------------------------------------
 // Reading. Each check names the part of the file that is wrong, so the writer can report it.
 
-type Json = Record<string, unknown>;
-
-function isObject(value: unknown): value is Json {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function fail(message: string): never {
-  throw new BackupError(message);
-}
-
-const DAMAGED = 'This backup file is damaged.';
-
-function text(row: Json, key: string, what: string): string {
-  const value = row[key];
-  if (typeof value !== 'string') fail(`${DAMAGED} ${what} has no ${key}.`);
-  return value;
-}
-
-function optionalText(row: Json, key: string, what: string): void {
-  if (row[key] !== undefined && typeof row[key] !== 'string') fail(`${DAMAGED} ${what} has a wrong ${key}.`);
-}
-
-function count(row: Json, key: string, what: string): number {
-  const value = row[key];
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0)
-    fail(`${DAMAGED} ${what} has a wrong ${key}.`);
-  return value;
-}
-
-function id(row: Json, key: string, what: string): string {
-  const value = text(row, key, what);
-  if (!ID.test(value)) fail(`${DAMAGED} ${what} has a wrong ${key}.`);
-  return value;
-}
-
-function list(manifest: Json, key: string): Json[] {
-  const value = manifest[key];
-  if (!Array.isArray(value) || !value.every(isObject)) fail(`${DAMAGED} The ${key} list is missing.`);
-  return value;
-}
+export { BackupError };
 
 function checkProject(value: unknown): Project {
   if (!isObject(value)) fail(`${DAMAGED} It has no project.`);
@@ -171,14 +153,6 @@ function checkProject(value: unknown): Project {
     fail(`${DAMAGED} The project settings are wrong.`);
   for (const key of ['font', 'page', 'scene']) optionalText(settings, key, 'The project settings');
   return value as unknown as Project;
-}
-
-function checkOrder(order: string, what: string): void {
-  try {
-    generateKeyBetween(order, null);
-  } catch {
-    fail(`${DAMAGED} ${what} has a wrong order.`);
-  }
 }
 
 function checkItems(rows: Json[], projectId: string): Item[] {
@@ -214,14 +188,6 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     }
   }
   return rows as unknown as Item[];
-}
-
-function checkRows<T>(rows: Json[], projectId: string, what: string, fields: (row: Json) => void): T[] {
-  for (const row of rows) {
-    if (text(row, 'projectId', what) !== projectId) fail(`${DAMAGED} ${what} belongs to another project.`);
-    fields(row);
-  }
-  return rows as unknown as T[];
 }
 
 /** Applies an update to a new document, and checks that this build can show it. */
@@ -296,6 +262,13 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     text(row, 'text', 'A text copy');
     count(row, 'updatedAt', 'A text copy');
   });
+  const views = checkViews(manifest, project.id, itemIds);
+  const stageIds = new Set(views.lifeStages.map((stage) => stage.id));
+  for (const item of items) {
+    const stage = item.memory?.lifeStageId;
+    if (stage !== undefined && !stageIds.has(stage))
+      fail(`${DAMAGED} A memory names a life stage that is not in it.`);
+  }
   const musicRows = manifest.music === undefined ? [] : list(manifest, 'music');
   for (const row of musicRows) {
     id(row, 'id', 'A music file');
@@ -338,5 +311,6 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     itemTexts,
     updates,
     music,
+    views,
   };
 }

@@ -81,10 +81,15 @@ export async function updateItem(
   });
 }
 
-/** Deletes an item and everything under it, with their snapshots, text copies and stored text. */
+/**
+ * Deletes an item and everything under it, with their snapshots, text copies and stored text. Board
+ * cards of a deleted item stay on the board without their link, and each poem order drops the item.
+ * A submission keeps the id, so the tracker can show "Deleted piece".
+ */
 export async function deleteItem(id: string): Promise<void> {
   const now = clock.now();
-  const ids = await db.transaction('rw', [db.items, db.snapshots, db.itemTexts, db.projects], async () => {
+  const tables = [db.items, db.snapshots, db.itemTexts, db.projects, db.cards, db.sequences];
+  const ids = await db.transaction('rw', tables, async () => {
     const root = await db.items.get(id);
     if (!root) return [];
     const all = await db.items.where('projectId').equals(root.projectId).toArray();
@@ -96,6 +101,19 @@ export async function deleteItem(id: string): Promise<void> {
     await db.items.bulkDelete(gone);
     await db.snapshots.where('itemId').anyOf(gone).delete();
     await db.itemTexts.bulkDelete(gone);
+    await db.cards
+      .where('itemId')
+      .anyOf(gone)
+      .modify((card) => {
+        delete card.itemId;
+      });
+    const goneSet = new Set(gone);
+    await db.sequences
+      .where('projectId')
+      .equals(root.projectId)
+      .modify((sequence) => {
+        sequence.itemIds = sequence.itemIds.filter((itemId) => !goneSet.has(itemId));
+      });
     await touchProject(root.projectId, now);
     return gone;
   });

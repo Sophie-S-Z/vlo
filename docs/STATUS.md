@@ -283,9 +283,22 @@ Last update: 2026-11-04
     disk). The browser test picks a folder in the private file system of the browser, leaves a project and
     reads the two files back.
 
+- Phase 3 pull request C1: data model version 3 and backup format version 2 (plan Task C1).
+  - Dexie version 3 adds the tables of the template views: `cards`, `threads`, `cardLinks`, `lifeStages`,
+    `sequences`, `people` and `submissions`. Opening a version 2 database keeps every row and the music.
+  - A backup (version 2) holds the rows of these tables. Vlo still imports a version 1 backup. Each
+    reference must point to a row of the same file. An import as a copy gives each row a new id and points
+    each reference into the copy. An older build refuses a version 2 file, so it cannot drop the new rows.
+  - Deleting a project removes its view rows. Deleting an item unlinks its board cards and drops it from
+    each poem order. A submission keeps the id, so the tracker can show "Deleted piece".
+  - Checks: an upgrade test from version 2, delete rules, a round trip with every new table, the copy remap,
+    a version 1 file, and damaged references.
+
 ## In progress
 
-- Phase 2 pull request B: B1, B2 and B3 merged. B4 (folder save) is in review. Gate 2 follows.
+- Phase 2: every pull request merged.
+- Phase 3: the plan is `docs/plans/phase-3.md`. It waits for the product owner's choices (D1 to D5, E1 to E5
+  and 3 packages). C1 (data model and backup format) is in review, because no choice changes it.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.

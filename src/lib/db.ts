@@ -85,6 +85,79 @@ export interface Session {
   poemsAdded: number;
 }
 
+/* Phase 3 tables (spec section 5, plan Task C1). Each belongs to one project. */
+
+/** An index card on the Story Board (spec 8.1). `x` and `y` are board pixels at 100 % zoom. */
+export interface Card {
+  id: string;
+  projectId: string;
+  itemId?: string;
+  title: string;
+  note?: string;
+  x: number;
+  y: number;
+  color: string;
+}
+
+/** A named, colored plot line that links board cards. */
+export interface Thread {
+  id: string;
+  projectId: string;
+  name: string;
+  color: string;
+  order: string;
+}
+
+export interface CardLink {
+  id: string;
+  projectId: string;
+  fromCardId: string;
+  toCardId: string;
+  threadId?: string;
+}
+
+/** A colored band on the Memory Timeline. `start` and `end` are dates as in `Item.memory.date`. */
+export interface LifeStage {
+  id: string;
+  projectId: string;
+  name: string;
+  start: string;
+  end: string;
+  color: string;
+  order: string;
+}
+
+/** A named order of poems (spec 8.3). Orders are independent of each other and of the binder. */
+export interface Sequence {
+  id: string;
+  projectId: string;
+  name: string;
+  itemIds: string[];
+  createdAt: number;
+}
+
+/** A real person in a memoir, with each way the text names them and the alias for each (F17). */
+export interface Person {
+  id: string;
+  projectId: string;
+  label: string;
+  variants: { real: string; alias: string }[];
+}
+
+export type SubmissionStatus = 'sent' | 'accepted' | 'declined' | 'withdrawn' | 'no-reply';
+
+export interface Submission {
+  id: string;
+  projectId: string;
+  itemIds: string[];
+  venue: string;
+  /** ISO date, YYYY-MM-DD. */
+  sentAt: string;
+  status: SubmissionStatus;
+  replyAt?: string;
+  notes?: string;
+}
+
 /** A plain-text copy of each item, for search and readable backups (ADR 0003). */
 export interface ItemText {
   itemId: string;
@@ -124,6 +197,13 @@ export class VloDb extends Dexie {
   itemTexts!: Table<ItemText, string>;
   appMeta!: Table<AppMeta, string>;
   audioFiles!: Table<AudioFile, string>;
+  cards!: Table<Card, string>;
+  threads!: Table<Thread, string>;
+  cardLinks!: Table<CardLink, string>;
+  lifeStages!: Table<LifeStage, string>;
+  sequences!: Table<Sequence, string>;
+  people!: Table<Person, string>;
+  submissions!: Table<Submission, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -137,7 +217,69 @@ export class VloDb extends Dexie {
     });
     // Version 2 (Phase 2, Task A9): the writer's own music. The other tables do not change.
     this.version(2).stores({ audioFiles: 'id, addedAt' });
+    // Version 3 (Phase 3, Task C1): the template views. New tables only, so no rows change.
+    this.version(3).stores({
+      cards: 'id, projectId, itemId',
+      threads: 'id, projectId',
+      cardLinks: 'id, projectId, fromCardId, toCardId',
+      lifeStages: 'id, projectId',
+      sequences: 'id, projectId',
+      people: 'id, projectId',
+      submissions: 'id, projectId',
+    });
   }
 }
 
 export const db = new VloDb();
+
+/** The Phase 3 tables. Each row has an `id` and a `projectId`, and belongs to one project. */
+export const VIEW_TABLE_NAMES = [
+  'cards',
+  'threads',
+  'cardLinks',
+  'lifeStages',
+  'sequences',
+  'people',
+  'submissions',
+] as const;
+export type ViewTableName = (typeof VIEW_TABLE_NAMES)[number];
+
+/** The rows of the Phase 3 tables of one project, by table. */
+export interface ViewRows {
+  cards: Card[];
+  threads: Thread[];
+  cardLinks: CardLink[];
+  lifeStages: LifeStage[];
+  sequences: Sequence[];
+  people: Person[];
+  submissions: Submission[];
+}
+
+export function emptyViewRows(): ViewRows {
+  return {
+    cards: [],
+    threads: [],
+    cardLinks: [],
+    lifeStages: [],
+    sequences: [],
+    people: [],
+    submissions: [],
+  };
+}
+
+/** The Phase 3 tables of a database, for a transaction or a delete by project. */
+export function viewTables(database: VloDb = db): Table<{ id: string; projectId: string }, string>[] {
+  return VIEW_TABLE_NAMES.map(
+    (name) => database[name] as unknown as Table<{ id: string; projectId: string }, string>,
+  );
+}
+
+/** Reads the Phase 3 rows of a project. Call it inside a transaction that holds `viewTables()`. */
+export async function readViewRows(projectId: string, database: VloDb = db): Promise<ViewRows> {
+  const rows = emptyViewRows();
+  for (const name of VIEW_TABLE_NAMES) {
+    const table = database[name] as unknown as Table<{ projectId: string }, string>;
+    (rows[name] as unknown[]) = await table.where('projectId').equals(projectId).toArray();
+  }
+  return rows;
+}

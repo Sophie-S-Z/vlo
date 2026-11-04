@@ -1,0 +1,194 @@
+import type { SubmissionStatus, ViewRows } from '@/lib/db';
+import { emptyViewRows } from '@/lib/db';
+import { newId } from '@/lib/ids';
+import {
+  checkOrder,
+  checkRows,
+  count,
+  DAMAGED,
+  fail,
+  id,
+  ID,
+  list,
+  optionalText,
+  text,
+  type Json,
+} from './check';
+
+/*
+ * The Phase 3 rows in a backup file (plan Task C1): board cards, threads and links, life stages, poem
+ * orders, people and submissions. A version 1 file has none of them. Each reference must point to a
+ * row of the same file, except a submission, which may name a piece that the writer deleted.
+ */
+
+const SUBMISSION_STATUSES: readonly SubmissionStatus[] = [
+  'sent',
+  'accepted',
+  'declined',
+  'withdrawn',
+  'no-reply',
+];
+
+/** A number that may be below zero, such as a board position. */
+function coordinate(row: Json, key: string, what: string): void {
+  const value = row[key];
+  if (typeof value !== 'number' || !Number.isFinite(value)) fail(`${DAMAGED} ${what} has a wrong ${key}.`);
+}
+
+function ids(row: Json, key: string, what: string): string[] {
+  const value = row[key];
+  if (!Array.isArray(value) || !value.every((v): v is string => typeof v === 'string' && ID.test(v)))
+    fail(`${DAMAGED} ${what} has a wrong ${key}.`);
+  return value;
+}
+
+function unique(rows: Json[], what: string): Set<string> {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const rowId = id(row, 'id', what);
+    if (seen.has(rowId)) fail(`${DAMAGED} Two rows of ${what} share one id.`);
+    seen.add(rowId);
+  }
+  return seen;
+}
+
+/** The rows of one Phase 3 table, or none when the file is older than the table. */
+function rowsOf(manifest: Json, key: keyof ViewRows): Json[] {
+  return manifest[key] === undefined ? [] : list(manifest, key);
+}
+
+/** Checks the Phase 3 rows of a backup file against its project and items. */
+export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlySet<string>): ViewRows {
+  const views = emptyViewRows();
+
+  const cardRows = rowsOf(manifest, 'cards');
+  const cardIds = unique(cardRows, 'the board cards');
+  views.cards = checkRows(cardRows, projectId, 'A board card', (row) => {
+    if (row.itemId !== undefined && !itemIds.has(id(row, 'itemId', 'A board card')))
+      fail(`${DAMAGED} A board card links to an item that is not in it.`);
+    text(row, 'title', 'A board card');
+    optionalText(row, 'note', 'A board card');
+    coordinate(row, 'x', 'A board card');
+    coordinate(row, 'y', 'A board card');
+    text(row, 'color', 'A board card');
+  });
+
+  const threadRows = rowsOf(manifest, 'threads');
+  const threadIds = unique(threadRows, 'the threads');
+  views.threads = checkRows(threadRows, projectId, 'A thread', (row) => {
+    text(row, 'name', 'A thread');
+    text(row, 'color', 'A thread');
+    checkOrder(text(row, 'order', 'A thread'), 'A thread');
+  });
+
+  const linkRows = rowsOf(manifest, 'cardLinks');
+  unique(linkRows, 'the card links');
+  views.cardLinks = checkRows(linkRows, projectId, 'A card link', (row) => {
+    for (const key of ['fromCardId', 'toCardId'])
+      if (!cardIds.has(id(row, key, 'A card link'))) fail(`${DAMAGED} A card link has no card.`);
+    if (row.threadId !== undefined && !threadIds.has(id(row, 'threadId', 'A card link')))
+      fail(`${DAMAGED} A card link has no thread.`);
+  });
+
+  const stageRows = rowsOf(manifest, 'lifeStages');
+  unique(stageRows, 'the life stages');
+  views.lifeStages = checkRows(stageRows, projectId, 'A life stage', (row) => {
+    for (const key of ['name', 'start', 'end', 'color']) text(row, key, 'A life stage');
+    checkOrder(text(row, 'order', 'A life stage'), 'A life stage');
+  });
+
+  const sequenceRows = rowsOf(manifest, 'sequences');
+  unique(sequenceRows, 'the poem orders');
+  views.sequences = checkRows(sequenceRows, projectId, 'A poem order', (row) => {
+    text(row, 'name', 'A poem order');
+    if (!ids(row, 'itemIds', 'A poem order').every((itemId) => itemIds.has(itemId)))
+      fail(`${DAMAGED} A poem order holds a poem that is not in it.`);
+    count(row, 'createdAt', 'A poem order');
+  });
+
+  const personRows = rowsOf(manifest, 'people');
+  unique(personRows, 'the people');
+  views.people = checkRows(personRows, projectId, 'A person', (row) => {
+    text(row, 'label', 'A person');
+    const variants = row.variants;
+    if (
+      !Array.isArray(variants) ||
+      !variants.every(
+        (v: unknown) =>
+          typeof v === 'object' &&
+          v !== null &&
+          typeof (v as Json).real === 'string' &&
+          typeof (v as Json).alias === 'string',
+      )
+    )
+      fail(`${DAMAGED} A person has wrong names.`);
+  });
+
+  const submissionRows = rowsOf(manifest, 'submissions');
+  unique(submissionRows, 'the submissions');
+  views.submissions = checkRows(submissionRows, projectId, 'A submission', (row) => {
+    ids(row, 'itemIds', 'A submission');
+    text(row, 'venue', 'A submission');
+    text(row, 'sentAt', 'A submission');
+    if (!SUBMISSION_STATUSES.includes(text(row, 'status', 'A submission') as SubmissionStatus))
+      fail(`${DAMAGED} A submission has a wrong status.`);
+    optionalText(row, 'replyAt', 'A submission');
+    optionalText(row, 'notes', 'A submission');
+  });
+
+  return views;
+}
+
+/**
+ * The Phase 3 rows with new ids, for an import as a copy. `itemId` gives each item's new id. The result
+ * also maps each old life stage id to its new id, for the memories that name one.
+ */
+export function copyViews(
+  views: ViewRows,
+  projectId: string,
+  itemId: (old: string) => string,
+): { views: ViewRows; lifeStageId: (old: string) => string } {
+  const fresh = (rows: readonly { id: string }[]) => new Map(rows.map((row) => [row.id, newId()]));
+  const cardIds = fresh(views.cards);
+  const threadIds = fresh(views.threads);
+  const stageIds = fresh(views.lifeStages);
+  const from = (map: Map<string, string>) => (old: string) => map.get(old) ?? old;
+  const cardId = from(cardIds);
+  const threadId = from(threadIds);
+  const lifeStageId = from(stageIds);
+  return {
+    lifeStageId,
+    views: {
+      cards: views.cards.map((card) => ({
+        ...card,
+        id: cardId(card.id),
+        projectId,
+        ...(card.itemId === undefined ? {} : { itemId: itemId(card.itemId) }),
+      })),
+      threads: views.threads.map((thread) => ({ ...thread, id: threadId(thread.id), projectId })),
+      cardLinks: views.cardLinks.map((link) => ({
+        ...link,
+        id: newId(),
+        projectId,
+        fromCardId: cardId(link.fromCardId),
+        toCardId: cardId(link.toCardId),
+        ...(link.threadId === undefined ? {} : { threadId: threadId(link.threadId) }),
+      })),
+      lifeStages: views.lifeStages.map((stage) => ({ ...stage, id: lifeStageId(stage.id), projectId })),
+      sequences: views.sequences.map((sequence) => ({
+        ...sequence,
+        id: newId(),
+        projectId,
+        itemIds: sequence.itemIds.map(itemId),
+      })),
+      // No text names a person by id in this version, so a new id changes only the row.
+      people: views.people.map((person) => ({ ...person, id: newId(), projectId })),
+      submissions: views.submissions.map((submission) => ({
+        ...submission,
+        id: newId(),
+        projectId,
+        itemIds: submission.itemIds.map(itemId),
+      })),
+    },
+  };
+}

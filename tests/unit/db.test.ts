@@ -37,17 +37,24 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 2 has the six Phase 1 tables and the music files table', () => {
+  test('version 3 has the Phase 1 tables, the music files table and the template view tables', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
+      'cardLinks',
+      'cards',
       'itemTexts',
       'items',
+      'lifeStages',
+      'people',
       'projects',
+      'sequences',
       'sessions',
       'snapshots',
+      'submissions',
+      'threads',
     ]);
   });
 
@@ -69,7 +76,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(2);
+    expect(upgraded.verno).toBe(3);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     await upgraded.audioFiles.add({
@@ -82,6 +89,59 @@ describe('Vlo database', () => {
       data: new TextEncoder().encode('RIFF').buffer,
     });
     expect((await upgraded.audioFiles.orderBy('addedAt').first())?.name).toBe('Rain tape');
+    await upgraded.delete();
+  });
+
+  test('opening a version 2 database keeps its rows and music, and adds the template view tables', async () => {
+    const name = 'vlo-upgrade-test-2';
+    const old = new Dexie(name);
+    old.version(2).stores({
+      projects: 'id, updatedAt',
+      items: 'id, projectId, [projectId+parentId]',
+      snapshots: 'id, itemId, [itemId+createdAt], projectId',
+      sessions: 'id, projectId',
+      itemTexts: 'itemId, projectId',
+      appMeta: 'key',
+      audioFiles: 'id, addedAt',
+    });
+    await old.open();
+    await old.table('projects').add(project('kept'));
+    await old.table('items').add(item('a', 'kept', null, 'a0'));
+    await old.table('audioFiles').add({
+      id: 'f1',
+      name: 'Rain tape',
+      type: 'audio/wav',
+      size: 4,
+      duration: 1,
+      addedAt: 2,
+      data: new ArrayBuffer(4),
+    });
+    old.close();
+
+    const upgraded = new VloDb(name);
+    await upgraded.open();
+    expect(upgraded.verno).toBe(3);
+    expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
+    expect(await upgraded.items.count()).toBe(1);
+    expect(await upgraded.audioFiles.count()).toBe(1);
+    await upgraded.cards.add({
+      id: 'c1',
+      projectId: 'kept',
+      itemId: 'a',
+      title: 'Storm',
+      x: -40,
+      y: 16,
+      color: 'amber',
+    });
+    await upgraded.sequences.add({
+      id: 's1',
+      projectId: 'kept',
+      name: 'Chapbook',
+      itemIds: ['a'],
+      createdAt: 3,
+    });
+    expect((await upgraded.cards.where('itemId').equals('a').first())?.title).toBe('Storm');
+    expect((await upgraded.sequences.where('projectId').equals('kept').first())?.name).toBe('Chapbook');
     await upgraded.delete();
   });
 
