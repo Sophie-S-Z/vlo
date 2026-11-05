@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
@@ -20,6 +21,11 @@ export function ProgressPage() {
   const { projectId = '' } = useParams();
   const state = useProject(projectId);
   const sessions = useSessionCount(projectId);
+  // Binder order: each parent, then its children. Kept between renders, so the tile targets are too.
+  const items = useMemo(
+    () => (state.status === 'ready' ? flattenTree(state.items).map((node) => node.item) : []),
+    [state],
+  );
 
   useDocumentTitle(
     state.status === 'ready'
@@ -47,7 +53,6 @@ export function ProgressPage() {
 
   const { project } = state;
   const template = TEMPLATES[project.template];
-  const items = flattenTree(state.items).map((node) => node.item);
   const words = items.reduce((sum, item) => sum + item.wordCount, 0);
   const byStatus = new Map(STATUSES.map((s) => [s, items.filter((i) => i.status === s).length]));
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openableFor } from '@/features/binder/tree';
+import { openTargets } from '@/features/binder/tree';
 import { createProject } from '@/features/library/projects';
 import { TEMPLATES } from '@/features/library/templates';
 import { DEFAULT_GOAL, goalsOf, setGoals } from '@/features/progress/progress';
@@ -45,6 +45,14 @@ describe('setGoals', () => {
     expect((await db.projects.get(project.id))?.settings.restDays).toEqual([0, 6]);
   });
 
+  it('turns one rest day on or off inside the write, so quick taps keep each day', async () => {
+    const { project } = await createProject({ title: 'Debt', template: 'novel' });
+    await Promise.all([1, 2, 3].map((day) => setGoals(project.id, { toggleRestDay: day })));
+    expect((await db.projects.get(project.id))?.settings.restDays).toEqual([1, 2, 3]);
+    await setGoals(project.id, { toggleRestDay: 2 });
+    expect((await db.projects.get(project.id))?.settings.restDays).toEqual([1, 3]);
+  });
+
   it('refuses a goal outside 1 to 100,000 words', async () => {
     const { project } = await createProject({ title: 'Debt', template: 'novel' });
     for (const goal of [0, -5, 1.5, 100_001])
@@ -54,7 +62,7 @@ describe('setGoals', () => {
   });
 });
 
-describe('openableFor', () => {
+describe('openTargets', () => {
   const item = (id: string, kind: Item['kind'], parentId: string | null, order: string): Item => ({
     id,
     projectId: 'p',
@@ -75,18 +83,18 @@ describe('openableFor', () => {
     item('empty', 'chapter', null, 'b'),
     item('note', 'note', null, 'c'),
   ];
-  const kindOf = TEMPLATES.novel.editorKind;
+  const targets = openTargets(items, TEMPLATES.novel.editorKind);
 
   it('opens a scene or note itself, and a folder opens its first scene', () => {
-    expect(openableFor(items, 's1', kindOf)?.id).toBe('s1');
-    expect(openableFor(items, 'note', kindOf)?.id).toBe('note');
-    expect(openableFor(items, 'part', kindOf)?.id).toBe('s1');
-    expect(openableFor(items, 'ch2', kindOf)?.id).toBe('s1');
+    expect(targets.get('s1')?.id).toBe('s1');
+    expect(targets.get('note')?.id).toBe('note');
+    expect(targets.get('part')?.id).toBe('s1');
+    expect(targets.get('ch2')?.id).toBe('s1');
   });
 
   it('opens nothing for a folder with no scene, and never a scene outside it', () => {
-    expect(openableFor(items, 'ch1', kindOf)).toBeUndefined();
-    expect(openableFor(items, 'empty', kindOf)).toBeUndefined();
-    expect(openableFor(items, 'gone', kindOf)).toBeUndefined();
+    expect(targets.get('ch1')).toBeUndefined();
+    expect(targets.get('empty')).toBeUndefined();
+    expect(targets.get('gone')).toBeUndefined();
   });
 });

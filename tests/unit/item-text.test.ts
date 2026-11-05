@@ -61,7 +61,7 @@ test('docText keeps a line break between words, so they count apart', () => {
   editor.destroy();
 });
 
-test('writeItemText adds the change in words to the day, and a cut never takes the day under 0', async () => {
+test('writeItemText adds the net change in words to the day', async () => {
   const { project, firstItemId } = await createProject({ title: 'Debt', template: 'novel' });
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
@@ -74,5 +74,11 @@ test('writeItemText adds the change in words to the day, and a cut never takes t
   await writeItemText(item, 'one two three', 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({ [today]: 3 });
   await writeItemText(item, '', 'prose');
+  expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({});
+  // Words that were there before today count against today, so a cut and a paste add nothing.
+  await db.items.update(item.id, { wordCount: 4 });
+  await writeItemText(item, '', 'prose');
+  expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({ [today]: -4 });
+  await writeItemText(item, 'one two three four', 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({});
 });

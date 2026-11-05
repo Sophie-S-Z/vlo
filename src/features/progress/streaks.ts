@@ -32,25 +32,29 @@ export interface DayEntry {
 const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 86_400_000;
 const formats = new Map<string, Intl.DateTimeFormat>();
+const pad = (n: number) => String(n).padStart(2, '0');
 
-function formatFor(timeZone: string | undefined): Intl.DateTimeFormat {
-  const key = timeZone ?? '';
-  let format = formats.get(key);
+/**
+ * The calendar date of a moment as YYYY-MM-DD, in the given time zone or the device's own. The device's
+ * own zone comes from the Date getters, so a writer who flies to another zone with the tab open moves to
+ * the new zone at once.
+ */
+export function dayKey(ms: number, timeZone?: string): string {
+  if (timeZone === undefined) {
+    const date = new Date(ms);
+    return `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+  let format = formats.get(timeZone);
   if (!format) {
     format = new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-      ...(timeZone === undefined ? {} : { timeZone }),
+      timeZone,
     });
-    formats.set(key, format);
+    formats.set(timeZone, format);
   }
-  return format;
-}
-
-/** The calendar date of a moment as YYYY-MM-DD, in the given time zone or the device's own. */
-export function dayKey(ms: number, timeZone?: string): string {
-  const parts = formatFor(timeZone).formatToParts(ms);
+  const parts = format.formatToParts(ms);
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? '';
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
@@ -75,15 +79,24 @@ export function weekdayOf(day: string): number {
   return new Date(dayNumber(day) * DAY_MS).getUTCDay();
 }
 
-/** The record with `delta` words added to one day. A day that ends at 0 or under leaves the record. */
+/**
+ * The record with `delta` words added to one day. A day keeps its net change, so a cut and a paste of the
+ * same words add nothing. A day that ends at exactly 0 leaves the record. The reads floor a day at 0, as
+ * "Written today" and the session timer do.
+ */
 export function addWordsToDay(
   record: Readonly<Record<string, number>>,
   day: string,
   delta: number,
 ): Record<string, number> {
-  const words = (record[day] ?? 0) + delta;
+  const words = (Object.hasOwn(record, day) ? (record[day] ?? 0) : 0) + delta;
   const others = Object.fromEntries(Object.entries(record).filter(([key]) => key !== day));
-  return words > 0 ? { ...others, [day]: words } : others;
+  return words === 0 ? others : { ...others, [day]: words };
+}
+
+/** The words of one day, never under 0. */
+function wordsOn(record: Readonly<Record<string, number>>, day: string): number {
+  return Object.hasOwn(record, day) ? Math.max(0, record[day] ?? 0) : 0;
 }
 
 function metOn(words: number, goal: number): boolean {
@@ -100,14 +113,14 @@ export function streakOf(
   const days = Object.keys(record)
     .map(dayNumber)
     .filter((n) => Number.isFinite(n) && n <= end);
-  const todayWords = record[today] ?? 0;
+  const todayWords = wordsOn(record, today);
   const todayMet = metOn(todayWords, rules.goal);
   if (days.length === 0) return { current: 0, best: 0, today: todayWords, todayMet };
   const first = Math.min(...days);
   const rest = new Set(rules.restDays);
   const stateOf = (n: number): 'met' | 'keep' | 'break' => {
     const day = fromNumber(n);
-    if (metOn(record[day] ?? 0, rules.goal)) return 'met';
+    if (metOn(wordsOn(record, day), rules.goal)) return 'met';
     // Today is not over, and a rest day is allowed off.
     return n === end || rest.has(weekdayOf(day)) ? 'keep' : 'break';
   };
@@ -132,7 +145,7 @@ export function lastDays(
   const rest = new Set(rules.restDays);
   return Array.from({ length: count }, (_, i) => {
     const day = addDays(today, i - count + 1);
-    const words = record[day] ?? 0;
+    const words = wordsOn(record, day);
     const state: DayState = metOn(words, rules.goal)
       ? 'met'
       : day === today

@@ -49,6 +49,8 @@ async function logSubmission(
 ) {
   await page.getByRole('button', { name: 'Log a submission' }).click();
   const f = form(page);
+  // The button that opened the form is gone, so focus starts at the form heading.
+  await expect(f.getByRole('heading', { name: 'Log a submission' })).toBeFocused();
   for (const piece of entry.pieces) await f.getByRole('checkbox', { name: piece }).check();
   await f.getByLabel('Venue').fill(entry.venue);
   await f.getByLabel('Sent on').fill(entry.sentAt);
@@ -56,6 +58,7 @@ async function logSubmission(
   await f.getByRole('button', { name: 'Log submission' }).click();
   await expect(status(page)).toHaveText(`Logged the submission to ${entry.venue.trim()}.`);
   await expect(form(page)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Log a submission' })).toBeFocused();
 }
 
 const venuesInOrder = (page: Page) =>
@@ -200,6 +203,10 @@ test('a deleted piece shows as "Deleted piece", and a deleted row comes back wit
   await page.getByRole('button', { name: 'Change the submission of Poem 1, Deleted piece to Agni' }).click();
   await expect(form(page)).toContainText('One piece of this row left the binder.');
   await form(page).getByRole('button', { name: 'Cancel' }).click();
+  // Cancel puts focus back on the button that opened the form.
+  await expect(
+    page.getByRole('button', { name: 'Change the submission of Poem 1, Deleted piece to Agni' }),
+  ).toBeFocused();
 
   await page.getByRole('button', { name: 'Delete the submission of Poem 1, Deleted piece to Agni' }).click();
   await expect(status(page)).toHaveText('Deleted the submission to Agni.');
@@ -207,6 +214,9 @@ test('a deleted piece shows as "Deleted piece", and a deleted row comes back wit
   await expect(page.getByRole('button', { name: 'Undo' })).toBeFocused();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(status(page)).toHaveText('Restored the submission to Agni.');
+  await expect(
+    page.getByRole('button', { name: 'Change the submission of Poem 1, Deleted piece to Agni' }),
+  ).toBeFocused();
   await expect(rows(page)).toHaveCount(1);
   await expect(agni.locator('td').first()).toHaveText('Poem 1, Deleted piece');
 });

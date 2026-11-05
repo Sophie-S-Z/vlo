@@ -64,8 +64,7 @@ export async function writeItemText(
       updatedAt: now,
     });
     const added = wordCount - before.wordCount;
-    // The day's words feed the goal and the streak (F21). A cut takes words off the same day, never
-    // below 0, as a session counts it.
+    // The day's net words feed the goal and the streak (F21), as "Written today" counts them.
     await db.projects
       .where('id')
       .equals(item.projectId)

@@ -196,21 +196,42 @@ export function outdentTarget(
 }
 
 /**
- * The item that opens for `id`: the item itself when it has an editor, or else its first descendant that
- * has one. A part or chapter with no scene in it opens nothing.
+ * The item that opens for each item id: the item itself when it has an editor, or else its first
+ * descendant that has one. A part or chapter with no scene in it has no entry. One pass over the tree, so
+ * a map of thousands of items stays fast.
  */
-export function openableFor(
+export function openTargets(
   items: readonly Item[],
-  id: string,
   editorKind: (kind: ItemKind) => 'prose' | 'poem' | null,
-): Item | undefined {
+): Map<string, Item> {
   const flat = flattenTree(items);
-  const at = flat.findIndex((node) => node.item.id === id);
-  const start = flat[at];
-  if (!start) return undefined;
-  for (const node of flat.slice(at)) {
-    if (node !== start && node.depth <= start.depth) return undefined;
-    if (editorKind(node.item.kind) !== null) return node.item;
+  // The index of the first item with an editor at or after each row.
+  const next: (number | undefined)[] = [];
+  let upcoming: number | undefined;
+  for (let i = flat.length - 1; i >= 0; i--) {
+    const node = flat[i];
+    if (node && editorKind(node.item.kind) !== null) upcoming = i;
+    next[i] = upcoming;
   }
-  return undefined;
+  // The index just after the subtree of each row.
+  const end: number[] = flat.map(() => flat.length);
+  const open: number[] = [];
+  flat.forEach((node, i) => {
+    for (
+      let top = open.at(-1);
+      top !== undefined && (flat[top]?.depth ?? -1) >= node.depth;
+      top = open.at(-1)
+    ) {
+      end[top] = i;
+      open.pop();
+    }
+    open.push(i);
+  });
+  const targets = new Map<string, Item>();
+  flat.forEach((node, i) => {
+    const j = next[i];
+    const target = j === undefined || j >= (end[i] ?? flat.length) ? undefined : flat[j];
+    if (target) targets.set(node.item.id, target.item);
+  });
+  return targets;
 }

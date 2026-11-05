@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Item, Project, Submission, SubmissionStatus } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
@@ -55,6 +55,12 @@ export function SubmissionForm({ project, pieces, venues, editing, onSave, onCan
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // The button that opened the form is gone now, so focus starts at the form's own heading.
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
 
   const shown = useMemo(() => {
     const q = find.trim().toLowerCase();
@@ -96,7 +102,12 @@ export function SubmissionForm({ project, pieces, venues, editing, onSave, onCan
         );
       }}
     >
-      <h2 id={`${id}-title`} className="font-display text-xl font-semibold">
+      <h2
+        id={`${id}-title`}
+        ref={headingRef}
+        tabIndex={-1}
+        className="font-display text-xl font-semibold focus:outline-none"
+      >
         {editing ? 'Change the submission' : 'Log a submission'}
       </h2>
 

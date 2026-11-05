@@ -62,6 +62,9 @@ describe('dates and follow-up (E4)', () => {
     expect(followUpDaysFor(settings, '  PLOUGHSHARES ')).toBe(30);
     expect(followUpDaysFor(settings, 'Granta')).toBe(90);
     expect(followUpDaysFor({}, 'Granta')).toBe(90);
+    // A venue that shares a name with a property of every object still gets the default (code review).
+    for (const name of ['constructor', 'toString', '__proto__', 'valueOf'])
+      expect(followUpDaysFor(settings, name)).toBe(90);
   });
 });
 

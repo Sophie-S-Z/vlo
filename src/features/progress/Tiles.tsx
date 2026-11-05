@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
-import { openableFor } from '@/features/binder/tree';
+import { openTargets } from '@/features/binder/tree';
 import { formatWords } from '@/features/library/format';
 import { TEMPLATES } from '@/features/library/templates';
 import type { Item, Project, Status } from '@/lib/db';
@@ -32,6 +32,7 @@ export function Tiles({ project, items }: { project: Project; items: readonly It
   const listRef = useRef<HTMLUListElement>(null);
   const played = useRef(false);
   const template = TEMPLATES[project.template];
+  const targets = useMemo(() => openTargets(items, template.editorKind), [items, template]);
 
   // Once, when the map first shows. All reads come before the animations start.
   useLayoutEffect(() => {
@@ -72,7 +73,7 @@ export function Tiles({ project, items }: { project: Project; items: readonly It
     >
       {items.map((item) => {
         const kind = template.kindLabel[item.kind] ?? item.kind;
-        const target = openableFor(items, item.id, template.editorKind);
+        const target = targets.get(item.id);
         const name = `${item.title}, ${kind.toLowerCase()}, ${STATUS_LABEL[item.status].toLowerCase()}, ${formatWords(item.wordCount)}`;
         const body = (
           <>

@@ -162,7 +162,7 @@ function checkProject(value: unknown): Project {
           /^\d{4}-\d{2}-\d{2}$/.test(day) &&
           typeof words === 'number' &&
           Number.isInteger(words) &&
-          words > 0,
+          words !== 0,
       )
     )
   )

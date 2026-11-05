@@ -170,9 +170,8 @@ export function Goals({ project }: { project: Project }) {
                         // The box covers the whole chip, so a tap anywhere on it lands on the box.
                         className="absolute inset-0 cursor-pointer appearance-none rounded-full opacity-0"
                         onChange={() => {
-                          const next = on ? restDays.filter((d) => d !== day) : [...restDays, day];
-                          setRestDays(next);
-                          save({ restDays: next });
+                          setRestDays(on ? restDays.filter((d) => d !== day) : [...restDays, day]);
+                          save({ toggleRestDay: day });
                         }}
                       />
                       <span aria-hidden="true">{DAY_SHORT[day]}</span>

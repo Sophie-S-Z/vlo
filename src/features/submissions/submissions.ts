@@ -70,7 +70,11 @@ export function venueKey(venue: string): string {
 }
 
 export function followUpDaysFor(settings: Pick<Project['settings'], 'followUpDays'>, venue: string): number {
-  return settings.followUpDays?.[venueKey(venue)] ?? DEFAULT_FOLLOW_UP;
+  const days = settings.followUpDays;
+  const key = venueKey(venue);
+  // Own keys only, so a venue named "constructor" never reads a property of every object.
+  const own = days && Object.hasOwn(days, key) ? days[key] : undefined;
+  return typeof own === 'number' ? own : DEFAULT_FOLLOW_UP;
 }
 
 /** True when a sent piece has had no reply for the venue's follow-up days (E4). */

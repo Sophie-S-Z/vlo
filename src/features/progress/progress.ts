@@ -27,8 +27,15 @@ export function goalsOf(settings: Project['settings']): GoalSettings {
   };
 }
 
-/** Saves a change to the goal settings. A goal outside 1 to 100,000 words is a RangeError. */
-export async function setGoals(projectId: string, change: Partial<GoalSettings>): Promise<void> {
+/**
+ * Saves a change to the goal settings. A goal outside 1 to 100,000 words is a RangeError.
+ * `toggleRestDay` turns one weekday on or off inside the write, so quick taps on several days never drop
+ * one of them.
+ */
+export async function setGoals(
+  projectId: string,
+  change: Partial<GoalSettings> & { toggleRestDay?: number },
+): Promise<void> {
   const goal = change.goalWordsPerDay;
   if (goal !== undefined && (!Number.isInteger(goal) || goal < 1 || goal > MAX_GOAL))
     throw new RangeError(`Type a goal from 1 to ${MAX_GOAL.toLocaleString()} words.`);
@@ -53,6 +60,13 @@ export async function setGoals(projectId: string, change: Partial<GoalSettings>)
             : {}),
         ...(restDays === undefined ? {} : { restDays }),
       };
+      const day = change.toggleRestDay;
+      if (day !== undefined && Number.isInteger(day) && day >= 0 && day <= 6) {
+        const now = project.settings.restDays;
+        project.settings.restDays = (now.includes(day) ? now.filter((d) => d !== day) : [...now, day]).sort(
+          (a, b) => a - b,
+        );
+      }
       project.updatedAt = clock.now();
     });
 }

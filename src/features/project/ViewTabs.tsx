@@ -66,15 +66,21 @@ export function ViewTabs({ project }: { project: Project }) {
   const search = new URLSearchParams(location.search);
   const listRef = useRef<HTMLUListElement>(null);
 
-  // On a phone the row scrolls, so bring the tab of this screen into view.
+  // On a phone the row scrolls, so bring the tab of this screen into view. Only the row scrolls, never
+  // the page.
   useEffect(() => {
-    listRef.current
-      ?.querySelector('[aria-current="page"]')
-      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    const list = listRef.current;
+    const current = list?.querySelector('[aria-current="page"]');
+    if (!list || !current) return;
+    const row = list.getBoundingClientRect();
+    const tab = current.getBoundingClientRect();
+    if (tab.right > row.right) list.scrollLeft += Math.ceil(tab.right - row.right);
+    else if (tab.left < row.left) list.scrollLeft -= Math.ceil(row.left - tab.left);
   }, [location.pathname, location.search]);
 
   return (
-    <nav aria-label="Project views" className="mt-3">
+    // `contain: inline-size` keeps the long row from widening the page; the row scrolls inside instead.
+    <nav aria-label="Project views" className="mt-3 [contain:inline-size]">
       {/* One row that scrolls on a phone, so the active tab keeps its line on the rule. */}
       <ul ref={listRef} className="flex gap-1 overflow-x-auto border-b border-rule [scrollbar-width:thin]">
         {tabs.map((tab) => {

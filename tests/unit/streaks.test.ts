@@ -42,6 +42,14 @@ describe('calendar days', () => {
     const once = addWordsToDay({ '2026-11-04': 300 }, '2026-11-05', 120);
     expect(once).toEqual({ '2026-11-04': 300, '2026-11-05': 120 });
     expect(addWordsToDay(once, '2026-11-05', -20)).toEqual({ '2026-11-04': 300, '2026-11-05': 100 });
+    // A cut and a paste of the same words add nothing, and the reads floor a day at 0.
+    const cut = addWordsToDay({}, '2026-11-05', -400);
+    expect(cut).toEqual({ '2026-11-05': -400 });
+    expect(streakOf(cut, rules(1), '2026-11-05')).toMatchObject({ today: 0, todayMet: false });
+    expect(lastDays(cut, rules(1), '2026-11-05', 1)).toEqual([
+      { day: '2026-11-05', words: 0, state: 'today' },
+    ]);
+    expect(addWordsToDay(cut, '2026-11-05', 400)).toEqual({});
     // A day that ends at 0 leaves the record.
     expect(addWordsToDay(once, '2026-11-05', -120)).toEqual({ '2026-11-04': 300 });
   });

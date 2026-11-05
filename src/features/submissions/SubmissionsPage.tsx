@@ -1,13 +1,13 @@
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
-import { openableFor } from '@/features/binder/tree';
+import { flattenTree, openTargets } from '@/features/binder/tree';
 import { TEMPLATES } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import { formatDate } from '@/features/timeline/dates';
-import type { Submission, SubmissionStatus } from '@/lib/db';
+import type { Item, Submission, SubmissionStatus } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { SubmissionForm } from './SubmissionForm';
@@ -93,6 +93,48 @@ function SortHeader({
   );
 }
 
+/**
+ * The status box of one row. It shows the writer's choice at once, so the box never flicks back to the
+ * old status while the save is on its way.
+ */
+function StatusSelect({
+  row,
+  label,
+  onChosen,
+}: {
+  row: Submission;
+  label: string;
+  onChosen: (status: SubmissionStatus) => Promise<void>;
+}) {
+  const [chosen, setChosen] = useState<SubmissionStatus | null>(null);
+  const [stored, setStored] = useState(row.status);
+  // The stored status changed: the save came back, or another tab changed it.
+  if (stored !== row.status) {
+    setStored(row.status);
+    setChosen(null);
+  }
+  return (
+    <select
+      aria-label={label}
+      value={chosen ?? row.status}
+      onChange={(event) => {
+        const status = event.target.value as SubmissionStatus;
+        setChosen(status);
+        onChosen(status).catch(() => {
+          setChosen(null);
+        });
+      }}
+      className="vlo-sub-status min-h-11 rounded-md border border-rule bg-transparent px-2 text-sm"
+    >
+      {STATUSES.map((s) => (
+        <option key={s} value={s}>
+          {STATUS_LABEL[s]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function SubmissionsPage() {
   const { projectId = '' } = useParams();
   const state = useProject(projectId);
@@ -106,7 +148,10 @@ export function SubmissionsPage() {
   const [message, setMessage] = useState('');
   const [deleted, setDeleted] = useState<Submission | null>(null);
   const undoRef = useRef<HTMLButtonElement>(null);
-  const addRef = useRef<HTMLButtonElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  // The control that takes focus after the next render, as a data-focus value. A closed form or an Undo
+  // removes the focused button, so focus moves to the control that the writer will want next.
+  const focusNext = useRef<string | null>(null);
   // Today, read once a render, so a page left open past midnight shows the new follow-ups.
   const today = todayIso();
 
@@ -122,9 +167,31 @@ export function SubmissionsPage() {
     if (deleted) undoRef.current?.focus();
   }, [deleted]);
 
+  useLayoutEffect(() => {
+    const target = focusNext.current;
+    if (target === null) return;
+    const control = sectionRef.current?.querySelector<HTMLElement>(`[data-focus="${target}"]`);
+    if (!control) return;
+    control.focus();
+    focusNext.current = null;
+  });
+
   const items = useMemo(() => (state.status === 'ready' ? state.items : []), [state]);
   const titles = useMemo(() => new Map(items.map((i) => [i.id, i.title])), [items]);
-  const pieces = useMemo(() => items.filter((i) => i.kind !== 'note'), [items]);
+  // Binder order: each parent, then its children.
+  const pieces = useMemo(
+    () =>
+      flattenTree(items)
+        .map((node) => node.item)
+        .filter((i) => i.kind !== 'note'),
+    [items],
+  );
+  const template = state.status === 'ready' ? TEMPLATES[state.project.template] : null;
+  /** The item that a piece title opens: a part or chapter opens its first scene. */
+  const targets = useMemo(
+    () => (template ? openTargets(items, template.editorKind) : new Map<string, Item>()),
+    [items, template],
+  );
   const rows = useMemo(
     () =>
       submissions ? sortSubmissions(submissions, sort.key, sort.direction, (s) => piecesText(s, titles)) : [],
@@ -152,14 +219,11 @@ export function SubmissionsPage() {
   }
 
   const { project } = state;
-  const template = TEMPLATES[project.template];
+  const { label: templateLabel } = TEMPLATES[project.template];
   const announce = (text: string) => {
     setDeleted(null);
     setMessage(text);
   };
-
-  /** The item that a piece title opens: a folder opens its first scene (plan Task C9). */
-  const openTarget = (id: string) => openableFor(items, id, template.editorKind);
 
   const followUps = submissions.filter((s) =>
     needsFollowUp(s, followUpDaysFor(project.settings, s.venue), today),
@@ -173,13 +237,13 @@ export function SubmissionsPage() {
     else await addSubmission(project.id, draft);
     if (days !== followUpDaysFor(project.settings, draft.venue))
       await setFollowUpDays(project.id, draft.venue, days);
+    focusNext.current = editing ? `edit-${editing.id}` : 'add';
     setForm(null);
     announce(
       editing
         ? `Saved the changes to ${draft.venue.trim()}.`
         : `Logged the submission to ${draft.venue.trim()}.`,
     );
-    addRef.current?.focus();
   };
 
   const changeSort = (key: SortKey) => {
@@ -191,9 +255,9 @@ export function SubmissionsPage() {
   };
 
   return (
-    <section className="grid gap-6">
+    <section ref={sectionRef} className="grid gap-6">
       <header className="min-w-0">
-        <p className="text-sm text-muted">{template.label}</p>
+        <p className="text-sm text-muted">{templateLabel}</p>
         <h1 className="mt-1 font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
           {project.title}
         </h1>
@@ -211,7 +275,7 @@ export function SubmissionsPage() {
         </div>
         {!form && (
           <Button
-            ref={addRef}
+            data-focus="add"
             onClick={() => {
               setForm({ editing: null });
             }}
@@ -231,6 +295,7 @@ export function SubmissionsPage() {
           editing={form.editing}
           onSave={save}
           onCancel={() => {
+            focusNext.current = form.editing ? `edit-${form.editing.id}` : 'add';
             setForm(null);
           }}
         />
@@ -266,7 +331,8 @@ export function SubmissionsPage() {
             <caption className="sr-only">
               Submissions of {project.title}. The column buttons sort the table.
             </caption>
-            <thead className="max-sm:sr-only">
+            {/* Phones sort with the list box, so the header buttons leave the tab order there too. */}
+            <thead className="max-sm:hidden">
               <tr className="border-b border-rule">
                 {COLUMNS.map((column) => (
                   <SortHeader key={column.key} column={column} sort={sort} onSort={changeSort} />
@@ -296,9 +362,9 @@ export function SubmissionsPage() {
                           {i > 0 && ', '}
                           {!titles.has(id) ? (
                             <span className="text-muted italic">Deleted piece</span>
-                          ) : openTarget(id) ? (
+                          ) : targets.has(id) ? (
                             <Link
-                              to={`/p/${project.id}?${new URLSearchParams({ item: openTarget(id)?.id ?? id }).toString()}`}
+                              to={`/p/${project.id}?${new URLSearchParams({ item: targets.get(id)?.id ?? id }).toString()}`}
                               className="text-text"
                             >
                               {titles.get(id)}
@@ -320,28 +386,21 @@ export function SubmissionsPage() {
                     </td>
                     <td className="col-start-1 sm:px-2 sm:py-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <select
-                          aria-label={`Status of ${names} at ${row.venue}`}
-                          value={row.status}
-                          onChange={(event) => {
-                            const status = event.target.value as SubmissionStatus;
+                        <StatusSelect
+                          row={row}
+                          label={`Status of ${names} at ${row.venue}`}
+                          onChosen={(status) =>
                             setSubmissionStatus(row.id, status).then(
                               () => {
                                 announce(`${names} at ${row.venue}: ${STATUS_LABEL[status]}.`);
                               },
-                              () => {
+                              (problem: unknown) => {
                                 announce('Vlo could not save the status on this device.');
+                                throw problem;
                               },
-                            );
-                          }}
-                          className="vlo-sub-status min-h-11 rounded-md border border-rule bg-transparent px-2 text-sm"
-                        >
-                          {STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                              {STATUS_LABEL[s]}
-                            </option>
-                          ))}
-                        </select>
+                            )
+                          }
+                        />
                         {late && (
                           <span className="rounded-full border border-current px-2 py-0.5 text-xs font-semibold text-accent-text">
                             Follow up
@@ -371,6 +430,7 @@ export function SubmissionsPage() {
                           variant="ghost"
                           className="min-w-11 px-0"
                           aria-label={`Change the submission of ${names} to ${row.venue}`}
+                          data-focus={`edit-${row.id}`}
                           onClick={() => {
                             setForm({ editing: row });
                           }}
@@ -419,6 +479,7 @@ export function SubmissionsPage() {
               const row = deleted;
               restoreSubmission(row).then(
                 () => {
+                  focusNext.current = `edit-${row.id}`;
                   announce(`Restored the submission to ${row.venue}.`);
                 },
                 () => {

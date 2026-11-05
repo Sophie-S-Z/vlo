@@ -461,14 +461,28 @@ Last update: 2026-11-05
   - The daily goal and streak are off by default. With them on, the writer sets the words a day (500 at
     first) and the rest days. The screen shows today's words against the goal, the streak, the best streak
     and the last 4 weeks as a calendar, Monday first.
-  - Each save adds the change in words to the local date of that moment. A cut takes words off the same
-    day, never below 0. A met day counts. A rest day under the goal keeps the streak and adds nothing.
+  - Each save adds the change in words to the local date of that moment. A day keeps its net change, so a
+    cut and a paste of the same words add nothing. The screen floors a day at 0, as "Written today" does. A met day counts. A rest day under the goal keeps the streak and adds nothing.
     Today keeps the streak open until it ends. Days are calendar dates, so a daylight saving change never
     makes or loses a day.
   - Checks: unit tests for the streak rules, time zones and daylight saving changes, the day record on
     save, the goal settings, the item that a tile opens, and the backup check. Browser tests for F21, the
     rest day, the goal limits, a reload, the mosaic and Calm mode, the tab and command on every template,
     and axe, at desktop and phone widths.
+
+- Code review of Submissions and Progress (10 findings, all fixed):
+  - Each day keeps its net change in words (see Decisions).
+  - The tile and link targets come from one pass over the binder, so a binder of thousands of items stays
+    fast.
+  - Focus: the form heading takes focus when the form opens. Save and Cancel put focus on the button that
+    opened the form. Undo puts focus on the restored row.
+  - On a phone the sort header buttons leave the tab order, and the "Sort by" box sorts.
+  - The piece list in the form is in binder order.
+  - A venue named "constructor" or "toString" gets the default follow-up days.
+  - The day key follows the device time zone at once after a flight.
+  - The tab row scrolls only itself, never the page, and it no longer widens the page at 360 px.
+  - A rest day changes inside the write, so quick taps on several days keep each one.
+  - The status box in a row shows the new status at once and goes back only when the save fails.
 
 ## In progress
 
@@ -505,9 +519,13 @@ Last update: 2026-11-05
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
   retry covers it.
 
-- The board test "US05: a double-click on a linked card opens its scene in under 1 s" measures with the
-  wall clock. In the build container it failed twice when two workers ran the board and view tests
-  together, and it passed 9 times out of 9 alone. CI runs one worker.
+- Two board timing tests are sensitive to load in the build container. "US05: a double-click on a linked
+  card opens its scene in under 1 s" failed twice and "a pinch over 200 cards keeps 60 frames a second"
+  failed twice on the phone profile, each time with two workers running other tests beside them. Each
+  passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker.
+- Gate 3 in the build container: Chromium and the phone profile pass the whole browser suite. WebKit is
+  not installed there, and Firefox does not run there. Run "Run workflow" on the Actions tab for all four
+  browsers when the Actions minutes reset.
 
 - Known after the review of private names, left for later:
   - Mark all reads the stored text of each item. A word that the writer types in an open editor in the
@@ -637,5 +655,5 @@ Last update: 2026-11-05
 | 2026-11-05 | The Submissions form checks its own fields (`noValidate`) and shows each refusal as words in the form.                                                                                                                                                                         | A browser bubble on a number field gives no message that a screen reader keeps, and it differs in each browser.                                                                                                     |
 | 2026-11-05 | A tinted Submissions row mixes its quiet text and accent text 25 to 30% toward the main text color.                                                                                                                                                                            | The theme muted color is 4.5:1 on the page background only. On any tint it falls under WCAG AA.                                                                                                                     |
 | 2026-11-05 | The project keeps the words of each local day in `settings.wordsByDay`, from each save.                                                                                                                                                                                        | Spec section 5 has only timer sessions, and a streak from the timer alone would miss each day the writer types with no timer. The record is about 15 bytes a day and goes in the backup.                            |
-| 2026-11-05 | A cut takes words off the day it happens, never below 0.                                                                                                                                                                                                                       | The session timer counts removed words as 0 added (Phase 1). A day that counts the same way keeps the two numbers in step.                                                                                          |
+| 2026-11-05 | Each day keeps its net change in words, and the Progress screen floors a day at 0.                                                                                                                                                                                             | "Written today" in the editor counts the same way, so the two numbers agree. A cut and a paste of the same words add nothing.                                                                                       |
 | 2026-11-05 | The goal calendar starts each week on Monday.                                                                                                                                                                                                                                  | A rest weekend then sits together at the end of each row.                                                                                                                                                           |
