@@ -57,8 +57,20 @@ export default defineConfig({
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,png,woff2,webmanifest}'],
         // The writing fonts are not in the install cache. Each one is cached the first time it loads.
-        globIgnores: ['assets/fonts/**'],
+        // The pronouncing dictionary of the Craft labels (about 1 MB gzip) is not in the install cache
+        // either (plan decision D2). It is cached the first time a poet turns the labels on.
+        globIgnores: ['assets/fonts/**', 'assets/craft/**'],
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/craft\/[^/]+\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-craft-dictionary',
+              // The file name carries a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
           {
             urlPattern: /\/assets\/fonts\/[^/]+\.woff2?$/,
             handler: 'CacheFirst',
@@ -89,7 +101,18 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   // Module workers, so the export worker loads each format's code only when the writer picks it.
-  worker: { format: 'es' },
+  worker: {
+    format: 'es',
+    rolldownOptions: {
+      output: {
+        // The Craft worker's dictionary goes under assets/craft/, so the install leaves it out.
+        chunkFileNames: (chunk) =>
+          chunk.moduleIds.some((id) => id.includes('cmu-pronouncing-dictionary'))
+            ? 'assets/craft/[name]-[hash].js'
+            : 'assets/[name]-[hash].js',
+      },
+    },
+  },
   build: {
     manifest: true,
     sourcemap: true,

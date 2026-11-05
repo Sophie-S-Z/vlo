@@ -406,6 +406,32 @@ Last update: 2026-11-05
     tests for US08 after a reload, keyboard reorder, the ring keys, copy, rename, delete with Undo, a new
     poem, the export of an order, Calm mode, and axe, at desktop and phone widths.
 
+- Phase 3 pull request C4, part 2: Craft labels (plan Task C7, F19, Review Focus 6).
+  - In a poetry collection, "Craft labels" in the More tools menu and the command menu turns the labels on
+    for the open poem. Each poem keeps its own switch, off by default, and a backup carries it.
+  - Each line shows its syllable count and rhyme letter at the end, and a stress mark above each syllable
+    (˘ unstressed, / stressed). A line under the labels tells the poet what each label means. A screen
+    reader gets the same facts as a list: "Line 1: 10 syllables, iambic, rhyme A".
+  - The scan runs in a Web Worker after each typing pause of 250 ms. The CMU pronouncing dictionary (958 KB
+    gzip) loads with the first scan and stays out of the install. The service worker caches it on first
+    use (plan decision D2). A word that the dictionary lacks gets its syllables from `syllable` and no
+    stress mark.
+  - Stress: a word of two or more syllables keeps its CMU stress. A one-syllable word and a secondary
+    stress take the stress of the meter that fits the line (iambic, trochaic, anapestic or dactylic). With
+    no meter, a small word such as "the" is unstressed. "Shall I compare thee to a summer’s day" scans as
+    10 iambic syllables.
+  - Rhyme: two lines rhyme when the phones of their last words match from the last stressed vowel. "Cough"
+    and "bough" do not rhyme, and "bough" and "cow" do.
+  - The labels sit in a layer outside ProseMirror, so the poem text never changes. A changed line hides its
+    labels until the next scan. Only lines within one screen of the view get label elements, so a key on
+    a 300-line poem takes about the same time as with the labels off. Each line fades in with a short
+    stagger. Calm mode and reduced motion show the labels at once.
+  - Checks: unit tests for the scan (the Shakespeare line, trochaic and plain stress, unknown words,
+    apostrophes, rhyme by sound, letters after Z, 300 lines in under 100 ms), the switch, and the backup
+    check. Browser tests for F19 with a reload, a changed line, the text kept the same, axe, the dictionary
+    out of the install, and Review Focus 6: on 300 lines the labels came 30 to 40 ms after the scan
+    request, and each key took 7 to 32 ms from key to screen (budget 50 ms).
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -415,7 +441,7 @@ Last update: 2026-11-05
   push.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
   C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
-  built. C4 part 1 (Collection Sequencer) is built. The Craft panel is next.
+  built. C4 (Collection Sequencer and Craft labels) is built. C5 (Submissions and Progress) is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -562,3 +588,7 @@ Last update: 2026-11-05
 | 2026-11-05 | A deleted person keeps the marks in the text, and Undo brings the person back with the same id.                                                                                                                                                                                | A mark with no person does nothing, so a share-safe export still swaps any real name it finds.                                                                                                                      |
 | 2026-11-05 | The ring preview hides each card that turns past the side, and each card in view keeps its full color.                                                                                                                                                                         | A faded card fails the WCAG text contrast check. The 3D turn still shows the depth.                                                                                                                                 |
 | 2026-11-05 | The ring is a slider for a screen reader, with the poem in front as its value.                                                                                                                                                                                                 | The arrow keys, Home and End choose one poem from a list, as a slider does.                                                                                                                                         |
+| 2026-11-05 | Craft labels turn on from the More tools menu and the command menu, with a switch for each poem.                                                                                                                                                                               | The spec layout puts Craft in a side panel with Notes, AI and Comments, and that panel comes in a later phase. The labels themselves need no panel.                                                                 |
+| 2026-11-05 | A one-syllable word takes the stress of the meter that fits the line. A word of two or more syllables keeps its CMU stress.                                                                                                                                                    | CMU gives every one-syllable word a stress, so "Shall I compare thee" would read as all stressed. The plan's test asks for the iambic stress of that line.                                                          |
+| 2026-11-05 | A word that the CMU dictionary lacks gets no stress mark.                                                                                                                                                                                                                      | The `syllable` package counts syllables only, and a guessed stress would mislead.                                                                                                                                   |
+| 2026-11-05 | The scan uses the first CMU pronunciation for syllables and stress, and every pronunciation for rhyme.                                                                                                                                                                         | One count for each word keeps the labels steady. "Temperate" counts 2 syllables, as the dictionary's first form says.                                                                                               |

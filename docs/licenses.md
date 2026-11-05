@@ -59,6 +59,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | class-variance-authority | 0.7.1 | Apache-2.0 | runtime |
 | clsx | 2.1.1 | MIT | runtime |
 | cmdk | 1.1.1 | MIT | runtime |
+| cmu-pronouncing-dictionary | 3.0.0 | ISC | runtime |
 | dexie | 4.4.7 | Apache-2.0 | runtime |
 | dexie-react-hooks | 4.4.0 | Apache-2.0 | runtime |
 | diff | 9.0.0 | BSD-3-Clause | runtime |
@@ -82,6 +83,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | react | 19.3.1 | MIT | runtime |
 | react-dom | 19.3.1 | MIT | runtime |
 | react-router | 8.5.1 | MIT | runtime |
+| syllable | 5.0.1 | MIT | runtime |
 | tailwind-merge | 3.7.0 | MIT | runtime |
 | tailwindcss | 4.3.3 | MIT | build and test |
 | tw-animate-css | 1.4.0 | MIT | runtime |

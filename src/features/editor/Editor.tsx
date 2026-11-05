@@ -24,6 +24,9 @@ import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
 import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
+import { CraftLabels } from '@/features/craft/CraftLabels';
+import { useCraft } from '@/features/craft/craftStore';
+import { CraftSwitch } from '@/features/craft/craftSwitch';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
@@ -134,6 +137,7 @@ export function Editor({
         HeldSelection,
         ReadAloudMark,
         AliasPreview,
+        CraftSwitch,
         SlashMenu.configure({
           items: slashItems(kind, template),
           listId,
@@ -206,6 +210,9 @@ export function Editor({
   );
 
   // The project font is the manuscript font for the text, the notes and the panels' samples.
+  const craft = useCraft();
+  const craftOn = kind === 'poem' && template === 'poetry' && craft.on;
+
   const stack = fontStack(font, BASE_STACK);
   const rootStyle = { '--font-manuscript': stack } as CSSProperties;
 
@@ -218,7 +225,11 @@ export function Editor({
         <ReadAloudBar editor={editor} />
       </div>
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={stack} onPages={onPages}>
-        <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+        {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
+        <div className={cn('relative', craftOn && 'vlo-craft')}>
+          {craftOn && <CraftLabels editor={editor} />}
+          <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+        </div>
         <FootnoteList editor={editor} />
       </PageFrame>
       <SelectionMenu editor={editor} form={kind} template={template} />

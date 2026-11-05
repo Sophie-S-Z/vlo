@@ -361,6 +361,7 @@ describe('Reading a backup', () => {
       ['an unsafe id', (m) => (row(m, 'items').id = '../../etc'), /has a wrong id/],
       ['a wrong order', (m) => (row(m, 'items').order = ''), /has a wrong order/],
       ['a wrong kind', (m) => (row(m, 'items').kind = 'script'), /has a wrong kind/],
+      ['a wrong Craft switch', (m) => (row(m, 'items').craft = 'yes'), /has a wrong Craft switch/],
       ['a missing project', (m) => (m.project = null), /It has no project/],
       ['a snapshot of no item', (m) => (row(m, 'snapshots').itemId = 'gone'), /A snapshot has no item/],
     ];

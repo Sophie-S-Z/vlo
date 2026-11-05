@@ -172,6 +172,8 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     checkOrder(text(row, 'order', what), what);
     count(row, 'wordCount', what);
     if (row.lineCount !== undefined) count(row, 'lineCount', what);
+    if (row.craft !== undefined && typeof row.craft !== 'boolean')
+      fail(`${DAMAGED} ${what} has a wrong Craft switch.`);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);
     if (row.memory !== undefined && !isObject(row.memory)) fail(`${DAMAGED} ${what} has a wrong memory.`);

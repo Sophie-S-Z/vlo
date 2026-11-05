@@ -133,10 +133,10 @@ The view tabs (D5) arrive with the first view in Task C2, because a tab with no 
 
 **Files:** Create `src/features/craft/` (`craft.worker.ts`, `scan.ts`, `CraftLabels.tsx`).
 
-- [ ] `scan.ts` (pure, unit tested): words to CMU phones; syllable count per line with the `syllable` fallback; stress marks from CMU stress digits (˘ and /); rhyme letters, where two lines rhyme when their phones match from the last stressed vowel to the end.
-- [ ] Worker: loads the dictionary on first use (D2), scans after each typing pause, and answers with labels per line.
-- [ ] Labels: syllable count at each line end, stress marks above syllables, rhyme letters at line ends. They sit in an overlay outside ProseMirror and fade in with a short stagger. A switch per poem, off by default.
-- [ ] Tests: scan unit tests on known lines ("Shall I compare thee to a summer's day" gives 10 syllables and the iambic stress); worker timing (Review Focus 6); the poem text never changes; axe.
+- [x] `scan.ts` (pure, unit tested): words to CMU phones; syllable count per line with the `syllable` fallback; stress marks from CMU stress digits (˘ and /); rhyme letters, where two lines rhyme when their phones match from the last stressed vowel to the end.
+- [x] Worker: loads the dictionary on first use (D2), scans after each typing pause, and answers with labels per line.
+- [x] Labels: syllable count at each line end, stress marks above syllables, rhyme letters at line ends. They sit in an overlay outside ProseMirror and fade in with a short stagger. A switch per poem, off by default.
+- [x] Tests: scan unit tests on known lines ("Shall I compare thee to a summer's day" gives 10 syllables and the iambic stress); worker timing (Review Focus 6); the poem text never changes; axe.
 
 ### Task C8: Submissions tracker (F20) (pull request C5)
 

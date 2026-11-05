@@ -2,6 +2,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { History, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { setCraftItem } from '@/features/craft/craftStore';
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
@@ -92,6 +93,19 @@ export function EditorPane({
       editor.off('update', onUpdate);
     };
   }, [editor]);
+
+  // The Craft switch of the open poem (spec 8.3). Only a poem of a poetry collection has one.
+  const craftable = kind === 'poem' && template === 'poetry';
+  const craft = item.craft === true;
+  useEffect(() => {
+    setCraftItem(craftable ? id : null, craft);
+  }, [craftable, id, craft]);
+  useEffect(
+    () => () => {
+      setCraftItem(null, false);
+    },
+    [],
+  );
 
   const open = state.open;
   useEffect(() => {

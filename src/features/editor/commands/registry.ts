@@ -5,6 +5,7 @@ import {
   TextAlignStart,
   TextAlignEnd,
   ALargeSmall,
+  AudioLines,
   Asterisk,
   Baseline,
   Bold,
@@ -44,6 +45,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Template } from '@/lib/db';
+import { getCraft, setCraftLabels } from '@/features/craft/craftStore';
 import { showsAliases } from '@/features/people/aliasPreview';
 import { getNames, setShowAliases } from '@/features/people/nameStore';
 import { MAX_HANGING_EM } from '../extensions/poem';
@@ -85,6 +87,7 @@ export type CommandGroup =
   | 'insert'
   | 'review'
   | 'names'
+  | 'craft'
   | 'clear'
   | 'help';
 
@@ -99,6 +102,7 @@ export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   insert: 'Insert',
   review: 'Find and read aloud',
   names: 'Private names',
+  craft: 'Craft',
   clear: 'Clear',
   help: 'Help',
 };
@@ -733,6 +737,23 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: (e) => showsAliases(e.state),
+  },
+  {
+    kind: 'run',
+    id: 'craft-labels',
+    label: 'Craft labels',
+    icon: AudioLines,
+    group: 'craft',
+    forms: POEM,
+    templates: ['poetry'],
+    keywords: ['syllables', 'stress', 'meter', 'scansion', 'rhyme', 'craft panel'],
+    run: () => {
+      const { itemId, on } = getCraft();
+      if (itemId === null) return false;
+      void setCraftLabels(itemId, !on).catch(() => undefined);
+      return true;
+    },
+    isActive: () => getCraft().on,
   },
   {
     kind: 'run',

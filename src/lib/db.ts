@@ -56,6 +56,8 @@ export interface Item {
   order: string;
   wordCount: number;
   lineCount?: number;
+  /** True when the poem shows its Craft labels (spec 8.3). Off when absent. */
+  craft?: boolean;
   createdAt: number;
   updatedAt: number;
   memory?: {
