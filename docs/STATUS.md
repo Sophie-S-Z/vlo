@@ -484,6 +484,18 @@ Last update: 2026-11-05
   - A rest day changes inside the write, so quick taps on several days keep each one.
   - The status box in a row shows the new status at once and goes back only when the save fails.
 
+- Phase 4 Task D1: network module and network log (F25, US09).
+  - Dexie version 4 adds the table `networkLog`. The upgrade keeps every row of version 3 (upgrade test).
+  - `vloFetch` sends only to the hosts on the list for each purpose, over https (http only for Ollama and
+    LM Studio on localhost). It refuses any other host before a request starts. It sends no cookie and no
+    referrer.
+  - Each request writes one log entry: host, path, purpose, bytes sent and the HTTP status, or "error". The
+    log keeps no text, key or header, and it keeps the newest 1,000 entries.
+  - `/network` shows the log newest first, with a purpose filter and "Clear log" with Undo. On a phone each
+    request is a small block. The footer link "See the network log" opens it from each screen.
+  - US09 browser test: 60 s of typing, find, an export, the views and a backup in Pen mode send no request
+    off the app, load no AI code, and the log says "0 requests.".
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -657,3 +669,4 @@ Last update: 2026-11-05
 | 2026-11-05 | The project keeps the words of each local day in `settings.wordsByDay`, from each save.                                                                                                                                                                                        | Spec section 5 has only timer sessions, and a streak from the timer alone would miss each day the writer types with no timer. The record is about 15 bytes a day and goes in the backup.                            |
 | 2026-11-05 | Each day keeps its net change in words, and the Progress screen floors a day at 0.                                                                                                                                                                                             | "Written today" in the editor counts the same way, so the two numbers agree. A cut and a paste of the same words add nothing.                                                                                       |
 | 2026-11-05 | The goal calendar starts each week on Monday.                                                                                                                                                                                                                                  | A rest weekend then sits together at the end of each row.                                                                                                                                                           |
+| 2026-11-05 | With no log entry, the network log names the mode of each project on the device, not only the last one.                                                                                                                                                                        | One project in Reader mode can send, so the page counts each mode. The plan named only the last project.                                                                                                            |

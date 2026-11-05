@@ -60,10 +60,10 @@ The provider adapters use `vloFetch` and need no package. No GSAP or `motion` (P
 
 **Files:** Modify `src/lib/net.ts`, `src/lib/db.ts`, `src/app/routes.tsx`. Create `src/features/network/NetworkPage.tsx`.
 
-- [ ] Dexie version 4: `networkLog: 'id, at'` with the spec's `NetworkLogEntry`. Upgrade test from version 3.
-- [ ] `vloFetch(url, { purpose, body, signal, headers })`: refuses a host that is not on the list of the purpose, writes one log entry for each request that leaves the origin (host, path, purpose, bytes sent, status or "error"), and never logs a key, a header or a body.
-- [ ] `/network`: newest first, filter by purpose, "Clear log". With no entry: "0 requests. This project is in Pen mode." with the mode of the last project.
-- [ ] Tests: unit tests for the host lists and the log entry; US09 Playwright test (60 s session, 0 requests, 0 log entries, no AI chunk); axe.
+- [x] Dexie version 4: `networkLog: 'id, at'` with the spec's `NetworkLogEntry`. Upgrade test from version 3.
+- [x] `vloFetch(url, { purpose, body, signal, headers })`: refuses a host that is not on the list of the purpose, writes one log entry for each request that leaves the origin (host, path, purpose, bytes sent, status or "error"), and never logs a key, a header or a body.
+- [x] `/network`: newest first, filter by purpose, "Clear log". With no entry: "0 requests. This project is in Pen mode." with the mode of the last project.
+- [x] Tests: unit tests for the host lists and the log entry; US09 Playwright test (60 s session, 0 requests, 0 log entries, no AI chunk); axe.
 
 ### Task D2: Mode setting, badge and confirm dialog (F23) (pull request D1)
 
