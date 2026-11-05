@@ -507,6 +507,41 @@ Last update: 2026-11-05
   - The command menu has "Change AI mode…" and, outside Pen, "Turn off AI (Pen mode)", which switches at
     once with no confirm.
 
+- Phase 4 Task D3: engine layer and adapters (F24).
+  - One `Engine` interface streams text for each adapter: OpenAI-compatible (OpenRouter, Groq, Gemini,
+    Ollama, LM Studio), Anthropic and WebLLM. Stop ends the stream at once and keeps the words so far.
+  - Anthropic uses raw HTTP through `vloFetch` with `anthropic-dangerous-direct-browser-access`, and streams
+    only the text blocks. A refusal and an overload have their own messages.
+  - Errors: 401 and 403 say the key is wrong, 429 shows the provider's words once with no retry, a blocked
+    request says that the provider may block requests from a browser, and a local server that is off gets
+    setup help such as `OLLAMA_ORIGINS`.
+  - WebLLM 0.2.87 is its own chunk in `assets/ai-model/`, outside the install precache, with a cache-first
+    runtime cache. Each model download goes in the network log as a model download.
+- Phase 4 Task D4: keys and free-tier terms (F24, US11).
+  - A key stays in memory for the tab. "Remember on this device" stores it with AES-GCM under a key from the
+    passphrase (PBKDF2, SHA-256, 600,000 rounds). Three wrong passphrases lock it for 30 seconds.
+  - OpenRouter, Groq and Gemini show their data terms in plain words, and a key works only after the writer
+    ticks the box.
+- Phase 4 Task D5: Reader actions, the Assistant panel and the "What will be sent" drawer (F23, US10).
+  - The Assistant panel loads only outside Pen mode (15 KB gzip). It is a right column beside the text, and
+    a bottom sheet on a phone. It opens by itself on a large screen when the writer turns AI on.
+  - Reader actions: Feedback, Ask the manuscript (MiniSearch, top 8 passages under 3,000 tokens),
+    Summarize for synopsis ("Use as synopsis" writes the synopsis field), Suggest tags or themes, and the
+    continuity check.
+  - The drawer shows the exact text, the host and the tokens before each request. "Do not show this again"
+    turns it off on this device. A memoir with aliases on sends aliases, and the answer shows the real
+    names again.
+  - A Reader answer has no Insert and is no drag source (US10 browser test).
+- Phase 4 Task D6: Co-writer actions, the AI mark and the provenance page (F23, F26).
+  - Co-writer adds Continue (50 to 300 words), Rewrite selection, Three alternatives and Brainstorm.
+  - Insert puts the draft at the cursor, or in place of the words it rewrites, with the `aiOrigin` mark
+    (provider, model, time). One Undo takes out the whole draft. Text that the writer types, also inside AI
+    text, is the writer's own. A paste, a drop and a snapshot restore keep the mark.
+  - `DOC_SCHEMA` is 5, so an older build does not open a document with AI marks.
+  - "Show AI text" in More tools tints AI words with a dashed line. Clear formatting keeps the mark.
+  - The export dialog offers "Add an AI provenance page" in Co-writer mode and in each project with AI text.
+    The page gives the share of AI text for the export and for each item, and the models.
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -685,3 +720,8 @@ Last update: 2026-11-05
 | 2026-11-05 | The goal calendar starts each week on Monday.                                                                                                                                                                                                                                  | A rest weekend then sits together at the end of each row.                                                                                                                                                           |
 | 2026-11-05 | With no log entry, the network log names the mode of each project on the device, not only the last one.                                                                                                                                                                        | One project in Reader mode can send, so the page counts each mode. The plan named only the last project.                                                                                                            |
 | 2026-11-05 | The badge icon morph runs on `requestAnimationFrame`, not on the Web Animations API.                                                                                                                                                                                           | Plan decision P1 named the Web Animations API. Safari cannot animate the `d` of a path with it, so the morph writes each frame itself, as CountUp does. It still needs no GSAP.                                     |
+| 2026-11-05 | The AI provenance page counts characters of the writer's text. Equations, footnotes and the headings that Vlo adds do not count.                                                                                                                                               | The spec asks for "the share of AI-origin text". Characters measure a short insert inside a sentence, where words split.                                                                                            |
+| 2026-11-05 | The project records the time of its first Co-writer insert in `settings.aiInsertedAt`.                                                                                                                                                                                         | The export dialog then offers the provenance page after a switch back to Pen, with no scan of every item.                                                                                                           |
+| 2026-11-05 | On a phone the Assistant sheet opens only from its button.                                                                                                                                                                                                                     | The mode dialog says that the panel opens beside the text. On a phone a sheet covers the text, so it waits for the writer.                                                                                          |
+| 2026-11-05 | "Do not show this again" for the drawer applies to this device, for each project.                                                                                                                                                                                              | The setting is about the writer's trust in the drawer, not about one project. Each request still goes in the network log.                                                                                           |
+| 2026-11-05 | Ask the manuscript and the continuity check leave out notes.                                                                                                                                                                                                                   | Notes are research, as in exports. A question about the story should come from its text.                                                                                                                            |

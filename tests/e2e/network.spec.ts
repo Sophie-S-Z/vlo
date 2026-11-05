@@ -120,6 +120,8 @@ test('US09: a 60 second Pen session sends no request off the app, and the log sa
     );
   }
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
+  // The binder has its own "Options for" buttons, so wait until the Library shows.
+  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
   await page.getByRole('button', { name: /^Options for / }).click();
   await page.getByRole('menuitem', { name: 'Back up' }).click();
   const backup = page.waitForEvent('download');

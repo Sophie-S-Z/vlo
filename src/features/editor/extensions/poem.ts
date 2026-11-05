@@ -9,6 +9,7 @@ import { nodeText } from '../leafText';
 import { parsePoemText, poemDataToText, type PoemData } from '../poemText';
 import { EscapeTab } from './escapeTab';
 import { PrivateName } from '@/features/people/personMark';
+import { AiOriginMark } from './aiOrigin';
 import { Footnote } from './footnote';
 import { MathInline } from './math';
 import { ClearFormatting, inlineFormatting } from './formatting';
@@ -316,6 +317,7 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     ...inlineFormatting(),
     ClearFormatting.configure({ blocks: false }),
     PrivateName,
+    AiOriginMark,
     Footnote,
     MathInline,
     EscapeTab,

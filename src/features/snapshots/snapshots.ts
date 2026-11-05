@@ -2,6 +2,7 @@ import type { Editor } from '@tiptap/core';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import { Dexie } from 'dexie';
 import * as Y from 'yjs';
+import { KEEP_AI_MARKS } from '@/features/editor/extensions/aiOrigin';
 import { docText } from '@/features/editor/itemText';
 import { clock } from '@/lib/clock';
 import { db, type Item, type Snapshot } from '@/lib/db';
@@ -68,7 +69,8 @@ export async function restoreSnapshot(
   const old = docFromUpdate(snapshot.state);
   try {
     const node = yXmlFragmentToProseMirrorRootNode(old.getXmlFragment(YFRAGMENT), editor.schema);
-    editor.commands.setContent(node, { emitUpdate: true });
+    // A restore brings back the AI marks of the snapshot as they were.
+    editor.chain().setMeta(KEEP_AI_MARKS, true).setContent(node, { emitUpdate: true }).run();
   } finally {
     old.destroy();
   }

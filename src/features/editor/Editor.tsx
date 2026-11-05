@@ -75,7 +75,12 @@ const HELP = {
 };
 
 /** The editor element's attributes. A rename passes a new label. */
-function editorAttributes(label: string, kind: EditorProps['kind'], helpId: string): Record<string, string> {
+function editorAttributes(
+  label: string,
+  kind: EditorProps['kind'],
+  helpId: string,
+  showAi: boolean,
+): Record<string, string> {
   return {
     'aria-label': label,
     'aria-multiline': 'true',
@@ -83,6 +88,8 @@ function editorAttributes(label: string, kind: EditorProps['kind'], helpId: stri
     role: 'textbox',
     spellcheck: 'true',
     class: kind === 'poem' ? 'vlo-manuscript vlo-poem' : 'vlo-manuscript vlo-prose',
+    // "Show AI text" draws the aiOrigin mark. The mark stays in the text when it is hidden.
+    ...(showAi ? { 'data-show-ai': '' } : {}),
   };
 }
 
@@ -163,20 +170,25 @@ export function Editor({
       autofocus: focusOnOpen ? 'end' : false,
       // The tool surfaces read editor state on their own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
-      editorProps: { attributes: editorAttributes(label, kind, helpId) },
+      editorProps: { attributes: editorAttributes(label, kind, helpId, writing.showAiText) },
     },
     [doc, kind, smart],
   );
 
   // A rename changes the editor's accessible name at once, without reopening the item.
-  const namedAs = useRef(label);
+  // The "Show AI text" switch also changes the attributes at once.
+  const namedAs = useRef({ label, showAi: writing.showAiText });
   useEffect(() => {
-    if (editor.isDestroyed || namedAs.current === label) return;
-    namedAs.current = label;
+    const showAi = writing.showAiText;
+    if (editor.isDestroyed || (namedAs.current.label === label && namedAs.current.showAi === showAi)) return;
+    namedAs.current = { label, showAi };
     editor.setOptions({
-      editorProps: { ...editor.options.editorProps, attributes: editorAttributes(label, kind, helpId) },
+      editorProps: {
+        ...editor.options.editorProps,
+        attributes: editorAttributes(label, kind, helpId, showAi),
+      },
     });
-  }, [editor, label, kind, helpId]);
+  }, [editor, label, kind, helpId, writing.showAiText]);
 
   const focus = useFocusPrefs();
   // A focus switch changed: redraw the dimming and center the caret at once.

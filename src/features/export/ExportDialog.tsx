@@ -5,6 +5,7 @@ import { TEMPLATES } from '@/features/library/templates';
 import { updateProjectSettings } from '@/features/library/projects';
 import { markAllInProject } from '@/features/people/markAll';
 import { db, type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
+import { clock } from '@/lib/clock';
 import type { NameCheck } from '@/lib/privacy';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -129,6 +130,9 @@ export function ExportDialog({
   const [format, setFormat] = useState<ExportFormat>('docx');
   const [scope, setScope] = useState<ScopeChoice>(sequence ? 'sequence' : current ? 'item' : 'project');
   const [safe, setSafe] = useState(project.template === 'memoir');
+  // A project with AI text, or in Co-writer mode, can add the AI provenance page (F26).
+  const offersProvenance = project.aiMode === 'cowriter' || project.settings.aiInsertedAt !== undefined;
+  const [provenance, setProvenance] = useState(project.settings.aiInsertedAt !== undefined);
   const [manuscript, setManuscript] = useState<ManuscriptSettings>(() => startingManuscript(project));
   const [nameError, setNameError] = useState(false);
   const [status, setStatus] = useState<Status>({ step: 'choose' });
@@ -221,6 +225,7 @@ export function ExportDialog({
       people: (await currentPeople()).map((p) => ({ id: p.id, variants: p.variants })),
       shareSafe: safe,
       ...(usesManuscript ? { manuscript: details } : {}),
+      ...(offersProvenance && provenance ? { provenance: { at: clock.now() } } : {}),
     };
     closeJob();
     try {
@@ -657,6 +662,25 @@ export function ExportDialog({
                     : 'Swaps each real name for its alias. This project has no people yet.'}
                 </p>
               </div>
+
+              {offersProvenance && (
+                <div className="grid gap-1">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id={`${ids}-ai`}
+                      checked={provenance}
+                      onCheckedChange={setProvenance}
+                      aria-describedby={`${ids}-ai-hint`}
+                    />
+                    <label htmlFor={`${ids}-ai`} className="text-sm font-medium">
+                      Add an AI provenance page
+                    </label>
+                  </div>
+                  <p id={`${ids}-ai-hint`} className="pl-14 text-sm text-muted">
+                    Adds a last page with the share of AI-marked text in each item, and the AI models.
+                  </p>
+                </div>
+              )}
 
               {status.step === 'failed' && (
                 <p role="alert" className="text-sm text-accent-text">

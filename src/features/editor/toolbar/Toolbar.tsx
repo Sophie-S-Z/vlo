@@ -67,6 +67,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'find',
       'replace',
       'read-aloud',
+      'show-ai-text',
       'clear',
       'shortcuts',
     ],
@@ -81,7 +82,17 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['font', 'color', 'highlight', 'gradient'], wide: true },
       { tools: ['characters', 'footnote', 'math'], wide: true },
     ],
-    more: ['superscript', 'subscript', 'size', 'find', 'replace', 'read-aloud', 'clear', 'shortcuts'],
+    more: [
+      'superscript',
+      'subscript',
+      'size',
+      'find',
+      'replace',
+      'read-aloud',
+      'show-ai-text',
+      'clear',
+      'shortcuts',
+    ],
   },
 };
 

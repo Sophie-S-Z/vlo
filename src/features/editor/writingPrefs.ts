@@ -15,6 +15,8 @@ export interface WritingPrefs {
   showLatex: boolean;
   /** Page zoom in percent, 80 to 200, on this device (E7). It is separate from the browser's zoom. */
   zoom: number;
+  /** The editor draws the aiOrigin mark under AI text (F26). On, so the writer sees each AI word. */
+  showAiText: boolean;
 }
 
 const KEY = 'vlo:writing';
@@ -23,6 +25,7 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   smartPoems: false,
   showLatex: false,
   zoom: 100,
+  showAiText: true,
 };
 const listeners = new Set<() => void>();
 
@@ -36,6 +39,7 @@ function load(): WritingPrefs {
         smartPoems: typeof value.smartPoems === 'boolean' ? value.smartPoems : WRITING_DEFAULTS.smartPoems,
         showLatex: typeof value.showLatex === 'boolean' ? value.showLatex : WRITING_DEFAULTS.showLatex,
         zoom: cleanZoom(value.zoom),
+        showAiText: typeof value.showAiText === 'boolean' ? value.showAiText : WRITING_DEFAULTS.showAiText,
       };
     }
   } catch {

@@ -1,0 +1,667 @@
+import { Square, X } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { getActiveEditor } from '@/features/editor/commands/editorBus';
+import { insertAiText } from '@/features/editor/extensions/aiOrigin';
+import { docBody } from '@/features/editor/itemText';
+import { leafText } from '@/features/editor/leafText';
+import { updateItem } from '@/features/binder/items';
+import { updateProjectSettings } from '@/features/library/projects';
+import { TEMPLATES } from '@/features/library/templates';
+import { clock } from '@/lib/clock';
+import { db, type Item, type Person, type Project } from '@/lib/db';
+import type { PrivatePerson } from '@/lib/privacy';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Textarea } from '@/ui/textarea';
+import {
+  clearProject,
+  markUsed,
+  removeEntry,
+  startEntry,
+  stopEntry,
+  useEntries,
+  type Entry,
+} from './assistantStore';
+import {
+  CONTINUE_WORDS,
+  COWRITER_ACTIONS,
+  cowriterRequest,
+  splitAlternatives,
+  type CowriterAction,
+} from './cowriter';
+import { providerEngine } from './engine/engine';
+import { PRESETS } from './engine/presets';
+import { EngineError, type Engine } from './engine/types';
+import { loadWebLlm, unloadWebLlm } from './engine/webllm';
+import { engineName, EngineSettings } from './EngineSettings';
+import { KeyDialog } from './KeyDialog';
+import { sessionKey } from './keys';
+import {
+  privateRequest,
+  READER_ACTIONS,
+  readerRequest,
+  restoreNames,
+  type AiRequest,
+  type ItemContext,
+  type ReaderAction,
+} from './reader';
+import { passagesOf, type Source } from './retrieve';
+import { SendDrawer } from './SendDrawer';
+import { DEFAULT_ENGINE, drawerOff, loadEngineChoice, setDrawerOff, type EngineChoice } from './settings';
+
+/*
+ * The Assistant panel (spec section 10, plan decision P5). It loads only outside Pen mode. Every answer
+ * stays here. In Reader mode no answer has a way into the manuscript. In Co-writer mode, Insert puts a
+ * draft in the text with the aiOrigin mark, and only when the writer presses it.
+ */
+
+type ActionId = ReaderAction | CowriterAction;
+
+const isCowriterAction = (action: ActionId): action is CowriterAction =>
+  COWRITER_ACTIONS.some((a) => a.id === action);
+
+/** The most tokens of the writer's text in one request: small for the in-browser model. */
+const BUDGET = { webllm: 1500, provider: 12000 } as const;
+
+const selectClass =
+  'min-h-11 w-full rounded-md border border-rule bg-bg px-3 text-base text-text focus-visible:border-accent';
+
+export interface AssistantPanelProps {
+  project: Project;
+  items: readonly Item[];
+  /** The open item, if it has an editor. */
+  item: Item | undefined;
+  kind: 'prose' | 'poem' | null;
+  people: readonly Person[];
+  /** Runs after an Insert, so a phone can close the sheet and show the text. */
+  onInserted?: () => void;
+}
+
+/** Stops every answer of the project and frees the in-browser model, as when the project goes to Pen. */
+export async function shutDownAssistant(projectId: string): Promise<void> {
+  clearProject(projectId);
+  await unloadWebLlm();
+}
+
+interface Pending {
+  request: AiRequest;
+  host: string;
+  aliased: boolean;
+  /** The words the writer selected for a rewrite, to replace on Insert. */
+  target?: { itemId: string; from: number; to: number; text: string };
+}
+
+const STATUS_TEXT: Record<Entry['status'], string> = {
+  running: 'Writing',
+  done: 'Done',
+  stopped: 'Stopped',
+  error: 'Stopped with an error',
+};
+
+export default function AssistantPanel({
+  project,
+  items,
+  item,
+  kind,
+  people,
+  onInserted,
+}: AssistantPanelProps) {
+  const id = useId();
+  const template = TEMPLATES[project.template];
+  const cowriter = project.aiMode === 'cowriter';
+  const entries = useEntries(project.id);
+  const [choice, setChoice] = useState<EngineChoice | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [chosen, setAction] = useState<ActionId>('feedback');
+  const [question, setQuestion] = useState('');
+  const [words, setWords] = useState<number>(100);
+  const [instruction, setInstruction] = useState('');
+  const [topic, setTopic] = useState('');
+  const [error, setError] = useState('');
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [keyFor, setKeyFor] = useState<Pending | null>(null);
+  const [loading, setLoading] = useState<{ share: number; text: string } | null>(null);
+  const [announce, setAnnounce] = useState('');
+  const targets = useRef(new Map<string, NonNullable<Pending['target']>>());
+  const listRef = useRef<HTMLOListElement>(null);
+  const actionRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    let live = true;
+    void loadEngineChoice()
+      .catch(() => DEFAULT_ENGINE)
+      .then((c) => {
+        if (live) setChoice(c);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // A switch from Co-writer to Reader leaves no drafting action chosen.
+  const action: ActionId = !cowriter && isCowriterAction(chosen) ? 'feedback' : chosen;
+
+  const aliasOn = project.template === 'memoir' && project.settings.aliasAiRequests;
+  const privatePeople: PrivatePerson[] = people.map((p) => ({ id: p.id, variants: p.variants }));
+  const budget = choice?.kind === 'provider' ? BUDGET.provider : BUDGET.webllm;
+  const kindName = (i: Item) => (template.kindLabel[i.kind] ?? i.kind).toLowerCase();
+
+  /** The open item's text from the editor, which is newer than the stored copy. */
+  const liveItem = (): ItemContext | undefined => {
+    if (!item || !kind) return undefined;
+    const editor = getActiveEditor()?.editor;
+    const text = editor && !editor.isDestroyed ? docBody(editor.state.doc, kind) : '';
+    return { id: item.id, title: item.title, kind: kindName(item), text };
+  };
+
+  /** Every passage of the manuscript, with the open item read from the editor. Notes are research. */
+  const passages = async (open: ItemContext | undefined) => {
+    const texts = await db.itemTexts.where('projectId').equals(project.id).toArray();
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const sources: Source[] = [];
+    for (const row of texts) {
+      const it = byId.get(row.itemId);
+      if (!it || it.kind === 'note' || template.editorKind(it.kind) === null) continue;
+      sources.push({
+        itemId: it.id,
+        title: it.title,
+        text: open?.id === it.id ? open.text : row.text,
+      });
+    }
+    return passagesOf(sources);
+  };
+
+  const hostOf = (c: EngineChoice) =>
+    c.kind === 'webllm' ? 'this browser' : new URL(PRESETS[c.preset].base).host;
+
+  const prepare = async () => {
+    setError('');
+    if (!choice) return;
+    const open = liveItem();
+    let request: AiRequest;
+    let target: Pending['target'];
+    try {
+      if (isCowriterAction(action)) {
+        const editor = getActiveEditor()?.editor;
+        if (!open || !editor || editor.isDestroyed) throw new RangeError('Open an item first.');
+        const { from, to } = editor.state.selection;
+        const sep = kind === 'poem' ? '\n' : '\n\n';
+        const before = editor.state.doc.textBetween(0, from, sep, leafText);
+        const selection = editor.state.doc.textBetween(from, to, sep, leafText);
+        request = cowriterRequest(action, {
+          item: open,
+          before,
+          selection,
+          words,
+          instruction,
+          topic,
+          budget,
+        });
+        if (action === 'rewrite' || action === 'alternatives')
+          target = { itemId: open.id, from, to, text: selection };
+      } else {
+        const needsAll = action === 'ask' || action === 'continuity';
+        request = readerRequest(action, {
+          ...(open ? { item: open } : {}),
+          question,
+          passages: needsAll ? await passages(open) : [],
+          budget,
+        });
+      }
+    } catch (problem) {
+      setError(
+        problem instanceof RangeError ? problem.message : 'Vlo could not read the text for this request.',
+      );
+      return;
+    }
+    const sent = privateRequest(request, privatePeople, aliasOn);
+    const next: Pending = {
+      request: sent,
+      host: hostOf(choice),
+      aliased: aliasOn && sent !== request,
+      ...(target ? { target } : {}),
+    };
+    if (choice.kind === 'provider' && !PRESETS[choice.preset].local && !sessionKey(choice.preset)) {
+      setKeyFor(next);
+      return;
+    }
+    await review(next);
+  };
+
+  /** Shows the drawer, or sends at once when the writer turned the drawer off. */
+  const review = async (next: Pending) => {
+    let off = false;
+    try {
+      off = await drawerOff();
+    } catch {
+      off = false;
+    }
+    if (off) await send(next);
+    else setPending(next);
+  };
+
+  const engineFor = async (c: EngineChoice): Promise<Engine> => {
+    if (c.kind === 'provider') return providerEngine(c.preset, c.model, sessionKey(c.preset));
+    setLoading({ share: 0, text: '' });
+    try {
+      return await loadWebLlm(c.model, (share, text) => {
+        setLoading({ share, text });
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const send = async (next: Pending) => {
+    setPending(null);
+    if (!choice) return;
+    let engine: Engine;
+    try {
+      engine = await engineFor(choice);
+    } catch (problem) {
+      setError(
+        problem instanceof EngineError || problem instanceof RangeError || problem instanceof Error
+          ? problem.message
+          : 'Vlo could not start the engine.',
+      );
+      actionRef.current?.focus();
+      return;
+    }
+    const entryId = startEntry(
+      project.id,
+      next.request,
+      engine,
+      (text) => restoreNames(text, privatePeople, aliasOn),
+      next.request.label,
+    );
+    if (next.target) targets.current.set(entryId, next.target);
+    setAnnounce(`Asked: ${next.request.label}.`);
+    // The new answer takes focus, so the writer hears it and can stop it.
+    requestAnimationFrame(() => {
+      listRef.current?.querySelector<HTMLElement>(`[data-entry="${entryId}"]`)?.focus();
+    });
+  };
+
+  const saveSynopsis = async (entry: Entry) => {
+    if (!entry.itemId) return;
+    try {
+      await updateItem(entry.itemId, { synopsis: entry.text.trim() });
+      markUsed(entry.id, 'Used as the synopsis.');
+    } catch {
+      markUsed(entry.id, 'Vlo could not save the synopsis on this device.');
+    }
+  };
+
+  const insert = (entry: Entry, text: string) => {
+    const editor = getActiveEditor()?.editor;
+    if (!cowriter || !editor || !kind || entry.itemId !== item?.id) return;
+    const target = targets.current.get(entry.id);
+    if (target && editor.state.doc.content.size >= target.to) {
+      const sep = kind === 'poem' ? '\n' : '\n\n';
+      const still = editor.state.doc.textBetween(target.from, target.to, sep, leafText);
+      // The rewrite replaces the words it was asked about, if they are still there.
+      if (still === target.text) editor.commands.setTextSelection({ from: target.from, to: target.to });
+    }
+    const done = insertAiText(
+      editor,
+      text,
+      { provider: entry.engine.label, model: entry.engine.model, createdAt: clock.now() },
+      kind,
+    );
+    if (!done) {
+      markUsed(entry.id, 'Vlo could not insert this draft here.');
+      return;
+    }
+    targets.current.delete(entry.id);
+    markUsed(entry.id, 'Inserted in your text. Undo removes it.');
+    onInserted?.();
+    if (project.settings.aiInsertedAt === undefined)
+      void updateProjectSettings(project.id, { aiInsertedAt: clock.now() }).catch(() => undefined);
+  };
+
+  const actionNeedsItem =
+    isCowriterAction(action) || READER_ACTIONS.find((a) => a.id === action)?.needsItem === true;
+  const canAsk = choice !== null && loading === null && (!actionNeedsItem || item !== undefined);
+
+  return (
+    <section aria-labelledby={`${id}-title`} className="grid content-start gap-4" data-testid="assistant">
+      <div className="grid gap-1">
+        <h2 id={`${id}-title`} className="font-display text-xl font-semibold">
+          Assistant
+        </h2>
+        <p className="text-sm text-muted">
+          {cowriter
+            ? 'Co-writer mode. Each draft shows here first. Insert puts it in your text with the AI mark.'
+            : 'Reader mode. Answers stay in this panel and never enter your text.'}
+        </p>
+      </div>
+
+      {choice &&
+        (editing ? (
+          <EngineSettings
+            choice={choice}
+            onSaved={(next) => {
+              setChoice(next);
+              setEditing(false);
+            }}
+            onCancel={() => {
+              setEditing(false);
+            }}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <p className="min-w-0 [overflow-wrap:anywhere]">
+              <span className="text-muted">Engine: </span>
+              {engineName(choice)}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditing(true);
+              }}
+            >
+              Change engine
+            </Button>
+          </div>
+        ))}
+
+      {!editing && !pending && (
+        <form
+          aria-label="Ask the AI"
+          className="grid gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void prepare();
+          }}
+        >
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${id}-action`}>What to ask</Label>
+            <select
+              ref={actionRef}
+              id={`${id}-action`}
+              className={selectClass}
+              value={action}
+              onChange={(event) => {
+                setAction(event.target.value as ActionId);
+                setError('');
+              }}
+            >
+              <optgroup label="Read">
+                {READER_ACTIONS.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </optgroup>
+              {cowriter && (
+                <optgroup label="Write">
+                  {COWRITER_ACTIONS.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </div>
+
+          {action === 'ask' && (
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-question`}>Your question</Label>
+              <Textarea
+                id={`${id}-question`}
+                rows={3}
+                value={question}
+                onChange={(event) => {
+                  setQuestion(event.target.value);
+                }}
+              />
+            </div>
+          )}
+          {action === 'continue' && (
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-words`}>Length</Label>
+              <select
+                id={`${id}-words`}
+                className={selectClass}
+                value={words}
+                onChange={(event) => {
+                  setWords(Number(event.target.value));
+                }}
+              >
+                {CONTINUE_WORDS.map((n) => (
+                  <option key={n} value={n}>
+                    About {n} words
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-muted">The draft continues from the cursor.</p>
+            </div>
+          )}
+          {(action === 'rewrite' || action === 'alternatives') && (
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-how`}>How to change it (you can leave this empty)</Label>
+              <Input
+                id={`${id}-how`}
+                value={instruction}
+                placeholder="Shorter, in past tense"
+                onChange={(event) => {
+                  setInstruction(event.target.value);
+                }}
+              />
+              <p className="text-sm text-muted">Vlo uses the words that you select in your text.</p>
+            </div>
+          )}
+          {action === 'brainstorm' && (
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${id}-topic`}>Ideas for</Label>
+              <Input
+                id={`${id}-topic`}
+                value={topic}
+                placeholder="What the sister hides"
+                onChange={(event) => {
+                  setTopic(event.target.value);
+                }}
+              />
+              <p className="text-sm text-muted">Ideas stay in this panel.</p>
+            </div>
+          )}
+
+          {actionNeedsItem && item && (
+            <p className="text-sm text-muted [overflow-wrap:anywhere]">About: {item.title}</p>
+          )}
+          {actionNeedsItem && !item && <p className="text-sm text-muted">Open an item first.</p>}
+          {error && (
+            <p role="alert" className="text-sm text-accent-text">
+              {error}
+            </p>
+          )}
+          {loading && (
+            <div className="grid gap-1 text-sm">
+              <label htmlFor={`${id}-load`}>Loading the model in this browser</label>
+              <progress
+                id={`${id}-load`}
+                max={1}
+                value={loading.share}
+                className="w-full accent-[var(--accent)]"
+              />
+              <p className="text-muted [overflow-wrap:anywhere]">
+                {Math.round(loading.share * 100)}%. The first time, the browser downloads the model.
+              </p>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button type="submit" disabled={!canAsk}>
+              Prepare the request
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {pending && (
+        <SendDrawer
+          request={pending.request}
+          host={pending.host}
+          aliased={pending.aliased}
+          onCancel={() => {
+            setPending(null);
+            requestAnimationFrame(() => actionRef.current?.focus());
+          }}
+          onSend={(hide) => {
+            if (hide) void setDrawerOff(true).catch(() => undefined);
+            void send(pending);
+          }}
+        />
+      )}
+
+      {keyFor && choice?.kind === 'provider' && (
+        <KeyDialog
+          preset={choice.preset}
+          open
+          onOpenChange={(open) => {
+            if (!open) setKeyFor(null);
+          }}
+          onReady={() => {
+            const next = keyFor;
+            setKeyFor(null);
+            void review(next);
+          }}
+        />
+      )}
+
+      <p aria-live="polite" className="sr-only">
+        {announce}
+      </p>
+
+      {entries.length > 0 && (
+        <div className="grid gap-2">
+          <h3 className="font-display text-lg font-semibold">Answers</h3>
+          <ol ref={listRef} className="grid gap-3">
+            {entries.map((entry) => (
+              <AnswerCard
+                key={entry.id}
+                entry={entry}
+                canInsert={
+                  cowriter && entry.itemId !== undefined && entry.itemId === item?.id && kind !== null
+                }
+                openTitle={items.find((i) => i.id === entry.itemId)?.title}
+                onInsert={(text) => {
+                  insert(entry, text);
+                }}
+                onSynopsis={() => {
+                  void saveSynopsis(entry);
+                }}
+              />
+            ))}
+          </ol>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AnswerCard({
+  entry,
+  canInsert,
+  openTitle,
+  onInsert,
+  onSynopsis,
+}: {
+  entry: Entry;
+  canInsert: boolean;
+  openTitle: string | undefined;
+  onInsert: (text: string) => void;
+  onSynopsis: () => void;
+}) {
+  const id = useId();
+  const running = entry.status === 'running';
+  const drafts =
+    entry.result === 'alternatives' && !running ? splitAlternatives(entry.text) : [entry.text.trim()];
+  const writable = entry.result === 'draft' || entry.result === 'alternatives';
+
+  return (
+    <li
+      data-entry={entry.id}
+      tabIndex={-1}
+      aria-labelledby={`${id}-label`}
+      aria-busy={running || undefined}
+      className="grid gap-2 rounded-[var(--radius-card)] border border-rule bg-surface p-3 focus-visible:border-accent"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h4 id={`${id}-label`} className="text-sm font-semibold [overflow-wrap:anywhere]">
+            {entry.label}
+          </h4>
+          <p className="text-xs text-muted">
+            {entry.engine.label}, {entry.engine.model}. {STATUS_TEXT[entry.status]}.
+          </p>
+        </div>
+        {running ? (
+          <Button
+            variant="outline"
+            className="min-w-11 px-3"
+            onClick={() => {
+              stopEntry(entry.id);
+            }}
+          >
+            <Square aria-hidden="true" className="size-4" />
+            Stop
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            className="min-w-11 px-0"
+            aria-label={`Remove the answer: ${entry.label}`}
+            onClick={() => {
+              removeEntry(entry.id);
+            }}
+          >
+            <X aria-hidden="true" className="size-4" />
+          </Button>
+        )}
+      </div>
+
+      {drafts.map((text, index) => (
+        <div key={index} className="grid gap-2">
+          {drafts.length > 1 && <p className="text-xs font-semibold text-muted">Version {index + 1}</p>}
+          {/* An answer is not a drag source, so no answer reaches the text without Insert. */}
+          <div
+            className="vlo-answer text-sm whitespace-pre-wrap [overflow-wrap:anywhere]"
+            draggable={false}
+            onDragStart={(event) => {
+              event.preventDefault();
+            }}
+          >
+            {text || (running ? 'Waiting for the first words.' : '')}
+          </div>
+          {canInsert && writable && !running && text !== '' && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onInsert(text);
+                }}
+              >
+                {drafts.length > 1 ? `Insert version ${String(index + 1)}` : 'Insert'}
+              </Button>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {!canInsert && writable && !running && openTitle && (
+        <p className="text-sm text-muted">Open {openTitle} to insert this draft.</p>
+      )}
+      {entry.result === 'synopsis' && !running && entry.text.trim() !== '' && entry.used === undefined && (
+        <div>
+          <Button variant="outline" onClick={onSynopsis}>
+            Use as synopsis
+          </Button>
+        </div>
+      )}
+      {entry.error && <p className="text-sm text-accent-text">{entry.error}</p>}
+      {entry.used && <p className="text-sm text-muted">{entry.used}</p>}
+    </li>
+  );
+}

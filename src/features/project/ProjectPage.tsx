@@ -23,7 +23,7 @@ import { usePeople } from '@/features/people/people';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
-import { db, type Item, type Project } from '@/lib/db';
+import { db, type AiMode, type Item, type Project } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { withViewTransition } from '@/ui/motion';
@@ -41,6 +41,14 @@ const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu'))
 const ExportDialog = lazy(async () => ({
   default: (await import('@/features/export/ExportDialog')).ExportDialog,
 }));
+
+// The Assistant and every AI module load only outside Pen mode (spec section 10, US09).
+type AssistantModule = typeof import('@/features/ai/AssistantPanel');
+let assistantModule: AssistantModule | null = null;
+const AssistantPanel = lazy(async () => {
+  assistantModule = await import('@/features/ai/AssistantPanel');
+  return assistantModule;
+});
 
 /** True while a dialog, a menu or the / tool list is open, so Escape belongs to it. */
 function layerOpen(): boolean {
@@ -80,6 +88,23 @@ export function ProjectPage() {
   const activeEditor = useActiveEditor();
   const people = usePeople(projectId);
   const memoir = state.status === 'ready' && state.project.template === 'memoir';
+  const aiMode = state.status === 'ready' ? state.project.aiMode : null;
+
+  // On a large screen the Assistant opens beside the text when the writer turns AI on. On a phone it is a
+  // sheet over the text, so it waits for the Assistant button.
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [seenMode, setSeenMode] = useState<AiMode | null>(null);
+  if (aiMode !== seenMode) {
+    setSeenMode(aiMode);
+    if (aiMode === null || aiMode === 'pen') setAssistantOpen(false);
+    else if ((seenMode === null || seenMode === 'pen') && !window.matchMedia('(max-width: 599px)').matches)
+      setAssistantOpen(true);
+  }
+  // Back in Pen mode, every answer stops and the in-browser model frees its memory.
+  useEffect(() => {
+    if (aiMode === 'pen' && assistantModule) void assistantModule.shutDownAssistant(projectId);
+  }, [aiMode, projectId]);
+  const inserted = useRef(false);
 
   // The editor's private-name tools read the people of the open memoir.
   useEffect(() => {
@@ -272,6 +297,16 @@ export function ProjectPage() {
       ? []
       : [
           {
+            id: 'assistant',
+            label: assistantOpen ? 'Hide the Assistant' : 'Open the Assistant',
+            keywords: ['ai', 'assistant', 'feedback', 'ask', 'reader', 'co-writer', 'draft'],
+            run: () => {
+              afterMenu.current = () => {
+                setAssistantOpen(!assistantOpen);
+              };
+            },
+          },
+          {
             id: 'pen-mode',
             label: 'Turn off AI (Pen mode)',
             keywords: ['ai', 'pen', 'off', 'privacy'],
@@ -390,6 +425,36 @@ export function ProjectPage() {
             changeFocusMode(false);
           }}
           timer={<SessionTimer projectId={project.id} />}
+          {...(project.aiMode === 'pen'
+            ? {}
+            : {
+                assistant: (
+                  <Suspense fallback={<p className="text-sm text-muted">Loading the Assistant.</p>}>
+                    <AssistantPanel
+                      project={project}
+                      items={items}
+                      item={item}
+                      kind={kind}
+                      people={people ?? []}
+                      onInserted={() => {
+                        // On a phone the sheet covers the text, so it closes and the text takes focus.
+                        if (window.matchMedia('(max-width: 599px)').matches) {
+                          inserted.current = true;
+                          setAssistantOpen(false);
+                        }
+                      }}
+                    />
+                  </Suspense>
+                ),
+                assistantOpen,
+                onAssistantOpen: setAssistantOpen,
+                onSheetCloseAutoFocus: (event: Event) => {
+                  if (!inserted.current) return;
+                  inserted.current = false;
+                  event.preventDefault();
+                  activeEditor?.editor.commands.focus();
+                },
+              })}
           tools={
             <>
               <Button

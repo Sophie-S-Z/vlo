@@ -71,43 +71,43 @@ The provider adapters use `vloFetch` and need no package. No GSAP or `motion` (P
 
 - [x] The badge shows on every project screen. A click opens the mode dialog. P1 morph, with Calm mode at once.
 - [x] A change away from Pen shows what will change: which code loads, what can be sent, and that nothing is sent until the writer asks. A change back to Pen unloads the panel and needs no confirm.
-- [ ] Tests: mode change and confirm; Pen loads no AI chunk; Reader loads it; Calm mode; axe.
+- [x] Tests: mode change and confirm; Pen loads no AI chunk; Reader loads it; Calm mode; axe.
 
 ### Task D3: Engine layer and adapters (F24) (pull request D2)
 
 **Files:** Create `src/features/ai/engine/` (`engine.ts`, `openaiCompatible.ts`, `anthropic.ts`, `local.ts`, `webllm.ts`, `presets.ts`).
 
-- [ ] One interface: `generate({ system, messages, maxTokens, signal }) => AsyncIterable<string>`. Streaming for every adapter. Stop through `signal`.
-- [ ] Presets: OpenRouter, Groq, Gemini (OpenAI-compatible), Anthropic (with `anthropic-dangerous-direct-browser-access: true`), Ollama (`http://localhost:11434/v1`), LM Studio (`http://localhost:1234/v1`). Model list from the provider when it has one.
-- [ ] WebLLM: check `navigator.gpu`; P2 models with download size and progress; the download goes in the log as `model-download`.
-- [ ] Errors: 401 (key), 429 (limit, no retry), CORS (preset unavailable, plain message), local server off (setup help, such as `OLLAMA_ORIGINS`).
-- [ ] Tests: each adapter against a fake provider through Playwright request routing; Stop; 429 with no retry; CORS refusal; a CORS check with no key for each real preset (P4).
+- [x] One interface: `generate({ system, messages, maxTokens, signal }) => AsyncIterable<string>`. Streaming for every adapter. Stop through `signal`.
+- [x] Presets: OpenRouter, Groq, Gemini (OpenAI-compatible), Anthropic (with `anthropic-dangerous-direct-browser-access: true`), Ollama (`http://localhost:11434/v1`), LM Studio (`http://localhost:1234/v1`). Model list from the provider when it has one.
+- [x] WebLLM: check `navigator.gpu`; P2 models with download size and progress; the download goes in the log as `model-download`.
+- [x] Errors: 401 (key), 429 (limit, no retry), CORS (preset unavailable, plain message), local server off (setup help, such as `OLLAMA_ORIGINS`).
+- [x] Tests: each adapter against a fake provider through Playwright request routing; Stop; 429 with no retry; CORS refusal; a CORS check with no key for each real preset (P4).
 
 ### Task D4: Keys and free-tier terms (F24, US11) (pull request D2)
 
 **Files:** Create `src/features/ai/keys.ts`, `KeyDialog.tsx`, `terms.ts`.
 
-- [ ] Keys in memory by default. P6 passphrase store with Web Crypto.
-- [ ] Before a free-tier key works, the provider's data terms in plain words and a checkbox. Gemini free tier: Google can use the content to improve its products, and human reviewers can read it.
-- [ ] Tests: the stored record holds no plain key; a wrong passphrase fails; US11; axe.
+- [x] Keys in memory by default. P6 passphrase store with Web Crypto.
+- [x] Before a free-tier key works, the provider's data terms in plain words and a checkbox. Gemini free tier: Google can use the content to improve its products, and human reviewers can read it.
+- [x] Tests: the stored record holds no plain key; a wrong passphrase fails; US11; axe.
 
 ### Task D5: Reader actions and the "What will be sent" drawer (F23, US10) (pull request D3)
 
 **Files:** Create `src/features/ai/AssistantPanel.tsx`, `SendDrawer.tsx`, `reader.ts`, `prompts.ts`, `retrieve.ts`.
 
-- [ ] Actions: Feedback on an item, Ask the manuscript (P7), Summarize for synopsis, Suggest tags or themes, Continuity check (names, dates, places). The spec's Reader system prompt.
-- [ ] "Summarize for synopsis" fills the synopsis field only after the writer presses "Use as synopsis", which is metadata and not manuscript text.
-- [ ] The drawer: exact text, host, estimated tokens, "Send" and "Do not show again". Memoir requests pass through `shareSafe` first.
-- [ ] Tests: US10 (no insert path); a memoir request body with no real-name variant (Gate 4); the drawer shows the exact body; axe.
+- [x] Actions: Feedback on an item, Ask the manuscript (P7), Summarize for synopsis, Suggest tags or themes, Continuity check (names, dates, places). The spec's Reader system prompt.
+- [x] "Summarize for synopsis" fills the synopsis field only after the writer presses "Use as synopsis", which is metadata and not manuscript text.
+- [x] The drawer: exact text, host, estimated tokens, "Send" and "Do not show again". Memoir requests pass through `shareSafe` first.
+- [x] Tests: US10 (no insert path); a memoir request body with no real-name variant (Gate 4); the drawer shows the exact body; axe.
 
 ### Task D6: Co-writer actions, `aiOrigin` marks and the provenance report (F23, F26) (pull request D3)
 
 **Files:** Create `src/features/ai/cowriter.ts`, `src/features/editor/extensions/aiOrigin.ts`. Modify the export pipeline.
 
-- [ ] Actions: every Reader action, plus Continue (50 to 300 words), Rewrite selection, Three alternatives and Brainstorm (panel only). The spec's Co-writer system prompt.
-- [ ] Insert adds the text with the `aiOrigin` mark (`provider`, `model`, `createdAt`) as one undo step. Typing inside AI text makes the new words the writer's own.
-- [ ] "Show AI text" in the More tools menu. P8 provenance page in each export format.
-- [ ] Tests: mark coverage; one Undo; a Reader-mode project cannot insert; the provenance share; axe.
+- [x] Actions: every Reader action, plus Continue (50 to 300 words), Rewrite selection, Three alternatives and Brainstorm (panel only). The spec's Co-writer system prompt.
+- [x] Insert adds the text with the `aiOrigin` mark (`provider`, `model`, `createdAt`) as one undo step. Typing inside AI text makes the new words the writer's own.
+- [x] "Show AI text" in the More tools menu. P8 provenance page in each export format.
+- [x] Tests: mark coverage; one Undo; a Reader-mode project cannot insert; the provenance share; axe.
 
 ### Task D7: AI policy page (pull request D4)
 

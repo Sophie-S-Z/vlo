@@ -34,6 +34,8 @@ export interface Project {
     followUpDays?: Record<string, number>;
     /** Net words added on each local day, by the date as YYYY-MM-DD, for goals and streaks (F21). */
     wordsByDay?: Record<string, number>;
+    /** The time of the first Co-writer insert, so each export offers the AI provenance page (F26). */
+    aiInsertedAt?: number;
   };
 }
 
