@@ -387,6 +387,25 @@ Last update: 2026-11-05
     - Undo of a deleted person keeps a real name that another person took in the meantime with that
       person, and says so. The People fields put the saved value back when a change is refused.
 
+- Phase 3 pull request C4, part 1: Collection Sequencer (plan Task C6, F18, US08, E2).
+  - A poetry collection has a Sequences tab and the command "Open the Collection Sequencer". The poet
+    keeps named orders of the same poems, for a chapbook, a contest or a reading. A new order starts in
+    binder order. Rename, Copy and Delete with Undo act on the order on show. The binder never changes.
+  - Each poem is a card with its number, title, words and status. A drag, the keyboard (Space, the arrow
+    keys, Space) or the card menu (Move to the start, Move earlier, Move later, Move to the end) moves it.
+    A drop settles with a small spring. Calm mode drops at once.
+  - Each order is independent (US08). A new poem joins the end of each order. A deleted poem leaves each
+    order with no gap (Review Focus 4).
+  - The ring preview stands the titles on a 3D ring. A drag, the wheel or the arrow keys, Home and End
+    turn it, and it settles with the nearest poem in front. A screen reader hears it as a slider with the
+    poem in front as its value. Calm mode and reduced motion show a still numbered list.
+  - Export (E2) opens the export dialog with "This order" chosen. The file holds the poems in the order,
+    with the order name after the project title.
+  - Checks: unit tests for the order data (US08, new and deleted poems, copy, rename, delete with undo),
+    the ring (front poem, radius, keys, a changed order, the still list) and the order export. Browser
+    tests for US08 after a reload, keyboard reorder, the ring keys, copy, rename, delete with Undo, a new
+    poem, the export of an order, Calm mode, and axe, at desktop and phone widths.
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -396,7 +415,7 @@ Last update: 2026-11-05
   push.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
   C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
-  built. C4 (Collection Sequencer and Craft panel) is next.
+  built. C4 part 1 (Collection Sequencer) is built. The Craft panel is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -541,3 +560,5 @@ Last update: 2026-11-05
 | 2026-11-05 | The plan's `person` mark (D3) uses the spec's name, `privateName`, with the attribute `personId`.                                                                                                                                                                              | Spec section 5 names the mark. The plan used a short name for the same mark.                                                                                                                                        |
 | 2026-11-05 | `nameCheck` lists the unmarked names for E5, next to `shareSafe`, and the export worker runs both.                                                                                                                                                                             | The dialog needs the list before the file, and the file needs only the aliased text.                                                                                                                                |
 | 2026-11-05 | A deleted person keeps the marks in the text, and Undo brings the person back with the same id.                                                                                                                                                                                | A mark with no person does nothing, so a share-safe export still swaps any real name it finds.                                                                                                                      |
+| 2026-11-05 | The ring preview hides each card that turns past the side, and each card in view keeps its full color.                                                                                                                                                                         | A faded card fails the WCAG text contrast check. The 3D turn still shows the depth.                                                                                                                                 |
+| 2026-11-05 | The ring is a slider for a screen reader, with the poem in front as its value.                                                                                                                                                                                                 | The arrow keys, Home and End choose one poem from a list, as a slider does.                                                                                                                                         |

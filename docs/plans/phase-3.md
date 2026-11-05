@@ -122,12 +122,12 @@ The view tabs (D5) arrive with the first view in Task C2, because a tab with no 
 
 **Files:** Create `src/features/sequences/` (`SequencesPage.tsx`, `SequenceList.tsx`, `Ring.tsx`).
 
-- [ ] Poems show as cards. Create, rename, copy and delete named orders. A new order starts with the binder order.
-- [ ] Reorder with dnd-kit sortable and a spring on drop. Keyboard reorder with the Phase 1 binder pattern.
-- [ ] Ring preview of the current order: a 3D ring with the poem titles, turned by drag, wheel or arrow keys. Calm mode and reduced motion show a still numbered list.
-- [ ] A new poem joins the end of each order. A deleted poem leaves each order (Review Focus 4).
-- [ ] E2 Export a sequence.
-- [ ] Tests: US08; delete and add; keyboard reorder; axe.
+- [x] Poems show as cards. Create, rename, copy and delete named orders. A new order starts with the binder order.
+- [x] Reorder with dnd-kit sortable and a spring on drop. Keyboard reorder with the Phase 1 binder pattern.
+- [x] Ring preview of the current order: a 3D ring with the poem titles, turned by drag, wheel or arrow keys. Calm mode and reduced motion show a still numbered list.
+- [x] A new poem joins the end of each order. A deleted poem leaves each order (Review Focus 4).
+- [x] E2 Export a sequence.
+- [x] Tests: US08; delete and add; keyboard reorder; axe.
 
 ### Task C7: Craft panel (F19) (pull request C4)
 

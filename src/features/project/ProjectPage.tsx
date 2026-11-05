@@ -296,6 +296,18 @@ export function ProjectPage() {
           },
         ]
       : []),
+    ...(project.template === 'poetry'
+      ? [
+          {
+            id: 'sequences',
+            label: 'Open the Collection Sequencer',
+            keywords: ['sequences', 'order', 'collection', 'chapbook', 'ring'],
+            run: () => {
+              void navigate(`/p/${project.id}/sequences`);
+            },
+          },
+        ]
+      : []),
     {
       id: 'library',
       label: 'Go to the Library',
