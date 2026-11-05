@@ -69,8 +69,8 @@ The provider adapters use `vloFetch` and need no package. No GSAP or `motion` (P
 
 **Files:** Create `src/features/ai/ModeBadge.tsx`, `ModeDialog.tsx`, `modes.ts`. Modify the project header and settings.
 
-- [ ] The badge shows on every project screen. A click opens the mode dialog. P1 morph, with Calm mode at once.
-- [ ] A change away from Pen shows what will change: which code loads, what can be sent, and that nothing is sent until the writer asks. A change back to Pen unloads the panel and needs no confirm.
+- [x] The badge shows on every project screen. A click opens the mode dialog. P1 morph, with Calm mode at once.
+- [x] A change away from Pen shows what will change: which code loads, what can be sent, and that nothing is sent until the writer asks. A change back to Pen unloads the panel and needs no confirm.
 - [ ] Tests: mode change and confirm; Pen loads no AI chunk; Reader loads it; Calm mode; axe.
 
 ### Task D3: Engine layer and adapters (F24) (pull request D2)

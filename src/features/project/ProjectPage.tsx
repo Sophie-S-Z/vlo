@@ -32,6 +32,7 @@ import type { CommandAction } from './CommandMenu';
 import { ProjectLayout } from './ProjectLayout';
 import { useProject } from './useProject';
 import { GRID_VIEW, ViewTabs } from './ViewTabs';
+import { setAiMode } from '@/features/ai/modes';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
@@ -73,6 +74,7 @@ export function ProjectPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [modeOpen, setModeOpen] = useState(false);
   const motion = useMotionAllowed();
   const navigate = useNavigate();
   const activeEditor = useActiveEditor();
@@ -256,6 +258,31 @@ export function ProjectPage() {
         };
       },
     },
+    {
+      id: 'ai-mode',
+      label: 'Change AI mode…',
+      keywords: ['ai', 'pen', 'reader', 'co-writer', 'assistant', 'mode', 'privacy'],
+      run: () => {
+        afterMenu.current = () => {
+          setModeOpen(true);
+        };
+      },
+    },
+    ...(project.aiMode === 'pen'
+      ? []
+      : [
+          {
+            id: 'pen-mode',
+            label: 'Turn off AI (Pen mode)',
+            keywords: ['ai', 'pen', 'off', 'privacy'],
+            // A change back to Pen needs no confirm (plan Task D2).
+            run: () => {
+              setAiMode(project.id, 'pen').catch(() => {
+                setSettingsError('Vlo could not save the mode on this device.');
+              });
+            },
+          },
+        ]),
     ...(project.template === 'novel'
       ? [
           {
@@ -399,7 +426,7 @@ export function ProjectPage() {
               <h1 className="mt-1 font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
                 {project.title}
               </h1>
-              <ViewTabs project={project} />
+              <ViewTabs project={project} modeOpen={modeOpen} onModeOpenChange={setModeOpen} />
             </header>
           }
           binder={<Binder project={project} items={items} openItemId={item?.id ?? null} onOpen={open} />}

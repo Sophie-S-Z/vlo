@@ -496,6 +496,17 @@ Last update: 2026-11-05
   - US09 browser test: 60 s of typing, find, an export, the views and a backup in Pen mode send no request
     off the app, load no AI code, and the log says "0 requests.".
 
+- Phase 4 Task D2: AI mode setting, badge and dialog (F23).
+  - The mode badge ends the row of view tabs, so it shows on every project screen. Pen is quiet, Reader has
+    the accent line, and Co-writer is filled. Its button is 44 px tall.
+  - The badge icon morphs between a pen, an eye and two pens. Each icon is two closed shapes of 6 cubic
+    curves, so the morph moves point by point. Calm mode and reduced motion swap the icon at once.
+  - The mode dialog lists the three modes. A choice other than the current mode lists what will change, and
+    the switch happens only on "Switch to … mode". A memoir with aliases on says that requests carry
+    aliases.
+  - The command menu has "Change AI mode…" and, outside Pen, "Turn off AI (Pen mode)", which switches at
+    once with no confirm.
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -535,6 +546,9 @@ Last update: 2026-11-05
   card opens its scene in under 1 s" failed twice and "a pinch over 200 cards keeps 60 frames a second"
   failed twice on the phone profile, each time with two workers running other tests beside them. Each
   passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker.
+- "Review Focus 6" in craft.spec (typing with Craft labels on a 300-line poem) failed 1 of 3 runs alone in
+  the build container, also with the mode badge taken out: the first key took 73 ms, and the other keys
+  took 9 to 38 ms. CI runs it on a quieter machine.
 - Gate 3 in the build container: Chromium and the phone profile pass the whole browser suite. WebKit is
   not installed there, and Firefox does not run there. Run "Run workflow" on the Actions tab for all four
   browsers when the Actions minutes reset.
@@ -670,3 +684,4 @@ Last update: 2026-11-05
 | 2026-11-05 | Each day keeps its net change in words, and the Progress screen floors a day at 0.                                                                                                                                                                                             | "Written today" in the editor counts the same way, so the two numbers agree. A cut and a paste of the same words add nothing.                                                                                       |
 | 2026-11-05 | The goal calendar starts each week on Monday.                                                                                                                                                                                                                                  | A rest weekend then sits together at the end of each row.                                                                                                                                                           |
 | 2026-11-05 | With no log entry, the network log names the mode of each project on the device, not only the last one.                                                                                                                                                                        | One project in Reader mode can send, so the page counts each mode. The plan named only the last project.                                                                                                            |
+| 2026-11-05 | The badge icon morph runs on `requestAnimationFrame`, not on the Web Animations API.                                                                                                                                                                                           | Plan decision P1 named the Web Animations API. Safari cannot animate the `d` of a path with it, so the morph writes each frame itself, as CountUp does. It still needs no GSAP.                                     |
