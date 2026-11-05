@@ -39,7 +39,8 @@ export interface Engine {
  * - no-gpu: this browser has no WebGPU for the in-browser engine.
  * - server: any other answer that is not a success.
  */
-export type EngineErrorKind = 'key' | 'limit' | 'blocked' | 'offline' | 'refused' | 'no-gpu' | 'server';
+export type EngineErrorKind =
+  'key' | 'limit' | 'blocked' | 'offline' | 'refused' | 'no-gpu' | 'server' | 'cancelled';
 
 export class EngineError extends Error {
   readonly kind: EngineErrorKind;

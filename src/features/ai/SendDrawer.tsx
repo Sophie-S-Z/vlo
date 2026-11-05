@@ -34,7 +34,7 @@ export function SendDrawer({
 }) {
   const id = useId();
   const [hide, setHide] = useState(false);
-  const sendRef = useRef<HTMLButtonElement>(null);
+  const textRef = useRef<HTMLPreElement>(null);
   const text = requestText(request);
   const tokens = estimateTokens(text) + request.maxTokens;
   const local = host === 'this browser';
@@ -46,7 +46,8 @@ export function SendDrawer({
   });
 
   useEffect(() => {
-    sendRef.current?.focus();
+    // The exact text takes focus first, so a key press cannot send before the writer reads it.
+    textRef.current?.focus();
     // Escape in the drawer cancels the request, and goes no further.
     const section = sectionRef.current;
     const onKey = (event: KeyboardEvent) => {
@@ -81,6 +82,7 @@ export function SendDrawer({
       </p>
       {/* The text can be long, so a keyboard user can focus it and scroll it. */}
       <pre
+        ref={textRef}
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={0}
         aria-label="The exact text"
@@ -99,12 +101,12 @@ export function SendDrawer({
         />
         Do not show this again
       </label>
+      {hide && <p className="text-sm text-muted">Change engine has a switch that shows this again.</p>}
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
         <Button
-          ref={sendRef}
           onClick={() => {
             onSend(hide);
           }}

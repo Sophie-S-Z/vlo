@@ -10,6 +10,13 @@ import type { AiRequest, ResultKind } from './reader';
 
 export type EntryStatus = 'running' | 'done' | 'stopped' | 'error';
 
+/** The words that a rewrite replaces on Insert, as positions in the item's document and their text. */
+export interface Target {
+  from: number;
+  to: number;
+  text: string;
+}
+
 export interface Entry {
   id: string;
   projectId: string;
@@ -23,6 +30,8 @@ export interface Entry {
   error?: string;
   /** What the panel did with the answer, such as "Used as synopsis." */
   used?: string;
+  /** For a rewrite: the words that Insert replaces. After an Insert, the inserted words. */
+  target?: Target;
   createdAt: number;
 }
 
@@ -79,6 +88,7 @@ export function startEntry(
   engine: Engine,
   show: (text: string) => string,
   label: string,
+  target?: Target,
 ): string {
   count += 1;
   const id = `answer-${String(count)}`;
@@ -90,6 +100,7 @@ export function startEntry(
     label,
     result: request.result,
     ...(request.itemId ? { itemId: request.itemId } : {}),
+    ...(target ? { target } : {}),
     engine: { id: engine.id, label: engine.label, model: engine.model },
     status: 'running',
     text: '',
@@ -133,6 +144,10 @@ export function stopEntry(id: string): void {
 
 export function markUsed(id: string, used: string): void {
   update(id, { used });
+}
+
+export function setTarget(id: string, target: Target): void {
+  update(id, { target });
 }
 
 export function removeEntry(id: string): void {

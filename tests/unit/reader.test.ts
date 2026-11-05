@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { COWRITER_SYSTEM, READER_SYSTEM } from '@/features/ai/prompts';
-import { fitText, privateRequest, readerRequest, restoreNames, type ItemContext } from '@/features/ai/reader';
+import { markedNamesIn, withMarkedNames } from '@/features/ai/names';
+import {
+  checkFits,
+  fitText,
+  privateRequest,
+  readerRequest,
+  requestTokens,
+  restoreNames,
+  type ItemContext,
+} from '@/features/ai/reader';
 import { findPassages, passagesOf, PASSAGE_BUDGET } from '@/features/ai/retrieve';
 import { estimateTokens } from '@/features/ai/engine/types';
 
@@ -95,6 +104,60 @@ describe('Ask the manuscript passages', () => {
   });
 });
 
+describe('a request for the in-browser model', () => {
+  const many = passagesOf(
+    Array.from({ length: 30 }, (_, i) => ({
+      itemId: `i${String(i)}`,
+      title: `Item ${String(i)}`,
+      text: `Tomas and the lighthouse keeper ${'watched the sea '.repeat(60)}`,
+    })),
+  );
+
+  it('keeps the passages of Ask and the continuity check within the passage budget', () => {
+    const passageTokens = (body: string) => {
+      const inside = /<passages>\n([\s\S]*)\n<\/passages>/.exec(body)?.[1] ?? '';
+      return estimateTokens(inside);
+    };
+    const ask = readerRequest('ask', {
+      question: 'What did the lighthouse keeper watch?',
+      passages: many,
+      budget: 1500,
+      passageBudget: 1000,
+    });
+    const wide = readerRequest('ask', {
+      question: 'What did the lighthouse keeper watch?',
+      passages: many,
+      budget: 1500,
+    });
+    expect(passageTokens(ask.messages[0]?.content ?? '')).toBeLessThanOrEqual(1100);
+    expect(passageTokens(wide.messages[0]?.content ?? '')).toBeGreaterThan(1100);
+    const item = { id: 'x', title: 'Tomas', kind: 'scene', text: 'Tomas came home.' };
+    const continuity = readerRequest('continuity', {
+      item,
+      passages: many,
+      budget: 1500,
+      passageBudget: 1000,
+    });
+    expect(passageTokens(continuity.messages[0]?.content ?? '')).toBeLessThanOrEqual(1100);
+    expect(() => {
+      checkFits(continuity, 3500);
+    }).not.toThrow();
+  });
+
+  it('refuses a request that does not fit with its answer', () => {
+    const request = readerRequest('feedback', { item: scene, passages, budget: 2000 });
+    expect(requestTokens(request)).toBe(
+      estimateTokens(`${request.system}${request.messages[0]?.content ?? ''}`) + request.maxTokens,
+    );
+    expect(() => {
+      checkFits(request, requestTokens(request));
+    }).not.toThrow();
+    expect(() => {
+      checkFits(request, requestTokens(request) - 1);
+    }).toThrow('This request is too long for the model in this browser.');
+  });
+});
+
 describe('a memoir request (Gate 4)', () => {
   const people = [
     {
@@ -156,5 +219,48 @@ describe('a memoir request (Gate 4)', () => {
       "Aunt Rosa and O'Brien talk. Rosie laughs.",
     );
     expect(restoreNames('Aunt Maria', people, false)).toBe('Aunt Maria');
+  });
+
+  it('aliases a marked name that no variant lists, such as "Gran" marked as Rosa', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Gr', marks: [{ type: 'privateName', attrs: { personId: 'p1' } }] },
+            {
+              type: 'text',
+              text: 'an',
+              marks: [{ type: 'privateName', attrs: { personId: 'p1' } }, { type: 'bold' }],
+            },
+            { type: 'text', text: ' baked bread.' },
+          ],
+        },
+      ],
+    };
+    const marked = markedNamesIn(doc);
+    expect(marked).toEqual([{ personId: 'p1', text: 'Gran' }]);
+    const withGran = withMarkedNames(people, marked);
+    const item: ItemContext = { id: 'm3', title: 'Bread', kind: 'memory', text: 'Gran baked bread.' };
+    const plainPeople = privateRequest(
+      readerRequest('feedback', { item, passages: [], budget: 2000 }),
+      people,
+      true,
+    );
+    expect(JSON.stringify(plainPeople)).toContain('Gran');
+    const safe = privateRequest(
+      readerRequest('feedback', { item, passages: [], budget: 2000 }),
+      withGran,
+      true,
+    );
+    const body = JSON.stringify(safe);
+    expect(body).not.toContain('Gran');
+    const alias = withGran[0]?.variants.find((v) => v.real === 'Gran')?.alias ?? '';
+    expect(alias).not.toBe('');
+    expect(body).toContain(`${alias} baked bread.`);
+    // "Gran" shares the alias of Rosa, so the answer shows the first real name of that person.
+    expect(alias).toBe('Maria');
+    expect(restoreNames(`${alias} smiles.`, withGran, true)).toBe('Rosa smiles.');
   });
 });

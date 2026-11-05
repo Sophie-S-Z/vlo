@@ -45,11 +45,16 @@ export async function hasWebGpu(): Promise<boolean> {
 }
 
 let loaded: { model: string; engine: MLCEngine } | null = null;
+/** Counts each unload, so a load that ends after an unload frees its model at once. */
+let generation = 0;
+
+/** The error that a load gives when an unload or a cancel came first. */
+export const LOAD_CANCELLED = 'Vlo stopped loading the model.';
 
 /** Logs each file that WebLLM downloads while `work` runs. */
 async function logDownloads<T>(work: () => Promise<T>): Promise<T> {
-  const seen = (list: PerformanceObserverEntryList) => {
-    for (const entry of list.getEntries() as PerformanceResourceTiming[]) {
+  const seen = (entries: readonly PerformanceEntry[]) => {
+    for (const entry of entries as readonly PerformanceResourceTiming[]) {
       let url: URL;
       try {
         url = new URL(entry.name);
@@ -62,12 +67,15 @@ async function logDownloads<T>(work: () => Promise<T>): Promise<T> {
       void logRequest(entry.name, 'model-download', entry.responseStatus || 200);
     }
   };
-  const observer = new PerformanceObserver(seen);
+  const observer = new PerformanceObserver((list) => {
+    seen(list.getEntries());
+  });
   observer.observe({ type: 'resource', buffered: false });
   try {
     return await work();
   } finally {
-    seen(observer.takeRecords() as unknown as PerformanceObserverEntryList);
+    // takeRecords gives the entries themselves, which the callback has not seen yet.
+    seen(observer.takeRecords());
     observer.disconnect();
   }
 }
@@ -85,18 +93,37 @@ export async function loadWebLlm(
       'This browser has no WebGPU, so it cannot run a model. Use a recent Chrome or Edge, or pick your own key or a server on your computer.',
     );
   if (loaded?.model !== modelId) {
+    const started = generation;
     const webllm = await import('@mlc-ai/web-llm');
+    if (started !== generation) throw new EngineError('cancelled', LOAD_CANCELLED);
     const progress = (report: { progress: number; text: string }) => {
       onProgress(report.progress, report.text);
     };
     if (loaded) {
-      loaded.engine.setInitProgressCallback(progress);
-      await logDownloads(() => (loaded as { engine: MLCEngine }).engine.reload(modelId));
-      loaded = { model: modelId, engine: loaded.engine };
+      const engine = loaded.engine;
+      // No caller may use the engine while it reloads.
+      loaded = null;
+      engine.setInitProgressCallback(progress);
+      try {
+        await logDownloads(() => engine.reload(modelId));
+      } catch (problem) {
+        await engine.unload().catch(() => undefined);
+        throw problem;
+      }
+      if (started !== generation) {
+        await engine.unload();
+        throw new EngineError('cancelled', LOAD_CANCELLED);
+      }
+      loaded = { model: modelId, engine };
     } else {
       const engine = await logDownloads(() =>
         webllm.CreateMLCEngine(modelId, { initProgressCallback: progress }),
       );
+      // WebLLM cannot stop a download in the middle of a file, so a cancelled load frees its model here.
+      if (started !== generation) {
+        await engine.unload();
+        throw new EngineError('cancelled', LOAD_CANCELLED);
+      }
       loaded = { model: modelId, engine };
     }
   }
@@ -129,8 +156,14 @@ export async function loadWebLlm(
   };
 }
 
+/** Stops a load that runs now. Its model is freed when its download ends, and no request uses it. */
+export function cancelWebLlmLoad(): void {
+  generation += 1;
+}
+
 /** Frees the model's graphics memory, as when the project goes back to Pen mode. */
 export async function unloadWebLlm(): Promise<void> {
+  generation += 1;
   const current = loaded;
   loaded = null;
   await current?.engine.unload();

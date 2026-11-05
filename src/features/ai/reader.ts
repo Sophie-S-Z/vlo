@@ -43,6 +43,8 @@ export interface ReaderContext {
   passages: readonly Passage[];
   /** The most tokens of the item's own text to send. */
   budget: number;
+  /** The most tokens of other passages, for Ask the manuscript and the continuity check. */
+  passageBudget?: number;
 }
 
 export const READER_ACTIONS: readonly { id: ReaderAction; label: string; needsItem: boolean }[] = [
@@ -62,6 +64,26 @@ export function fitText(text: string, budget: number): { text: string; cut: bool
   return { text: (end > 0 ? slice.slice(0, end) : slice).trimEnd(), cut: true };
 }
 
+const passageOptions = (context: ReaderContext) =>
+  context.passageBudget === undefined ? {} : { budget: context.passageBudget };
+
+/** The tokens of a request with its answer, by the rough count of `estimateTokens`. */
+export function requestTokens(request: AiRequest): number {
+  const sent = request.system + request.messages.map((m) => m.content).join('\n');
+  return estimateTokens(sent) + request.maxTokens;
+}
+
+/**
+ * Refuses a request that does not fit in `limit` tokens with its answer. The in-browser models read 4,096
+ * tokens at most, and the rough count can be low, so the panel gives them a smaller limit.
+ */
+export function checkFits(request: AiRequest, limit: number): void {
+  if (requestTokens(request) > limit)
+    throw new RangeError(
+      'This request is too long for the model in this browser. Select a shorter passage, or pick another engine.',
+    );
+}
+
 function itemBlock(item: ItemContext, budget: number): string {
   const fitted = fitText(item.text.trim(), budget);
   const note = fitted.cut ? `\n(The ${item.kind} continues. This is its first part.)` : '';
@@ -74,7 +96,7 @@ export function readerRequest(action: ReaderAction, context: ReaderContext): AiR
   if (action === 'ask') {
     const question = context.question?.trim() ?? '';
     if (question === '') throw new RangeError('Type a question first.');
-    const found = findPassages(context.passages, question);
+    const found = findPassages(context.passages, question, passageOptions(context));
     const body =
       found.length === 0
         ? 'No passage of the manuscript matches the question.'
@@ -137,7 +159,13 @@ export function readerRequest(action: ReaderAction, context: ReaderContext): AiR
     case 'continuity': {
       const query = namesIn(item.text).join(' ');
       const others =
-        query === '' ? [] : findPassages(context.passages, query, { skipItem: item.id, exact: true });
+        query === ''
+          ? []
+          : findPassages(context.passages, query, {
+              ...passageOptions(context),
+              skipItem: item.id,
+              exact: true,
+            });
       const rest =
         others.length === 0
           ? 'No other passage shares a name, a place or a year with it.'

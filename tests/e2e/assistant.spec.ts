@@ -126,7 +126,7 @@ test('US10: a Reader answer shows the exact request first, and has no way into t
   await expect(drawer(page)).toContainText('To localhost:11434, about');
   const exact = drawer(page).getByLabel('The exact text');
   await expect(exact).toContainText('Mira wants the ledger. She hides it under the boards.');
-  await expect(drawer(page).getByRole('button', { name: 'Send' })).toBeFocused();
+  await expect(exact).toBeFocused();
   expect(sent).toHaveLength(0);
   expect(await seriousIssues(page)).toEqual([]);
 
@@ -216,6 +216,61 @@ test('a Co-writer draft goes in with the AI mark, one Undo takes it out, and the
   expect(file).toContain('AI provenance');
   expect(file).toContain('of the text in this export carries the Vlo AI mark: 37 of 60 characters.');
   expect(file).toContain('Ollama, llama3.2');
+});
+
+test('each version of a rewrite replaces the words that the last Insert put in, after the text moves', async ({
+  page,
+}) => {
+  await newProject(page);
+  await page.keyboard.type('The old dog slept.');
+  await saved(page);
+  // Select "old dog".
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowRight');
+  for (let i = 0; i < 7; i += 1) await page.keyboard.press('Shift+ArrowRight');
+  await switchTo(page, 'Co-writer');
+  await openAssistant(page);
+  await useOllama(page);
+  const sent = await fakeChat(page, 'http://localhost:11434/v1/chat/completions', [
+    'grey hound\n---\n',
+    'tired cat\n---\nfox',
+  ]);
+
+  await panel(page).getByLabel('What to ask').selectOption('alternatives');
+  await panel(page).getByRole('button', { name: 'Prepare the request' }).click();
+  await expect(drawer(page).getByLabel('The exact text')).toContainText('<passage>\nold dog\n</passage>');
+  await drawer(page).getByRole('button', { name: 'Send' }).click();
+  const answer = panel(page).getByRole('listitem').filter({ hasText: 'Three alternatives in Scene 1' });
+  await expect(answer).toContainText('Done.');
+  expect(sent).toHaveLength(1);
+
+  const sheet = page.getByRole('dialog', { name: 'Assistant' });
+  const insertVersion = async (n: number) => {
+    if (!(await panel(page).isVisible())) await openAssistant(page);
+    const phone = await sheet.isVisible();
+    await answer.getByRole('button', { name: `Insert version ${String(n)}` }).click();
+    // On a phone the sheet closes after an Insert, so the writer sees the text.
+    if (phone) await expect(sheet).toHaveCount(0);
+  };
+  await insertVersion(1);
+  await expect(words(page)).toHaveText('The grey hound slept.');
+  await insertVersion(2);
+  await expect(words(page)).toHaveText('The tired cat slept.');
+  await expect(words(page).locator('.vlo-ai')).toHaveText('tired cat');
+
+  // New words before it move the draft. Vlo finds its words again.
+  await closeSheet(page);
+  // A click at the left edge of the line puts the cursor at the start. A phone has no Home key.
+  const line = await words(page).locator('p').first().boundingBox();
+  if (!line) throw new Error('The paragraph has no box.');
+  await page.mouse.click(line.x + 1, line.y + line.height / 2);
+  await expect(text(page)).toBeFocused();
+  await page.keyboard.type('Now ');
+  await expect(words(page)).toHaveText('Now The tired cat slept.');
+  await saved(page);
+  await insertVersion(3);
+  await expect(words(page)).toHaveText('Now The fox slept.');
+  await expect(words(page).locator('.vlo-ai')).toHaveText('fox');
 });
 
 test('US11: a free-tier key works only after the writer agrees to the data terms', async ({ page }) => {

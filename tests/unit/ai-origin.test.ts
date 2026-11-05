@@ -85,7 +85,7 @@ describe('Insert (Co-writer)', () => {
     editor.commands.setTextSelection(posOf(editor, ' Then'));
     // The writer's typing before the insert is a separate undo step.
     editor.view.dispatch(editor.state.tr.insertText(' Rain.'));
-    expect(insertAiText(editor, ' The kettle sang.', ORIGIN, 'prose')).toBe(true);
+    expect(insertAiText(editor, ' The kettle sang.', ORIGIN, 'prose')).not.toBeNull();
     expect(editor.state.doc.textContent).toBe('She waited. Rain. The kettle sang. Then the door.');
     expect(runs(editor)).toEqual([
       ['She waited. Rain.', ''],
@@ -102,10 +102,16 @@ describe('Insert (Co-writer)', () => {
     const { editor, doc } = mount('prose', '<p>Before old words after.</p>');
     const from = posOf(editor, 'old words');
     editor.commands.setTextSelection({ from, to: from + 'old words'.length });
-    insertAiText(editor, 'new one.\n\nA second paragraph', ORIGIN, 'prose');
+    const range = insertAiText(editor, 'new one.\n\nA second paragraph', ORIGIN, 'prose');
     expect(
       (editor.getJSON() as JSONContent).content?.map((p) => p.content?.map((t) => t.text).join('')),
     ).toEqual(['Before new one.', 'A second paragraph after.']);
+    // The cursor goes after the new words, so the next key press does not replace them.
+    expect(editor.state.selection.empty).toBe(true);
+    expect(editor.state.selection.from).toBe(range?.to);
+    expect(editor.state.doc.textBetween(editor.state.selection.from, editor.state.doc.content.size - 1)).toBe(
+      ' after.',
+    );
     const xml = JSON.stringify(doc.getXmlFragment(YFRAGMENT).toJSON());
     expect(xml).toContain('llama-3.3-70b-versatile');
     expect(editor.getHTML()).toContain(
@@ -134,9 +140,19 @@ describe('Insert (Co-writer)', () => {
     expect(editor.state.doc.textContent).toBe('Rain. The kettle sang. Then');
   });
 
+  test('a draft of paragraphs keeps a space after the last word at the cursor', () => {
+    const { editor } = mount('prose', '<p>It rained.</p>');
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    const range = insertAiText(editor, 'She walked.\n\nHe stayed.', ORIGIN, 'prose');
+    expect(
+      (editor.getJSON() as JSONContent).content?.map((p) => p.content?.map((t) => t.text).join('')),
+    ).toEqual(['It rained. She walked.', 'He stayed.']);
+    expect(range && editor.state.doc.textBetween(range.from, range.to, '|')).toBe(' She walked.|He stayed.');
+  });
+
   test('does nothing with an empty draft', () => {
     const { editor } = mount('prose', '<p>Text</p>');
-    expect(insertAiText(editor, ' \n\n ', ORIGIN, 'prose')).toBe(false);
+    expect(insertAiText(editor, ' \n\n ', ORIGIN, 'prose')).toBeNull();
     expect(editor.state.doc.textContent).toBe('Text');
   });
 });
@@ -187,6 +203,27 @@ describe("the writer's own words", () => {
     editor.chain().setMeta(KEEP_AI_MARKS, true).setContent(node).run();
     expect(runs(editor)).toEqual([['kept words', 'Groq, llama-3.3-70b-versatile']]);
     old.destroy();
+  });
+
+  test('the writer’s plain-text paste inside AI text is the writer’s, and a paste of AI text stays AI', () => {
+    const { editor } = mount('prose', '<p></p>');
+    insertAiText(editor, 'grey sea waves', ORIGIN, 'prose');
+    editor.commands.setTextSelection(posOf(editor, 'sea'));
+    // jsdom has no ClipboardEvent, so the paste events are plain objects with the clipboard data.
+    const paste = (data: Record<string, string>) =>
+      ({ clipboardData: { getData: (type: string) => data[type] ?? '' } }) as unknown as ClipboardEvent;
+    editor.view.pasteText('MYOWN ', paste({ 'text/plain': 'MYOWN ' }));
+    expect(runs(editor)).toEqual([
+      ['grey ', 'Groq, llama-3.3-70b-versatile'],
+      ['MYOWN ', ''],
+      ['sea waves', 'Groq, llama-3.3-70b-versatile'],
+    ]);
+    const html = editor.getHTML().replace(/^<p>|<\/p>$/g, '');
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    const copied = html.slice(html.indexOf('<span'), html.indexOf('</span>') + 7);
+    editor.view.pasteHTML(copied, paste({ 'text/html': copied }));
+    // The pasted AI words join the AI words at the end, as one marked run.
+    expect(runs(editor).at(-1)).toEqual(['sea wavesgrey', 'Groq, llama-3.3-70b-versatile']);
   });
 
   test('a damaged mark still names AI text', () => {
@@ -259,6 +296,48 @@ describe('the AI provenance page', () => {
     );
     const page = prepared.doc.sections.at(-1)?.blocks[1];
     expect(page?.type === 'paragraph' && runsText(page.runs)).toContain('No text in this export carries');
+  });
+
+  test('counts AI text in a share-safe memoir, where aliases take the place of real names', () => {
+    const name = (text: string, ai: boolean) => ({
+      type: 'text',
+      text,
+      marks: [
+        { type: 'privateName', attrs: { personId: 'p1' } },
+        ...(ai ? [{ type: AI_ORIGIN, attrs: { provider: 'Groq', model: 'llama', createdAt: 1 } }] : []),
+      ],
+    });
+    const prepared = prepareExport({
+      project: project('memoir'),
+      items: [item('m', 'memory', 'Kitchen')],
+      scope: { kind: 'project' },
+      updates: [
+        [
+          'm',
+          updateOf(
+            scene([
+              name('Rosa', false),
+              { type: 'text', text: ' baked. ' },
+              name('Rosa', true),
+              marked(' sang to Rosa.'),
+            ]),
+            'prose',
+          ),
+        ],
+      ],
+      format: 'markdown',
+      people: [{ id: 'p1', variants: [{ real: 'Rosa', alias: 'Maria' }] }],
+      shareSafe: true,
+      provenance: { at: Date.UTC(2026, 10, 5) },
+    });
+    const text = JSON.stringify(prepared.doc);
+    expect(text).not.toContain('Rosa');
+    const report = provenanceOf({ ...prepared.doc, sections: prepared.doc.sections.slice(0, -1) });
+    // "Maria" and " sang to Maria." keep the AI mark after the swap: 5 + 15 characters.
+    expect(report.ai).toBe('Maria'.length + ' sang to Maria.'.length);
+    expect(report.total).toBe('Maria baked. Maria sang to Maria.'.length);
+    const page = prepared.doc.sections.at(-1)?.blocks[1];
+    expect(page?.type === 'paragraph' && runsText(page.runs)).toContain('20 of 33 characters');
   });
 
   test('rounds a share for people', () => {

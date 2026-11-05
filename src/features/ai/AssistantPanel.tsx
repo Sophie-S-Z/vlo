@@ -1,3 +1,4 @@
+import type { JSONContent } from '@tiptap/core';
 import { Square, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { getActiveEditor } from '@/features/editor/commands/editorBus';
@@ -14,14 +15,18 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { Textarea } from '@/ui/textarea';
+import type { Node as PmNode } from '@tiptap/pm/model';
 import {
   clearProject,
+  getEntries,
   markUsed,
   removeEntry,
+  setTarget,
   startEntry,
   stopEntry,
   useEntries,
   type Entry,
+  type Target,
 } from './assistantStore';
 import {
   CONTINUE_WORDS,
@@ -33,11 +38,14 @@ import {
 import { providerEngine } from './engine/engine';
 import { PRESETS } from './engine/presets';
 import { EngineError, type Engine } from './engine/types';
-import { loadWebLlm, unloadWebLlm } from './engine/webllm';
+import { cancelWebLlmLoad, LOAD_CANCELLED, loadWebLlm, unloadWebLlm } from './engine/webllm';
 import { engineName, EngineSettings } from './EngineSettings';
 import { KeyDialog } from './KeyDialog';
 import { sessionKey } from './keys';
+import { withMarkedNames } from './names';
+import { projectMarkedNames } from './projectNames';
 import {
+  checkFits,
   privateRequest,
   READER_ACTIONS,
   readerRequest,
@@ -63,6 +71,46 @@ const isCowriterAction = (action: ActionId): action is CowriterAction =>
 
 /** The most tokens of the writer's text in one request: small for the in-browser model. */
 const BUDGET = { webllm: 1500, provider: 12000 } as const;
+/** The most tokens of other passages for the in-browser model. Other engines take the default of 3,000. */
+const WEBLLM_PASSAGES = 1000;
+/** The in-browser models read 4,096 tokens. The rough count can be low, so a request stays under this. */
+const WEBLLM_LIMIT = 3500;
+
+/** The words that a rewrite replaces, found again after the text changed. */
+function findTarget(doc: PmNode, target: Target, sep: string): Target | null {
+  const inDoc = target.to <= doc.content.size;
+  if (inDoc && doc.textBetween(target.from, target.to, sep, leafText) === target.text) return target;
+  // The words moved. A text in one block with one match is still the same words.
+  if (target.text === '' || target.text.includes('\n')) return null;
+  const found: Target[] = [];
+  doc.descendants((node, pos) => {
+    if (found.length > 1) return false;
+    if (!node.isTextblock) return true;
+    let offset = pos + 1;
+    let text = '';
+    const starts: { at: number; pos: number }[] = [];
+    node.forEach((child) => {
+      if (child.isText) {
+        starts.push({ at: text.length, pos: offset });
+        text += child.text ?? '';
+      } else text += '\uFFFC';
+      offset += child.nodeSize;
+    });
+    let at = text.indexOf(target.text);
+    while (at >= 0 && found.length <= 1) {
+      const start = [...starts].reverse().find((s) => s.at <= at);
+      if (start) {
+        const from = start.pos + (at - start.at);
+        found.push({ from, to: from + target.text.length, text: target.text });
+      }
+      at = text.indexOf(target.text, at + 1);
+    }
+    return false;
+  });
+  const only = found.length === 1 ? found[0] : undefined;
+  if (!only) return null;
+  return doc.textBetween(only.from, only.to, sep, leafText) === target.text ? only : null;
+}
 
 const selectClass =
   'min-h-11 w-full rounded-md border border-rule bg-bg px-3 text-base text-text focus-visible:border-accent';
@@ -73,7 +121,8 @@ export interface AssistantPanelProps {
   /** The open item, if it has an editor. */
   item: Item | undefined;
   kind: 'prose' | 'poem' | null;
-  people: readonly Person[];
+  /** The people of the project, or undefined while they load. */
+  people: readonly Person[] | undefined;
   /** Runs after an Insert, so a phone can close the sheet and show the text. */
   onInserted?: () => void;
 }
@@ -88,8 +137,10 @@ interface Pending {
   request: AiRequest;
   host: string;
   aliased: boolean;
+  /** The people with each marked name as a variant, which also turn the answer back to real names. */
+  people: PrivatePerson[];
   /** The words the writer selected for a rewrite, to replace on Insert. */
-  target?: { itemId: string; from: number; to: number; text: string };
+  target?: Target;
 }
 
 const STATUS_TEXT: Record<Entry['status'], string> = {
@@ -123,9 +174,19 @@ export default function AssistantPanel({
   const [keyFor, setKeyFor] = useState<Pending | null>(null);
   const [loading, setLoading] = useState<{ share: number; text: string } | null>(null);
   const [announce, setAnnounce] = useState('');
-  const targets = useRef(new Map<string, NonNullable<Pending['target']>>());
+  const [busy, setBusy] = useState(false);
+  const working = useRef(false);
+  const cancelled = useRef(false);
+  const mounted = useRef(true);
   const listRef = useRef<HTMLOListElement>(null);
   const actionRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -143,8 +204,9 @@ export default function AssistantPanel({
   const action: ActionId = !cowriter && isCowriterAction(chosen) ? 'feedback' : chosen;
 
   const aliasOn = project.template === 'memoir' && project.settings.aliasAiRequests;
-  const privatePeople: PrivatePerson[] = people.map((p) => ({ id: p.id, variants: p.variants }));
-  const budget = choice?.kind === 'provider' ? BUDGET.provider : BUDGET.webllm;
+  const privatePeople: PrivatePerson[] = (people ?? []).map((p) => ({ id: p.id, variants: p.variants }));
+  const inBrowser = choice?.kind !== 'provider';
+  const budget = inBrowser ? BUDGET.webllm : BUDGET.provider;
   const kindName = (i: Item) => (template.kindLabel[i.kind] ?? i.kind).toLowerCase();
 
   /** The open item's text from the editor, which is newer than the stored copy. */
@@ -175,9 +237,37 @@ export default function AssistantPanel({
   const hostOf = (c: EngineChoice) =>
     c.kind === 'webllm' ? 'this browser' : new URL(PRESETS[c.preset].base).host;
 
+  /** The people of a memoir request, with each name that the writer marked anywhere in the memoir. */
+  const requestPeople = async (): Promise<PrivatePerson[]> => {
+    if (!aliasOn) return privatePeople;
+    const editor = getActiveEditor()?.editor;
+    const openDoc =
+      item && editor && !editor.isDestroyed
+        ? { id: item.id, doc: editor.getJSON() as JSONContent }
+        : undefined;
+    const written = items.filter((i) => template.editorKind(i.kind) !== null);
+    return withMarkedNames(privatePeople, await projectMarkedNames(written, openDoc));
+  };
+
   const prepare = async () => {
+    if (working.current) return;
+    working.current = true;
+    setBusy(true);
+    try {
+      await prepareNow();
+    } finally {
+      working.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  };
+
+  const prepareNow = async () => {
     setError('');
     if (!choice) return;
+    if (aliasOn && people === undefined) {
+      setError('Vlo is still reading the people of this memoir. Ask again in a moment.');
+      return;
+    }
     const open = liveItem();
     let request: AiRequest;
     let target: Pending['target'];
@@ -198,8 +288,7 @@ export default function AssistantPanel({
           topic,
           budget,
         });
-        if (action === 'rewrite' || action === 'alternatives')
-          target = { itemId: open.id, from, to, text: selection };
+        if (action === 'rewrite' || action === 'alternatives') target = { from, to, text: selection };
       } else {
         const needsAll = action === 'ask' || action === 'continuity';
         request = readerRequest(action, {
@@ -207,6 +296,7 @@ export default function AssistantPanel({
           question,
           passages: needsAll ? await passages(open) : [],
           budget,
+          ...(inBrowser ? { passageBudget: WEBLLM_PASSAGES } : {}),
         });
       }
     } catch (problem) {
@@ -215,11 +305,28 @@ export default function AssistantPanel({
       );
       return;
     }
-    const sent = privateRequest(request, privatePeople, aliasOn);
+    let safePeople: PrivatePerson[];
+    try {
+      safePeople = await requestPeople();
+    } catch {
+      // A memoir request never goes without every marked name.
+      setError('Vlo could not read the marked names of this memoir, so it sent nothing.');
+      return;
+    }
+    const sent = privateRequest(request, safePeople, aliasOn);
+    if (inBrowser) {
+      try {
+        checkFits(sent, WEBLLM_LIMIT);
+      } catch (problem) {
+        setError(problem instanceof RangeError ? problem.message : 'This request is too long.');
+        return;
+      }
+    }
     const next: Pending = {
       request: sent,
       host: hostOf(choice),
       aliased: aliasOn && sent !== request,
+      people: safePeople,
       ...(target ? { target } : {}),
     };
     if (choice.kind === 'provider' && !PRESETS[choice.preset].local && !sessionKey(choice.preset)) {
@@ -243,14 +350,23 @@ export default function AssistantPanel({
 
   const engineFor = async (c: EngineChoice): Promise<Engine> => {
     if (c.kind === 'provider') return providerEngine(c.preset, c.model, sessionKey(c.preset));
+    cancelled.current = false;
     setLoading({ share: 0, text: '' });
     try {
       return await loadWebLlm(c.model, (share, text) => {
-        setLoading({ share, text });
+        if (mounted.current && !cancelled.current) setLoading({ share, text });
       });
     } finally {
-      setLoading(null);
+      if (mounted.current) setLoading(null);
     }
+  };
+
+  const cancelLoad = () => {
+    cancelled.current = true;
+    cancelWebLlmLoad();
+    setLoading(null);
+    setError(`${LOAD_CANCELLED} A file that is downloading now still ends, and then Vlo frees it.`);
+    actionRef.current?.focus();
   };
 
   const send = async (next: Pending) => {
@@ -260,6 +376,8 @@ export default function AssistantPanel({
     try {
       engine = await engineFor(choice);
     } catch (problem) {
+      // A cancel already told the writer, and a panel that closed has nobody to tell.
+      if (!mounted.current || (problem instanceof EngineError && problem.kind === 'cancelled')) return;
       setError(
         problem instanceof EngineError || problem instanceof RangeError || problem instanceof Error
           ? problem.message
@@ -272,10 +390,11 @@ export default function AssistantPanel({
       project.id,
       next.request,
       engine,
-      (text) => restoreNames(text, privatePeople, aliasOn),
+      (text) => restoreNames(text, next.people, aliasOn),
       next.request.label,
+      next.target,
     );
-    if (next.target) targets.current.set(entryId, next.target);
+    if (!mounted.current) return;
     setAnnounce(`Asked: ${next.request.label}.`);
     // The new answer takes focus, so the writer hears it and can stop it.
     requestAnimationFrame(() => {
@@ -296,12 +415,16 @@ export default function AssistantPanel({
   const insert = (entry: Entry, text: string) => {
     const editor = getActiveEditor()?.editor;
     if (!cowriter || !editor || !kind || entry.itemId !== item?.id) return;
-    const target = targets.current.get(entry.id);
-    if (target && editor.state.doc.content.size >= target.to) {
-      const sep = kind === 'poem' ? '\n' : '\n\n';
-      const still = editor.state.doc.textBetween(target.from, target.to, sep, leafText);
-      // The rewrite replaces the words it was asked about, if they are still there.
-      if (still === target.text) editor.commands.setTextSelection({ from: target.from, to: target.to });
+    const sep = kind === 'poem' ? '\n' : '\n\n';
+    if (entry.target) {
+      // A rewrite replaces the words it was asked about, or the words that its last Insert put in.
+      const found = findTarget(editor.state.doc, entry.target, sep);
+      const { from, to } = editor.state.selection;
+      if (found) editor.commands.setTextSelection({ from: found.from, to: found.to });
+      else if (from === to) {
+        markUsed(entry.id, 'The words to rewrite changed. Select the words to replace, then press Insert.');
+        return;
+      }
     }
     const done = insertAiText(
       editor,
@@ -313,7 +436,13 @@ export default function AssistantPanel({
       markUsed(entry.id, 'Vlo could not insert this draft here.');
       return;
     }
-    targets.current.delete(entry.id);
+    // "Insert version 2" after version 1 replaces version 1.
+    if (entry.target)
+      setTarget(entry.id, {
+        from: done.from,
+        to: done.to,
+        text: editor.state.doc.textBetween(done.from, done.to, sep, leafText),
+      });
     markUsed(entry.id, 'Inserted in your text. Undo removes it.');
     onInserted?.();
     if (project.settings.aiInsertedAt === undefined)
@@ -322,7 +451,21 @@ export default function AssistantPanel({
 
   const actionNeedsItem =
     isCowriterAction(action) || READER_ACTIONS.find((a) => a.id === action)?.needsItem === true;
-  const canAsk = choice !== null && loading === null && (!actionNeedsItem || item !== undefined);
+  const canAsk = choice !== null && loading === null && !busy && (!actionNeedsItem || item !== undefined);
+
+  /** After Stop the answer card keeps focus. After Remove the next answer, or the action, takes it. */
+  const focusAfter = (entryId: string, removed: boolean) => {
+    requestAnimationFrame(() => {
+      const list = listRef.current;
+      if (!removed) {
+        list?.querySelector<HTMLElement>(`[data-entry="${entryId}"]`)?.focus();
+        return;
+      }
+      const first = getEntries(project.id)[0];
+      const next = first ? list?.querySelector<HTMLElement>(`[data-entry="${first.id}"]`) : null;
+      (next ?? actionRef.current)?.focus();
+    });
+  };
 
   return (
     <section aria-labelledby={`${id}-title`} className="grid content-start gap-4" data-testid="assistant">
@@ -489,6 +632,11 @@ export default function AssistantPanel({
               <p className="text-muted [overflow-wrap:anywhere]">
                 {Math.round(loading.share * 100)}%. The first time, the browser downloads the model.
               </p>
+              <div>
+                <Button type="button" variant="outline" onClick={cancelLoad}>
+                  Stop loading
+                </Button>
+              </div>
             </div>
           )}
           <div className="flex justify-end">
@@ -520,7 +668,9 @@ export default function AssistantPanel({
           preset={choice.preset}
           open
           onOpenChange={(open) => {
-            if (!open) setKeyFor(null);
+            if (open) return;
+            setKeyFor(null);
+            requestAnimationFrame(() => actionRef.current?.focus());
           }}
           onReady={() => {
             const next = keyFor;
@@ -549,6 +699,14 @@ export default function AssistantPanel({
                 onInsert={(text) => {
                   insert(entry, text);
                 }}
+                onStop={() => {
+                  stopEntry(entry.id);
+                  focusAfter(entry.id, false);
+                }}
+                onRemove={() => {
+                  removeEntry(entry.id);
+                  focusAfter(entry.id, true);
+                }}
                 onSynopsis={() => {
                   void saveSynopsis(entry);
                 }}
@@ -567,12 +725,16 @@ function AnswerCard({
   openTitle,
   onInsert,
   onSynopsis,
+  onStop,
+  onRemove,
 }: {
   entry: Entry;
   canInsert: boolean;
   openTitle: string | undefined;
   onInsert: (text: string) => void;
   onSynopsis: () => void;
+  onStop: () => void;
+  onRemove: () => void;
 }) {
   const id = useId();
   const running = entry.status === 'running';
@@ -598,13 +760,7 @@ function AnswerCard({
           </p>
         </div>
         {running ? (
-          <Button
-            variant="outline"
-            className="min-w-11 px-3"
-            onClick={() => {
-              stopEntry(entry.id);
-            }}
-          >
+          <Button variant="outline" className="min-w-11 px-3" onClick={onStop}>
             <Square aria-hidden="true" className="size-4" />
             Stop
           </Button>
@@ -613,9 +769,7 @@ function AnswerCard({
             variant="ghost"
             className="min-w-11 px-0"
             aria-label={`Remove the answer: ${entry.label}`}
-            onClick={() => {
-              removeEntry(entry.id);
-            }}
+            onClick={onRemove}
           >
             <X aria-hidden="true" className="size-4" />
           </Button>

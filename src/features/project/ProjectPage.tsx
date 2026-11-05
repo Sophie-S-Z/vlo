@@ -435,7 +435,7 @@ export function ProjectPage() {
                       items={items}
                       item={item}
                       kind={kind}
-                      people={people ?? []}
+                      people={people}
                       onInserted={() => {
                         // On a phone the sheet covers the text, so it closes and the text takes focus.
                         if (window.matchMedia('(max-width: 599px)').matches) {

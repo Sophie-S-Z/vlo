@@ -544,6 +544,28 @@ Last update: 2026-11-05
 - Phase 4 Task D7: AI policy page.
   - `/ai-policy` states the four rules of spec section 10 with a version and a date. `docs/ai-policy.md`
     holds the same words, and a unit test keeps the two the same. The footer links to it.
+- Phase 4 code review fixes (before the Phase 4 pull request).
+  - A memoir AI request aliases each name that the writer marked anywhere in the memoir, such as "Gran"
+    marked as Rosa, with the alias that a share-safe export prints. Vlo reads each item once, and again
+    after it changes. While the people load, or when Vlo cannot read the marks, the panel sends nothing.
+  - A share-safe export with the provenance page counts the AI mark on aliases too.
+  - A plain-text paste or a drop of the writer's own words inside AI text is the writer's. A paste or a
+    move of AI text keeps its mark. Words typed with an input method get the same rule when the
+    composition ends.
+  - A rewrite keeps the place of its words. If the writer types before them, Vlo finds the words again by
+    a single match. Each "Insert version N" replaces the version before it. If the words changed, the card
+    asks the writer to select the words to replace. After an Insert the cursor goes after the new words.
+    Before this fix, the new AI words stayed selected, and the next key replaced them.
+  - The in-browser model gets at most 1,000 tokens of other passages, and Vlo refuses a request that does
+    not fit in 3,500 tokens with its answer. The models read 4,096 tokens.
+  - "Stop loading" stops a model load, and Pen mode stops it too. WebLLM cannot stop a download in the
+    middle of a file, so the file ends and Vlo then frees the model. The fix found a second bug: the
+    download log read the last entries in a wrong way, so each in-browser model load failed at its end. A
+    unit test now loads a fake model.
+  - Change engine has the switch "Show what will be sent before each request", so a writer who chose
+    "Do not show this again" can turn the drawer back on. The drawer focuses the exact text, not Send.
+  - Focus stays in a useful place after Stop, Remove and the key dialog. "Prepare the request" waits for
+    the request before it takes a second press.
 
 ## In progress
 
@@ -584,9 +606,14 @@ Last update: 2026-11-05
   card opens its scene in under 1 s" failed twice and "a pinch over 200 cards keeps 60 frames a second"
   failed twice on the phone profile, each time with two workers running other tests beside them. Each
   passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker.
-- "Review Focus 6" in craft.spec (typing with Craft labels on a 300-line poem) failed 1 of 3 runs alone in
-  the build container, also with the mode badge taken out: the first key took 73 ms, and the other keys
-  took 9 to 38 ms. CI runs it on a quieter machine.
+- "Review Focus 6" in craft.spec (typing with Craft labels on a 300-line poem) fails most runs alone in the
+  build container: 3 of 4 runs with the AI mark taken out of the poem schema, and 4 of 4 with it. In each run
+  only the first key is slow (39 to 125 ms), and the other 7 keys take 10 to 37 ms. CI runs it on a quieter
+  machine.
+- Live CORS check with no key (Gate 4, plan decision P4), from the build container on 2026-11-05:
+  Anthropic and Gemini answer the browser preflight with `access-control-allow-origin` for the headers that
+  Vlo sends. The container's network allowlist blocks OpenRouter and Groq (proxy 403), so their check waits
+  for a writer's browser. Check both by hand with a key before Phase 4 ships.
 - Gate 3 in the build container: Chromium and the phone profile pass the whole browser suite. WebKit is
   not installed there, and Firefox does not run there. Run "Run workflow" on the Actions tab for all four
   browsers when the Actions minutes reset.

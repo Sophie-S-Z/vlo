@@ -1,4 +1,4 @@
-import { useEffect, useId, useReducer, useState } from 'react';
+import { useEffect, useId, useReducer, useRef, useState } from 'react';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
@@ -8,7 +8,7 @@ import { hasWebGpu, WEBLLM_MODELS } from './engine/webllm';
 import { EngineError } from './engine/types';
 import { KeyDialog } from './KeyDialog';
 import { sessionKey } from './keys';
-import { saveEngineChoice, type EngineChoice } from './settings';
+import { drawerOff, saveEngineChoice, setDrawerOff, type EngineChoice } from './settings';
 
 /*
  * The engine choice of the Assistant panel (spec section 10): in this browser (the default), the writer's
@@ -53,9 +53,13 @@ export function EngineSettings({
   const [listing, setListing] = useState(false);
   const [gpu, setGpu] = useState<boolean | null>(null);
   const [keyOpen, setKeyOpen] = useState(false);
+  const keyButton = useRef<HTMLButtonElement>(null);
   // A new key lives outside React, so the key line renders again after the key dialog.
   const [, refresh] = useReducer((n: number) => n + 1, 0);
   const [error, setError] = useState('');
+  /** True when the drawer shows each request before it goes. Null until the setting loads. */
+  const [showDrawer, setShowDrawer] = useState<boolean | null>(null);
+  const [drawerAtStart, setDrawerAtStart] = useState<boolean | null>(null);
   const preset = source === 'webllm' ? null : PRESETS[source];
   const hasKey = preset !== null && (preset.local || sessionKey(preset.id) !== undefined);
 
@@ -64,6 +68,13 @@ export function EngineSettings({
     void hasWebGpu().then((yes) => {
       if (live) setGpu(yes);
     });
+    void drawerOff()
+      .catch(() => false)
+      .then((off) => {
+        if (!live) return;
+        setShowDrawer(!off);
+        setDrawerAtStart(!off);
+      });
     return () => {
       live = false;
     };
@@ -112,6 +123,7 @@ export function EngineSettings({
     }
     try {
       await saveEngineChoice(next);
+      if (showDrawer !== null && showDrawer !== drawerAtStart) await setDrawerOff(!showDrawer);
     } catch {
       // The choice still works in this tab when storage refuses it.
     }
@@ -239,6 +251,7 @@ export function EngineSettings({
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span>{hasKey ? 'Key: ready for this tab.' : 'No key for this tab yet.'}</span>
                   <Button
+                    ref={keyButton}
                     type="button"
                     variant="outline"
                     onClick={() => {
@@ -258,6 +271,19 @@ export function EngineSettings({
           )
         )}
 
+        {showDrawer !== null && (
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showDrawer}
+              onChange={(event) => {
+                setShowDrawer(event.target.checked);
+              }}
+              className="size-5 accent-[var(--accent)]"
+            />
+            Show what will be sent before each request
+          </label>
+        )}
         {error && (
           <p role="alert" className="text-sm text-accent-text">
             {error}
@@ -273,7 +299,15 @@ export function EngineSettings({
       {/* Outside the form: the dialog is a portal, and its own submit must not save the engine. */}
       {/* Each opening mounts it again, so it reads the stored key and the terms again. */}
       {keyOpen && preset && !preset.local && (
-        <KeyDialog preset={preset.id} open onOpenChange={setKeyOpen} onReady={refresh} />
+        <KeyDialog
+          preset={preset.id}
+          open
+          onOpenChange={(open) => {
+            setKeyOpen(open);
+            if (!open) requestAnimationFrame(() => keyButton.current?.focus());
+          }}
+          onReady={refresh}
+        />
       )}
     </>
   );
