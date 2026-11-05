@@ -54,6 +54,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @types/node | 22.20.5 | MIT | build and test |
 | @types/react | 19.3.0 | MIT | build and test |
 | @types/react-dom | 19.3.0 | MIT | build and test |
+| @use-gesture/react | 10.3.1 | MIT | runtime |
 | @vitejs/plugin-react | 6.2.1 | MIT | build and test |
 | class-variance-authority | 0.7.1 | Apache-2.0 | runtime |
 | clsx | 2.1.1 | MIT | runtime |

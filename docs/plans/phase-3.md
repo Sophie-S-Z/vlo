@@ -78,21 +78,21 @@ The view tabs (D5) arrive with the first view in Task C2, because a tab with no 
 
 **Files:** Create `src/features/board/` (`BoardPage.tsx`, `Canvas.tsx`, `CardView.tsx`, `Threads.tsx`, `inertia.ts`, `boardStore.ts`, `BoardList.tsx`) and `src/features/project/ViewTabs.tsx`. Modify `src/app/routes.tsx`.
 
-- [ ] View tabs (D5). Each view is a lazy route with a document title and an `h1`. Each later task adds its own tab.
-- [ ] Canvas: DOM cards with CSS transforms. Pan by drag on empty space or two fingers, zoom by wheel or pinch around the pointer, 10 % to 400 %. Zoom buttons and a "Fit all" button.
-- [ ] Cards: add, edit title and note, color, delete with undo. Drag with inertia (D1) and an 8 px snap. Arrow keys move a focused card by 8 px (Shift: 64 px).
-- [ ] Threads: create, name, color, order. Link two cards with a thread (drag from a card's handle, or a "Link to…" menu for keyboard users). SVG curves redraw on each move frame.
-- [ ] Link a card to a binder item. E1 "Cards from scenes".
-- [ ] Double-click (or Enter) on a linked card: the view zooms to the card, then a view transition grows the card into the scene editor (F14). The scene opens in under 1 s (US05).
-- [ ] List view (spec 8.1): the same cards in a sortable table by thread, linked item or title. Every action of the canvas is in this view too.
-- [ ] Tests: unit tests for snap, inertia decay, zoom math and the thread path. Playwright: US05 timing, keyboard move, link by menu, touch pan and pinch at 390 px (Review Focus 3), Calm mode, axe on canvas and list.
+- [x] View tabs (D5). Each view is a lazy route with a document title and an `h1`. Each later task adds its own tab.
+- [x] Canvas: DOM cards with CSS transforms. Pan by drag on empty space or two fingers, zoom by wheel or pinch around the pointer, 10 % to 400 %. Zoom buttons and a "Fit all" button.
+- [x] Cards: add, edit title and note, color, delete with undo. Drag with inertia (D1) and an 8 px snap. Arrow keys move a focused card by 8 px (Shift: 64 px).
+- [x] Threads: create, name, color, order. Link two cards with a thread (drag from a card's handle, or a "Link to…" menu for keyboard users). SVG curves redraw on each move frame.
+- [x] Link a card to a binder item. E1 "Cards from scenes".
+- [x] Double-click (or Enter) on a linked card: the view zooms to the card, then a view transition grows the card into the scene editor (F14). The scene opens in under 1 s (US05).
+- [x] List view (spec 8.1): the same cards in a sortable table by thread, linked item or title. Every action of the canvas is in this view too.
+- [x] Tests: unit tests for snap, inertia decay, zoom math and the thread path. Playwright: US05 timing, keyboard move, link by menu, touch pan and pinch at 390 px (Review Focus 3), Calm mode, axe on canvas and list.
 
 ### Task C3: Plot Grid (pull request C2)
 
-- [ ] Rows are chapters (binder order), columns are threads. A cell holds the cards on that thread whose linked scene is in that chapter. A card with no thread sits in "No thread".
-- [ ] Moving a card between cells changes its thread or the parent chapter of its scene, after a confirm for a chapter change.
-- [ ] The board to grid switch animates the cards to their cells (D1). Calm mode switches at once.
-- [ ] Tests: the novel fixture (3 chapters, 2 threads, 6 cards) gives the right cells; a cell move changes the thread; axe.
+- [x] Rows are chapters (binder order), columns are threads. A cell holds the cards on that thread whose linked scene is in that chapter. A card with no thread sits in "No thread".
+- [x] Moving a card between cells changes its thread or the parent chapter of its scene, after a confirm for a chapter change.
+- [x] The board to grid switch animates the cards to their cells (D1). Calm mode switches at once.
+- [x] Tests: the novel fixture (3 chapters, 2 threads, 6 cards) gives the right cells; a cell move changes the thread; axe.
 
 ### Task C4: Memory Timeline (F16) (pull request C3)
 

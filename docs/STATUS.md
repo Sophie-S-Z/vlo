@@ -1,6 +1,6 @@
 # Vlo status
 
-Last update: 2026-11-04
+Last update: 2026-11-05
 
 ## Done
 
@@ -294,6 +294,36 @@ Last update: 2026-11-04
   - Checks: an upgrade test from version 2, delete rules, a round trip with every new table, the copy remap,
     a version 1 file, and damaged references.
 
+- Phase 3 pull request C2: Story Board, List view and Plot Grid (plan Tasks C2 and C3, F15, F14).
+  - A novel project has view tabs under its title: Write, Board and Plot Grid. Each view is a lazy route
+    with its own tab title and `h1`. A memoir or a poetry project shows no tabs until its views exist.
+  - Board: cards on a canvas. Drag the empty board or use one finger to pan. Use the wheel, a pinch or the
+    zoom buttons to zoom, from 10 % to 400 %. "Fit all cards" shows every card.
+  - Cards: add, edit (title, note, color, scene), delete with Undo. A card drags with a glide and snaps to
+    the 8 px grid. Arrow keys move a focused card by 8 px, Shift and an arrow key by 64 px. A new card goes
+    in the middle of the visible board, next to any card that is already there.
+  - Threads: add, rename, color, order and delete. Link two cards by a drag from the handle on a card's
+    right edge, or with Links… in the card menu. A link on a thread takes its color. A plain link is dashed.
+  - "Cards from scenes" (E1) makes a card for each scene that has no card, with its title and synopsis.
+  - Double-click or Enter on a card with a scene zooms to the card, then the card grows into the scene
+    editor (F14). The scene opens in under 1 s (US05). A card with no scene opens its form.
+  - List view: every card in a table that sorts by card, scene, threads or note, with the full card menu.
+    Under 600 px the board opens as the List view (decision of 2026-11-02). The canvas is one tap away.
+  - Plot Grid: chapters by threads. A card on two threads shows in both columns. "No chapter" and
+    "No thread" hold the rest. "Move scene to chapter…" moves the scene to the end of another chapter,
+    after the writer picks it in a dialog. "Move to thread…" moves the card's links on that column's thread
+    to another thread, and the dialog names the cards at their other ends, which move too. A card with no
+    link picks a card to link to. A switch between the board and the grid moves each card to its cell.
+    Calm mode switches at once.
+  - On a touch screen, the card menu opens on a tap, so a pan or a pinch can start on a card. A second
+    finger stops a card drag and pinches the board.
+  - Checks: unit tests for the geometry, the glide, the card and thread data, the Plot Grid fixture (3
+    chapters, 2 threads, 6 cards), chapter and thread moves, and the thread order. Browser tests for US05, keyboard moves, delete and
+    Undo, a link by menu and by drag, list sort, grid cells, a chapter move, a thread move, Calm mode, axe on all three
+    views, and touch pan and pinch at 390 px. A pinch over 200 cards with the CPU at a quarter speed keeps a
+    median frame of 16.7 ms on local Chromium (Review Focus 3). CI has a 25 ms ceiling for that test.
+  - The board chunk is 20 KB gzip (budget 60 KB). The first load is 197 KB gzip (budget 250 KB).
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -301,8 +331,9 @@ Last update: 2026-11-04
   and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
   run it before each phase gate. Until the minutes reset, run every check in the build container before each
   push.
-- Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) is
-  in review. C2 (Story Board, Plot Grid and List view) is next.
+- Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
+  C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
+  next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
