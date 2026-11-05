@@ -1,4 +1,5 @@
 import { downloadBytes } from '@/lib/download';
+import type { NameCheck } from '@/lib/privacy';
 import { readItemUpdate } from '@/lib/ydocs';
 import { scopeItems } from './build';
 import { localFontName } from '@/features/editor/format/fonts';
@@ -66,14 +67,16 @@ export class ExportJob {
   /** Reads the items and prepares the export. The result lists the own fonts that the file needs. */
   static async start(
     request: Omit<ExportRequest, 'updates'>,
-  ): Promise<{ job: ExportJob; ownFonts: string[] }> {
+  ): Promise<{ job: ExportJob; ownFonts: string[]; names: NameCheck }> {
     const updates = await readUpdates(request);
     const job = new ExportJob();
     // Each buffer moves to the worker once, without a copy. Two updates may share one buffer.
     const buffers = new Set(updates.map(([, update]) => update.buffer as ArrayBuffer));
     try {
       const response = await job.send({ type: 'prepare', request: { ...request, updates } }, [...buffers]);
-      return { job, ownFonts: response.type === 'prepared' ? response.ownFonts : [] };
+      return response.type === 'prepared'
+        ? { job, ownFonts: response.ownFonts, names: response.names }
+        : { job, ownFonts: [], names: { unmarked: [], changed: [] } };
     } catch (error) {
       job.close();
       throw error;

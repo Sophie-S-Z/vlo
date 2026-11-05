@@ -141,23 +141,26 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
 
 /**
  * The Phase 3 rows with new ids, for an import as a copy. `itemId` gives each item's new id. The result
- * also maps each old life stage id to its new id, for the memories that name one.
+ * also maps each old life stage id to its new id, for the memories that name one, and each old person id
+ * to its new id, for the private-name marks in the text.
  */
 export function copyViews(
   views: ViewRows,
   projectId: string,
   itemId: (old: string) => string,
-): { views: ViewRows; lifeStageId: (old: string) => string } {
+): { views: ViewRows; lifeStageId: (old: string) => string; personId: (old: string) => string | null } {
   const fresh = (rows: readonly { id: string }[]) => new Map(rows.map((row) => [row.id, newId()]));
   const cardIds = fresh(views.cards);
   const threadIds = fresh(views.threads);
   const stageIds = fresh(views.lifeStages);
+  const personIds = fresh(views.people);
   const from = (map: Map<string, string>) => (old: string) => map.get(old) ?? old;
   const cardId = from(cardIds);
   const threadId = from(threadIds);
   const lifeStageId = from(stageIds);
   return {
     lifeStageId,
+    personId: (old) => personIds.get(old) ?? null,
     views: {
       cards: views.cards.map((card) => ({
         ...card,
@@ -181,8 +184,11 @@ export function copyViews(
         projectId,
         itemIds: sequence.itemIds.map(itemId),
       })),
-      // No text names a person by id in this version, so a new id changes only the row.
-      people: views.people.map((person) => ({ ...person, id: newId(), projectId })),
+      people: views.people.map((person) => ({
+        ...person,
+        id: personIds.get(person.id) ?? newId(),
+        projectId,
+      })),
       submissions: views.submissions.map((submission) => ({
         ...submission,
         id: newId(),

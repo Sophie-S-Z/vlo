@@ -4,6 +4,7 @@ import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { readItemUpdate, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
+import { remapNameMarks } from '@/features/people/markAll';
 import { copyViews } from './views';
 import { backupFileName, holdsText, readBackup, writeBackup, type Backup, type BackupMusic } from './file';
 
@@ -100,6 +101,9 @@ function asCopy(backup: Backup): Backup {
   const ids = new Map(backup.items.map((item) => [item.id, newId()]));
   const itemId = (old: string) => ids.get(old) ?? old;
   const copied = copyViews(backup.views, projectId, itemId);
+  // Each private-name mark in the text names a person by id, so it moves to the new id too.
+  const marks = (update: Uint8Array) =>
+    backup.views.people.length === 0 ? update : remapNameMarks(update, copied.personId);
   return {
     ...backup,
     project: { ...backup.project, id: projectId, title: `${backup.project.title} (copy)` },
@@ -112,10 +116,16 @@ function asCopy(backup: Backup): Backup {
         ? {}
         : { memory: { ...item.memory, lifeStageId: copied.lifeStageId(item.memory.lifeStageId) } }),
     })),
-    snapshots: backup.snapshots.map((s) => ({ ...s, id: newId(), projectId, itemId: itemId(s.itemId) })),
+    snapshots: backup.snapshots.map((s) => ({
+      ...s,
+      id: newId(),
+      projectId,
+      itemId: itemId(s.itemId),
+      state: marks(s.state),
+    })),
     sessions: backup.sessions.map((s) => ({ ...s, id: newId(), projectId })),
     itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
-    updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), update])),
+    updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), marks(update)])),
     views: copied.views,
   };
 }

@@ -348,6 +348,33 @@ Last update: 2026-11-05
     at 390 px.
   - The timeline chunk is 11 KB gzip (budget 60 KB).
 
+- Phase 3 pull request C3, part 2: People and private names (plan Task C5, F17, US06, E5).
+  - A memoir project has a People tab. Each person has a label and one or more real names, each with an
+    alias ("Aunt Rosa" to "Aunt Maria", "Rosa" to "Maria"). A real name belongs to one person. A deleted
+    person comes back with Undo, and the marks in the text find the person again.
+  - The `privateName` mark (spec section 5) holds the person id in the item's Yjs text (plan decision D3).
+    The document schema is now 4, so an older build never opens a text with marks. Typing inside a name
+    keeps the mark, and typing after it does not. Clear formatting keeps the mark. A marked name has a
+    dotted line under it.
+  - "Mark as person" is in the selection menu, the More tools menu and the command menu. The panel picks a
+    person, or adds one with the selected text as the real name. "Mark all names" on the People screen marks
+    every exact whole-word match in the project, longest name first: "Rosa" never matches "Rosalind"
+    (Review Focus 1). Open editors get the marks at once.
+  - "Show aliases" in the More tools menu shows each alias in place of the real name. The text does not
+    change. A real name with no mark shows a dashed edge.
+  - Share-safe export puts the alias of the matching name in place of each marked name, then each unmarked
+    match, in the text, the headings, the notes and the titles. Marked text that an edit split gets the
+    person's first alias, so no part of the real name shows (Review Focus 2).
+  - Name check before export (E5): the export dialog lists each unmarked real name with a count, and marked
+    text that is no longer a name, before the file is made. "Mark all" marks them from the dialog.
+  - A backup imported as a copy points each mark in the text and the snapshots to the copy's people.
+  - Checks: unit tests for the person rules, Mark all, the scan counts, the copy remap, the mark through
+    edits, a reload, a clear of the formats and a snapshot restore, exact poem spaces, and share-safe
+    export with marks. The leak test (US06) exports the memoir fixture to Markdown, Word, EPUB, PDF and
+    standard manuscript format in Word and PDF, reads each file back as text, and finds "Rosa" and "Teo" 0
+    times. Browser tests for US06, Mark as person, the name check, Show aliases, delete with Undo, and axe,
+    at desktop and phone widths.
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -356,8 +383,8 @@ Last update: 2026-11-05
   run it before each phase gate. Until the minutes reset, run every check in the build container before each
   push.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
-  C2 (Story Board, Plot Grid and List view) are in review. C3 is in progress: the Memory Timeline is built,
-  and People and private names are next.
+  C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
+  built. C4 (Collection Sequencer and Craft panel) is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -493,3 +520,6 @@ Last update: 2026-11-05
 | 2026-11-04 | Folder save writes one Markdown file for the whole project, beside the backup.                                                                                                                                                                                                 | One file per project is easier to read in a cloud drive than one file per item, and the backup already holds each item.                                                                                             |
 | 2026-11-04 | Folder save runs when the writer leaves a project or the tab, and only after a change.                                                                                                                                                                                         | The spec says "after each session". Leaving is the end of a session, and the browser has no other safe moment.                                                                                                      |
 | 2026-11-04 | A save to the folder counts as a backup for the card date and the reminder.                                                                                                                                                                                                    | The folder holds the same `.vlo.zip` file that Back up makes.                                                                                                                                                       |
+| 2026-11-05 | The plan's `person` mark (D3) uses the spec's name, `privateName`, with the attribute `personId`.                                                                                                                                                                              | Spec section 5 names the mark. The plan used a short name for the same mark.                                                                                                                                        |
+| 2026-11-05 | `nameCheck` lists the unmarked names for E5, next to `shareSafe`, and the export worker runs both.                                                                                                                                                                             | The dialog needs the list before the file, and the file needs only the aliased text.                                                                                                                                |
+| 2026-11-05 | A deleted person keeps the marks in the text, and Undo brings the person back with the same id.                                                                                                                                                                                | A mark with no person does nothing, so a share-safe export still swaps any real name it finds.                                                                                                                      |

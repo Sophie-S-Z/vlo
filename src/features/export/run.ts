@@ -1,6 +1,5 @@
 import { appFile } from '@/lib/net';
-import type { Alias } from '@/lib/privacy';
-import { shareSafe } from '@/lib/privacy';
+import { nameCheck, shareSafe, type NameCheck, type PrivatePerson } from '@/lib/privacy';
 import { buildExportDoc, exportFileName, type BuildInput } from './build';
 import { checkOwnFonts, ownFontsOf, type FontCheck, type FontSwap } from './fontCheck';
 import { exportWords, type ManuscriptDetails, type ManuscriptSetup } from './manuscript';
@@ -18,7 +17,8 @@ export interface ExportRequest extends Omit<BuildInput, 'updates'> {
   format: ExportFormat;
   /** Each item's Yjs update, by item id. */
   updates: [string, Uint8Array][];
-  aliases: Alias[];
+  /** The project's people, for share-safe export. */
+  people: PrivatePerson[];
   shareSafe: boolean;
   /** Standard manuscript format, with the writer's details. Only a novel in Word or PDF uses it. */
   manuscript?: ManuscriptDetails;
@@ -62,12 +62,15 @@ export interface PreparedExport {
   manuscript: ManuscriptSetup | undefined;
   /** The writer's own fonts that the file would embed, by stored value. */
   ownFonts: string[];
+  /** The unmarked and changed private names, for the check before a share-safe export. */
+  names: NameCheck;
 }
 
 /** Builds the export tree and lists the own fonts that the file needs. */
 export function prepareExport(request: ExportRequest): PreparedExport {
   const built = buildExportDoc({ ...request, updates: new Map(request.updates) });
-  const doc = shareSafe(built, request.aliases, request.shareSafe);
+  const doc = shareSafe(built, request.people, request.shareSafe);
+  const names = request.shareSafe ? nameCheck(built, request.people) : { unmarked: [], changed: [] };
   const manuscript =
     usesManuscript(request) && request.manuscript
       ? { ...request.manuscript, words: exportWords(doc) }
@@ -81,7 +84,7 @@ export function prepareExport(request: ExportRequest): PreparedExport {
         : ownFontsOf(doc).filter((v) => v === doc.font)
       : ownFontsOf(doc);
   }
-  return { format: request.format, doc, manuscript, ownFonts };
+  return { format: request.format, doc, manuscript, ownFonts, names };
 }
 
 /** Sorts the own fonts by whether they may go in the file. Bytes are null for a font Vlo cannot read. */

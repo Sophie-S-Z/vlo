@@ -5,6 +5,7 @@ import { cleanFontValue } from '@/features/editor/format/fonts';
 import { cleanLatex } from '@/features/editor/format/math';
 import { parseNote } from '@/features/editor/format/notes';
 import { resolveColor } from '@/features/editor/format/palette';
+import { personIdOf, PRIVATE_NAME } from '@/features/people/markName';
 import { YFRAGMENT } from '@/lib/ydocs';
 import type { Align, Block, ExportForm, PoemLine, Run, RunStyle } from './model';
 
@@ -170,11 +171,23 @@ function styleOf(marks: JSONContent['marks']): RunStyle {
   return style;
 }
 
+/** The person id of a private-name mark on the text, or null. */
+function personOf(marks: JSONContent['marks']): string | null {
+  const mark = marks?.find((m) => m.type === PRIVATE_NAME);
+  return mark ? personIdOf(mark.attrs) : null;
+}
+
 function inlineRuns(content: JSONContent[] | undefined, notes: NoteCounter): Run[] {
   const runs: Run[] = [];
   for (const node of content ?? []) {
     if (node.type === 'text' && typeof node.text === 'string' && node.text !== '') {
-      runs.push({ type: 'text', text: node.text, style: styleOf(node.marks) });
+      const person = personOf(node.marks);
+      runs.push({
+        type: 'text',
+        text: node.text,
+        style: styleOf(node.marks),
+        ...(person === null ? {} : { person }),
+      });
     } else if (node.type === 'hardBreak') {
       runs.push({ type: 'break' });
     } else if (node.type === 'mathInline') {

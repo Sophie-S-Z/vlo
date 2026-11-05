@@ -5,7 +5,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
-import type { Item, PageFormat } from '@/lib/db';
+import type { Item, PageFormat, Template } from '@/lib/db';
 import { SceneBackdrop } from '@/features/scenes/SceneBackdrop';
 import { ScenePicker } from '@/features/scenes/ScenePicker';
 import { SoundControl } from '@/features/sound/SoundPanel';
@@ -53,6 +53,8 @@ interface EditorPaneProps {
   scene?: string | undefined;
   /** Changes the project's font, page format or scene. */
   onSettings?: (change: { font?: FontValue; page?: PageFormat; scene?: SceneChoice }) => void;
+  /** The project's template, for the tools that only some templates offer. */
+  template?: Template | undefined;
 }
 
 /** The open item: its editor, save status and counts. Only this item's Yjs document loads. Key it by item id. */
@@ -65,6 +67,7 @@ export function EditorPane({
   page: storedPage,
   scene: storedScene,
   onSettings,
+  template,
 }: EditorPaneProps) {
   const state = useItemDoc(item.id);
   const [save, setSave] = useState<SaveState>('saved');
@@ -260,6 +263,7 @@ export function EditorPane({
               page={page}
               zoom={zoom}
               onPages={setPages}
+              template={template}
             />
           )}
         </article>

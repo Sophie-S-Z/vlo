@@ -29,7 +29,8 @@ export interface RunStyle {
 }
 
 export type Run =
-  | { type: 'text'; text: string; style: RunStyle }
+  /** `person` is the id of the person when the text is a marked private name. */
+  | { type: 'text'; text: string; style: RunStyle; person?: string }
   | { type: 'break' }
   | { type: 'math'; latex: string; style: RunStyle }
   | { type: 'footnote'; number: number; note: NoteContent };

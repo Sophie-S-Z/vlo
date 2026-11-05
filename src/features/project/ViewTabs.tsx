@@ -22,7 +22,7 @@ function tabsFor(project: Project): Tab[] {
   const write: Tab = {
     label: 'Write',
     to: '',
-    active: (path) => !path.endsWith('/board') && !path.endsWith('/timeline'),
+    active: (path) => !['/board', '/timeline', '/people'].some((end) => path.endsWith(end)),
   };
   if (project.template === 'novel')
     return [
@@ -39,7 +39,11 @@ function tabsFor(project: Project): Tab[] {
       },
     ];
   if (project.template === 'memoir')
-    return [write, { label: 'Timeline', to: '/timeline', active: (path) => path.endsWith('/timeline') }];
+    return [
+      write,
+      { label: 'Timeline', to: '/timeline', active: (path) => path.endsWith('/timeline') },
+      { label: 'People', to: '/people', active: (path) => path.endsWith('/people') },
+    ];
   return [write];
 }
 

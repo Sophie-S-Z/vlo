@@ -111,12 +111,12 @@ The view tabs (D5) arrive with the first view in Task C2, because a tab with no 
 
 **Files:** Create `src/features/people/` (`PeoplePage.tsx`, `PersonForm.tsx`, `personMark.ts`, `markAll.ts`, `aliasPreview.ts`). Modify `src/lib/privacy.ts`, the export dialog.
 
-- [ ] People route: add a person with a label and name variants, each with an alias ("Aunt Rosa" to "Aunt Maria", "Rosa" to "Maria").
-- [ ] Mark `person` with `personId` (D3) in prose and poems. "Mark as person" in the selection menu and the command menu. "Mark all" marks every exact whole-word match of each variant in the project (Review Focus 1).
-- [ ] "Show aliases" switch: a decoration shows each alias in place of the marked text and each unmarked match, and the text does not change.
-- [ ] `shareSafe` replaces marked ranges by the alias of the matching variant, then unmarked exact matches, longest variant first. It returns the list of unmarked names for E5.
-- [ ] Leak test: the memoir fixture exported to Markdown, DOCX, EPUB, PDF and the manuscript format contains "Rosa" and "Teo" 0 times (US06). The test reads each file back as text.
-- [ ] Tests: mark survives edits, reload and snapshot restore (Review Focus 2); poem spaces stay exact around a marked name; axe.
+- [x] People route: add a person with a label and name variants, each with an alias ("Aunt Rosa" to "Aunt Maria", "Rosa" to "Maria").
+- [x] Mark `person` with `personId` (D3) in prose and poems. "Mark as person" in the selection menu and the command menu. "Mark all" marks every exact whole-word match of each variant in the project (Review Focus 1).
+- [x] "Show aliases" switch: a decoration shows each alias in place of the marked text and each unmarked match, and the text does not change.
+- [x] `shareSafe` replaces marked ranges by the alias of the matching variant, then unmarked exact matches, longest variant first. It returns the list of unmarked names for E5.
+- [x] Leak test: the memoir fixture exported to Markdown, DOCX, EPUB, PDF and the manuscript format contains "Rosa" and "Teo" 0 times (US06). The test reads each file back as text.
+- [x] Tests: mark survives edits, reload and snapshot restore (Review Focus 2); poem spaces stay exact around a marked name; axe.
 
 ### Task C6: Collection Sequencer (F18) (pull request C4)
 

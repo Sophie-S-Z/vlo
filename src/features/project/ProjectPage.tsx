@@ -18,6 +18,8 @@ import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
+import { resetNames, setNamePeople } from '@/features/people/nameStore';
+import { usePeople } from '@/features/people/people';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
@@ -74,6 +76,19 @@ export function ProjectPage() {
   const motion = useMotionAllowed();
   const navigate = useNavigate();
   const activeEditor = useActiveEditor();
+  const people = usePeople(projectId);
+  const memoir = state.status === 'ready' && state.project.template === 'memoir';
+
+  // The editor's private-name tools read the people of the open memoir.
+  useEffect(() => {
+    if (memoir && people) setNamePeople(projectId, people);
+  }, [memoir, people, projectId]);
+  useEffect(
+    () => () => {
+      resetNames();
+    },
+    [projectId],
+  );
   // A format action runs after the command menu closes, so focus goes back to the text first.
   const afterMenu = useRef<(() => void) | null>(null);
 
@@ -271,6 +286,14 @@ export function ProjectPage() {
               void navigate(`/p/${project.id}/timeline`);
             },
           },
+          {
+            id: 'people',
+            label: 'Open People',
+            keywords: ['people', 'private names', 'aliases', 'real names'],
+            run: () => {
+              void navigate(`/p/${project.id}/people`);
+            },
+          },
         ]
       : []),
     {
@@ -288,7 +311,7 @@ export function ProjectPage() {
       },
     },
     ...(activeEditor
-      ? commandsFor(activeEditor.form).map((cmd): CommandAction => ({
+      ? commandsFor(activeEditor.form, project.template).map((cmd): CommandAction => ({
           id: cmd.id,
           label: cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label,
           group: 'format',
@@ -400,6 +423,7 @@ export function ProjectPage() {
                     page={project.settings.page}
                     scene={project.settings.scene}
                     onSettings={changeSettings}
+                    template={project.template}
                   />
                 </MotionViewTransition>
               </>
@@ -454,7 +478,7 @@ export function ProjectPage() {
               project={project}
               items={items}
               currentItemId={item?.id ?? null}
-              aliases={[]}
+              people={people ?? []}
             />
           </Suspense>
         )}

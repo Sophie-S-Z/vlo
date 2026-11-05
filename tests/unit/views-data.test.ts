@@ -4,7 +4,10 @@ import { backUpProject, importBackup, readBackup } from '@/features/backup/backu
 import { addItem, deleteItem } from '@/features/binder/items';
 import { createProject, deleteProject } from '@/features/library/projects';
 import { db, readViewRows, type Item, type ViewRows } from '@/lib/db';
-import { writeItemUpdate } from '@/lib/ydocs';
+import { updateToJson } from '@/features/export/read';
+import { markAllInProject } from '@/features/people/markAll';
+import { addPerson } from '@/features/people/people';
+import { readItemUpdate, writeItemUpdate } from '@/lib/ydocs';
 import { proseUpdate } from './export-fixtures';
 
 /* The template view rows (plan Task C1): delete rules, and the rows in a backup file (version 2). */
@@ -158,6 +161,39 @@ describe('View rows in a backup', () => {
     const memory = items.find((i: Item) => i.memory !== undefined)?.memory;
     expect(memory?.lifeStageId).toBe(copy.lifeStages[0]?.id);
     expect(memory?.themes).toEqual(['sea']);
+  });
+
+  test('a copy points each private-name mark in the text and the snapshots to the new person', async () => {
+    const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
+    const memory = (await db.items.where('projectId').equals(project.id).toArray()).find(
+      (i) => i.kind === 'memory',
+    );
+    if (!memory) throw new Error('The memoir has no memory.');
+    await writeItemUpdate(memory.id, proseUpdate(['Rosa came home.']), 1);
+    const person = await addPerson(project.id, '', [{ real: 'Rosa', alias: 'Maria' }]);
+    await markAllInProject(project.id, [person]);
+    await db.snapshots.add({
+      id: 'snap-1',
+      projectId: project.id,
+      itemId: memory.id,
+      createdAt: 2,
+      state: await readItemUpdate(memory.id),
+      text: 'Rosa came home.',
+    });
+    const { bytes } = await backUpProject(project.id, { music: false });
+    const copyId = await importBackup(await readBackup(bytes), 'copy');
+    const copyPerson = (await db.people.where('projectId').equals(copyId).toArray())[0];
+    const copyMemory = (await db.items.where('projectId').equals(copyId).toArray()).find(
+      (i) => i.kind === 'memory',
+    );
+    if (!copyPerson || !copyMemory) throw new Error('The copy has no person or memory.');
+    expect(copyPerson.id).not.toBe(person.id);
+    const personOf = (update: Uint8Array) =>
+      /"personId":"([^"]+)"/.exec(JSON.stringify(updateToJson(update)))?.[1];
+    expect(personOf(await readItemUpdate(copyMemory.id))).toBe(copyPerson.id);
+    const snapshot = (await db.snapshots.where('itemId').equals(copyMemory.id).toArray())[0];
+    expect(snapshot && personOf(snapshot.state)).toBe(copyPerson.id);
+    expect(personOf(await readItemUpdate(memory.id))).toBe(person.id);
   });
 
   test('a version 1 backup, which has no view rows, still imports', async () => {

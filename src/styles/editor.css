@@ -592,3 +592,32 @@ html[data-calm='true'] .vlo-fill-shimmer {
   background: var(--bg);
   box-shadow: 0 24px 60px -30px rgb(0 0 0 / 0.55);
 }
+
+/* Private names (spec 8.2). A marked name has a dotted line under it, so the writer sees what is marked. */
+.vlo-manuscript .vlo-name {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+/* Show aliases: the alias stands in front of the real name, which hides. The text itself does not change. */
+.vlo-manuscript .vlo-alias-real {
+  display: none;
+}
+
+.vlo-manuscript .vlo-alias {
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent);
+  padding-inline: 0.1em;
+}
+
+/* A real name with no mark shows a dashed edge, so the writer can see it still needs a mark. */
+.vlo-manuscript .vlo-alias-unmarked {
+  background: transparent;
+  box-shadow: none;
+  outline: 1px dashed var(--accent);
+  outline-offset: 1px;
+}
