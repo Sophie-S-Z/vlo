@@ -10,7 +10,7 @@
 
 **Already done:** Ambient sound (F22, Phase 3 task 8) moved to Phase 2 and shipped there. F14 for the Library card is done in Phase 1. Phase 3 adds the board card to scene transition.
 
-## Decisions for the product owner
+## Decisions (product owner approved all, 2026-11-05)
 
 | # | Topic | Recommendation | Other choice |
 | --- | --- | --- | --- |
@@ -20,7 +20,7 @@
 | D4 | Board scope | One board per novel project. A card can link to one binder item. "Cards from scenes" (E1) makes one card per scene. | One board per part or chapter. |
 | D5 | Navigation to the views | A tab row in the project header: Write, then the views of the template (Board and Plot Grid for a novel, Timeline and People for a memoir, Sequences for poetry), then Submissions and Progress for every template. | Only the command menu and the binder menu open the views. |
 
-## Extra features I propose (need your approval)
+## Extra features (approved 2026-11-05)
 
 | # | Feature | What it does |
 | --- | --- | --- |
@@ -30,7 +30,7 @@
 | E4 | Submission follow-up | A row turns to the accent color when a "Sent" piece has no reply after the days the writer sets for that venue (default 90). |
 | E5 | Name check before export | The export dialog lists each unmarked real name that it found, with a count and a "Mark all" button, before the file is made. |
 
-## Packages (need your approval)
+## Packages (approved 2026-11-05)
 
 | Package | License | Ships to browser | Reason |
 | --- | --- | --- | --- |

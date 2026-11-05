@@ -297,8 +297,8 @@ Last update: 2026-11-04
 ## In progress
 
 - Phase 2: every pull request merged.
-- Phase 3: the plan is `docs/plans/phase-3.md`. It waits for the product owner's choices (D1 to D5, E1 to E5
-  and 3 packages). C1 (data model and backup format) is in review, because no choice changes it.
+- Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) is
+  in review. C2 (Story Board, Plot Grid and List view) is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -348,6 +348,7 @@ Last update: 2026-11-04
 | 2026-11-03 | Sound: generated in the browser, plus the writer's own files.            |
 | 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.               |
 | 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.    |
+| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages. |
 
 ## Spec changes
 
