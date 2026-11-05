@@ -58,14 +58,25 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,woff2,webmanifest}'],
         // The writing fonts are not in the install cache. Each one is cached the first time it loads.
         // The pronouncing dictionary of the Craft labels (about 1 MB gzip) is not in the install cache
-        // either (plan decision D2). It is cached the first time a poet turns the labels on.
-        globIgnores: ['assets/fonts/**', 'assets/craft/**'],
+        // either (plan decision D2). It is cached the first time a poet turns the labels on. The in-browser
+        // AI engine (about 2 MB gzip, Phase 4 plan decision P3) is cached the first time a writer picks it.
+        globIgnores: ['assets/fonts/**', 'assets/craft/**', 'assets/ai-model/**'],
         runtimeCaching: [
           {
             urlPattern: /\/assets\/craft\/[^/]+\.js$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'vlo-craft-dictionary',
+              // The file name carries a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            urlPattern: /\/assets\/ai-model\/[^/]+\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-ai-engine',
               // The file name carries a content hash, so a cached file never goes stale.
               expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [200] },
@@ -121,6 +132,11 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         // The writing fonts go under assets/fonts/, so the service worker can leave them out of its install.
+        // The WebLLM library goes under assets/ai-model/, so the install leaves it out.
+        chunkFileNames: (chunk) =>
+          chunk.moduleIds.some((id) => id.includes('@mlc-ai/web-llm'))
+            ? 'assets/ai-model/[name]-[hash].js'
+            : 'assets/[name]-[hash].js',
         assetFileNames: (asset) =>
           isWritingFont(asset.names[0] ?? '')
             ? 'assets/fonts/[name]-[hash][extname]'
