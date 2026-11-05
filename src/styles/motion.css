@@ -76,3 +76,36 @@ html.vlo-theme-reveal::view-transition-new(root) {
     clip-path: circle(150vmax at var(--vt-x, 50%) var(--vt-y, 50%));
   }
 }
+
+/* A submission row eases to the tint of its new status. The status text always shows too (spec 8.4). */
+.vlo-sub-row {
+  transition:
+    background-color 0.6s var(--ease-reveal),
+    color 0.6s var(--ease-reveal);
+}
+
+/* A tinted row moves its quiet text a step toward the main text color, so it keeps 4.5:1 on the tint.
+   The theme element mixes the colors, because a property that names itself is not valid. */
+[data-theme] {
+  --vlo-sub-muted: color-mix(in oklch, var(--muted) 70%, var(--text));
+  --vlo-sub-accent-text: color-mix(in oklch, var(--accent-text) 75%, var(--text));
+}
+
+.vlo-sub-accepted,
+.vlo-sub-late {
+  --muted: var(--vlo-sub-muted);
+  --accent-text: var(--vlo-sub-accent-text);
+}
+
+.vlo-sub-accepted {
+  background-color: color-mix(in oklch, var(--text) 7%, transparent);
+}
+
+/* A sent piece with no reply after the venue's days (E4). */
+.vlo-sub-late {
+  background-color: color-mix(in oklch, var(--accent) 10%, transparent);
+}
+
+.vlo-sub-closed {
+  color: var(--muted);
+}

@@ -309,6 +309,14 @@ export function ProjectPage() {
         ]
       : []),
     {
+      id: 'submissions',
+      label: 'Open Submissions',
+      keywords: ['submissions', 'venues', 'journals', 'sent', 'follow up', 'tracker'],
+      run: () => {
+        void navigate(`/p/${project.id}/submissions`);
+      },
+    },
+    {
       id: 'library',
       label: 'Go to the Library',
       run: () => {

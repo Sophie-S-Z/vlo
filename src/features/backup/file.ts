@@ -152,6 +152,17 @@ function checkProject(value: unknown): Project {
   if (!Array.isArray(settings.restDays) || !settings.restDays.every((d) => typeof d === 'number'))
     fail(`${DAMAGED} The project settings are wrong.`);
   for (const key of ['font', 'page', 'scene']) optionalText(settings, key, 'The project settings');
+  const followUp = settings.followUpDays;
+  if (
+    followUp !== undefined &&
+    !(
+      isObject(followUp) &&
+      Object.values(followUp).every(
+        (d) => typeof d === 'number' && Number.isInteger(d) && d >= 1 && d <= 3650,
+      )
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
   return value as unknown as Project;
 }
 

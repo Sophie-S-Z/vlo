@@ -30,6 +30,8 @@ export interface Project {
     scene?: string;
     /** Standard manuscript format for exports of a novel: the switch and the writer's details. */
     manuscript?: ManuscriptSettings;
+    /** Follow-up days of each venue in the Submissions tracker, by the venue in lower case (E4). */
+    followUpDays?: Record<string, number>;
   };
 }
 

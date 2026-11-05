@@ -142,9 +142,9 @@ The view tabs (D5) arrive with the first view in Task C2, because a tab with no 
 
 **Files:** Create `src/features/submissions/` (`SubmissionsPage.tsx`, `SubmissionForm.tsx`).
 
-- [ ] A sortable table: pieces (one or more items), venue, sent date, status, reply date, notes. Sort by each column. A status change animates the row color.
-- [ ] Add, edit and delete with undo. E4 follow-up days per venue.
-- [ ] Tests: sort, status change, a deleted item shows as "Deleted piece"; axe.
+- [x] A sortable table: pieces (one or more items), venue, sent date, status, reply date, notes. Sort by each column. A status change animates the row color.
+- [x] Add, edit and delete with undo. E4 follow-up days per venue.
+- [x] Tests: sort, status change, a deleted item shows as "Deleted piece"; axe.
 
 ### Task C9: Progress map, goals and streaks (F21) (pull request C5)
 

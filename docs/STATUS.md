@@ -432,6 +432,23 @@ Last update: 2026-11-05
     out of the install, and Review Focus 6: on 300 lines the labels came 30 to 40 ms after the scan
     request, and each key took 7 to 32 ms from key to screen (budget 50 ms).
 
+- Phase 3 pull request C5, part 1: Submissions tracker (plan Task C8, F20, E4).
+  - Every template has a Submissions tab after its views, and the command menu has "Open Submissions".
+  - "Log a submission" opens a form above the table, so the writer sees the earlier rows while typing. A
+    row holds one or more pieces (any item but a note), the venue, the sent date, the status, the reply
+    date and notes. The venue box suggests the earlier venues.
+  - The table sorts by each column in both directions. Text sorts without regard to case, and an empty
+    reply date or note goes last. On a phone each row is a block and a "Sort by" box sorts.
+  - The status box in each row saves at once. The row eases to the tint of the new status: a gray tint for
+    Accepted, quiet text for Declined, Withdrawn and No reply. The status text always shows too.
+  - E4: each venue keeps its own follow-up days, 90 by default. " agni " and "Agni" are the same venue. A
+    sent piece with no reply after those days gets the accent tint and a "Follow up" badge. A backup
+    carries the days.
+  - A deleted piece stays in its rows as "Deleted piece". Delete has Undo.
+  - Checks: unit tests for the dates, follow-up, sort, the draft checks, the data functions and the backup
+    check. Browser tests for F20 with a reload, sort, status change, edit, E4 in each theme with axe, a
+    deleted piece, delete with Undo, and the tab and command on every template, at desktop and phone widths.
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -441,7 +458,7 @@ Last update: 2026-11-05
   push.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
   C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
-  built. C4 (Collection Sequencer and Craft labels) is built. C5 (Submissions and Progress) is next.
+  built. C4 (Collection Sequencer and Craft labels) is built. C5 part 1 (Submissions) is built, and part 2 (Progress) is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -592,3 +609,5 @@ Last update: 2026-11-05
 | 2026-11-05 | A one-syllable word takes the stress of the meter that fits the line. A word of two or more syllables keeps its CMU stress.                                                                                                                                                    | CMU gives every one-syllable word a stress, so "Shall I compare thee" would read as all stressed. The plan's test asks for the iambic stress of that line.                                                          |
 | 2026-11-05 | A word that the CMU dictionary lacks gets no stress mark.                                                                                                                                                                                                                      | The `syllable` package counts syllables only, and a guessed stress would mislead.                                                                                                                                   |
 | 2026-11-05 | The scan uses the first CMU pronunciation for syllables and stress, and every pronunciation for rhyme.                                                                                                                                                                         | One count for each word keeps the labels steady. "Temperate" counts 2 syllables, as the dictionary's first form says.                                                                                               |
+| 2026-11-05 | The Submissions form checks its own fields (`noValidate`) and shows each refusal as words in the form.                                                                                                                                                                         | A browser bubble on a number field gives no message that a screen reader keeps, and it differs in each browser.                                                                                                     |
+| 2026-11-05 | A tinted Submissions row mixes its quiet text and accent text 25 to 30% toward the main text color.                                                                                                                                                                            | The theme muted color is 4.5:1 on the page background only. On any tint it falls under WCAG AA.                                                                                                                     |

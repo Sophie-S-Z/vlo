@@ -3,8 +3,8 @@ import type { Project } from '@/lib/db';
 import { cn } from '@/ui/cn';
 
 /*
- * The project's view tabs (plan decision D5): Write, then the views of the template. Each later task
- * adds its tab here when its screen exists (section 0, rule 8).
+ * The project's view tabs (plan decision D5): Write, then the views of the template, then Submissions.
+ * Each later task adds its tab here when its screen exists (section 0, rule 8).
  */
 
 interface Tab {
@@ -22,11 +22,22 @@ function tabsFor(project: Project): Tab[] {
   const write: Tab = {
     label: 'Write',
     to: '',
-    active: (path) => !['/board', '/timeline', '/people', '/sequences'].some((end) => path.endsWith(end)),
+    active: (path) =>
+      !['/board', '/timeline', '/people', '/sequences', '/submissions'].some((end) => path.endsWith(end)),
   };
+  // Every template tracks the pieces sent out (spec 8.4), so Submissions is the last tab of each.
+  const submissions: Tab = {
+    label: 'Submissions',
+    to: '/submissions',
+    active: (path) => path.endsWith('/submissions'),
+  };
+  return [write, ...viewsOf(project), submissions];
+}
+
+/** The views of one template, between Write and Submissions. */
+function viewsOf(project: Project): Tab[] {
   if (project.template === 'novel')
     return [
-      write,
       {
         label: 'Board',
         to: '/board',
@@ -40,19 +51,16 @@ function tabsFor(project: Project): Tab[] {
     ];
   if (project.template === 'memoir')
     return [
-      write,
       { label: 'Timeline', to: '/timeline', active: (path) => path.endsWith('/timeline') },
       { label: 'People', to: '/people', active: (path) => path.endsWith('/people') },
     ];
   // Poetry.
-  return [write, { label: 'Sequences', to: '/sequences', active: (path) => path.endsWith('/sequences') }];
+  return [{ label: 'Sequences', to: '/sequences', active: (path) => path.endsWith('/sequences') }];
 }
 
 export function ViewTabs({ project }: { project: Project }) {
   const location = useLocation();
   const tabs = tabsFor(project);
-  // A template with no view yet has one tab, and one tab is no choice.
-  if (tabs.length < 2) return null;
   const search = new URLSearchParams(location.search);
   return (
     <nav aria-label="Project views" className="mt-3">
