@@ -97,9 +97,14 @@ export function AppShell() {
             </Link>
           </p>
           <UpdatePrompt />
-          <a href={MARKETING_URL} rel="noreferrer">
-            About Vlo
-          </a>
+          <p className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link to="/ai-policy" className="underline">
+              AI policy
+            </Link>
+            <a href={MARKETING_URL} rel="noreferrer">
+              About Vlo
+            </a>
+          </p>
         </div>
       </footer>
     </div>

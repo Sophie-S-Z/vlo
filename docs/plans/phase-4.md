@@ -113,7 +113,7 @@ The provider adapters use `vloFetch` and need no package. No GSAP or `motion` (P
 
 **Files:** Create `src/features/policy/AiPolicyPage.tsx`. Modify `src/app/routes.tsx` and the footer.
 
-- [ ] `/ai-policy` with a version number and date: Vlo trains no model on writer text; no Vlo server receives manuscript text; Pen mode loads no AI code and sends nothing; a provider key means the provider's terms apply, and Vlo shows them first.
-- [ ] Tests: the four statements; axe; the footer link.
+- [x] `/ai-policy` with a version number and date: Vlo trains no model on writer text; no Vlo server receives manuscript text; Pen mode loads no AI code and sends nothing; a provider key means the provider's terms apply, and Vlo shows them first.
+- [x] Tests: the four statements; axe; the footer link.
 
 **Gate 4:** US09, US10 and US11 pass. A Playwright test proves that Pen mode loads no AI chunk. A test proves that a memoir AI request body contains no real-name variant. axe passes on every new route and dialog. The keystroke and open budgets still pass.

@@ -541,6 +541,9 @@ Last update: 2026-11-05
   - "Show AI text" in More tools tints AI words with a dashed line. Clear formatting keeps the mark.
   - The export dialog offers "Add an AI provenance page" in Co-writer mode and in each project with AI text.
     The page gives the share of AI text for the export and for each item, and the models.
+- Phase 4 Task D7: AI policy page.
+  - `/ai-policy` states the four rules of spec section 10 with a version and a date. `docs/ai-policy.md`
+    holds the same words, and a unit test keeps the two the same. The footer links to it.
 
 ## In progress
 
