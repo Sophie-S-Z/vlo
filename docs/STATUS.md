@@ -297,6 +297,10 @@ Last update: 2026-11-04
 ## In progress
 
 - Phase 2: every pull request merged.
+- CI: the free Actions minutes ran out in November. A pull request now runs the checks, the export files job
+  and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
+  run it before each phase gate. Until the minutes reset, run every check in the build container before each
+  push.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) is
   in review. C2 (Story Board, Plot Grid and List view) is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
@@ -330,25 +334,26 @@ Last update: 2026-11-04
 
 ## Decisions
 
-| Date       | Decision                                                                 |
-| ---------- | ------------------------------------------------------------------------ |
-| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                            |
-| 2026-11-02 | License: MIT.                                                            |
-| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                           |
-| 2026-11-02 | Supabase project: create in Phase 5.                                     |
-| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.     |
-| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.      |
-| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.          |
-| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                     |
-| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1). |
-| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).               |
-| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                             |
-| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.              |
-| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.              |
-| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.            |
-| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.               |
-| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.    |
-| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.  |
+| Date       | Decision                                                                      |
+| ---------- | ----------------------------------------------------------------------------- |
+| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                                 |
+| 2026-11-02 | License: MIT.                                                                 |
+| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                                |
+| 2026-11-02 | Supabase project: create in Phase 5.                                          |
+| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.          |
+| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.           |
+| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.               |
+| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                          |
+| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1).      |
+| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).                    |
+| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                                  |
+| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.                   |
+| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.                   |
+| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.                 |
+| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.                    |
+| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.         |
+| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.       |
+| 2026-11-05 | CI on pull requests: checks, export files and Chromium. All browsers by hand. |
 
 ## Spec changes
 
