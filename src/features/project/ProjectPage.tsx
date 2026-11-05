@@ -5,6 +5,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Binder } from '@/features/binder/Binder';
+import { cardTransitionName, FROM_CARD } from '@/features/board/useBoard';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { runCommand, useActiveEditor } from '@/features/editor/commands/editorBus';
 import { shortcutLabel } from '@/features/editor/commands/keys';
@@ -17,6 +18,8 @@ import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
+import { resetNames, setNamePeople } from '@/features/people/nameStore';
+import { usePeople } from '@/features/people/people';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { TEMPLATES } from '@/features/library/templates';
@@ -28,6 +31,7 @@ import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import type { CommandAction } from './CommandMenu';
 import { ProjectLayout } from './ProjectLayout';
 import { useProject } from './useProject';
+import { GRID_VIEW, ViewTabs } from './ViewTabs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
@@ -72,6 +76,19 @@ export function ProjectPage() {
   const motion = useMotionAllowed();
   const navigate = useNavigate();
   const activeEditor = useActiveEditor();
+  const people = usePeople(projectId);
+  const memoir = state.status === 'ready' && state.project.template === 'memoir';
+
+  // The editor's private-name tools read the people of the open memoir.
+  useEffect(() => {
+    if (memoir && people) setNamePeople(projectId, people);
+  }, [memoir, people, projectId]);
+  useEffect(
+    () => () => {
+      resetNames();
+    },
+    [projectId],
+  );
   // A format action runs after the command menu closes, so focus goes back to the text first.
   const afterMenu = useRef<(() => void) | null>(null);
 
@@ -190,6 +207,7 @@ export function ProjectPage() {
   const item = openItem(project, items, params.get('item'));
   const kind = item ? template.editorKind(item.kind) : null;
   const totalWords = items.reduce((sum, i) => sum + i.wordCount, 0);
+  const fromCard = params.get(FROM_CARD);
   const open = (itemId: string) => {
     setParams({ item: itemId });
     setDrawer(false);
@@ -238,6 +256,74 @@ export function ProjectPage() {
         };
       },
     },
+    ...(project.template === 'novel'
+      ? [
+          {
+            id: 'board',
+            label: 'Open the Story Board',
+            keywords: ['board', 'cards', 'plot', 'outline', 'corkboard'],
+            run: () => {
+              void navigate(`/p/${project.id}/board`);
+            },
+          },
+          {
+            id: 'grid',
+            label: 'Open the Plot Grid',
+            keywords: ['grid', 'threads', 'chapters', 'plot'],
+            run: () => {
+              void navigate(`/p/${project.id}/board?view=${GRID_VIEW}`);
+            },
+          },
+        ]
+      : []),
+    ...(project.template === 'memoir'
+      ? [
+          {
+            id: 'timeline',
+            label: 'Open the Memory Timeline',
+            keywords: ['timeline', 'dates', 'life stages', 'themes', 'chronology'],
+            run: () => {
+              void navigate(`/p/${project.id}/timeline`);
+            },
+          },
+          {
+            id: 'people',
+            label: 'Open People',
+            keywords: ['people', 'private names', 'aliases', 'real names'],
+            run: () => {
+              void navigate(`/p/${project.id}/people`);
+            },
+          },
+        ]
+      : []),
+    ...(project.template === 'poetry'
+      ? [
+          {
+            id: 'sequences',
+            label: 'Open the Collection Sequencer',
+            keywords: ['sequences', 'order', 'collection', 'chapbook', 'ring'],
+            run: () => {
+              void navigate(`/p/${project.id}/sequences`);
+            },
+          },
+        ]
+      : []),
+    {
+      id: 'submissions',
+      label: 'Open Submissions',
+      keywords: ['submissions', 'venues', 'journals', 'sent', 'follow up', 'tracker'],
+      run: () => {
+        void navigate(`/p/${project.id}/submissions`);
+      },
+    },
+    {
+      id: 'progress',
+      label: 'Open Progress',
+      keywords: ['progress', 'goal', 'streak', 'words', 'sessions', 'map', 'tiles'],
+      run: () => {
+        void navigate(`/p/${project.id}/progress`);
+      },
+    },
     {
       id: 'library',
       label: 'Go to the Library',
@@ -253,7 +339,7 @@ export function ProjectPage() {
       },
     },
     ...(activeEditor
-      ? commandsFor(activeEditor.form).map((cmd): CommandAction => ({
+      ? commandsFor(activeEditor.form, project.template).map((cmd): CommandAction => ({
           id: cmd.id,
           label: cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label,
           group: 'format',
@@ -313,6 +399,7 @@ export function ProjectPage() {
               <h1 className="mt-1 font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
                 {project.title}
               </h1>
+              <ViewTabs project={project} />
             </header>
           }
           binder={<Binder project={project} items={items} openItemId={item?.id ?? null} onOpen={open} />}
@@ -347,17 +434,26 @@ export function ProjectPage() {
                     {settingsError}
                   </p>
                 )}
-                <EditorPane
+                {/* A scene opened from a board card takes the card's name, so the card grows into it (F14).
+                    With no card the boundary stays, with no animation, so the editor never remounts. */}
+                <MotionViewTransition
                   key={item.id}
-                  item={item}
-                  kind={kind}
-                  width={width}
-                  snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
-                  font={project.settings.font}
-                  page={project.settings.page}
-                  scene={project.settings.scene}
-                  onSettings={changeSettings}
-                />
+                  {...(fromCard
+                    ? { name: cardTransitionName(fromCard), update: 'none' }
+                    : { default: 'none' })}
+                >
+                  <EditorPane
+                    item={item}
+                    kind={kind}
+                    width={width}
+                    snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
+                    font={project.settings.font}
+                    page={project.settings.page}
+                    scene={project.settings.scene}
+                    onSettings={changeSettings}
+                    template={project.template}
+                  />
+                </MotionViewTransition>
               </>
             ) : (
               <p className="text-muted">Add an item from the binder to start writing.</p>
@@ -410,7 +506,7 @@ export function ProjectPage() {
               project={project}
               items={items}
               currentItemId={item?.id ?? null}
-              aliases={[]}
+              people={people ?? []}
             />
           </Suspense>
         )}

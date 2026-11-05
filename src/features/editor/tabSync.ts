@@ -115,3 +115,14 @@ export function shareWithTabs(
     presence.close();
   };
 }
+
+/**
+ * Sends a change made outside the editor, such as "Mark all", to every tab that has the item open,
+ * this tab too. Yjs merges it with the edits there.
+ */
+export function sendToTabs(itemId: string, update: Uint8Array): void {
+  if (typeof BroadcastChannel === 'undefined') return;
+  const channel = new BroadcastChannel(`vlo-item-${itemId}-s${String(DOC_SCHEMA)}`);
+  channel.postMessage({ type: 'update', tab: crypto.randomUUID(), update } satisfies TabMessage);
+  channel.close();
+}

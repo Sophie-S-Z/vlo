@@ -5,6 +5,7 @@ import { Toolbar as ToolbarPrimitive } from 'radix-ui';
 import { Fragment, useMemo } from 'react';
 import { useMediaQuery } from '@/app/useMediaQuery';
 import { focusText, runCommand } from '../commands/editorBus';
+import type { Template } from '@/lib/db';
 import { commandsFor, type EditorForm } from '../commands/registry';
 import { ToolButton } from './ToolButton';
 import { NO_STATE, useCommandState } from './useCommandState';
@@ -20,8 +21,16 @@ const shouldShow: ShouldShow = ({ editor, view, state, from, to, element }) => {
 };
 
 /** The menu over selected text, with the most used inline tools. Alt-F10 moves focus into it. */
-export function SelectionMenu({ editor, form }: { editor: Editor; form: EditorForm }) {
-  const commands = useMemo(() => commandsFor(form).filter((c) => c.selection), [form]);
+export function SelectionMenu({
+  editor,
+  form,
+  template,
+}: {
+  editor: Editor;
+  form: EditorForm;
+  template?: Template | undefined;
+}) {
+  const commands = useMemo(() => commandsFor(form, template).filter((c) => c.selection), [form, template]);
   const state = useCommandState(editor, commands);
   // Phones show their own copy and paste bar above a selection, so Vlo's menu goes below it there.
   const touch = useMediaQuery('(pointer: coarse), (max-width: 639px)');

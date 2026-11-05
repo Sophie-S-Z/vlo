@@ -34,7 +34,7 @@ function request(format: ExportRequest['format'], extra: Partial<ExportRequest> 
     scope: { kind: 'item', itemId: 's1' },
     updates: [['s1', updateOf(ownFontText, 'prose')]],
     format,
-    aliases: [],
+    people: [],
     shareSafe: false,
     ...extra,
   };

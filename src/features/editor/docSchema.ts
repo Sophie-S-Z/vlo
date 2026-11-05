@@ -4,9 +4,9 @@ import type * as Y from 'yjs';
  * The schema version of an item document. Raise it with every new node, mark or attribute that an older
  * build cannot show. An older build drops content it cannot show, and Yjs then saves that loss, so a
  * build never binds an editor to a document newer than its own schema. 1 is Phase 1; 2 adds the Phase 2
- * formats (styles, colors, gradient text and footnotes); 3 adds equations.
+ * formats (styles, colors, gradient text and footnotes); 3 adds equations; 4 adds private names.
  */
-export const DOC_SCHEMA = 3;
+export const DOC_SCHEMA = 4;
 
 const META = 'vlo';
 const KEY = 'schema';

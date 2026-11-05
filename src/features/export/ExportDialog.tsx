@@ -3,8 +3,9 @@ import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { TEMPLATES } from '@/features/library/templates';
 import { updateProjectSettings } from '@/features/library/projects';
-import type { Item, ManuscriptSettings, Project } from '@/lib/db';
-import type { Alias } from '@/lib/privacy';
+import { markAllInProject } from '@/features/people/markAll';
+import { db, type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
+import type { NameCheck } from '@/lib/privacy';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
@@ -53,11 +54,16 @@ const FORMATS: { id: ExportFormat; label: string; detail: string; icon: typeof F
   },
 ];
 
-type ScopeChoice = 'item' | 'folder' | 'project';
+type ScopeChoice = 'item' | 'folder' | 'project' | 'sequence';
+
+/** The name check's Mark all failed. */
+const FAILED = -1;
 
 type Status =
   | { step: 'choose' }
   | { step: 'working' }
+  /** The check before a share-safe export found unmarked or changed names (E5). */
+  | { step: 'names'; names: NameCheck; job: ExportJob; ownFonts: string[]; marked: number | null }
   | { step: 'swaps'; swaps: FontSwap[]; job: ExportJob }
   | { step: 'done'; file: ExportFile; format: ExportFormat }
   | { step: 'failed' };
@@ -69,8 +75,10 @@ interface ExportDialogProps {
   items: readonly Item[];
   /** The item open in the editor, for the "this item" and "this chapter" choices. */
   currentItemId: string | null;
-  /** The project's private names and their aliases. */
-  aliases: readonly Alias[];
+  /** The project's people, with the real names and their aliases. */
+  people: readonly Person[];
+  /** A named order of poems to offer, and to choose first (E2). */
+  sequence?: { name: string; itemIds: readonly string[] } | undefined;
 }
 
 function lower(label: string): string {
@@ -111,18 +119,20 @@ export function ExportDialog({
   project,
   items,
   currentItemId,
-  aliases,
+  people,
+  sequence,
 }: ExportDialogProps) {
   const ids = useId();
   const template = TEMPLATES[project.template];
   const current = items.find((i) => i.id === currentItemId && template.editorKind(i.kind) !== null) ?? null;
   const folder = current ? folderOf(items, current.id) : null;
   const [format, setFormat] = useState<ExportFormat>('docx');
-  const [scope, setScope] = useState<ScopeChoice>(current ? 'item' : 'project');
+  const [scope, setScope] = useState<ScopeChoice>(sequence ? 'sequence' : current ? 'item' : 'project');
   const [safe, setSafe] = useState(project.template === 'memoir');
   const [manuscript, setManuscript] = useState<ManuscriptSettings>(() => startingManuscript(project));
   const [nameError, setNameError] = useState(false);
   const [status, setStatus] = useState<Status>({ step: 'choose' });
+  const [marking, setMarking] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const jobRef = useRef<ExportJob | null>(null);
 
@@ -152,11 +162,13 @@ export function ExportDialog({
   };
 
   const scopeOf = (choice: ScopeChoice): ExportScope =>
-    choice === 'item' && current
-      ? { kind: 'item', itemId: current.id }
-      : choice === 'folder' && folder
-        ? { kind: 'folder', itemId: folder.id }
-        : { kind: 'project' };
+    choice === 'sequence' && sequence
+      ? { kind: 'sequence', name: sequence.name, itemIds: sequence.itemIds }
+      : choice === 'item' && current
+        ? { kind: 'item', itemId: current.id }
+        : choice === 'folder' && folder
+          ? { kind: 'folder', itemId: folder.id }
+          : { kind: 'project' };
 
   async function finish(job: ExportJob, chosen: ExportFormat) {
     setStatus({ step: 'working' });
@@ -168,6 +180,18 @@ export function ExportDialog({
       setStatus({ step: 'failed' });
     } finally {
       if (jobRef.current === job) closeJob();
+    }
+  }
+
+  /**
+   * The people as stored now. The list in the props can be a step behind, such as just after the writer
+   * adds a person, and a share-safe export must never miss a name.
+   */
+  async function currentPeople(): Promise<readonly Person[]> {
+    try {
+      return await db.people.where('projectId').equals(project.id).toArray();
+    } catch {
+      return people;
     }
   }
 
@@ -194,14 +218,28 @@ export function ExportDialog({
       items: [...items],
       scope: scopeOf(scope),
       format,
-      aliases: [...aliases],
+      people: (await currentPeople()).map((p) => ({ id: p.id, variants: p.variants })),
       shareSafe: safe,
       ...(usesManuscript ? { manuscript: details } : {}),
     };
     closeJob();
     try {
-      const { job, ownFonts } = await ExportJob.start(request);
+      const { job, ownFonts, names } = await ExportJob.start(request);
       jobRef.current = job;
+      if (safe && (names.unmarked.length > 0 || names.changed.length > 0)) {
+        setStatus({ step: 'names', names, job, ownFonts, marked: null });
+        return;
+      }
+      await checkFonts(job, ownFonts);
+    } catch {
+      closeJob();
+      setStatus({ step: 'failed' });
+    }
+  }
+
+  async function checkFonts(job: ExportJob, ownFonts: string[]) {
+    setStatus({ step: 'working' });
+    try {
       const swaps = await job.check(await readOwnFonts(ownFonts));
       if (swaps.length > 0) {
         setStatus({ step: 'swaps', swaps, job });
@@ -216,6 +254,125 @@ export function ExportDialog({
 
   const kindLabel = (item: Item) => lower(template.kindLabel[item.kind] ?? item.kind);
   const formatLabel = FORMATS.find((f) => f.id === format)?.label ?? 'file';
+
+  if (status.step === 'names') {
+    const { names, job, ownFonts, marked } = status;
+    const total = names.unmarked.reduce((n, c) => n + c.count, 0);
+    return (
+      <Dialog open={open} onOpenChange={changeOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogTitle>Check the private names</DialogTitle>
+          <DialogDescription>
+            The export puts an alias in place of each real name below. Nothing with a real name leaves this
+            device.
+          </DialogDescription>
+          {names.unmarked.length > 0 && marked === null && (
+            <section aria-labelledby={`${ids}-unmarked`} className="grid gap-2">
+              <h3 id={`${ids}-unmarked`} className="text-sm font-semibold">
+                Real names with no mark
+              </h3>
+              <ul className="grid gap-1 text-sm">
+                {names.unmarked.map((name) => (
+                  <li
+                    key={name.name}
+                    className="flex justify-between gap-3 rounded-[var(--radius-card)] bg-bg px-3 py-2"
+                  >
+                    <span className="font-medium [overflow-wrap:anywhere]">{name.name}</span>
+                    <span className="shrink-0 text-muted">
+                      {name.count === 1 ? '1 time' : `${String(name.count)} times`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-muted">
+                Mark them, so the editor shows each one and Show aliases previews it.
+              </p>
+            </section>
+          )}
+          {marked !== null && (
+            <p role="status" className="text-sm">
+              {marked === FAILED
+                ? 'Vlo could not mark the names on this device. The export still uses the aliases.'
+                : marked === 0
+                  ? 'Every real name in the text has a mark now.'
+                  : `Marked ${String(marked)} ${marked === 1 ? 'name' : 'names'}.`}
+            </p>
+          )}
+          {names.changed.length > 0 && (
+            <section aria-labelledby={`${ids}-changed`} className="grid gap-2">
+              <h3 id={`${ids}-changed`} className="text-sm font-semibold">
+                Marked text that is no longer a name
+              </h3>
+              <ul className="grid gap-1 text-sm">
+                {names.changed.map((name) => (
+                  <li
+                    key={name.name}
+                    className="flex justify-between gap-3 rounded-[var(--radius-card)] bg-bg px-3 py-2"
+                  >
+                    <span className="font-medium [overflow-wrap:anywhere]">“{name.name}”</span>
+                    <span className="shrink-0 text-muted">
+                      {name.count === 1 ? '1 time' : `${String(name.count)} times`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-muted">
+                An edit split or changed these names. The export shows the person&apos;s first alias for each.
+                Fix the text, or select it and choose Mark as person again.
+              </p>
+            </section>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                closeJob();
+                setStatus({ step: 'choose' });
+              }}
+            >
+              Back
+            </Button>
+            {names.unmarked.length > 0 && marked === null && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={marking}
+                onClick={() => {
+                  setMarking(true);
+                  // The result goes to this check only. Back or a new export in the meantime wins.
+                  const show = (marked: number) => {
+                    setMarking(false);
+                    setStatus((now) => (now.step === 'names' && now.job === job ? { ...now, marked } : now));
+                  };
+                  currentPeople()
+                    .then((list) => markAllInProject(project.id, list))
+                    .then(
+                      (result) => {
+                        show(result.names);
+                      },
+                      () => {
+                        show(FAILED);
+                      },
+                    );
+                }}
+              >
+                Mark all {total === 1 ? '1 name' : `${String(total)} names`}
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={() => {
+                void checkFonts(job, ownFonts);
+              }}
+            >
+              Export with aliases
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (status.step === 'swaps') {
     const unread = status.swaps.some((s) => s.reason.startsWith('Vlo cannot read'));
@@ -376,6 +533,12 @@ export function ExportDialog({
                     setScope(next as ScopeChoice);
                   }}
                 >
+                  {sequence && (
+                    <label className="flex min-h-11 items-center gap-3 text-sm">
+                      <RadioGroupItem value="sequence" />
+                      <span className="[overflow-wrap:anywhere]">This order: {sequence.name}</span>
+                    </label>
+                  )}
                   {current && (
                     <label className="flex min-h-11 items-center gap-3 text-sm">
                       <RadioGroupItem value="item" />
@@ -489,9 +652,9 @@ export function ExportDialog({
                   </label>
                 </div>
                 <p id={`${ids}-safe-hint`} className="pl-14 text-sm text-muted">
-                  {aliases.length > 0
-                    ? `Swaps each private name for its alias: ${String(aliases.length)} ${aliases.length === 1 ? 'name' : 'names'}.`
-                    : 'Swaps each private name for its alias. This project has no private names yet.'}
+                  {people.length > 0
+                    ? `Swaps each real name for its alias: ${String(people.length)} ${people.length === 1 ? 'person' : 'people'}.`
+                    : 'Swaps each real name for its alias. This project has no people yet.'}
                 </p>
               </div>
 

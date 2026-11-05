@@ -7,6 +7,7 @@ import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { cleanFontValue, fontStack, type FontValue } from '../format/fonts';
 import { swatchVar } from '../format/palette';
 import { TextFillMark } from './textFill';
+import { PRIVATE_NAME } from '@/features/people/markName';
 
 /* Formats beyond StarterKit. Inline formats apply to prose and poems; block formats to prose only. */
 
@@ -130,7 +131,15 @@ export const ClearFormatting = Extension.create<{ blocks: boolean }>({
       clearFormatting:
         () =>
         ({ chain }) => {
-          let next = chain().unsetAllMarks();
+          // A private name is not a format, so its mark stays.
+          let next = chain().command(({ tr, state }) => {
+            for (const range of tr.selection.ranges) {
+              for (const type of Object.values(state.schema.marks)) {
+                if (type.name !== PRIVATE_NAME) tr.removeMark(range.$from.pos, range.$to.pos, type);
+              }
+            }
+            return true;
+          });
           if (this.options.blocks) {
             next = next
               .unsetTextAlign()

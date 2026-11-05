@@ -1,9 +1,15 @@
 name: CI
 
+# GitHub Actions minutes are limited on a private repository, so CI runs only what a change needs:
+# - a pull request runs the checks, the export files job and Chromium, and skips a change to docs only;
+# - "Run workflow" on the Actions tab runs every browser (before each phase gate).
+# A merge to main runs nothing, because its pull request ran the same checks.
 on:
-  push:
-    branches: [main]
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -57,11 +63,12 @@ jobs:
   e2e:
     name: Playwright (${{ matrix.project }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Firefox needs about 16 minutes for its tests, and a slow package mirror can add 10 more.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit, mobile-chrome]
+        project: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["chromium", "firefox", "webkit", "mobile-chrome"]') || fromJSON('["chromium"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

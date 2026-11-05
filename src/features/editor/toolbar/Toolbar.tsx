@@ -14,7 +14,8 @@ import {
 } from '@/ui/dropdown-menu';
 import { shortcutLabel } from '../commands/keys';
 import { focusText, getPanelRequest, runCommand, type PanelAnchor } from '../commands/editorBus';
-import { command, type EditorCommand, type EditorForm } from '../commands/registry';
+import type { Template } from '@/lib/db';
+import { command, commandsFor, type EditorCommand, type EditorForm } from '../commands/registry';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { ToolButton, toolClass } from './ToolButton';
 import { NO_STATE, useCommandState, type CommandState } from './useCommandState';
@@ -90,18 +91,35 @@ function Separator() {
 }
 
 /** The formatting toolbar. */
-export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) {
+export function Toolbar({
+  editor,
+  kind,
+  template,
+}: {
+  editor: Editor;
+  kind: EditorForm;
+  template?: Template | undefined;
+}) {
   const layout = LAYOUTS[kind];
+  // The tools of this template only, such as the private-name tools of a memoir, end the More menu.
+  const own = useMemo(
+    () =>
+      commandsFor(kind, template)
+        .filter((c) => c.templates !== undefined)
+        .map((c) => c.id),
+    [kind, template],
+  );
   const all = useMemo(() => {
     const ids = [
       ...layout.blockMenu,
       ...layout.alignMenu,
       ...layout.segments.flatMap((s) => s.tools),
       ...layout.more,
+      ...own,
       ...(kind === 'poem' ? ['hang-less', 'hang-more'] : []),
     ];
     return ids.map(command);
-  }, [layout, kind]);
+  }, [layout, kind, own]);
   const state = useCommandState(editor, all);
   const at = (id: string) => state[id] ?? NO_STATE;
   const more = useRef<HTMLButtonElement>(null);
@@ -307,6 +325,8 @@ export function Toolbar({ editor, kind }: { editor: Editor; kind: EditorForm }) 
             {narrowOnly.map((id) => menuItem(id, true))}
             {narrowOnly.length > 0 && <DropdownMenuSeparator className="sm:hidden" />}
             {layout.more.map((id) => menuItem(id))}
+            {own.length > 0 && <DropdownMenuSeparator />}
+            {own.map((id) => menuItem(id))}
           </DropdownMenuContent>
         </DropdownMenu>
       </ToolbarPrimitive.Root>

@@ -26,6 +26,7 @@ import { ReadAloudPanel } from './panels/ReadAloudPanel';
 import { SizePanel } from './panels/SizePanel';
 import { SpacingPanel } from './panels/SpacingPanel';
 import { ShortcutSheet } from './ShortcutSheet';
+import { PersonPanel } from '@/features/people/PersonPanel';
 
 // The gradient editor loads the first time a writer opens it.
 const GradientPanel = lazy(async () => ({ default: (await import('./panels/GradientPanel')).GradientPanel }));
@@ -73,6 +74,8 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
       return <SpacingPanel editor={editor} />;
     case 'link':
       return <LinkPanel editor={editor} onDone={closePanel} />;
+    case 'person':
+      return <PersonPanel editor={editor} onDone={closePanel} />;
     case 'characters':
       return <CharactersPanel editor={editor} />;
     case 'footnote':
@@ -107,6 +110,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   gradient: 'Gradient and shimmer',
   math: 'Equation',
   'read-aloud': 'Read aloud',
+  person: 'Mark as person',
 };
 
 /** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */

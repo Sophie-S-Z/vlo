@@ -126,8 +126,8 @@ describe('equation data', () => {
     expect(insertOf('matrix-2')).toBe('\\begin{pmatrix}#?&#?\\\\#?&#?\\end{pmatrix}');
   });
 
-  test('documents with equations carry schema 3, so an older build never opens them', () => {
-    expect(DOC_SCHEMA).toBe(3);
+  test('documents with equations carry schema 3 or later, so a build before equations never opens them', () => {
+    expect(DOC_SCHEMA).toBeGreaterThanOrEqual(3);
   });
 });
 

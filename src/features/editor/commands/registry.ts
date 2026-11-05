@@ -5,6 +5,7 @@ import {
   TextAlignStart,
   TextAlignEnd,
   ALargeSmall,
+  AudioLines,
   Asterisk,
   Baseline,
   Bold,
@@ -39,8 +40,14 @@ import {
   Underline,
   Undo2,
   UnfoldVertical,
+  UserRound,
+  VenetianMask,
   type LucideIcon,
 } from 'lucide-react';
+import type { Template } from '@/lib/db';
+import { getCraft, setCraftLabels } from '@/features/craft/craftStore';
+import { showsAliases } from '@/features/people/aliasPreview';
+import { getNames, setShowAliases } from '@/features/people/nameStore';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
@@ -66,6 +73,7 @@ export type PanelId =
   | 'footnote'
   | 'math'
   | 'read-aloud'
+  | 'person'
   | 'shortcuts';
 
 export type CommandGroup =
@@ -78,6 +86,8 @@ export type CommandGroup =
   | 'indent'
   | 'insert'
   | 'review'
+  | 'names'
+  | 'craft'
   | 'clear'
   | 'help';
 
@@ -91,6 +101,8 @@ export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   indent: 'Indent',
   insert: 'Insert',
   review: 'Find and read aloud',
+  names: 'Private names',
+  craft: 'Craft',
   clear: 'Clear',
   help: 'Help',
 };
@@ -102,6 +114,8 @@ interface BaseCommand {
   group: CommandGroup;
   /** The forms that offer this tool. Poems get inline tools only, so line layout stays exact. */
   forms: readonly EditorForm[];
+  /** Only these templates offer the tool. Every template offers a tool without this list. */
+  templates?: readonly Template[];
   /** The shortcut in TipTap's form, such as "Mod-Shift-h". The editor extension owns the key itself. */
   keys?: string;
   /** More words that find the tool in the / menu and the command menu. */
@@ -696,6 +710,52 @@ export const COMMANDS: readonly EditorCommand[] = [
     isActive: (e) => isReading(e),
   },
   {
+    kind: 'panel',
+    id: 'person',
+    label: 'Mark as person',
+    icon: UserRound,
+    group: 'names',
+    forms: BOTH,
+    templates: ['memoir'],
+    keywords: ['private name', 'alias', 'real name', 'people'],
+    panel: 'person',
+    selection: true,
+    isActive: (e) => e.isActive('privateName'),
+    isEnabled: (e) => !e.state.selection.empty || e.isActive('privateName'),
+  },
+  {
+    kind: 'run',
+    id: 'show-aliases',
+    label: 'Show aliases',
+    icon: VenetianMask,
+    group: 'names',
+    forms: BOTH,
+    templates: ['memoir'],
+    keywords: ['private names', 'preview', 'share-safe', 'people'],
+    run: () => {
+      setShowAliases(!getNames().show);
+      return true;
+    },
+    isActive: (e) => showsAliases(e.state),
+  },
+  {
+    kind: 'run',
+    id: 'craft-labels',
+    label: 'Craft labels',
+    icon: AudioLines,
+    group: 'craft',
+    forms: POEM,
+    templates: ['poetry'],
+    keywords: ['syllables', 'stress', 'meter', 'scansion', 'rhyme', 'craft panel'],
+    run: () => {
+      const { itemId, on } = getCraft();
+      if (itemId === null) return false;
+      void setCraftLabels(itemId, !on).catch(() => undefined);
+      return true;
+    },
+    isActive: () => getCraft().on,
+  },
+  {
     kind: 'run',
     id: 'clear',
     label: 'Clear formatting',
@@ -730,9 +790,14 @@ export function command(id: string): EditorCommand {
   return found;
 }
 
-/** The commands that this form offers, in registry order. */
-export function commandsFor(form: EditorForm): EditorCommand[] {
-  return COMMANDS.filter((c) => c.forms.includes(form));
+/** True when a project of this template offers the command. */
+export function offeredIn(cmd: EditorCommand, template: Template | undefined): boolean {
+  return cmd.templates === undefined || (template !== undefined && cmd.templates.includes(template));
+}
+
+/** The commands that this form offers in a project of this template, in registry order. */
+export function commandsFor(form: EditorForm, template?: Template): EditorCommand[] {
+  return COMMANDS.filter((c) => c.forms.includes(form) && offeredIn(c, template));
 }
 
 /** True when `query` finds the command by its label or a keyword. Every query word must match. */

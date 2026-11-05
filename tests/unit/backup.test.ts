@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { backUpProject, collectBackup, importBackup, readBackup } from '@/features/backup/backup';
-import { BackupError, backupFileName, writeBackup } from '@/features/backup/file';
+import { BACKUP_VERSION, BackupError, backupFileName, writeBackup } from '@/features/backup/file';
 import { backupDue, backupLabel, daysBetween } from '@/features/backup/reminder';
 import { safariDevice } from '@/features/backup/safari';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
@@ -100,7 +100,7 @@ describe('Backup file', () => {
       unknown
     >;
     expect(manifest.format).toBe('vlo-backup');
-    expect(manifest.version).toBe(1);
+    expect(manifest.version).toBe(BACKUP_VERSION);
     expect(manifest.docSchema).toBe(DOC_SCHEMA);
     for (const scene of scenes) {
       expect(zip.file(`items/${scene.id}.yjs`)).not.toBeNull();
@@ -310,7 +310,7 @@ describe('Reading a backup', () => {
 
   test('refuses a backup from a newer Vlo, by its format or by the schema of its text', async () => {
     const zip = await backupZip();
-    await expect(reads(await withManifest(zip, (m) => (m.version = 2)))).rejects.toThrow(
+    await expect(reads(await withManifest(zip, (m) => (m.version = BACKUP_VERSION + 1)))).rejects.toThrow(
       /A newer version of Vlo/,
     );
 
@@ -361,6 +361,15 @@ describe('Reading a backup', () => {
       ['an unsafe id', (m) => (row(m, 'items').id = '../../etc'), /has a wrong id/],
       ['a wrong order', (m) => (row(m, 'items').order = ''), /has a wrong order/],
       ['a wrong kind', (m) => (row(m, 'items').kind = 'script'), /has a wrong kind/],
+      ['a wrong Craft switch', (m) => (row(m, 'items').craft = 'yes'), /has a wrong Craft switch/],
+      [
+        'a wrong day of words',
+        (m) => {
+          const project = m.project as { settings: Record<string, unknown> };
+          project.settings.wordsByDay = { '5 November': 300 };
+        },
+        /The project settings are wrong/,
+      ],
       ['a missing project', (m) => (m.project = null), /It has no project/],
       ['a snapshot of no item', (m) => (row(m, 'snapshots').itemId = 'gone'), /A snapshot has no item/],
     ];

@@ -1,6 +1,6 @@
 # Vlo status
 
-Last update: 2026-11-04
+Last update: 2026-11-05
 
 ## Done
 
@@ -283,9 +283,217 @@ Last update: 2026-11-04
     disk). The browser test picks a folder in the private file system of the browser, leaves a project and
     reads the two files back.
 
+- Phase 3 pull request C1: data model version 3 and backup format version 2 (plan Task C1).
+  - Dexie version 3 adds the tables of the template views: `cards`, `threads`, `cardLinks`, `lifeStages`,
+    `sequences`, `people` and `submissions`. Opening a version 2 database keeps every row and the music.
+  - A backup (version 2) holds the rows of these tables. Vlo still imports a version 1 backup. Each
+    reference must point to a row of the same file. An import as a copy gives each row a new id and points
+    each reference into the copy. An older build refuses a version 2 file, so it cannot drop the new rows.
+  - Deleting a project removes its view rows. Deleting an item unlinks its board cards and drops it from
+    each poem order. A submission keeps the id, so the tracker can show "Deleted piece".
+  - Checks: an upgrade test from version 2, delete rules, a round trip with every new table, the copy remap,
+    a version 1 file, and damaged references.
+
+- Phase 3 pull request C2: Story Board, List view and Plot Grid (plan Tasks C2 and C3, F15, F14).
+  - A novel project has view tabs under its title: Write, Board and Plot Grid. Each view is a lazy route
+    with its own tab title and `h1`. A memoir or a poetry project shows no tabs until its views exist.
+  - Board: cards on a canvas. Drag the empty board or use one finger to pan. Use the wheel, a pinch or the
+    zoom buttons to zoom, from 10 % to 400 %. "Fit all cards" shows every card.
+  - Cards: add, edit (title, note, color, scene), delete with Undo. A card drags with a glide and snaps to
+    the 8 px grid. Arrow keys move a focused card by 8 px, Shift and an arrow key by 64 px. A new card goes
+    in the middle of the visible board, next to any card that is already there.
+  - Threads: add, rename, color, order and delete. Link two cards by a drag from the handle on a card's
+    right edge, or with Links… in the card menu. A link on a thread takes its color. A plain link is dashed.
+  - "Cards from scenes" (E1) makes a card for each scene that has no card, with its title and synopsis.
+  - Double-click or Enter on a card with a scene zooms to the card, then the card grows into the scene
+    editor (F14). The scene opens in under 1 s (US05). A card with no scene opens its form.
+  - List view: every card in a table that sorts by card, scene, threads or note, with the full card menu.
+    Under 600 px the board opens as the List view (decision of 2026-11-02). The canvas is one tap away.
+  - Plot Grid: chapters by threads. A card on two threads shows in both columns. "No chapter" and
+    "No thread" hold the rest. "Move scene to chapter…" moves the scene to the end of another chapter,
+    after the writer picks it in a dialog. "Move to thread…" moves the card's links on that column's thread
+    to another thread, and the dialog names the cards at their other ends, which move too. A card with no
+    link picks a card to link to. A switch between the board and the grid moves each card to its cell.
+    Calm mode switches at once.
+  - On a touch screen, the card menu opens on a tap, so a pan or a pinch can start on a card. A second
+    finger stops a card drag and pinches the board.
+  - Checks: unit tests for the geometry, the glide, the card and thread data, the Plot Grid fixture (3
+    chapters, 2 threads, 6 cards), chapter and thread moves, and the thread order. Browser tests for US05, keyboard moves, delete and
+    Undo, a link by menu and by drag, list sort, grid cells, a chapter move, a thread move, Calm mode, axe on all three
+    views, and touch pan and pinch at 390 px. A pinch over 200 cards with the CPU at a quarter speed keeps a
+    median frame of 16.7 ms on local Chromium (Review Focus 3). CI has a 25 ms ceiling for that test.
+  - The board chunk is 20 KB gzip (budget 60 KB). The first load is 197 KB gzip (budget 250 KB).
+
+- Phase 3 pull request C3, part 1: Memory Timeline (plan Task C4, F16, US07).
+  - A memoir project has a Timeline tab. The track shows life stages as colored bands and memories as cards
+    at their dates, stacked when they overlap. A date is a year, a month or a day. A partial date sits at
+    the middle of its year or month.
+  - The vertical wheel moves the track sideways. Ctrl-wheel and a pinch change the scale, and the Years,
+    Months and Days buttons jump to each scale. One finger pans the track on a touch screen.
+  - A drag moves a memory to a new date, as exact as the scale: a year at Years, a month at Months, a full
+    date only at Days. Left and Right move a focused memory by one unit of the scale. Enter opens it.
+  - Undated shelf (E3): memories with no date sit under the track. A drag from the shelf onto the track
+    gives a date, and a drag onto the shelf takes it away. Near the top or bottom of the window a drag
+    scrolls the page.
+  - "Add memory" and each memory's form set the title, the date, the life stage and the themes. "Life
+    stages" adds, renames, dates, colors, orders and deletes the stages. A deleted stage leaves its memories
+    in place.
+  - By theme (US07): a column for each theme, with each memory once under each of its themes, and "No
+    theme" for the rest. The memory count stays the same. The cards move to their columns with a view
+    transition. Calm mode switches at once.
+  - List view: every memory by date, undated ones last. Under 600 px the timeline opens as the List view.
+  - Checks: unit tests for dates (parse, spans, scale units, drops, key steps, words, rows, axis marks)
+    and for the memory and life stage data. Browser tests for US07, drags on the track and to and from the
+    shelf, key steps at each scale, life stages, Calm mode, axe on all three views, and touch pan and pinch
+    at 390 px.
+  - The timeline chunk is 11 KB gzip (budget 60 KB).
+
+- Phase 3 pull request C3, part 2: People and private names (plan Task C5, F17, US06, E5).
+  - A memoir project has a People tab. Each person has a label and one or more real names, each with an
+    alias ("Aunt Rosa" to "Aunt Maria", "Rosa" to "Maria"). A real name belongs to one person. A deleted
+    person comes back with Undo, and the marks in the text find the person again.
+  - The `privateName` mark (spec section 5) holds the person id in the item's Yjs text (plan decision D3).
+    The document schema is now 4, so an older build never opens a text with marks. Typing inside a name
+    keeps the mark, and typing after it does not. Clear formatting keeps the mark. A marked name has a
+    dotted line under it.
+  - "Mark as person" is in the selection menu, the More tools menu and the command menu. The panel picks a
+    person, or adds one with the selected text as the real name. "Mark all names" on the People screen marks
+    every exact whole-word match in the project, longest name first: "Rosa" never matches "Rosalind"
+    (Review Focus 1). Open editors get the marks at once.
+  - "Show aliases" in the More tools menu shows each alias in place of the real name. The text does not
+    change. A real name with no mark shows a dashed edge.
+  - Share-safe export puts the alias of the matching name in place of each marked name, then each unmarked
+    match, in the text, the headings, the notes and the titles. Marked text that an edit split gets the
+    person's first alias, so no part of the real name shows (Review Focus 2).
+  - Name check before export (E5): the export dialog lists each unmarked real name with a count, and marked
+    text that is no longer a name, before the file is made. "Mark all" marks them from the dialog.
+  - A backup imported as a copy points each mark in the text and the snapshots to the copy's people.
+  - Checks: unit tests for the person rules, Mark all, the scan counts, the copy remap, the mark through
+    edits, a reload, a clear of the formats and a snapshot restore, exact poem spaces, and share-safe
+    export with marks. The leak test (US06) exports the memoir fixture to Markdown, Word, EPUB, PDF and
+    standard manuscript format in Word and PDF, reads each file back as text, and finds "Rosa" and "Teo" 0
+    times. Browser tests for US06, Mark as person, the name check, Show aliases, delete with Undo, and axe,
+    at desktop and phone widths.
+  - Fixes after the code review of C3 part 2:
+    - Names match in the same way everywhere: curly and straight apostrophes, no-break and plain spaces,
+      and both Unicode forms of an accent count as the same text. Mark all, the scan, Show aliases, the
+      name check and the export all use one match.
+    - A mark on "Rosa and Teo" gives each name its own alias, and the check lists "Teo" as unmarked.
+    - A name in a note that two styles split is swapped. An equation gets the aliases. A link whose
+      address holds a real name keeps its text and loses its address.
+    - An alias with "$" in it stays as typed.
+    - The export and Mark all read the people from the database at that time, so a person added a moment
+      before is never missed. The dialog ignores a Mark all result that comes after Back.
+    - Undo of a deleted person keeps a real name that another person took in the meantime with that
+      person, and says so. The People fields put the saved value back when a change is refused.
+
+- Phase 3 pull request C4, part 1: Collection Sequencer (plan Task C6, F18, US08, E2).
+  - A poetry collection has a Sequences tab and the command "Open the Collection Sequencer". The poet
+    keeps named orders of the same poems, for a chapbook, a contest or a reading. A new order starts in
+    binder order. Rename, Copy and Delete with Undo act on the order on show. The binder never changes.
+  - Each poem is a card with its number, title, words and status. A drag, the keyboard (Space, the arrow
+    keys, Space) or the card menu (Move to the start, Move earlier, Move later, Move to the end) moves it.
+    A drop settles with a small spring. Calm mode drops at once.
+  - Each order is independent (US08). A new poem joins the end of each order. A deleted poem leaves each
+    order with no gap (Review Focus 4).
+  - The ring preview stands the titles on a 3D ring. A drag, the wheel or the arrow keys, Home and End
+    turn it, and it settles with the nearest poem in front. A screen reader hears it as a slider with the
+    poem in front as its value. Calm mode and reduced motion show a still numbered list.
+  - Export (E2) opens the export dialog with "This order" chosen. The file holds the poems in the order,
+    with the order name after the project title.
+  - Checks: unit tests for the order data (US08, new and deleted poems, copy, rename, delete with undo),
+    the ring (front poem, radius, keys, a changed order, the still list) and the order export. Browser
+    tests for US08 after a reload, keyboard reorder, the ring keys, copy, rename, delete with Undo, a new
+    poem, the export of an order, Calm mode, and axe, at desktop and phone widths.
+
+- Phase 3 pull request C4, part 2: Craft labels (plan Task C7, F19, Review Focus 6).
+  - In a poetry collection, "Craft labels" in the More tools menu and the command menu turns the labels on
+    for the open poem. Each poem keeps its own switch, off by default, and a backup carries it.
+  - Each line shows its syllable count and rhyme letter at the end, and a stress mark above each syllable
+    (˘ unstressed, / stressed). A line under the labels tells the poet what each label means. A screen
+    reader gets the same facts as a list: "Line 1: 10 syllables, iambic, rhyme A".
+  - The scan runs in a Web Worker after each typing pause of 250 ms. The CMU pronouncing dictionary (958 KB
+    gzip) loads with the first scan and stays out of the install. The service worker caches it on first
+    use (plan decision D2). A word that the dictionary lacks gets its syllables from `syllable` and no
+    stress mark.
+  - Stress: a word of two or more syllables keeps its CMU stress. A one-syllable word and a secondary
+    stress take the stress of the meter that fits the line (iambic, trochaic, anapestic or dactylic). With
+    no meter, a small word such as "the" is unstressed. "Shall I compare thee to a summer’s day" scans as
+    10 iambic syllables.
+  - Rhyme: two lines rhyme when the phones of their last words match from the last stressed vowel. "Cough"
+    and "bough" do not rhyme, and "bough" and "cow" do.
+  - The labels sit in a layer outside ProseMirror, so the poem text never changes. A changed line hides its
+    labels until the next scan. Only lines within one screen of the view get label elements, so a key on
+    a 300-line poem takes about the same time as with the labels off. Each line fades in with a short
+    stagger. Calm mode and reduced motion show the labels at once.
+  - Checks: unit tests for the scan (the Shakespeare line, trochaic and plain stress, unknown words,
+    apostrophes, rhyme by sound, letters after Z, 300 lines in under 100 ms), the switch, and the backup
+    check. Browser tests for F19 with a reload, a changed line, the text kept the same, axe, the dictionary
+    out of the install, and Review Focus 6: on 300 lines the labels came 30 to 40 ms after the scan
+    request, and each key took 7 to 32 ms from key to screen (budget 50 ms).
+
+- Phase 3 pull request C5, part 1: Submissions tracker (plan Task C8, F20, E4).
+  - Every template has a Submissions tab after its views, and the command menu has "Open Submissions".
+  - "Log a submission" opens a form above the table, so the writer sees the earlier rows while typing. A
+    row holds one or more pieces (any item but a note), the venue, the sent date, the status, the reply
+    date and notes. The venue box suggests the earlier venues.
+  - The table sorts by each column in both directions. Text sorts without regard to case, and an empty
+    reply date or note goes last. On a phone each row is a block and a "Sort by" box sorts.
+  - The status box in each row saves at once. The row eases to the tint of the new status: a gray tint for
+    Accepted, quiet text for Declined, Withdrawn and No reply. The status text always shows too.
+  - E4: each venue keeps its own follow-up days, 90 by default. " agni " and "Agni" are the same venue. A
+    sent piece with no reply after those days gets the accent tint and a "Follow up" badge. A backup
+    carries the days.
+  - A deleted piece stays in its rows as "Deleted piece". Delete has Undo.
+  - Checks: unit tests for the dates, follow-up, sort, the draft checks, the data functions and the backup
+    check. Browser tests for F20 with a reload, sort, status change, edit, E4 in each theme with axe, a
+    deleted piece, delete with Undo, and the tab and command on every template, at desktop and phone widths.
+
+- Phase 3 pull request C5, part 2: Progress (plan Task C9, F21).
+  - Every template has a Progress tab after Submissions, and the command menu has "Open Progress". The tab
+    row scrolls on a phone and brings the tab of the screen into view.
+  - The total words and the timer sessions count up from 0. Calm mode and reduced motion show the numbers
+    at once, and a screen reader hears the final number only.
+  - The map has one tile per item in binder order, filled by status: a dashed edge for Idea, a light accent
+    for Draft, a deeper accent for Revised and the full accent for Done. A key above it counts each status.
+    The tiles enter as a mosaic from the center. A tile opens its item, and a part or chapter opens its
+    first scene. Submissions links a part or chapter the same way.
+  - The daily goal and streak are off by default. With them on, the writer sets the words a day (500 at
+    first) and the rest days. The screen shows today's words against the goal, the streak, the best streak
+    and the last 4 weeks as a calendar, Monday first.
+  - Each save adds the change in words to the local date of that moment. A day keeps its net change, so a
+    cut and a paste of the same words add nothing. The screen floors a day at 0, as "Written today" does. A met day counts. A rest day under the goal keeps the streak and adds nothing.
+    Today keeps the streak open until it ends. Days are calendar dates, so a daylight saving change never
+    makes or loses a day.
+  - Checks: unit tests for the streak rules, time zones and daylight saving changes, the day record on
+    save, the goal settings, the item that a tile opens, and the backup check. Browser tests for F21, the
+    rest day, the goal limits, a reload, the mosaic and Calm mode, the tab and command on every template,
+    and axe, at desktop and phone widths.
+
+- Code review of Submissions and Progress (10 findings, all fixed):
+  - Each day keeps its net change in words (see Decisions).
+  - The tile and link targets come from one pass over the binder, so a binder of thousands of items stays
+    fast.
+  - Focus: the form heading takes focus when the form opens. Save and Cancel put focus on the button that
+    opened the form. Undo puts focus on the restored row.
+  - On a phone the sort header buttons leave the tab order, and the "Sort by" box sorts.
+  - The piece list in the form is in binder order.
+  - A venue named "constructor" or "toString" gets the default follow-up days.
+  - The day key follows the device time zone at once after a flight.
+  - The tab row scrolls only itself, never the page, and it no longer widens the page at 360 px.
+  - A rest day changes inside the write, so quick taps on several days keep each one.
+  - The status box in a row shows the new status at once and goes back only when the save fails.
+
 ## In progress
 
-- Phase 2 pull request B: B1, B2 and B3 merged. B4 (folder save) is in review. Gate 2 follows.
+- Phase 2: every pull request merged.
+- CI: the free Actions minutes ran out in November. A pull request now runs the checks, the export files job
+  and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
+  run it before each phase gate. Until the minutes reset, run every check in the build container before each
+  push.
+- Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
+  C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
+  built. C4 (Collection Sequencer and Craft labels) is built. C5 (Submissions and Progress) is built. Gate 3 is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -311,30 +519,46 @@ Last update: 2026-11-04
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
   retry covers it.
 
+- Two board timing tests are sensitive to load in the build container. "US05: a double-click on a linked
+  card opens its scene in under 1 s" failed twice and "a pinch over 200 cards keeps 60 frames a second"
+  failed twice on the phone profile, each time with two workers running other tests beside them. Each
+  passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker.
+- Gate 3 in the build container: Chromium and the phone profile pass the whole browser suite. WebKit is
+  not installed there, and Firefox does not run there. Run "Run workflow" on the Actions tab for all four
+  browsers when the Actions minutes reset.
+
+- Known after the review of private names, left for later:
+  - Mark all reads the stored text of each item. A word that the writer types in an open editor in the
+    same second can miss its mark. The name check before each export finds it, and Mark all again marks it.
+  - Show aliases hides each real name with a decoration. The caret can still move into the hidden text,
+    and typing there changes the real name. The switch is a preview, so turn it off to edit names.
+
 ## Blocked
 
 - Nothing.
 
 ## Decisions
 
-| Date       | Decision                                                                 |
-| ---------- | ------------------------------------------------------------------------ |
-| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                            |
-| 2026-11-02 | License: MIT.                                                            |
-| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                           |
-| 2026-11-02 | Supabase project: create in Phase 5.                                     |
-| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.     |
-| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.      |
-| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.          |
-| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                     |
-| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1). |
-| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).               |
-| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                             |
-| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.              |
-| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.              |
-| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.            |
-| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.               |
-| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.    |
+| Date       | Decision                                                                      |
+| ---------- | ----------------------------------------------------------------------------- |
+| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                                 |
+| 2026-11-02 | License: MIT.                                                                 |
+| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                                |
+| 2026-11-02 | Supabase project: create in Phase 5.                                          |
+| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.          |
+| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.           |
+| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.               |
+| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                          |
+| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1).      |
+| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).                    |
+| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                                  |
+| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.                   |
+| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.                   |
+| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.                 |
+| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.                    |
+| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.         |
+| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.       |
+| 2026-11-05 | CI on pull requests: checks, export files and Chromium. All browsers by hand. |
 
 ## Spec changes
 
@@ -419,3 +643,17 @@ Last update: 2026-11-04
 | 2026-11-04 | Folder save writes one Markdown file for the whole project, beside the backup.                                                                                                                                                                                                 | One file per project is easier to read in a cloud drive than one file per item, and the backup already holds each item.                                                                                             |
 | 2026-11-04 | Folder save runs when the writer leaves a project or the tab, and only after a change.                                                                                                                                                                                         | The spec says "after each session". Leaving is the end of a session, and the browser has no other safe moment.                                                                                                      |
 | 2026-11-04 | A save to the folder counts as a backup for the card date and the reminder.                                                                                                                                                                                                    | The folder holds the same `.vlo.zip` file that Back up makes.                                                                                                                                                       |
+| 2026-11-05 | The plan's `person` mark (D3) uses the spec's name, `privateName`, with the attribute `personId`.                                                                                                                                                                              | Spec section 5 names the mark. The plan used a short name for the same mark.                                                                                                                                        |
+| 2026-11-05 | `nameCheck` lists the unmarked names for E5, next to `shareSafe`, and the export worker runs both.                                                                                                                                                                             | The dialog needs the list before the file, and the file needs only the aliased text.                                                                                                                                |
+| 2026-11-05 | A deleted person keeps the marks in the text, and Undo brings the person back with the same id.                                                                                                                                                                                | A mark with no person does nothing, so a share-safe export still swaps any real name it finds.                                                                                                                      |
+| 2026-11-05 | The ring preview hides each card that turns past the side, and each card in view keeps its full color.                                                                                                                                                                         | A faded card fails the WCAG text contrast check. The 3D turn still shows the depth.                                                                                                                                 |
+| 2026-11-05 | The ring is a slider for a screen reader, with the poem in front as its value.                                                                                                                                                                                                 | The arrow keys, Home and End choose one poem from a list, as a slider does.                                                                                                                                         |
+| 2026-11-05 | Craft labels turn on from the More tools menu and the command menu, with a switch for each poem.                                                                                                                                                                               | The spec layout puts Craft in a side panel with Notes, AI and Comments, and that panel comes in a later phase. The labels themselves need no panel.                                                                 |
+| 2026-11-05 | A one-syllable word takes the stress of the meter that fits the line. A word of two or more syllables keeps its CMU stress.                                                                                                                                                    | CMU gives every one-syllable word a stress, so "Shall I compare thee" would read as all stressed. The plan's test asks for the iambic stress of that line.                                                          |
+| 2026-11-05 | A word that the CMU dictionary lacks gets no stress mark.                                                                                                                                                                                                                      | The `syllable` package counts syllables only, and a guessed stress would mislead.                                                                                                                                   |
+| 2026-11-05 | The scan uses the first CMU pronunciation for syllables and stress, and every pronunciation for rhyme.                                                                                                                                                                         | One count for each word keeps the labels steady. "Temperate" counts 2 syllables, as the dictionary's first form says.                                                                                               |
+| 2026-11-05 | The Submissions form checks its own fields (`noValidate`) and shows each refusal as words in the form.                                                                                                                                                                         | A browser bubble on a number field gives no message that a screen reader keeps, and it differs in each browser.                                                                                                     |
+| 2026-11-05 | A tinted Submissions row mixes its quiet text and accent text 25 to 30% toward the main text color.                                                                                                                                                                            | The theme muted color is 4.5:1 on the page background only. On any tint it falls under WCAG AA.                                                                                                                     |
+| 2026-11-05 | The project keeps the words of each local day in `settings.wordsByDay`, from each save.                                                                                                                                                                                        | Spec section 5 has only timer sessions, and a streak from the timer alone would miss each day the writer types with no timer. The record is about 15 bytes a day and goes in the backup.                            |
+| 2026-11-05 | Each day keeps its net change in words, and the Progress screen floors a day at 0.                                                                                                                                                                                             | "Written today" in the editor counts the same way, so the two numbers agree. A cut and a paste of the same words add nothing.                                                                                       |
+| 2026-11-05 | The goal calendar starts each week on Monday.                                                                                                                                                                                                                                  | A rest weekend then sits together at the end of each row.                                                                                                                                                           |

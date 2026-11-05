@@ -1,6 +1,7 @@
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
 import { useEffect, useId, useRef, type CSSProperties } from 'react';
-import type { PageFormat } from '@/lib/db';
+import { AliasPreview } from '@/features/people/aliasPreview';
+import type { PageFormat, Template } from '@/lib/db';
 import type * as Y from 'yjs';
 import { FocusTools } from '@/features/focus/focusExtension';
 import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
@@ -23,6 +24,9 @@ import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
 import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
+import { CraftLabels } from '@/features/craft/CraftLabels';
+import { useCraft } from '@/features/craft/craftStore';
+import { CraftSwitch } from '@/features/craft/craftSwitch';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
@@ -61,6 +65,8 @@ interface EditorProps {
   zoom?: number;
   /** Receives the page count, or null when no sheet shows. */
   onPages?: (pages: number | null) => void;
+  /** The project's template, for the tools that only some templates offer. */
+  template?: Template | undefined;
 }
 
 const HELP = {
@@ -81,8 +87,8 @@ function editorAttributes(label: string, kind: EditorProps['kind'], helpId: stri
 }
 
 /** Tools for the / menu: label matches first, then keyword matches, each in registry order. */
-function slashItems(kind: EditorProps['kind']) {
-  const tools = commandsFor(kind).filter((c) => c.slash);
+function slashItems(kind: EditorProps['kind'], template: Template | undefined) {
+  const tools = commandsFor(kind, template).filter((c) => c.slash);
   return (query: string): EditorCommand[] => {
     const found = tools.filter((c) => matchesCommand(c, query));
     const q = query.trim().toLowerCase();
@@ -113,6 +119,7 @@ export function Editor({
   page = 'pageless',
   zoom = 100,
   onPages,
+  template,
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
@@ -129,8 +136,10 @@ export function Editor({
         TypingState,
         HeldSelection,
         ReadAloudMark,
+        AliasPreview,
+        CraftSwitch,
         SlashMenu.configure({
-          items: slashItems(kind),
+          items: slashItems(kind, template),
           listId,
           onChoose: (cmd, e) => {
             runCommand(e, cmd, 'caret');
@@ -201,6 +210,9 @@ export function Editor({
   );
 
   // The project font is the manuscript font for the text, the notes and the panels' samples.
+  const craft = useCraft();
+  const craftOn = kind === 'poem' && template === 'poetry' && craft.on;
+
   const stack = fontStack(font, BASE_STACK);
   const rootStyle = { '--font-manuscript': stack } as CSSProperties;
 
@@ -208,15 +220,19 @@ export function Editor({
     <div className="grid gap-3" data-vlo-editor="" style={rootStyle}>
       {/* The toolbar, the find bar and the read aloud bar stay at the top while the text scrolls. */}
       <div className="sticky top-0 z-10 -mx-1 grid bg-bg">
-        <Toolbar editor={editor} kind={kind} />
+        <Toolbar editor={editor} kind={kind} template={template} />
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
       </div>
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={stack} onPages={onPages}>
-        <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+        {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
+        <div className={cn('relative', craftOn && 'vlo-craft')}>
+          {craftOn && <CraftLabels editor={editor} />}
+          <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+        </div>
         <FootnoteList editor={editor} />
       </PageFrame>
-      <SelectionMenu editor={editor} form={kind} />
+      <SelectionMenu editor={editor} form={kind} template={template} />
       <SlashMenuList editor={editor} listId={listId} />
       <PanelHost editor={editor} form={kind} />
       <p id={helpId} className="text-xs text-muted">

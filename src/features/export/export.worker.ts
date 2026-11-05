@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import type { NameCheck } from '@/lib/privacy';
 import type { FontCheck, FontSwap } from './fontCheck';
 import {
   checkFonts,
@@ -21,7 +22,7 @@ export type ExportMessage =
   | { type: 'make' };
 
 export type ExportResponse =
-  | { type: 'prepared'; ownFonts: string[] }
+  | { type: 'prepared'; ownFonts: string[]; names: NameCheck }
   | { type: 'checked'; swaps: FontSwap[] }
   | { type: 'file'; file: ExportFile }
   | { type: 'error'; message: string };
@@ -39,7 +40,7 @@ async function handle(message: ExportMessage): Promise<void> {
   if (message.type === 'prepare') {
     prepared = prepareExport(message.request);
     fonts = undefined;
-    reply({ type: 'prepared', ownFonts: prepared.ownFonts });
+    reply({ type: 'prepared', ownFonts: prepared.ownFonts, names: prepared.names });
     return;
   }
   if (!prepared) throw new Error('The export has no prepared text.');

@@ -30,6 +30,34 @@ export const routes: RouteObject[] = [
         path: 'p/:projectId',
         lazy: async () => ({ Component: (await import('@/features/project/ProjectPage')).ProjectPage }),
       },
+      {
+        path: 'p/:projectId/board',
+        lazy: async () => ({ Component: (await import('@/features/board/BoardPage')).BoardPage }),
+      },
+      {
+        path: 'p/:projectId/timeline',
+        lazy: async () => ({ Component: (await import('@/features/timeline/TimelinePage')).TimelinePage }),
+      },
+      {
+        path: 'p/:projectId/people',
+        lazy: async () => ({ Component: (await import('@/features/people/PeoplePage')).PeoplePage }),
+      },
+      {
+        path: 'p/:projectId/sequences',
+        lazy: async () => ({
+          Component: (await import('@/features/sequences/SequencesPage')).SequencesPage,
+        }),
+      },
+      {
+        path: 'p/:projectId/submissions',
+        lazy: async () => ({
+          Component: (await import('@/features/submissions/SubmissionsPage')).SubmissionsPage,
+        }),
+      },
+      {
+        path: 'p/:projectId/progress',
+        lazy: async () => ({ Component: (await import('@/features/progress/ProgressPage')).ProgressPage }),
+      },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],

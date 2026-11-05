@@ -7,6 +7,7 @@ import { EscapeTab } from './escapeTab';
 import { Footnote } from './footnote';
 import { MathBlock, MathInline } from './math';
 import { blockFormatting, ClearFormatting, inlineFormatting } from './formatting';
+import { PrivateName } from '@/features/people/personMark';
 import { SceneBreak } from './sceneBreak';
 
 /** The prose schema for scenes, memories and notes. Collaboration keeps undo history, so UndoRedo is off. */
@@ -24,6 +25,7 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     ...blockFormatting(),
     ClearFormatting,
     SceneBreak,
+    PrivateName,
     Footnote,
     MathInline,
     MathBlock,

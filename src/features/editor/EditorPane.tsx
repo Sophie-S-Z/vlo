@@ -2,10 +2,11 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { History, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { setCraftItem } from '@/features/craft/craftStore';
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
-import type { Item, PageFormat } from '@/lib/db';
+import type { Item, PageFormat, Template } from '@/lib/db';
 import { SceneBackdrop } from '@/features/scenes/SceneBackdrop';
 import { ScenePicker } from '@/features/scenes/ScenePicker';
 import { SoundControl } from '@/features/sound/SoundPanel';
@@ -53,6 +54,8 @@ interface EditorPaneProps {
   scene?: string | undefined;
   /** Changes the project's font, page format or scene. */
   onSettings?: (change: { font?: FontValue; page?: PageFormat; scene?: SceneChoice }) => void;
+  /** The project's template, for the tools that only some templates offer. */
+  template?: Template | undefined;
 }
 
 /** The open item: its editor, save status and counts. Only this item's Yjs document loads. Key it by item id. */
@@ -65,6 +68,7 @@ export function EditorPane({
   page: storedPage,
   scene: storedScene,
   onSettings,
+  template,
 }: EditorPaneProps) {
   const state = useItemDoc(item.id);
   const [save, setSave] = useState<SaveState>('saved');
@@ -89,6 +93,19 @@ export function EditorPane({
       editor.off('update', onUpdate);
     };
   }, [editor]);
+
+  // The Craft switch of the open poem (spec 8.3). Only a poem of a poetry collection has one.
+  const craftable = kind === 'poem' && template === 'poetry';
+  const craft = item.craft === true;
+  useEffect(() => {
+    setCraftItem(craftable ? id : null, craft);
+  }, [craftable, id, craft]);
+  useEffect(
+    () => () => {
+      setCraftItem(null, false);
+    },
+    [],
+  );
 
   const open = state.open;
   useEffect(() => {
@@ -260,6 +277,7 @@ export function EditorPane({
               page={page}
               zoom={zoom}
               onPages={setPages}
+              template={template}
             />
           )}
         </article>

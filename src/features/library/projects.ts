@@ -1,6 +1,6 @@
 import { clock } from '@/lib/clock';
 import { dayStartKey } from '@/features/editor/stats/dayStart';
-import { db, type Item, type Project, type Template } from '@/lib/db';
+import { db, viewTables, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
 import { requestPersistence } from '@/lib/storage';
@@ -108,11 +108,12 @@ export async function renameProject(id: string, title: string): Promise<void> {
 export async function deleteProject(id: string): Promise<void> {
   const itemIds = await db.transaction(
     'rw',
-    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.appMeta],
+    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.appMeta, ...viewTables()],
     async () => {
       // Read the ids in the same transaction, so an item added from another tab cannot be left behind.
       const ids = await db.items.where('projectId').equals(id).primaryKeys();
       await db.items.where('projectId').equals(id).delete();
+      for (const table of viewTables()) await table.where('projectId').equals(id).delete();
       await db.snapshots.where('projectId').equals(id).delete();
       await db.sessions.where('projectId').equals(id).delete();
       await db.itemTexts.where('projectId').equals(id).delete();

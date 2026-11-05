@@ -8,6 +8,7 @@ import { YFRAGMENT } from '@/lib/ydocs';
 import { nodeText } from '../leafText';
 import { parsePoemText, poemDataToText, type PoemData } from '../poemText';
 import { EscapeTab } from './escapeTab';
+import { PrivateName } from '@/features/people/personMark';
 import { Footnote } from './footnote';
 import { MathInline } from './math';
 import { ClearFormatting, inlineFormatting } from './formatting';
@@ -314,6 +315,7 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     PoemLine.configure(opts),
     ...inlineFormatting(),
     ClearFormatting.configure({ blocks: false }),
+    PrivateName,
     Footnote,
     MathInline,
     EscapeTab,
