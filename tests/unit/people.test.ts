@@ -147,6 +147,27 @@ describe('people in the database', () => {
     expect((await db.people.get(rosa.id))?.label).toBe('Rosa');
   });
 
+  test('undo keeps a name that another person took in the meantime with that person', async () => {
+    const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
+    const rosa = await addPerson(project.id, '', [
+      { real: 'Aunt Rosa', alias: 'Aunt Maria' },
+      { real: 'Rosa', alias: 'Maria' },
+    ]);
+    const deleted = await deletePerson(rosa.id);
+    if (!deleted) throw new Error('No deleted person.');
+    await addPerson(project.id, 'Cousin', [{ real: 'Rosa', alias: 'Ana' }]);
+    expect(await restorePerson(deleted)).toEqual(['Rosa']);
+    expect((await db.people.get(rosa.id))?.variants).toEqual([{ real: 'Aunt Rosa', alias: 'Aunt Maria' }]);
+    // With each name taken, the undo stops and says why.
+    const again = await deletePerson(rosa.id);
+    if (!again) throw new Error('No deleted person.');
+    await addPerson(project.id, 'Aunt', [{ real: 'Aunt Rosa', alias: 'Aunt Ana' }]);
+    await expect(restorePerson(again)).rejects.toThrow(
+      'Another person in this project has each name of Aunt Rosa now.',
+    );
+    expect(await db.people.get(rosa.id)).toBeUndefined();
+  });
+
   test('Mark all marks the stored text of each item and sends the marks to open editors', async () => {
     const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
     const memory = (await db.items.where('projectId').equals(project.id).toArray()).find(
@@ -199,6 +220,20 @@ describe('marks in the Yjs text', () => {
       ]),
       unmarked: new Map(),
     });
+  });
+
+  test('Mark all finds a name with a curly apostrophe or a no-break space, as the export does', () => {
+    const people: PrivatePerson[] = [
+      { id: 'b', variants: [{ real: "O'Brien", alias: 'Kane' }] },
+      { id: 'u', variants: [{ real: 'Uncle Teo', alias: 'Uncle Sol' }] },
+    ];
+    const doc = docFromUpdate(proseUpdate(['O’Brien met Uncle\u00A0Teo at the shore.']));
+    expect(markNames(doc, people)).toBe(2);
+    expect(marked(doc)).toEqual([
+      ['O’Brien', 'b'],
+      ['Uncle\u00A0Teo', 'u'],
+    ]);
+    expect(scanNames(doc, people).unmarked).toEqual(new Map());
   });
 
   test('the scan counts the unmarked names', () => {

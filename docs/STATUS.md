@@ -374,6 +374,18 @@ Last update: 2026-11-05
     standard manuscript format in Word and PDF, reads each file back as text, and finds "Rosa" and "Teo" 0
     times. Browser tests for US06, Mark as person, the name check, Show aliases, delete with Undo, and axe,
     at desktop and phone widths.
+  - Fixes after the code review of C3 part 2:
+    - Names match in the same way everywhere: curly and straight apostrophes, no-break and plain spaces,
+      and both Unicode forms of an accent count as the same text. Mark all, the scan, Show aliases, the
+      name check and the export all use one match.
+    - A mark on "Rosa and Teo" gives each name its own alias, and the check lists "Teo" as unmarked.
+    - A name in a note that two styles split is swapped. An equation gets the aliases. A link whose
+      address holds a real name keeps its text and loses its address.
+    - An alias with "$" in it stays as typed.
+    - The export and Mark all read the people from the database at that time, so a person added a moment
+      before is never missed. The dialog ignores a Mark all result that comes after Back.
+    - Undo of a deleted person keeps a real name that another person took in the meantime with that
+      person, and says so. The People fields put the saved value back when a change is refused.
 
 ## In progress
 
@@ -409,6 +421,12 @@ Last update: 2026-11-05
 - Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
   retry covers it.
+
+- Known after the review of private names, left for later:
+  - Mark all reads the stored text of each item. A word that the writer types in an open editor in the
+    same second can miss its mark. The name check before each export finds it, and Mark all again marks it.
+  - Show aliases hides each real name with a decoration. The caret can still move into the hidden text,
+    and typing there changes the real name. The switch is a preview, so turn it off to edit names.
 
 ## Blocked
 

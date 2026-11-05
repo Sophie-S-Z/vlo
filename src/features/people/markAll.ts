@@ -4,7 +4,7 @@ import { sendToTabs } from '@/features/editor/tabSync';
 import { TEMPLATES } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
-import type { PrivatePerson } from '@/lib/privacy';
+import { matchNames, type PrivatePerson } from '@/lib/privacy';
 import { openItemDoc, YFRAGMENT } from '@/lib/ydocs';
 import { personIdOf, PRIVATE_NAME } from './markName';
 
@@ -14,8 +14,6 @@ import { personIdOf, PRIVATE_NAME } from './markName';
  * into the stored text and to each open editor, so the writer sees them at once.
  */
 
-/** True for a letter or a digit in any script, so "Rosa" never matches inside "Rosalind". */
-const WORD = /[\p{L}\p{N}]/u;
 /** Stands in for an inline object in a text, so a name never crosses it. */
 const OBJECT = '￼';
 
@@ -66,24 +64,24 @@ function targetsOf(people: readonly PrivatePerson[]): Target[] {
     .sort((a, b) => b.real.length - a.real.length);
 }
 
-/** The unmarked whole-word matches in one text, without overlaps. */
+/**
+ * The unmarked whole-word matches in one text, without overlaps. The match folds curly quotes, special
+ * spaces and Unicode forms in the same way as share-safe export, so each name that the export swaps can
+ * get a mark.
+ */
 function matchesIn(
   part: TextPart,
   targets: readonly Target[],
 ): { from: number; to: number; target: Target }[] {
-  const found: { from: number; to: number; target: Target }[] = [];
-  for (const target of targets) {
-    let from = part.chars.indexOf(target.real);
-    while (from !== -1) {
-      const to = from + target.real.length;
-      const whole = !WORD.test(part.chars[from - 1] ?? '') && !WORD.test(part.chars[to] ?? '');
-      const unmarked = part.marks.slice(from, to).every((m) => m === null);
-      const free = found.every((m) => to <= m.from || from >= m.to);
-      if (whole && unmarked && free) found.push({ from, to, target });
-      from = part.chars.indexOf(target.real, from + 1);
-    }
-  }
-  return found.sort((a, b) => a.from - b.from);
+  const unmarked = (from: number, to: number) => part.marks.slice(from, to).every((m) => m === null);
+  return matchNames(
+    part.chars,
+    targets.map((t) => t.real),
+    unmarked,
+  ).flatMap((m) => {
+    const target = targets[m.index];
+    return target ? [{ from: m.from, to: m.to, target }] : [];
+  });
 }
 
 /** Marks every unmarked real name in the document. Returns how many names it marked. */

@@ -13,12 +13,23 @@ import { itemBlocks, noteCounter, updateToJson } from './read';
  */
 
 export type ExportScope =
-  { kind: 'item'; itemId: string } | { kind: 'folder'; itemId: string } | { kind: 'project' };
+  | { kind: 'item'; itemId: string }
+  | { kind: 'folder'; itemId: string }
+  | { kind: 'project' }
+  /** A named order of poems (E2): the poems in that order, under the order's name. */
+  | { kind: 'sequence'; name: string; itemIds: readonly string[] };
 
 /** The items an export holds, in binder order, with their depth under the scope. */
 export function scopeItems(items: readonly Item[], scope: ExportScope): { item: Item; depth: number }[] {
   const nodes = flattenTree(items).filter((n) => n.item.kind !== 'note');
   if (scope.kind === 'project') return nodes.map((n) => ({ item: n.item, depth: n.depth }));
+  if (scope.kind === 'sequence') {
+    const byId = new Map(nodes.map((n) => [n.item.id, n.item]));
+    return [...new Set(scope.itemIds)].flatMap((id) => {
+      const item = byId.get(id);
+      return item ? [{ item, depth: 0 }] : [];
+    });
+  }
   const start = nodes.findIndex((n) => n.item.id === scope.itemId);
   const first = nodes[start];
   if (!first) return [];
@@ -99,9 +110,12 @@ export function buildExportDoc({ project, items, scope, updates }: BuildInput): 
     blocks.push(...body);
     sections.push({ id: item.id, title: item.title, form, blocks });
   }
-  const scoped = scope.kind === 'project' ? null : items.find((i) => i.id === scope.itemId);
+  const scoped =
+    scope.kind === 'project' || scope.kind === 'sequence' ? null : items.find((i) => i.id === scope.itemId);
+  const title =
+    scope.kind === 'sequence' ? `${project.title}, ${scope.name}` : (scoped?.title ?? project.title);
   return {
-    title: scoped?.title ?? project.title,
+    title,
     ...(project.authorName ? { author: project.authorName } : {}),
     font: project.settings.font ?? DEFAULT_FONT,
     paper: project.settings.page === 'a4' ? 'a4' : 'letter',

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import type { JSONContent } from '@tiptap/core';
 import { buildExportDoc } from '@/features/export/build';
 import { footnotesOf, runsText, type ExportDoc, type Run } from '@/features/export/model';
 import { aliasesOf, aliasText, nameCheck, shareSafe, type PrivatePerson } from '@/lib/privacy';
@@ -206,5 +207,96 @@ describe('marked private names', () => {
     const stanza = safe.sections[0]?.blocks.find((b) => b.type === 'stanza');
     const line = stanza?.type === 'stanza' ? stanza.lines[0] : undefined;
     expect(line ? runsText(line.runs) : '').toBe('    for Mae,   at the  shore');
+  });
+});
+
+/** A one-item memory export of any TipTap JSON paragraph content. */
+function paragraphDoc(content: JSONContent[], blocks: JSONContent[] = []) {
+  return buildExportDoc({
+    project: project('memoir'),
+    items: [item('m1', 'memory', 'Letters')],
+    scope: { kind: 'item', itemId: 'm1' },
+    updates: new Map([
+      ['m1', updateOf({ type: 'doc', content: [{ type: 'paragraph', content }, ...blocks] }, 'prose')],
+    ]),
+  });
+}
+
+const textRuns = (doc: ExportDoc) =>
+  doc.sections
+    .flatMap((s) => s.blocks)
+    .flatMap((b) => ('runs' in b ? b.runs : []))
+    .filter((r): r is Extract<Run, { type: 'text' }> => r.type === 'text');
+
+describe('names in every place of the text (code review)', () => {
+  test('a mark on two names gives each its own alias, and the check lists the other name', () => {
+    const doc = markedDoc([{ text: 'Rosa and Teo', person: 'rosa' }, { text: ' came.' }]);
+    expect(text(shareSafe(doc, PEOPLE, true))).toContain('Mae and Sol came.');
+    expect(nameCheck(doc, PEOPLE).unmarked).toEqual([{ name: 'Teo', count: 1 }]);
+  });
+
+  test('a name in a note that two styles split is still swapped', () => {
+    const note = [
+      { type: 'text', text: 'Ro', marks: [{ type: 'bold' }] },
+      { type: 'text', text: 'sa wrote it.' },
+    ];
+    const doc = paragraphDoc([
+      { type: 'text', text: 'Letters' },
+      { type: 'footnote', attrs: { content: note } },
+    ]);
+    const safe = footnotesOf(shareSafe(doc, PEOPLE, true))[0]?.note ?? [];
+    expect(safe.map((r) => r.text).join('')).toBe('Mae wrote it.');
+    expect(safe[0]).toEqual({ type: 'text', text: 'Mae', marks: [{ type: 'bold' }] });
+  });
+
+  test('curly apostrophes, no-break spaces and both Unicode forms of an accent match', () => {
+    const people: PrivatePerson[] = [
+      { id: 'b', variants: [{ real: "O'Brien", alias: 'Kane' }] },
+      { id: 'j', variants: [{ real: 'José', alias: 'Juan' }] },
+      { id: 'u', variants: [{ real: 'Uncle Teo', alias: 'Uncle Sol' }] },
+    ];
+    const aliases = aliasesOf(people);
+    expect(aliasText('O’Brien came.', aliases)).toBe('Kane came.');
+    expect(aliasText('José came.', aliases)).toBe('Juan came.');
+    expect(aliasText('Uncle Teo came.', aliases)).toBe('Uncle Sol came.');
+    // An accent stays with its letter, so "José" never matches the "Jose" in "Josee".
+    expect(aliasText('Josée came.', aliases)).toBe('Josée came.');
+  });
+
+  test('a link that holds a real name loses its address, and an equation gets the alias', () => {
+    const doc = paragraphDoc(
+      [
+        {
+          type: 'text',
+          text: 'Her letters',
+          marks: [{ type: 'link', attrs: { href: 'https://example.org/Rosa-letters' } }],
+        },
+        {
+          type: 'text',
+          text: ' and ',
+          marks: [{ type: 'link', attrs: { href: 'https://example.org/sea' } }],
+        },
+        { type: 'mathInline', attrs: { latex: '\\text{Teo}^2' } },
+      ],
+      [{ type: 'mathBlock', attrs: { latex: '\\text{Aunt Rosa} = 1' } }],
+    );
+    const safe = shareSafe(doc, PEOPLE, true);
+    const runs = textRuns(safe);
+    expect(runs.find((r) => r.text === 'Her letters')?.style.link).toBeUndefined();
+    expect(runs.find((r) => r.text === ' and ')?.style.link).toBe('https://example.org/sea');
+    const maths = safe.sections
+      .flatMap((s) => s.blocks)
+      .flatMap((b) =>
+        b.type === 'math'
+          ? [b.latex]
+          : 'runs' in b
+            ? b.runs.flatMap((r) => (r.type === 'math' ? [r.latex] : []))
+            : [],
+      );
+    expect(maths).toEqual(['\\text{Sol}^2', '\\text{Aunt Mae} = 1']);
+  });
+
+  test('an alias with a dollar sign stays as typed', () => {
+    expect(aliasText('Rosa came.', [{ name: 'Rosa', alias: '$& $1 $$' }])).toBe('$& $1 $$ came.');
   });
 });

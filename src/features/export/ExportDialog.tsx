@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { TEMPLATES } from '@/features/library/templates';
 import { updateProjectSettings } from '@/features/library/projects';
 import { markAllInProject } from '@/features/people/markAll';
-import type { Item, ManuscriptSettings, Person, Project } from '@/lib/db';
+import { db, type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
 import type { NameCheck } from '@/lib/privacy';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -54,7 +54,7 @@ const FORMATS: { id: ExportFormat; label: string; detail: string; icon: typeof F
   },
 ];
 
-type ScopeChoice = 'item' | 'folder' | 'project';
+type ScopeChoice = 'item' | 'folder' | 'project' | 'sequence';
 
 /** The name check's Mark all failed. */
 const FAILED = -1;
@@ -77,6 +77,8 @@ interface ExportDialogProps {
   currentItemId: string | null;
   /** The project's people, with the real names and their aliases. */
   people: readonly Person[];
+  /** A named order of poems to offer, and to choose first (E2). */
+  sequence?: { name: string; itemIds: readonly string[] } | undefined;
 }
 
 function lower(label: string): string {
@@ -118,17 +120,19 @@ export function ExportDialog({
   items,
   currentItemId,
   people,
+  sequence,
 }: ExportDialogProps) {
   const ids = useId();
   const template = TEMPLATES[project.template];
   const current = items.find((i) => i.id === currentItemId && template.editorKind(i.kind) !== null) ?? null;
   const folder = current ? folderOf(items, current.id) : null;
   const [format, setFormat] = useState<ExportFormat>('docx');
-  const [scope, setScope] = useState<ScopeChoice>(current ? 'item' : 'project');
+  const [scope, setScope] = useState<ScopeChoice>(sequence ? 'sequence' : current ? 'item' : 'project');
   const [safe, setSafe] = useState(project.template === 'memoir');
   const [manuscript, setManuscript] = useState<ManuscriptSettings>(() => startingManuscript(project));
   const [nameError, setNameError] = useState(false);
   const [status, setStatus] = useState<Status>({ step: 'choose' });
+  const [marking, setMarking] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const jobRef = useRef<ExportJob | null>(null);
 
@@ -158,11 +162,13 @@ export function ExportDialog({
   };
 
   const scopeOf = (choice: ScopeChoice): ExportScope =>
-    choice === 'item' && current
-      ? { kind: 'item', itemId: current.id }
-      : choice === 'folder' && folder
-        ? { kind: 'folder', itemId: folder.id }
-        : { kind: 'project' };
+    choice === 'sequence' && sequence
+      ? { kind: 'sequence', name: sequence.name, itemIds: sequence.itemIds }
+      : choice === 'item' && current
+        ? { kind: 'item', itemId: current.id }
+        : choice === 'folder' && folder
+          ? { kind: 'folder', itemId: folder.id }
+          : { kind: 'project' };
 
   async function finish(job: ExportJob, chosen: ExportFormat) {
     setStatus({ step: 'working' });
@@ -174,6 +180,18 @@ export function ExportDialog({
       setStatus({ step: 'failed' });
     } finally {
       if (jobRef.current === job) closeJob();
+    }
+  }
+
+  /**
+   * The people as stored now. The list in the props can be a step behind, such as just after the writer
+   * adds a person, and a share-safe export must never miss a name.
+   */
+  async function currentPeople(): Promise<readonly Person[]> {
+    try {
+      return await db.people.where('projectId').equals(project.id).toArray();
+    } catch {
+      return people;
     }
   }
 
@@ -200,7 +218,7 @@ export function ExportDialog({
       items: [...items],
       scope: scopeOf(scope),
       format,
-      people: people.map((p) => ({ id: p.id, variants: p.variants })),
+      people: (await currentPeople()).map((p) => ({ id: p.id, variants: p.variants })),
       shareSafe: safe,
       ...(usesManuscript ? { manuscript: details } : {}),
     };
@@ -319,15 +337,24 @@ export function ExportDialog({
               <Button
                 type="button"
                 variant="outline"
+                disabled={marking}
                 onClick={() => {
-                  markAllInProject(project.id, people).then(
-                    (result) => {
-                      setStatus({ ...status, marked: result.names });
-                    },
-                    () => {
-                      setStatus({ ...status, marked: FAILED });
-                    },
-                  );
+                  setMarking(true);
+                  // The result goes to this check only. Back or a new export in the meantime wins.
+                  const show = (marked: number) => {
+                    setMarking(false);
+                    setStatus((now) => (now.step === 'names' && now.job === job ? { ...now, marked } : now));
+                  };
+                  currentPeople()
+                    .then((list) => markAllInProject(project.id, list))
+                    .then(
+                      (result) => {
+                        show(result.names);
+                      },
+                      () => {
+                        show(FAILED);
+                      },
+                    );
                 }}
               >
                 Mark all {total === 1 ? '1 name' : `${String(total)} names`}
@@ -506,6 +533,12 @@ export function ExportDialog({
                     setScope(next as ScopeChoice);
                   }}
                 >
+                  {sequence && (
+                    <label className="flex min-h-11 items-center gap-3 text-sm">
+                      <RadioGroupItem value="sequence" />
+                      <span className="[overflow-wrap:anywhere]">This order: {sequence.name}</span>
+                    </label>
+                  )}
                   {current && (
                     <label className="flex min-h-11 items-center gap-3 text-sm">
                       <RadioGroupItem value="item" />

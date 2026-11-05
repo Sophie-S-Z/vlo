@@ -5,7 +5,8 @@ import type { Block, ExportDoc, Run } from '@/features/export/model';
  * Share-safe export (spec sections 8.2 and 9, plan Tasks B1 and C5). Every export passes through
  * `shareSafe`. With the switch on, each marked private name becomes the alias of its person. Then each
  * unmarked exact match of a real name becomes its alias too, longest name first, in the text, the
- * headings, the notes and the titles. `nameCheck` lists the unmarked names for the check before export.
+ * headings, the notes, the equations and the titles. A link whose address holds a real name loses its
+ * address. `nameCheck` lists the unmarked names for the check before export.
  */
 
 export interface Alias {
@@ -29,6 +30,72 @@ export interface PrivatePerson {
 
 /** True for a letter or a digit in any script, so "Rosa" never matches inside "Rosalind". */
 const WORD = /[\p{L}\p{N}]/u;
+/** One character with the accents that follow it, so a match never cuts an accent from its letter. */
+const SEGMENT = /\P{M}\p{M}*|\p{M}+/gu;
+const QUOTES = /[\u2018\u2019\u02BC\u2032]/g;
+const SPACES = /[\u00A0\u2007\u2009\u200A\u202F]/g;
+
+/**
+ * Folds the forms that a reader sees as the same: curly and straight apostrophes, no-break and plain
+ * spaces, and an accent typed as one character or as a letter and a mark (Unicode NFC). Smart punctuation
+ * types "O’Brien" while the People screen may hold "O'Brien", and both must match.
+ */
+function fold(text: string): string {
+  return text.normalize('NFC').replace(QUOTES, "'").replace(SPACES, ' ');
+}
+
+/** The folded text, with the place in the original text where each folded character starts and ends. */
+function folded(text: string): { text: string; start: number[]; end: number[] } {
+  let out = '';
+  const start: number[] = [];
+  const end: number[] = [];
+  for (const m of text.matchAll(SEGMENT)) {
+    const piece = fold(m[0]);
+    // One entry for each UTF-16 unit of the folded piece.
+    start.push(...new Array<number>(piece.length).fill(m.index));
+    end.push(...new Array<number>(piece.length).fill(m.index + m[0].length));
+    out += piece;
+  }
+  return { text: out, start, end };
+}
+
+export interface WordMatch {
+  /** The place in the original text. */
+  from: number;
+  to: number;
+  /** The index of the name in the list. */
+  index: number;
+}
+
+/**
+ * Whole-word matches of each name in `text`, in text order and without overlaps. An earlier name in the
+ * list wins, so the list goes longest first. `free` can refuse a place, such as text that has a mark.
+ */
+export function matchNames(
+  text: string,
+  names: readonly string[],
+  free: (from: number, to: number) => boolean = () => true,
+): WordMatch[] {
+  const f = folded(text);
+  const taken: WordMatch[] = [];
+  names.forEach((raw, index) => {
+    const name = fold(raw.trim());
+    if (name === '') return;
+    let at = f.text.indexOf(name);
+    while (at !== -1) {
+      const last = at + name.length - 1;
+      const from = f.start[at] ?? 0;
+      const to = f.end[last] ?? from;
+      const whole = !WORD.test(f.text[at - 1] ?? '') && !WORD.test(f.text[last + 1] ?? '');
+      // A match starts and ends at the edges of whole characters.
+      const edges = f.start[at - 1] !== from && f.end[last + 1] !== to;
+      const open = taken.every((m) => to <= m.from || from >= m.to);
+      if (whole && edges && open && free(from, to)) taken.push({ from, to, index });
+      at = f.text.indexOf(name, at + 1);
+    }
+  });
+  return taken.sort((a, b) => a.from - b.from);
+}
 
 interface Match {
   from: number;
@@ -43,8 +110,8 @@ type TextRun = Extract<Run, { type: 'text' }>;
 function prepare(aliases: readonly Alias[]): Alias[] {
   return aliases
     .map((a) => ({ name: a.name.trim(), alias: a.alias.trim() }))
-    .filter((a) => a.name !== '' && a.name !== a.alias)
-    .sort((a, b) => b.name.length - a.name.length);
+    .filter((a) => a.name !== '' && fold(a.name) !== fold(a.alias))
+    .sort((a, b) => fold(b.name).length - fold(a.name).length);
 }
 
 /** Every variant of every person as one alias list. */
@@ -52,31 +119,17 @@ export function aliasesOf(people: readonly PrivatePerson[]): Alias[] {
   return people.flatMap((person) => person.variants.map((v) => ({ name: v.real, alias: v.alias })));
 }
 
-/** Whole-word matches of each name in `text`, without overlaps, in text order. */
 function findMatches(text: string, aliases: readonly Alias[]): Match[] {
-  const taken: Match[] = [];
-  for (const { name, alias } of aliases) {
-    let from = text.indexOf(name);
-    while (from !== -1) {
-      const to = from + name.length;
-      const before = text[from - 1] ?? '';
-      const after = text[to] ?? '';
-      const whole = !WORD.test(before) && !WORD.test(after);
-      const free = taken.every((m) => to <= m.from || from >= m.to);
-      if (whole && free) taken.push({ from, to, name, alias });
-      from = text.indexOf(name, from + 1);
-    }
-  }
-  return taken.sort((a, b) => a.from - b.from);
+  return matchNames(
+    text,
+    aliases.map((a) => a.name),
+  ).map((m) => {
+    const alias = aliases[m.index] ?? { name: '', alias: '' };
+    return { from: m.from, to: m.to, name: alias.name, alias: alias.alias };
+  });
 }
 
-/** Replaces each name in a plain string. */
-export function aliasText(text: string, aliases: readonly Alias[]): string {
-  const list = prepare(aliases);
-  if (list.length === 0) return text;
-  return replaceIn(text, findMatches(text, list));
-}
-
+/** Builds the text with each match replaced. Plain joins, so a "$" in an alias stays a "$". */
 function replaceIn(text: string, matches: readonly Match[]): string {
   let out = '';
   let at = 0;
@@ -87,14 +140,26 @@ function replaceIn(text: string, matches: readonly Match[]): string {
   return out + text.slice(at);
 }
 
+/** Replaces each name in a plain string. */
+export function aliasText(text: string, aliases: readonly Alias[]): string {
+  const list = prepare(aliases);
+  if (list.length === 0) return text;
+  return replaceIn(text, findMatches(text, list));
+}
+
+interface PersonNames {
+  first: string;
+  own: Alias[];
+}
+
 /** The people by id, each with its alias list ready for matching. */
 interface Lookup {
   all: Alias[];
-  byId: Map<string, { first: string; own: Alias[] }>;
+  byId: Map<string, PersonNames>;
 }
 
 function lookupOf(people: readonly PrivatePerson[]): Lookup {
-  const byId = new Map<string, { first: string; own: Alias[] }>();
+  const byId = new Map<string, PersonNames>();
   for (const person of people) {
     const own = prepare(person.variants.map((v) => ({ name: v.real, alias: v.alias })));
     const first = person.variants.map((v) => v.alias.trim()).find((a) => a !== '');
@@ -104,38 +169,42 @@ function lookupOf(people: readonly PrivatePerson[]): Lookup {
 }
 
 /**
- * The text that takes the place of a marked name. The exact name gives its own alias. Marked text with
- * more around the name, such as "Rosa’s", keeps the rest. Marked text with no name of the person in it,
- * such as a name that the writer split, gives the person's first alias, so no part of it shows.
+ * The text that takes the place of a marked name. Each name of the person gives its own alias, and the
+ * rest of the marked text stays, as in "Rosa’s". A name of another person in the marked text, as in a
+ * mark on "Rosa and Teo", gives that person's alias too, and the check lists it. Marked text with no name
+ * of the person in it, such as a name that the writer split, gives the person's first alias, so no part
+ * of it shows.
  */
 function markedAlias(
   text: string,
-  person: { first: string; own: Alias[] },
-): { text: string; known: boolean } {
-  const trimmed = text.trim();
-  const exact = person.own.find((a) => a.name === trimmed);
-  if (exact) return { text: text.replace(trimmed, exact.alias), known: true };
-  const matches = findMatches(text, person.own);
-  if (matches.length > 0) return { text: replaceIn(text, matches), known: true };
-  return { text: person.first, known: false };
+  person: PersonNames,
+  all: readonly Alias[],
+): { text: string; known: boolean; others: string[] } {
+  const own = new Set(person.own.map((a) => a.name));
+  const matches = findMatches(text, [...person.own, ...all.filter((a) => !own.has(a.name))]);
+  if (!matches.some((m) => own.has(m.name))) return { text: person.first, known: false, others: [] };
+  return {
+    text: replaceIn(text, matches),
+    known: true,
+    others: matches.filter((m) => !own.has(m.name)).map((m) => m.name),
+  };
 }
 
-/** The unmarked names in a plain string, for the alias preview in the editor. */
-export function findNames(
-  text: string,
-  people: readonly PrivatePerson[],
-): { from: number; to: number; name: string; alias: string }[] {
-  return findMatches(text, prepare(aliasesOf(people)));
-}
-
-/** The text that takes the place of a marked name, or null when no person has this id. */
-export function markedAliasFor(
-  text: string,
-  people: readonly PrivatePerson[],
-  personId: string,
-): string | null {
-  const person = lookupOf(people).byId.get(personId);
-  return person ? markedAlias(text, person).text : null;
+/** The alias preview in the editor: the unmarked names in a text, and the alias of a marked name. */
+export function namePreview(people: readonly PrivatePerson[]): {
+  unmarked: (text: string) => Match[];
+  marked: (text: string, personId: string) => string | null;
+  has: (personId: string) => boolean;
+} {
+  const lookup = lookupOf(people);
+  return {
+    unmarked: (text) => findMatches(text, lookup.all),
+    marked: (text, personId) => {
+      const person = lookup.byId.get(personId);
+      return person ? markedAlias(text, person, lookup.all).text : null;
+    },
+    has: (personId) => lookup.byId.has(personId),
+  };
 }
 
 /** A line of runs cut into marked names and the unmarked text between them. */
@@ -164,14 +233,18 @@ function plain(run: TextRun, text: string = run.text): TextRun {
 }
 
 /**
- * Replaces names in unmarked text runs. A name can cross from one run into the next, as in
- * "Aunt *Rosa*", so the runs are read as one text. The alias takes the style of the run where the name
- * starts.
+ * Replaces names across runs of text. A name can cross from one run into the next, as in "Aunt *Rosa*",
+ * so the runs are read as one text. The alias takes the style of the run where the name starts. `make`
+ * gives a run with the style of `run` and new text.
  */
-function aliasUnmarked(group: readonly TextRun[], aliases: readonly Alias[]): TextRun[] {
+function aliasAcross<R extends { text: string }>(
+  group: readonly R[],
+  aliases: readonly Alias[],
+  make: (run: R, text: string) => R,
+): R[] {
   const text = group.map((r) => r.text).join('');
   const matches = findMatches(text, aliases);
-  if (matches.length === 0) return group.map((r) => plain(r));
+  if (matches.length === 0) return group.map((r) => make(r, r.text));
   // The start offset of each run in the joined text.
   const starts: number[] = [];
   let offset = 0;
@@ -184,7 +257,7 @@ function aliasUnmarked(group: readonly TextRun[], aliases: readonly Alias[]): Te
     for (let i = 0; i < starts.length; i += 1) if ((starts[i] ?? 0) <= pos) index = i;
     return index;
   };
-  const pieces: TextRun[] = [];
+  const pieces: R[] = [];
   const keep = (from: number, to: number) => {
     // The text between matches keeps the style of each run it came from.
     let at = from;
@@ -193,7 +266,7 @@ function aliasUnmarked(group: readonly TextRun[], aliases: readonly Alias[]): Te
       const run = group[index];
       if (!run) break;
       const end = Math.min(to, (starts[index] ?? 0) + run.text.length);
-      pieces.push(plain(run, text.slice(at, end)));
+      pieces.push(make(run, text.slice(at, end)));
       at = end;
     }
   };
@@ -201,7 +274,7 @@ function aliasUnmarked(group: readonly TextRun[], aliases: readonly Alias[]): Te
   for (const m of matches) {
     keep(pos, m.from);
     const run = group[runAt(m.from)];
-    if (run && m.alias !== '') pieces.push(plain(run, m.alias));
+    if (run && m.alias !== '') pieces.push(make(run, m.alias));
     pos = m.to;
   }
   keep(pos, text.length);
@@ -209,39 +282,63 @@ function aliasUnmarked(group: readonly TextRun[], aliases: readonly Alias[]): Te
 }
 
 /** Joins runs of the same style, so an alias and the words around it make one run in each format. */
-function joinRuns(runs: readonly TextRun[]): TextRun[] {
-  const out: TextRun[] = [];
+function joinRuns<R extends { text: string }>(runs: readonly R[]): R[] {
+  const out: R[] = [];
+  const styleOf = (run: R) => JSON.stringify({ ...run, text: '' });
   for (const run of runs) {
     const last = out[out.length - 1];
-    if (last && JSON.stringify(last.style) === JSON.stringify(run.style)) last.text += run.text;
+    if (last && styleOf(last) === styleOf(run)) last.text += run.text;
     else out.push({ ...run });
   }
   return out;
 }
 
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+/** The run without its link when the address holds a real name, as in https://example.org/Rosa. */
+function safeLink(run: TextRun, aliases: readonly Alias[]): TextRun {
+  const href = run.style.link;
+  if (href === undefined) return run;
+  const names = aliases.map((a) => a.name);
+  // The parts of an address count as words, so "Rosa" is found in "/Rosa-letters" and "Rosa.html".
+  const found = (value: string) => matchNames(value.replace(/[/?#=&._~+-]/g, ' '), names).length > 0;
+  if (!found(href) && !found(safeDecode(href))) return run;
+  const style = { ...run.style };
+  delete style.link;
+  return { ...run, style };
+}
+
 function aliasGroup(group: readonly TextRun[], lookup: Lookup): TextRun[] {
   return joinRuns(
     piecesOf(group, lookup).flatMap((piece) => {
-      if (!piece.marked) return aliasUnmarked(piece.runs, lookup.all);
+      if (!piece.marked) return aliasAcross(piece.runs, lookup.all, (run, text) => plain(run, text));
       const person = lookup.byId.get(piece.person);
       const first = piece.runs[0];
       if (!person || !first) return [];
-      const alias = markedAlias(piece.runs.map((r) => r.text).join(''), person).text;
+      const alias = markedAlias(piece.runs.map((r) => r.text).join(''), person, lookup.all).text;
       return alias === '' ? [] : [plain(first, alias)];
     }),
-  );
+  ).map((run) => safeLink(run, lookup.all));
 }
 
-/** Calls `onGroup` for each line of text runs, and passes the other runs through. */
-function mapRuns(
-  runs: readonly Run[],
-  onGroup: (group: TextRun[]) => TextRun[],
-  onNote: (note: NoteContent) => NoteContent,
-): Run[] {
+interface RunHandlers {
+  group: (group: TextRun[]) => TextRun[];
+  note: (note: NoteContent) => NoteContent;
+  latex: (latex: string) => string;
+}
+
+/** Calls the handlers for each line of text runs, each note and each equation. */
+function mapRuns(runs: readonly Run[], on: RunHandlers): Run[] {
   const out: Run[] = [];
   let group: TextRun[] = [];
   const flush = () => {
-    if (group.length > 0) out.push(...onGroup(group));
+    if (group.length > 0) out.push(...on.group(group));
     group = [];
   };
   for (const run of runs) {
@@ -250,24 +347,28 @@ function mapRuns(
       continue;
     }
     flush();
-    out.push(run.type === 'footnote' ? { ...run, note: onNote(run.note) } : run);
+    if (run.type === 'footnote') out.push({ ...run, note: on.note(run.note) });
+    else if (run.type === 'math') out.push({ ...run, latex: on.latex(run.latex) });
+    else out.push(run);
   }
   flush();
   return out;
 }
 
-function mapBlocks(blocks: readonly Block[], onRuns: (runs: readonly Run[]) => Run[]): Block[] {
+function mapBlocks(blocks: readonly Block[], on: RunHandlers): Block[] {
   return blocks.map((block): Block => {
     switch (block.type) {
       case 'paragraph':
       case 'heading':
-        return { ...block, runs: onRuns(block.runs) };
+        return { ...block, runs: mapRuns(block.runs, on) };
       case 'list':
-        return { ...block, items: block.items.map((item) => mapBlocks(item, onRuns)) };
+        return { ...block, items: block.items.map((item) => mapBlocks(item, on)) };
       case 'quote':
-        return { ...block, blocks: mapBlocks(block.blocks, onRuns) };
+        return { ...block, blocks: mapBlocks(block.blocks, on) };
       case 'stanza':
-        return { ...block, lines: block.lines.map((line) => ({ ...line, runs: onRuns(line.runs) })) };
+        return { ...block, lines: block.lines.map((line) => ({ ...line, runs: mapRuns(line.runs, on) })) };
+      case 'math':
+        return { ...block, latex: on.latex(block.latex) };
       default:
         return block;
     }
@@ -278,16 +379,19 @@ function mapBlocks(blocks: readonly Block[], onRuns: (runs: readonly Run[]) => R
 export function shareSafe(doc: ExportDoc, people: readonly PrivatePerson[], on: boolean): ExportDoc {
   const lookup = lookupOf(people);
   if (!on || lookup.all.length === 0) return doc;
-  const onNote = (note: NoteContent): NoteContent =>
-    note.map((run) => ({ ...run, text: replaceIn(run.text, findMatches(run.text, lookup.all)) }));
-  const onRuns = (runs: readonly Run[]) => mapRuns(runs, (group) => aliasGroup(group, lookup), onNote);
+  const handlers: RunHandlers = {
+    group: (group) => aliasGroup(group, lookup),
+    // A note's runs are read as one text too, so a name in two styles is still found.
+    note: (note) => joinRuns(aliasAcross(note, lookup.all, (run, text) => ({ ...run, text }))),
+    latex: (latex) => aliasText(latex, lookup.all),
+  };
   return {
     ...doc,
     title: aliasText(doc.title, lookup.all),
     sections: doc.sections.map((section) => ({
       ...section,
       title: aliasText(section.title, lookup.all),
-      blocks: mapBlocks(section.blocks, onRuns),
+      blocks: mapBlocks(section.blocks, handlers),
     })),
   };
 }
@@ -299,7 +403,7 @@ export interface NameCount {
 
 /** What the check before a share-safe export found in the text. */
 export interface NameCheck {
-  /** Real names in the text with no mark, longest first. The export still swaps each for its alias. */
+  /** Real names in the text with no mark of their own, longest first. The export still swaps each. */
   unmarked: NameCount[];
   /**
    * Marked text that holds no name of its person, such as a name that the writer split. The export
@@ -315,8 +419,8 @@ function counted(counts: Map<string, number>, longestFirst: boolean): NameCount[
 }
 
 /**
- * The unmarked real names and the changed marked names in the text of an export. Titles and notes have no
- * marks, so the check reads only the text, where "Mark all" can add a mark.
+ * The unmarked real names and the changed marked names in the text of an export. Titles, notes and
+ * equations have no marks, so the check reads only the text, where "Mark all" can add a mark.
  */
 export function nameCheck(doc: ExportDoc, people: readonly PrivatePerson[]): NameCheck {
   const lookup = lookupOf(people);
@@ -326,24 +430,30 @@ export function nameCheck(doc: ExportDoc, people: readonly PrivatePerson[]): Nam
   const add = (counts: Map<string, number>, name: string) => {
     counts.set(name, (counts.get(name) ?? 0) + 1);
   };
-  const onGroup = (group: TextRun[]) => {
-    for (const piece of piecesOf(group, lookup)) {
-      const text = piece.runs.map((r) => r.text).join('');
-      if (!piece.marked) {
-        for (const m of findMatches(text, lookup.all)) add(unmarked, m.name);
-        continue;
+  const handlers: RunHandlers = {
+    group: (group) => {
+      for (const piece of piecesOf(group, lookup)) {
+        const text = piece.runs.map((r) => r.text).join('');
+        if (!piece.marked) {
+          for (const m of findMatches(text, lookup.all)) add(unmarked, m.name);
+          continue;
+        }
+        const person = lookup.byId.get(piece.person);
+        if (!person) continue;
+        const result = markedAlias(text, person, lookup.all);
+        if (!result.known) add(changed, text);
+        for (const name of result.others) add(unmarked, name);
       }
-      const person = lookup.byId.get(piece.person);
-      if (person && !markedAlias(text, person).known) add(changed, text);
-    }
-    return group;
+      return group;
+    },
+    note: (note) => note,
+    latex: (latex) => latex,
   };
-  const onRuns = (runs: readonly Run[]) => mapRuns(runs, onGroup, (note) => note);
   for (const section of doc.sections) {
     // Headings at levels 1 and 2 are folder and item titles, not text.
     mapBlocks(
       section.blocks.filter((b) => b.type !== 'heading' || b.level > 2),
-      onRuns,
+      handlers,
     );
   }
   return { unmarked: counted(unmarked, true), changed: counted(changed, false) };

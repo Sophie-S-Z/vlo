@@ -147,10 +147,15 @@ function PersonSection({
       },
     );
 
-  const changeVariant = (index: number, field: keyof NameVariant, value: string) => {
+  /** Saves a change from a field. A change that the rules refuse puts the saved value back in the field. */
+  const changeVariant = (input: HTMLInputElement, index: number, field: keyof NameVariant) => {
     const current = person.variants[index];
-    if (!current || current[field] === value.trim()) return;
-    void save({ variants: person.variants.map((v, i) => (i === index ? { ...v, [field]: value } : v)) });
+    if (!current || current[field] === input.value.trim()) return;
+    void save({
+      variants: person.variants.map((v, i) => (i === index ? { ...v, [field]: input.value } : v)),
+    }).then((ok) => {
+      if (!ok) input.value = current[field];
+    });
   };
 
   return (
@@ -188,7 +193,11 @@ function PersonSection({
           key={person.label}
           maxLength={MAX_LABEL}
           onBlur={(event) => {
-            if (event.target.value.trim() !== person.label) void save({ label: event.target.value });
+            const input = event.target;
+            if (input.value.trim() === person.label) return;
+            void save({ label: input.value }).then((ok) => {
+              if (!ok) input.value = person.label;
+            });
           }}
         />
       </div>
@@ -214,7 +223,8 @@ function PersonSection({
         <tbody>
           {person.variants.map((variant, index) => (
             <tr
-              key={`${variant.real}-${String(index)}`}
+              // The key holds both names, so a saved change from elsewhere redraws the fields.
+              key={`${String(index)}:${variant.real}:${variant.alias}`}
               className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 py-2 sm:table-row"
             >
               <td className="sm:py-1 sm:pr-2">
@@ -223,7 +233,7 @@ function PersonSection({
                   defaultValue={variant.real}
                   maxLength={MAX_NAME}
                   onBlur={(event) => {
-                    changeVariant(index, 'real', event.target.value);
+                    changeVariant(event.target, index, 'real');
                   }}
                 />
               </td>
@@ -233,7 +243,7 @@ function PersonSection({
                   defaultValue={variant.alias}
                   maxLength={MAX_NAME}
                   onBlur={(event) => {
-                    changeVariant(index, 'alias', event.target.value);
+                    changeVariant(event.target, index, 'alias');
                   }}
                 />
               </td>
@@ -453,11 +463,15 @@ export function PeoplePage() {
             onClick={() => {
               const person = deleted;
               restorePerson(person).then(
-                () => {
-                  announce(`Restored ${person.label}.`);
+                (dropped) => {
+                  announce(
+                    dropped.length === 0
+                      ? `Restored ${person.label}.`
+                      : `Restored ${person.label}. Another person has ${dropped.join(', ')} now, so ${dropped.length === 1 ? 'that name stays' : 'those names stay'} with them.`,
+                  );
                 },
-                () => {
-                  announce('Vlo could not restore the person on this device.');
+                (problem: unknown) => {
+                  announce(problemText(problem, 'Vlo could not restore the person on this device.'));
                 },
               );
             }}

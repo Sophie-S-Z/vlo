@@ -118,9 +118,19 @@ export async function deletePerson(id: string): Promise<Person | undefined> {
 }
 
 /** Puts a deleted person back with the same id, so the marks in the text find the person again. */
-export async function restorePerson(person: Person): Promise<void> {
-  await db.transaction('rw', db.people, db.projects, async () => {
-    await db.people.put(person);
+/**
+ * Puts a deleted person back. A real name that another person took in the meantime stays with that
+ * person, so two people never share a name. Returns the names that did not come back.
+ */
+export async function restorePerson(person: Person): Promise<string[]> {
+  return db.transaction('rw', db.people, db.projects, async () => {
+    const taken = await takenNames(person.projectId, person.id);
+    const variants = person.variants.filter((v) => !taken.has(v.real));
+    if (variants.length === 0) {
+      throw new RangeError(`Another person in this project has each name of ${person.label} now.`);
+    }
+    await db.people.put({ ...person, variants });
     await touch(person.projectId);
+    return person.variants.filter((v) => taken.has(v.real)).map((v) => v.real);
   });
 }
