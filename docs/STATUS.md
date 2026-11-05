@@ -348,7 +348,7 @@ Last update: 2026-11-04
 | 2026-11-03 | Sound: generated in the browser, plus the writer's own files.            |
 | 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.               |
 | 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.    |
-| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages. |
+| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.  |
 
 ## Spec changes
 
