@@ -34,6 +34,10 @@ export const routes: RouteObject[] = [
         path: 'p/:projectId/board',
         lazy: async () => ({ Component: (await import('@/features/board/BoardPage')).BoardPage }),
       },
+      {
+        path: 'p/:projectId/timeline',
+        lazy: async () => ({ Component: (await import('@/features/timeline/TimelinePage')).TimelinePage }),
+      },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],

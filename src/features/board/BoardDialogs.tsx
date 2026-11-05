@@ -24,7 +24,7 @@ import {
 
 const SAVE_FAILED = 'Vlo could not save this change on this device. Check the storage space and try again.';
 
-function ColorPicker({
+export function ColorPicker({
   value,
   onChange,
   legend,

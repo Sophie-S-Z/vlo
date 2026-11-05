@@ -261,6 +261,18 @@ export function ProjectPage() {
           },
         ]
       : []),
+    ...(project.template === 'memoir'
+      ? [
+          {
+            id: 'timeline',
+            label: 'Open the Memory Timeline',
+            keywords: ['timeline', 'dates', 'life stages', 'themes', 'chronology'],
+            run: () => {
+              void navigate(`/p/${project.id}/timeline`);
+            },
+          },
+        ]
+      : []),
     {
       id: 'library',
       label: 'Go to the Library',

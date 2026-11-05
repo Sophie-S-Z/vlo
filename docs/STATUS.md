@@ -324,6 +324,30 @@ Last update: 2026-11-05
     median frame of 16.7 ms on local Chromium (Review Focus 3). CI has a 25 ms ceiling for that test.
   - The board chunk is 20 KB gzip (budget 60 KB). The first load is 197 KB gzip (budget 250 KB).
 
+- Phase 3 pull request C3, part 1: Memory Timeline (plan Task C4, F16, US07).
+  - A memoir project has a Timeline tab. The track shows life stages as colored bands and memories as cards
+    at their dates, stacked when they overlap. A date is a year, a month or a day. A partial date sits at
+    the middle of its year or month.
+  - The vertical wheel moves the track sideways. Ctrl-wheel and a pinch change the scale, and the Years,
+    Months and Days buttons jump to each scale. One finger pans the track on a touch screen.
+  - A drag moves a memory to a new date, as exact as the scale: a year at Years, a month at Months, a full
+    date only at Days. Left and Right move a focused memory by one unit of the scale. Enter opens it.
+  - Undated shelf (E3): memories with no date sit under the track. A drag from the shelf onto the track
+    gives a date, and a drag onto the shelf takes it away. Near the top or bottom of the window a drag
+    scrolls the page.
+  - "Add memory" and each memory's form set the title, the date, the life stage and the themes. "Life
+    stages" adds, renames, dates, colors, orders and deletes the stages. A deleted stage leaves its memories
+    in place.
+  - By theme (US07): a column for each theme, with each memory once under each of its themes, and "No
+    theme" for the rest. The memory count stays the same. The cards move to their columns with a view
+    transition. Calm mode switches at once.
+  - List view: every memory by date, undated ones last. Under 600 px the timeline opens as the List view.
+  - Checks: unit tests for dates (parse, spans, scale units, drops, key steps, words, rows, axis marks)
+    and for the memory and life stage data. Browser tests for US07, drags on the track and to and from the
+    shelf, key steps at each scale, life stages, Calm mode, axe on all three views, and touch pan and pinch
+    at 390 px.
+  - The timeline chunk is 11 KB gzip (budget 60 KB).
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -332,8 +356,8 @@ Last update: 2026-11-05
   run it before each phase gate. Until the minutes reset, run every check in the build container before each
   push.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
-  C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
-  next.
+  C2 (Story Board, Plot Grid and List view) are in review. C3 is in progress: the Memory Timeline is built,
+  and People and private names are next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.

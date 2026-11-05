@@ -98,14 +98,14 @@ The view tabs (D5) arrive with the first view in Task C2, because a tab with no 
 
 **Files:** Create `src/features/timeline/` (`TimelinePage.tsx`, `Track.tsx`, `LifeStages.tsx`, `dates.ts`, `ThemeColumns.tsx`).
 
-- [ ] `dates.ts`: parse `YYYY`, `YYYY-MM` and `YYYY-MM-DD`, place partial dates at the middle of their span (Review Focus 5), and map dates to x at year, month and day scale.
-- [ ] Track: life stages as colored bands with names, memories as cards placed by date, stacked when they overlap. Vertical wheel moves the track sideways. Pinch and Ctrl-wheel change the scale.
-- [ ] Drag a memory to a new date. Keyboard: Left and Right move a focused memory by one unit of the current scale.
-- [ ] Life stages: add, rename, color, set start and end, reorder.
-- [ ] "By time / By theme" toggle: theme columns hold each memory once per theme, and "No theme" holds the rest. The card count text stays the same (US07).
-- [ ] E3 Undated shelf.
-- [ ] A List view with the same data, sorted by date.
-- [ ] Tests: date unit tests; US07; drag changes the date; touch at 390 px; axe.
+- [x] `dates.ts`: parse `YYYY`, `YYYY-MM` and `YYYY-MM-DD`, place partial dates at the middle of their span (Review Focus 5), and map dates to x at year, month and day scale.
+- [x] Track: life stages as colored bands with names, memories as cards placed by date, stacked when they overlap. Vertical wheel moves the track sideways. Pinch and Ctrl-wheel change the scale.
+- [x] Drag a memory to a new date. Keyboard: Left and Right move a focused memory by one unit of the current scale.
+- [x] Life stages: add, rename, color, set start and end, reorder.
+- [x] "By time / By theme" toggle: theme columns hold each memory once per theme, and "No theme" holds the rest. The card count text stays the same (US07).
+- [x] E3 Undated shelf.
+- [x] A List view with the same data, sorted by date.
+- [x] Tests: date unit tests; US07; drag changes the date; touch at 390 px; axe.
 
 ### Task C5: People and private names (F17) (pull request C3)
 

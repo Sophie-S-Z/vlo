@@ -19,7 +19,11 @@ interface Tab {
 export const GRID_VIEW = 'grid';
 
 function tabsFor(project: Project): Tab[] {
-  const write: Tab = { label: 'Write', to: '', active: (path) => !path.endsWith('/board') };
+  const write: Tab = {
+    label: 'Write',
+    to: '',
+    active: (path) => !path.endsWith('/board') && !path.endsWith('/timeline'),
+  };
   if (project.template === 'novel')
     return [
       write,
@@ -34,6 +38,8 @@ function tabsFor(project: Project): Tab[] {
         active: (path, search) => path.endsWith('/board') && search.get('view') === GRID_VIEW,
       },
     ];
+  if (project.template === 'memoir')
+    return [write, { label: 'Timeline', to: '/timeline', active: (path) => path.endsWith('/timeline') }];
   return [write];
 }
 
