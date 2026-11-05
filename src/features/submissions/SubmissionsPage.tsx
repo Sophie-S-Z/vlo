@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { openableFor } from '@/features/binder/tree';
 import { TEMPLATES } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
@@ -157,6 +158,9 @@ export function SubmissionsPage() {
     setMessage(text);
   };
 
+  /** The item that a piece title opens: a folder opens its first scene (plan Task C9). */
+  const openTarget = (id: string) => openableFor(items, id, template.editorKind);
+
   const followUps = submissions.filter((s) =>
     needsFollowUp(s, followUpDaysFor(project.settings, s.venue), today),
   ).length;
@@ -290,15 +294,18 @@ export function SubmissionsPage() {
                       {row.itemIds.map((id, i) => (
                         <span key={`${id}-${String(i)}`}>
                           {i > 0 && ', '}
-                          {titles.has(id) ? (
+                          {!titles.has(id) ? (
+                            <span className="text-muted italic">Deleted piece</span>
+                          ) : openTarget(id) ? (
                             <Link
-                              to={`/p/${project.id}?${new URLSearchParams({ item: id }).toString()}`}
+                              to={`/p/${project.id}?${new URLSearchParams({ item: openTarget(id)?.id ?? id }).toString()}`}
                               className="text-text"
                             >
                               {titles.get(id)}
                             </Link>
                           ) : (
-                            <span className="text-muted italic">Deleted piece</span>
+                            // A part or chapter with no scene in it opens nothing.
+                            titles.get(id)
                           )}
                         </span>
                       ))}

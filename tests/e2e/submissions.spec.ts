@@ -220,7 +220,8 @@ test('every template has the Submissions tab, and the command palette opens it',
     await dialog.getByRole('radio', { name: template }).click();
     await dialog.getByRole('button', { name: 'Create project' }).click();
     const tabs = page.getByRole('navigation', { name: 'Project views' }).getByRole('link');
-    await expect(tabs.last()).toHaveText('Submissions');
+    await expect(tabs.nth(-2)).toHaveText('Submissions');
+    await expect(tabs.last()).toHaveText('Progress');
     await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
   }
   await page.keyboard.press('ControlOrMeta+k');

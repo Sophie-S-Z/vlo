@@ -317,6 +317,14 @@ export function ProjectPage() {
       },
     },
     {
+      id: 'progress',
+      label: 'Open Progress',
+      keywords: ['progress', 'goal', 'streak', 'words', 'sessions', 'map', 'tiles'],
+      run: () => {
+        void navigate(`/p/${project.id}/progress`);
+      },
+    },
+    {
       id: 'library',
       label: 'Go to the Library',
       run: () => {

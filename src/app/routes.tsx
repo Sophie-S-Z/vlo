@@ -54,6 +54,10 @@ export const routes: RouteObject[] = [
           Component: (await import('@/features/submissions/SubmissionsPage')).SubmissionsPage,
         }),
       },
+      {
+        path: 'p/:projectId/progress',
+        lazy: async () => ({ Component: (await import('@/features/progress/ProgressPage')).ProgressPage }),
+      },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],

@@ -449,6 +449,27 @@ Last update: 2026-11-05
     check. Browser tests for F20 with a reload, sort, status change, edit, E4 in each theme with axe, a
     deleted piece, delete with Undo, and the tab and command on every template, at desktop and phone widths.
 
+- Phase 3 pull request C5, part 2: Progress (plan Task C9, F21).
+  - Every template has a Progress tab after Submissions, and the command menu has "Open Progress". The tab
+    row scrolls on a phone and brings the tab of the screen into view.
+  - The total words and the timer sessions count up from 0. Calm mode and reduced motion show the numbers
+    at once, and a screen reader hears the final number only.
+  - The map has one tile per item in binder order, filled by status: a dashed edge for Idea, a light accent
+    for Draft, a deeper accent for Revised and the full accent for Done. A key above it counts each status.
+    The tiles enter as a mosaic from the center. A tile opens its item, and a part or chapter opens its
+    first scene. Submissions links a part or chapter the same way.
+  - The daily goal and streak are off by default. With them on, the writer sets the words a day (500 at
+    first) and the rest days. The screen shows today's words against the goal, the streak, the best streak
+    and the last 4 weeks as a calendar, Monday first.
+  - Each save adds the change in words to the local date of that moment. A cut takes words off the same
+    day, never below 0. A met day counts. A rest day under the goal keeps the streak and adds nothing.
+    Today keeps the streak open until it ends. Days are calendar dates, so a daylight saving change never
+    makes or loses a day.
+  - Checks: unit tests for the streak rules, time zones and daylight saving changes, the day record on
+    save, the goal settings, the item that a tile opens, and the backup check. Browser tests for F21, the
+    rest day, the goal limits, a reload, the mosaic and Calm mode, the tab and command on every template,
+    and axe, at desktop and phone widths.
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -458,7 +479,7 @@ Last update: 2026-11-05
   push.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
   C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
-  built. C4 (Collection Sequencer and Craft labels) is built. C5 part 1 (Submissions) is built, and part 2 (Progress) is next.
+  built. C4 (Collection Sequencer and Craft labels) is built. C5 (Submissions and Progress) is built. Gate 3 is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -483,6 +504,10 @@ Last update: 2026-11-05
 - Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
   retry covers it.
+
+- The board test "US05: a double-click on a linked card opens its scene in under 1 s" measures with the
+  wall clock. In the build container it failed twice when two workers ran the board and view tests
+  together, and it passed 9 times out of 9 alone. CI runs one worker.
 
 - Known after the review of private names, left for later:
   - Mark all reads the stored text of each item. A word that the writer types in an open editor in the
@@ -611,3 +636,6 @@ Last update: 2026-11-05
 | 2026-11-05 | The scan uses the first CMU pronunciation for syllables and stress, and every pronunciation for rhyme.                                                                                                                                                                         | One count for each word keeps the labels steady. "Temperate" counts 2 syllables, as the dictionary's first form says.                                                                                               |
 | 2026-11-05 | The Submissions form checks its own fields (`noValidate`) and shows each refusal as words in the form.                                                                                                                                                                         | A browser bubble on a number field gives no message that a screen reader keeps, and it differs in each browser.                                                                                                     |
 | 2026-11-05 | A tinted Submissions row mixes its quiet text and accent text 25 to 30% toward the main text color.                                                                                                                                                                            | The theme muted color is 4.5:1 on the page background only. On any tint it falls under WCAG AA.                                                                                                                     |
+| 2026-11-05 | The project keeps the words of each local day in `settings.wordsByDay`, from each save.                                                                                                                                                                                        | Spec section 5 has only timer sessions, and a streak from the timer alone would miss each day the writer types with no timer. The record is about 15 bytes a day and goes in the backup.                            |
+| 2026-11-05 | A cut takes words off the day it happens, never below 0.                                                                                                                                                                                                                       | The session timer counts removed words as 0 added (Phase 1). A day that counts the same way keeps the two numbers in step.                                                                                          |
+| 2026-11-05 | The goal calendar starts each week on Monday.                                                                                                                                                                                                                                  | A rest weekend then sits together at the end of each row.                                                                                                                                                           |

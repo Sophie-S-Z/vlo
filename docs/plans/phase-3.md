@@ -150,9 +150,9 @@ The view tabs (D5) arrive with the first view in Task C2, because a tab with no 
 
 **Files:** Create `src/features/progress/` (`ProgressPage.tsx`, `Tiles.tsx`, `streaks.ts`).
 
-- [ ] One tile per item, colored by status, in binder order. Tiles enter with a mosaic stagger from the center. A tile opens its item.
-- [ ] Total words and session counts with counting numbers.
-- [ ] Goals and streaks are off by default. A daily word goal. Rest days keep a streak (`streaks.ts`, pure and unit tested across time zones and daylight saving changes).
-- [ ] Tests: streak rules; tiles match items; Calm mode shows no stagger; axe.
+- [x] One tile per item, colored by status, in binder order. Tiles enter with a mosaic stagger from the center. A tile opens its item.
+- [x] Total words and session counts with counting numbers.
+- [x] Goals and streaks are off by default. A daily word goal. Rest days keep a streak (`streaks.ts`, pure and unit tested across time zones and daylight saving changes).
+- [x] Tests: streak rules; tiles match items; Calm mode shows no stagger; axe.
 
 **Gate 3:** US05, US06, US07 and US08 pass. The private-name leak test passes for every export format. Touch pan and pinch work on the board at 390 px width. axe passes on every new route. Keystroke and open budgets still pass.

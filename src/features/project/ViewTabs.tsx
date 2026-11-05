@@ -1,10 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { Project } from '@/lib/db';
 import { cn } from '@/ui/cn';
 
 /*
- * The project's view tabs (plan decision D5): Write, then the views of the template, then Submissions.
- * Each later task adds its tab here when its screen exists (section 0, rule 8).
+ * The project's view tabs (plan decision D5): Write, then the views of the template, then Submissions and
+ * Progress. Each later task adds its tab here when its screen exists (section 0, rule 8).
  */
 
 interface Tab {
@@ -23,18 +24,19 @@ function tabsFor(project: Project): Tab[] {
     label: 'Write',
     to: '',
     active: (path) =>
-      !['/board', '/timeline', '/people', '/sequences', '/submissions'].some((end) => path.endsWith(end)),
+      !['/board', '/timeline', '/people', '/sequences', '/submissions', '/progress'].some((end) =>
+        path.endsWith(end),
+      ),
   };
-  // Every template tracks the pieces sent out (spec 8.4), so Submissions is the last tab of each.
-  const submissions: Tab = {
-    label: 'Submissions',
-    to: '/submissions',
-    active: (path) => path.endsWith('/submissions'),
-  };
-  return [write, ...viewsOf(project), submissions];
+  // Every template has Submissions and Progress (spec 8.4), after its own views.
+  const shared: Tab[] = [
+    { label: 'Submissions', to: '/submissions', active: (path) => path.endsWith('/submissions') },
+    { label: 'Progress', to: '/progress', active: (path) => path.endsWith('/progress') },
+  ];
+  return [write, ...viewsOf(project), ...shared];
 }
 
-/** The views of one template, between Write and Submissions. */
+/** The views of one template, between Write and the shared views. */
 function viewsOf(project: Project): Tab[] {
   if (project.template === 'novel')
     return [
@@ -62,18 +64,28 @@ export function ViewTabs({ project }: { project: Project }) {
   const location = useLocation();
   const tabs = tabsFor(project);
   const search = new URLSearchParams(location.search);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // On a phone the row scrolls, so bring the tab of this screen into view.
+  useEffect(() => {
+    listRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  }, [location.pathname, location.search]);
+
   return (
     <nav aria-label="Project views" className="mt-3">
-      <ul className="flex flex-wrap gap-1 border-b border-rule">
+      {/* One row that scrolls on a phone, so the active tab keeps its line on the rule. */}
+      <ul ref={listRef} className="flex gap-1 overflow-x-auto border-b border-rule [scrollbar-width:thin]">
         {tabs.map((tab) => {
           const active = tab.active(location.pathname, search);
           return (
-            <li key={tab.label}>
+            <li key={tab.label} className="shrink-0">
               <Link
                 to={`/p/${project.id}${tab.to}`}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  '-mb-px flex min-h-11 items-center border-b-2 px-3 text-sm font-medium no-underline',
+                  'flex min-h-11 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap no-underline focus-visible:outline-offset-[-2px]',
                   active ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text',
                 )}
               >

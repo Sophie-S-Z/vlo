@@ -362,6 +362,14 @@ describe('Reading a backup', () => {
       ['a wrong order', (m) => (row(m, 'items').order = ''), /has a wrong order/],
       ['a wrong kind', (m) => (row(m, 'items').kind = 'script'), /has a wrong kind/],
       ['a wrong Craft switch', (m) => (row(m, 'items').craft = 'yes'), /has a wrong Craft switch/],
+      [
+        'a wrong day of words',
+        (m) => {
+          const project = m.project as { settings: Record<string, unknown> };
+          project.settings.wordsByDay = { '5 November': 300 };
+        },
+        /The project settings are wrong/,
+      ],
       ['a missing project', (m) => (m.project = null), /It has no project/],
       ['a snapshot of no item', (m) => (row(m, 'snapshots').itemId = 'gone'), /A snapshot has no item/],
     ];

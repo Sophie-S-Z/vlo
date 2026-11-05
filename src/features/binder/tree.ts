@@ -194,3 +194,23 @@ export function outdentTarget(
   const order = orderBetween(parent.item.order, after?.item.order ?? null);
   return { parentId: parent.parentId, order, depth: parent.depth };
 }
+
+/**
+ * The item that opens for `id`: the item itself when it has an editor, or else its first descendant that
+ * has one. A part or chapter with no scene in it opens nothing.
+ */
+export function openableFor(
+  items: readonly Item[],
+  id: string,
+  editorKind: (kind: ItemKind) => 'prose' | 'poem' | null,
+): Item | undefined {
+  const flat = flattenTree(items);
+  const at = flat.findIndex((node) => node.item.id === id);
+  const start = flat[at];
+  if (!start) return undefined;
+  for (const node of flat.slice(at)) {
+    if (node !== start && node.depth <= start.depth) return undefined;
+    if (editorKind(node.item.kind) !== null) return node.item;
+  }
+  return undefined;
+}

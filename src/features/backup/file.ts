@@ -152,6 +152,21 @@ function checkProject(value: unknown): Project {
   if (!Array.isArray(settings.restDays) || !settings.restDays.every((d) => typeof d === 'number'))
     fail(`${DAMAGED} The project settings are wrong.`);
   for (const key of ['font', 'page', 'scene']) optionalText(settings, key, 'The project settings');
+  const byDay = settings.wordsByDay;
+  if (
+    byDay !== undefined &&
+    !(
+      isObject(byDay) &&
+      Object.entries(byDay).every(
+        ([day, words]) =>
+          /^\d{4}-\d{2}-\d{2}$/.test(day) &&
+          typeof words === 'number' &&
+          Number.isInteger(words) &&
+          words > 0,
+      )
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
   const followUp = settings.followUpDays;
   if (
     followUp !== undefined &&
