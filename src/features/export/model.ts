@@ -29,8 +29,11 @@ export interface RunStyle {
 }
 
 export type Run =
-  /** `person` is the id of the person when the text is a marked private name. */
-  | { type: 'text'; text: string; style: RunStyle; person?: string }
+  /**
+   * `person` is the id of the person when the text is a marked private name. `ai` names the provider and
+   * the model when the text carries the aiOrigin mark.
+   */
+  | { type: 'text'; text: string; style: RunStyle; person?: string; ai?: string }
   | { type: 'break' }
   | { type: 'math'; latex: string; style: RunStyle }
   | { type: 'footnote'; number: number; note: NoteContent };

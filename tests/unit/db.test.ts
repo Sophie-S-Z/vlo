@@ -37,9 +37,9 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 3 has the Phase 1 tables, the music files table and the template view tables', () => {
+  test('version 4 has the Phase 1 tables, the music files table, the template view tables and the network log', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(4);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
@@ -48,6 +48,7 @@ describe('Vlo database', () => {
       'itemTexts',
       'items',
       'lifeStages',
+      'networkLog',
       'people',
       'projects',
       'sequences',
@@ -76,7 +77,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(3);
+    expect(upgraded.verno).toBe(4);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     await upgraded.audioFiles.add({
@@ -120,7 +121,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(3);
+    expect(upgraded.verno).toBe(4);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);

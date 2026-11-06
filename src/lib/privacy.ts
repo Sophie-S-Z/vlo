@@ -227,9 +227,9 @@ function piecesOf(group: readonly TextRun[], lookup: Lookup): Piece[] {
   return pieces;
 }
 
-/** A text run without the person id, which no file format needs. */
+/** A text run without the person id, which no file format needs. The AI mark stays for provenance. */
 function plain(run: TextRun, text: string = run.text): TextRun {
-  return { type: 'text', text, style: run.style };
+  return { type: 'text', text, style: run.style, ...(run.ai === undefined ? {} : { ai: run.ai }) };
 }
 
 /**
@@ -322,7 +322,9 @@ function aliasGroup(group: readonly TextRun[], lookup: Lookup): TextRun[] {
       const first = piece.runs[0];
       if (!person || !first) return [];
       const alias = markedAlias(piece.runs.map((r) => r.text).join(''), person, lookup.all).text;
-      return alias === '' ? [] : [plain(first, alias)];
+      // An alias in place of AI words is still AI text on the provenance page.
+      const ai = piece.runs.find((r) => r.ai !== undefined) ?? first;
+      return alias === '' ? [] : [plain({ ...first, ...(ai.ai === undefined ? {} : { ai: ai.ai }) }, alias)];
     }),
   ).map((run) => safeLink(run, lookup.all));
 }

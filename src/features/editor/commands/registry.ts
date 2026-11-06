@@ -6,6 +6,7 @@ import {
   TextAlignEnd,
   ALargeSmall,
   AudioLines,
+  Bot,
   Asterisk,
   Baseline,
   Bold,
@@ -48,6 +49,7 @@ import type { Template } from '@/lib/db';
 import { getCraft, setCraftLabels } from '@/features/craft/craftStore';
 import { showsAliases } from '@/features/people/aliasPreview';
 import { getNames, setShowAliases } from '@/features/people/nameStore';
+import { getWritingPrefs, setWritingPrefs } from '../writingPrefs';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
@@ -737,6 +739,20 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: (e) => showsAliases(e.state),
+  },
+  {
+    kind: 'run',
+    id: 'show-ai-text',
+    label: 'Show AI text',
+    icon: Bot,
+    group: 'review',
+    forms: BOTH,
+    keywords: ['ai mark', 'co-writer', 'provenance', 'highlight ai', 'hide ai'],
+    run: () => {
+      setWritingPrefs({ showAiText: !getWritingPrefs().showAiText });
+      return true;
+    },
+    isActive: () => getWritingPrefs().showAiText,
   },
   {
     kind: 'run',

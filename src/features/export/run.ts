@@ -5,6 +5,7 @@ import { checkOwnFonts, ownFontsOf, type FontCheck, type FontSwap } from './font
 import { exportWords, type ManuscriptDetails, type ManuscriptSetup } from './manuscript';
 import type { ExportDoc } from './model';
 import { exportNotices, type ExportFormat } from './notices';
+import { provenanceSection } from './provenance';
 import type { LoadFile } from './pdf/fonts';
 
 /*
@@ -22,6 +23,8 @@ export interface ExportRequest extends Omit<BuildInput, 'updates'> {
   shareSafe: boolean;
   /** Standard manuscript format, with the writer's details. Only a novel in Word or PDF uses it. */
   manuscript?: ManuscriptDetails;
+  /** Adds the AI provenance page (F26) as the last section, dated at this time in milliseconds. */
+  provenance?: { at: number };
 }
 
 export interface ExportFile {
@@ -69,12 +72,16 @@ export interface PreparedExport {
 /** Builds the export tree and lists the own fonts that the file needs. */
 export function prepareExport(request: ExportRequest): PreparedExport {
   const built = buildExportDoc({ ...request, updates: new Map(request.updates) });
-  const doc = shareSafe(built, request.people, request.shareSafe);
+  const safe = shareSafe(built, request.people, request.shareSafe);
   const names = request.shareSafe ? nameCheck(built, request.people) : { unmarked: [], changed: [] };
+  // The word count of standard manuscript format counts the writer's text, not the report page.
   const manuscript =
     usesManuscript(request) && request.manuscript
-      ? { ...request.manuscript, words: exportWords(doc) }
+      ? { ...request.manuscript, words: exportWords(safe) }
       : undefined;
+  const doc = request.provenance
+    ? { ...safe, sections: [...safe.sections, provenanceSection(safe, new Date(request.provenance.at))] }
+    : safe;
   let ownFonts: string[] = [];
   if (embedsFonts(request.format)) {
     // Standard manuscript format sets every word in one font: the typewriter font or the project font.

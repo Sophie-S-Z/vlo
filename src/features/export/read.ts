@@ -6,6 +6,7 @@ import { cleanLatex } from '@/features/editor/format/math';
 import { parseNote } from '@/features/editor/format/notes';
 import { resolveColor } from '@/features/editor/format/palette';
 import { personIdOf, PRIVATE_NAME } from '@/features/people/markName';
+import { AI_ORIGIN, aiLabelOf } from '@/features/editor/format/aiOrigin';
 import { YFRAGMENT } from '@/lib/ydocs';
 import type { Align, Block, ExportForm, PoemLine, Run, RunStyle } from './model';
 
@@ -177,16 +178,24 @@ function personOf(marks: JSONContent['marks']): string | null {
   return mark ? personIdOf(mark.attrs) : null;
 }
 
+/** The provider and model of an aiOrigin mark on the text, or null. */
+function aiOf(marks: JSONContent['marks']): string | null {
+  const mark = marks?.find((m) => m.type === AI_ORIGIN);
+  return mark ? aiLabelOf(mark.attrs ?? {}) : null;
+}
+
 function inlineRuns(content: JSONContent[] | undefined, notes: NoteCounter): Run[] {
   const runs: Run[] = [];
   for (const node of content ?? []) {
     if (node.type === 'text' && typeof node.text === 'string' && node.text !== '') {
       const person = personOf(node.marks);
+      const ai = aiOf(node.marks);
       runs.push({
         type: 'text',
         text: node.text,
         style: styleOf(node.marks),
         ...(person === null ? {} : { person }),
+        ...(ai === null ? {} : { ai }),
       });
     } else if (node.type === 'hardBreak') {
       runs.push({ type: 'break' });

@@ -34,6 +34,8 @@ export interface Project {
     followUpDays?: Record<string, number>;
     /** Net words added on each local day, by the date as YYYY-MM-DD, for goals and streaks (F21). */
     wordsByDay?: Record<string, number>;
+    /** The time of the first Co-writer insert, so each export offers the AI provenance page (F26). */
+    aiInsertedAt?: number;
   };
 }
 
@@ -189,6 +191,20 @@ export interface AudioFile {
   data: ArrayBuffer | Blob;
 }
 
+/** Why a request left the app (spec section 5). */
+export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage';
+
+/** One request that left the app's origin (spec section 5, F25). It never holds a key, a header or a body. */
+export interface NetworkLogEntry {
+  id: string;
+  at: number;
+  host: string;
+  path: string;
+  purpose: NetPurpose;
+  bytesSent: number;
+  status: number | 'error';
+}
+
 /** Small app-wide values, such as the first-visit flag. */
 export interface AppMeta {
   key: string;
@@ -210,6 +226,7 @@ export class VloDb extends Dexie {
   sequences!: Table<Sequence, string>;
   people!: Table<Person, string>;
   submissions!: Table<Submission, string>;
+  networkLog!: Table<NetworkLogEntry, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -233,6 +250,8 @@ export class VloDb extends Dexie {
       people: 'id, projectId',
       submissions: 'id, projectId',
     });
+    // Version 4 (Phase 4, Task D1): the network log. A new table only, so no rows change.
+    this.version(4).stores({ networkLog: 'id, at' });
   }
 }
 

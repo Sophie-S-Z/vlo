@@ -484,6 +484,89 @@ Last update: 2026-11-05
   - A rest day changes inside the write, so quick taps on several days keep each one.
   - The status box in a row shows the new status at once and goes back only when the save fails.
 
+- Phase 4 Task D1: network module and network log (F25, US09).
+  - Dexie version 4 adds the table `networkLog`. The upgrade keeps every row of version 3 (upgrade test).
+  - `vloFetch` sends only to the hosts on the list for each purpose, over https (http only for Ollama and
+    LM Studio on localhost). It refuses any other host before a request starts. It sends no cookie and no
+    referrer.
+  - Each request writes one log entry: host, path, purpose, bytes sent and the HTTP status, or "error". The
+    log keeps no text, key or header, and it keeps the newest 1,000 entries.
+  - `/network` shows the log newest first, with a purpose filter and "Clear log" with Undo. On a phone each
+    request is a small block. The footer link "See the network log" opens it from each screen.
+  - US09 browser test: 60 s of typing, find, an export, the views and a backup in Pen mode send no request
+    off the app, load no AI code, and the log says "0 requests.".
+
+- Phase 4 Task D2: AI mode setting, badge and dialog (F23).
+  - The mode badge ends the row of view tabs, so it shows on every project screen. Pen is quiet, Reader has
+    the accent line, and Co-writer is filled. Its button is 44 px tall.
+  - The badge icon morphs between a pen, an eye and two pens. Each icon is two closed shapes of 6 cubic
+    curves, so the morph moves point by point. Calm mode and reduced motion swap the icon at once.
+  - The mode dialog lists the three modes. A choice other than the current mode lists what will change, and
+    the switch happens only on "Switch to … mode". A memoir with aliases on says that requests carry
+    aliases.
+  - The command menu has "Change AI mode…" and, outside Pen, "Turn off AI (Pen mode)", which switches at
+    once with no confirm.
+
+- Phase 4 Task D3: engine layer and adapters (F24).
+  - One `Engine` interface streams text for each adapter: OpenAI-compatible (OpenRouter, Groq, Gemini,
+    Ollama, LM Studio), Anthropic and WebLLM. Stop ends the stream at once and keeps the words so far.
+  - Anthropic uses raw HTTP through `vloFetch` with `anthropic-dangerous-direct-browser-access`, and streams
+    only the text blocks. A refusal and an overload have their own messages.
+  - Errors: 401 and 403 say the key is wrong, 429 shows the provider's words once with no retry, a blocked
+    request says that the provider may block requests from a browser, and a local server that is off gets
+    setup help such as `OLLAMA_ORIGINS`.
+  - WebLLM 0.2.87 is its own chunk in `assets/ai-model/`, outside the install precache, with a cache-first
+    runtime cache. Each model download goes in the network log as a model download.
+- Phase 4 Task D4: keys and free-tier terms (F24, US11).
+  - A key stays in memory for the tab. "Remember on this device" stores it with AES-GCM under a key from the
+    passphrase (PBKDF2, SHA-256, 600,000 rounds). Three wrong passphrases lock it for 30 seconds.
+  - OpenRouter, Groq and Gemini show their data terms in plain words, and a key works only after the writer
+    ticks the box.
+- Phase 4 Task D5: Reader actions, the Assistant panel and the "What will be sent" drawer (F23, US10).
+  - The Assistant panel loads only outside Pen mode (15 KB gzip). It is a right column beside the text, and
+    a bottom sheet on a phone. It opens by itself on a large screen when the writer turns AI on.
+  - Reader actions: Feedback, Ask the manuscript (MiniSearch, top 8 passages under 3,000 tokens),
+    Summarize for synopsis ("Use as synopsis" writes the synopsis field), Suggest tags or themes, and the
+    continuity check.
+  - The drawer shows the exact text, the host and the tokens before each request. "Do not show this again"
+    turns it off on this device. A memoir with aliases on sends aliases, and the answer shows the real
+    names again.
+  - A Reader answer has no Insert and is no drag source (US10 browser test).
+- Phase 4 Task D6: Co-writer actions, the AI mark and the provenance page (F23, F26).
+  - Co-writer adds Continue (50 to 300 words), Rewrite selection, Three alternatives and Brainstorm.
+  - Insert puts the draft at the cursor, or in place of the words it rewrites, with the `aiOrigin` mark
+    (provider, model, time). One Undo takes out the whole draft. Text that the writer types, also inside AI
+    text, is the writer's own. A paste, a drop and a snapshot restore keep the mark.
+  - `DOC_SCHEMA` is 5, so an older build does not open a document with AI marks.
+  - "Show AI text" in More tools tints AI words with a dashed line. Clear formatting keeps the mark.
+  - The export dialog offers "Add an AI provenance page" in Co-writer mode and in each project with AI text.
+    The page gives the share of AI text for the export and for each item, and the models.
+- Phase 4 Task D7: AI policy page.
+  - `/ai-policy` states the four rules of spec section 10 with a version and a date. `docs/ai-policy.md`
+    holds the same words, and a unit test keeps the two the same. The footer links to it.
+- Phase 4 code review fixes (before the Phase 4 pull request).
+  - A memoir AI request aliases each name that the writer marked anywhere in the memoir, such as "Gran"
+    marked as Rosa, with the alias that a share-safe export prints. Vlo reads each item once, and again
+    after it changes. While the people load, or when Vlo cannot read the marks, the panel sends nothing.
+  - A share-safe export with the provenance page counts the AI mark on aliases too.
+  - A plain-text paste or a drop of the writer's own words inside AI text is the writer's. A paste or a
+    move of AI text keeps its mark. Words typed with an input method get the same rule when the
+    composition ends.
+  - A rewrite keeps the place of its words. If the writer types before them, Vlo finds the words again by
+    a single match. Each "Insert version N" replaces the version before it. If the words changed, the card
+    asks the writer to select the words to replace. After an Insert the cursor goes after the new words.
+    Before this fix, the new AI words stayed selected, and the next key replaced them.
+  - The in-browser model gets at most 1,000 tokens of other passages, and Vlo refuses a request that does
+    not fit in 3,500 tokens with its answer. The models read 4,096 tokens.
+  - "Stop loading" stops a model load, and Pen mode stops it too. WebLLM cannot stop a download in the
+    middle of a file, so the file ends and Vlo then frees the model. The fix found a second bug: the
+    download log read the last entries in a wrong way, so each in-browser model load failed at its end. A
+    unit test now loads a fake model.
+  - Change engine has the switch "Show what will be sent before each request", so a writer who chose
+    "Do not show this again" can turn the drawer back on. The drawer focuses the exact text, not Send.
+  - Focus stays in a useful place after Stop, Remove and the key dialog. "Prepare the request" waits for
+    the request before it takes a second press.
+
 ## In progress
 
 - Phase 2: every pull request merged.
@@ -523,6 +606,14 @@ Last update: 2026-11-05
   card opens its scene in under 1 s" failed twice and "a pinch over 200 cards keeps 60 frames a second"
   failed twice on the phone profile, each time with two workers running other tests beside them. Each
   passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker.
+- "Review Focus 6" in craft.spec (typing with Craft labels on a 300-line poem) fails most runs alone in the
+  build container: 3 of 4 runs with the AI mark taken out of the poem schema, and 4 of 4 with it. In each run
+  only the first key is slow (39 to 125 ms), and the other 7 keys take 10 to 37 ms. CI runs it on a quieter
+  machine.
+- Live CORS check with no key (Gate 4, plan decision P4), from the build container on 2026-11-05:
+  Anthropic and Gemini answer the browser preflight with `access-control-allow-origin` for the headers that
+  Vlo sends. The container's network allowlist blocks OpenRouter and Groq (proxy 403), so their check waits
+  for a writer's browser. Check both by hand with a key before Phase 4 ships.
 - Gate 3 in the build container: Chromium and the phone profile pass the whole browser suite. WebKit is
   not installed there, and Firefox does not run there. Run "Run workflow" on the Actions tab for all four
   browsers when the Actions minutes reset.
@@ -657,3 +748,10 @@ Last update: 2026-11-05
 | 2026-11-05 | The project keeps the words of each local day in `settings.wordsByDay`, from each save.                                                                                                                                                                                        | Spec section 5 has only timer sessions, and a streak from the timer alone would miss each day the writer types with no timer. The record is about 15 bytes a day and goes in the backup.                            |
 | 2026-11-05 | Each day keeps its net change in words, and the Progress screen floors a day at 0.                                                                                                                                                                                             | "Written today" in the editor counts the same way, so the two numbers agree. A cut and a paste of the same words add nothing.                                                                                       |
 | 2026-11-05 | The goal calendar starts each week on Monday.                                                                                                                                                                                                                                  | A rest weekend then sits together at the end of each row.                                                                                                                                                           |
+| 2026-11-05 | With no log entry, the network log names the mode of each project on the device, not only the last one.                                                                                                                                                                        | One project in Reader mode can send, so the page counts each mode. The plan named only the last project.                                                                                                            |
+| 2026-11-05 | The badge icon morph runs on `requestAnimationFrame`, not on the Web Animations API.                                                                                                                                                                                           | Plan decision P1 named the Web Animations API. Safari cannot animate the `d` of a path with it, so the morph writes each frame itself, as CountUp does. It still needs no GSAP.                                     |
+| 2026-11-05 | The AI provenance page counts characters of the writer's text. Equations, footnotes and the headings that Vlo adds do not count.                                                                                                                                               | The spec asks for "the share of AI-origin text". Characters measure a short insert inside a sentence, where words split.                                                                                            |
+| 2026-11-05 | The project records the time of its first Co-writer insert in `settings.aiInsertedAt`.                                                                                                                                                                                         | The export dialog then offers the provenance page after a switch back to Pen, with no scan of every item.                                                                                                           |
+| 2026-11-05 | On a phone the Assistant sheet opens only from its button.                                                                                                                                                                                                                     | The mode dialog says that the panel opens beside the text. On a phone a sheet covers the text, so it waits for the writer.                                                                                          |
+| 2026-11-05 | "Do not show this again" for the drawer applies to this device, for each project.                                                                                                                                                                                              | The setting is about the writer's trust in the drawer, not about one project. Each request still goes in the network log.                                                                                           |
+| 2026-11-05 | Ask the manuscript and the continuity check leave out notes.                                                                                                                                                                                                                   | Notes are research, as in exports. A question about the story should come from its text.                                                                                                                            |

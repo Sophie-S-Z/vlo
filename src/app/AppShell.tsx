@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { NavLink, Outlet, useLocation, useMatch } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useMatch } from 'react-router';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -90,11 +90,21 @@ export function AppShell() {
             width,
           )}
         >
-          <p>Your writing stays on this device.</p>
+          <p>
+            Your writing stays on this device.{' '}
+            <Link to="/network" className="underline">
+              See the network log
+            </Link>
+          </p>
           <UpdatePrompt />
-          <a href={MARKETING_URL} rel="noreferrer">
-            About Vlo
-          </a>
+          <p className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link to="/ai-policy" className="underline">
+              AI policy
+            </Link>
+            <a href={MARKETING_URL} rel="noreferrer">
+              About Vlo
+            </a>
+          </p>
         </div>
       </footer>
     </div>

@@ -602,6 +602,20 @@ html[data-calm='true'] .vlo-fill-shimmer {
   text-underline-offset: 0.2em;
 }
 
+/*
+ * AI text (F26). With "Show AI text" on, Co-writer words have a soft tint and a dashed line under them, so
+ * they differ from the dotted line of a private name. The mark stays in the text when the tint is off.
+ */
+.vlo-manuscript[data-show-ai] .vlo-ai {
+  background: color-mix(in oklab, var(--muted) 14%, transparent);
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: color-mix(in oklab, var(--muted) 70%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.28em;
+  box-decoration-break: clone;
+}
+
 /* Show aliases: the alias stands in front of the real name, which hides. The text itself does not change. */
 .vlo-manuscript .vlo-alias-real {
   display: none;
