@@ -574,6 +574,9 @@ Last update: 2026-11-05
   and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
   run it before each phase gate. Until the minutes reset, run every check in the build container before each
   push.
+- Phase 4: pull request #12 merged on 2026-11-06. The checks by hand for OpenRouter and Groq with a key,
+  the in-browser model on WebGPU, and input method typing inside AI text are still open.
+- Phase 5: the plan is `docs/plans/phase-5.md`, written on 2026-11-06 and waiting for approval.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
   C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
   built. C4 (Collection Sequencer and Craft labels) is built. C5 (Submissions and Progress) is built. Gate 3 is next.
