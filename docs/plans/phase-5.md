@@ -92,7 +92,7 @@ S2 needs no package. If you choose `@supabase/supabase-js`, it is a runtime pack
 - Produces: `newShareKey(): Promise<{ key: CryptoKey; text: string }>` (`text` is base64url of 32 raw bytes), `importShareKey(text: string): Promise<CryptoKey>`, `newOwnerToken(): string` (base64url of 32 random bytes).
 - Produces: `sealJson(value: unknown, key: CryptoKey): Promise<{ payload: string; iv: string }>` (JSON, gzip, AES-GCM with a new 12-byte IV, base64) and `openJson(sealed: { payload: string; iv: string }, key: CryptoKey): Promise<unknown>`. `openJson` throws `CryptoError('damaged')` on any failure.
 
-- [ ] Tests first: a round trip of the memoir fixture bundle; a new IV for each seal; a changed byte in the payload, in the IV or in the key fails with `CryptoError('damaged')` (Review Focus 2); a key text that is not 32 bytes fails; `newOwnerToken` gives 43 characters and two calls differ; the Phase 4 key store tests still pass after `keys.ts` uses the shared helpers.
+- [x] Tests first: a round trip of the memoir fixture bundle; a new IV for each seal; a changed byte in the payload, in the IV or in the key fails with `CryptoError('damaged')` (Review Focus 2); a key text that is not 32 bytes fails; `newOwnerToken` gives 43 characters and two calls differ; the Phase 4 key store tests still pass after `keys.ts` uses the shared helpers.
 
 ### Task E3: Share panel (F27, US06, US12) (pull request E2)
 
