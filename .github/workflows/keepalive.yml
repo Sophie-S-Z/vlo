@@ -1,0 +1,41 @@
+name: Supabase keepalive
+
+# A free Supabase project pauses after 7 days with no requests (spec section 11). This job calls the
+# ping() function every 3 days, so share links keep working. It runs only after the repository has the
+# variable SUPABASE_URL and the secret SUPABASE_ANON_KEY (docs/sharing-setup.md). The anon key is public by
+# design, and the secret keeps it out of the logs.
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    name: Ping the Supabase project
+    if: ${{ vars.SUPABASE_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call ping()
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ANON_KEY}" ]; then
+            echo "The repository secret SUPABASE_ANON_KEY is empty." >&2
+            exit 1
+          fi
+          answer=$(curl --silent --show-error --fail --max-time 30 \
+            --request POST "${SUPABASE_URL%/}/rest/v1/rpc/ping" \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            --header "Content-Type: application/json" \
+            --data '{}')
+          if [ "${answer}" != "1" ]; then
+            echo "ping() answered '${answer}', not 1." >&2
+            exit 1
+          fi
+          echo "The Supabase project answered 1."
