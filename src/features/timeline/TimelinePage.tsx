@@ -1,5 +1,5 @@
 import { CalendarRange, Plus } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { useMediaQuery } from '@/app/useMediaQuery';
@@ -19,6 +19,7 @@ import { LifeStagesDialog, MemoryDialog } from './TimelineDialogs';
 import { TimelineList } from './TimelineList';
 import { SCALE_PRESETS, Track } from './Track';
 import { useLifeStages } from './useTimeline';
+import { recordFeature } from '@/features/usage/usage';
 
 /*
  * The Memory Timeline screen (spec 8.2, plan Task C4): the track with its Undated shelf, the List view,
@@ -81,6 +82,9 @@ function Segmented<T extends string>({
 
 export function TimelinePage() {
   const { projectId = '' } = useParams();
+  useEffect(() => {
+    recordFeature('timeline');
+  }, []);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const state = useProject(projectId);

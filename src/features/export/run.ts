@@ -69,19 +69,43 @@ export interface PreparedExport {
   names: NameCheck;
 }
 
+/** What leaves the device as an export file or a share link: the writer's text and the privacy switches. */
+export type SafeTreeInput = Pick<
+  ExportRequest,
+  'project' | 'items' | 'scope' | 'updates' | 'people' | 'shareSafe' | 'provenance'
+>;
+
+export interface SafeTree {
+  /** The export tree with each private name as its alias when `shareSafe` is on, and the provenance page. */
+  doc: ExportDoc;
+  /** The writer's own words, without the provenance page. */
+  words: number;
+  /** The unmarked and changed private names, read before the aliases go in. */
+  names: NameCheck;
+}
+
+/**
+ * The export tree that an export file and a share link both send (spec sections 8.2 and 11). The order
+ * matters: the name check reads the real names, the aliases go in next, and the provenance page counts
+ * the aliased text, so the page holds no real name.
+ */
+export function safeExportTree(input: SafeTreeInput): SafeTree {
+  const built = buildExportDoc({ ...input, updates: new Map(input.updates) });
+  const names = input.shareSafe ? nameCheck(built, input.people) : { unmarked: [], changed: [] };
+  const safe = shareSafe(built, input.people, input.shareSafe);
+  const words = exportWords(safe);
+  const doc = input.provenance
+    ? { ...safe, sections: [...safe.sections, provenanceSection(safe, new Date(input.provenance.at))] }
+    : safe;
+  return { doc, words, names };
+}
+
 /** Builds the export tree and lists the own fonts that the file needs. */
 export function prepareExport(request: ExportRequest): PreparedExport {
-  const built = buildExportDoc({ ...request, updates: new Map(request.updates) });
-  const safe = shareSafe(built, request.people, request.shareSafe);
-  const names = request.shareSafe ? nameCheck(built, request.people) : { unmarked: [], changed: [] };
+  const { doc, words, names } = safeExportTree(request);
   // The word count of standard manuscript format counts the writer's text, not the report page.
   const manuscript =
-    usesManuscript(request) && request.manuscript
-      ? { ...request.manuscript, words: exportWords(safe) }
-      : undefined;
-  const doc = request.provenance
-    ? { ...safe, sections: [...safe.sections, provenanceSection(safe, new Date(request.provenance.at))] }
-    : safe;
+    usesManuscript(request) && request.manuscript ? { ...request.manuscript, words } : undefined;
   let ownFonts: string[] = [];
   if (embedsFonts(request.format)) {
     // Standard manuscript format sets every word in one font: the typewriter font or the project font.

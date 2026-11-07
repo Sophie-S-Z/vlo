@@ -193,7 +193,23 @@ describe('Backup round trip', () => {
     const extra: Item = { ...first, id: 'item-after', title: 'After', order: 'a9' };
     await db.items.add(extra);
 
+    // A share link of the project: its key and owner token live only on this device.
+    await db.shares.add({
+      id: 'link-1',
+      projectId: project.id,
+      itemIds: [first.id],
+      title: 'Scene 1',
+      createdAt: 1,
+      expiresAt: Date.now() + 86_400_000,
+      ownerToken: 'owner-token',
+      key: 'share-key',
+      revoked: false,
+      comments: [],
+      commentsReadAt: 0,
+    });
+
     await importBackup(await readBackup(bytes), 'replace');
+    expect(await db.shares.get('link-1')).toMatchObject({ ownerToken: 'owner-token', key: 'share-key' });
     expect(await db.items.get('item-after')).toBeUndefined();
     expect(await textOf(first.id)).toContain('The harbour  lights');
     expect(await textOf(first.id)).not.toContain('after the backup');
@@ -433,5 +449,36 @@ describe('Safari install steps', () => {
     expect(safariDevice({ userAgent: chromeIos, maxTouchPoints: 5, installed: false })).toBeNull();
     expect(safariDevice({ userAgent: firefoxIos, maxTouchPoints: 5, installed: false })).toBeNull();
     expect(safariDevice({ userAgent: mac, maxTouchPoints: 0, installed: true })).toBeNull();
+  });
+});
+
+describe('share links and backups (plan Task E1, Review Focus 5)', () => {
+  test('a backup holds no share key and no owner token, and an import lists no share link', async () => {
+    const { project } = await novelWithText();
+    const key = 'K'.repeat(43);
+    const ownerToken = 'T'.repeat(43);
+    await db.shares.add({
+      id: 'share-1',
+      projectId: project.id,
+      itemIds: [],
+      title: project.title,
+      createdAt: 1,
+      expiresAt: 2,
+      ownerToken,
+      key,
+      revoked: false,
+      comments: [],
+      commentsReadAt: 0,
+    });
+    const file = await backUpProject(project.id, { music: false });
+    const zip = await JSZip.loadAsync(file.bytes);
+    for (const name of Object.keys(zip.files)) {
+      const text = await zip.file(name)?.async('string');
+      expect(text ?? '').not.toContain(key);
+      expect(text ?? '').not.toContain(ownerToken);
+      expect(text ?? '').not.toContain('share-1');
+    }
+    const copyId = await importBackup(await readBackup(file.bytes), 'copy');
+    expect(await db.shares.where('projectId').equals(copyId).count()).toBe(0);
   });
 });

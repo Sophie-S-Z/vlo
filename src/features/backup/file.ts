@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
-import { TEMPLATES } from '@/features/library/templates';
+import { holdsText as templateHoldsText, TEMPLATES } from '@/features/library/templates';
 import {
   BackupError,
   checkOrder,
@@ -83,7 +83,7 @@ export function backupFileName(title: string, date: Date): string {
 
 /** True when the item kind holds text in this template. Folders hold only their children. */
 export function holdsText(project: Pick<Project, 'template'>, kind: ItemKind): boolean {
-  return TEMPLATES[project.template].editorKind(kind) !== null;
+  return templateHoldsText(project.template, kind);
 }
 
 /** A snapshot row without its Yjs bytes, which go in their own file. */

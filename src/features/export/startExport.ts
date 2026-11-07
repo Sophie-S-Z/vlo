@@ -1,6 +1,7 @@
 import { downloadBytes } from '@/lib/download';
 import type { NameCheck } from '@/lib/privacy';
-import { readItemUpdate } from '@/lib/ydocs';
+import { holdsText } from '@/features/library/templates';
+import { readItemUpdates } from '@/lib/ydocs';
 import { scopeItems } from './build';
 import { localFontName } from '@/features/editor/format/fonts';
 import type { ExportMessage, ExportResponse } from './export.worker';
@@ -12,25 +13,13 @@ import type { ExportFile, ExportRequest } from './run';
  * open, and hands the rest to the export worker.
  */
 
-/** Items read at the same time, so a long book does not open hundreds of databases at once. */
-const READ_AT_ONCE = 6;
-
 /** The stored update of each item that the export holds. */
 export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Promise<[string, Uint8Array][]> {
   const ids = scopeItems(request.items, request.scope)
     .map((n) => n.item)
-    .filter((item) => item.kind !== 'part' && item.kind !== 'chapter')
+    .filter((item) => holdsText(request.project.template, item.kind))
     .map((item) => item.id);
-  const out: [string, Uint8Array][] = [];
-  for (let i = 0; i < ids.length; i += READ_AT_ONCE) {
-    const batch = ids.slice(i, i + READ_AT_ONCE);
-    const updates = await Promise.all(batch.map(readItemUpdate));
-    batch.forEach((id, j) => {
-      const update = updates[j];
-      if (update) out.push([id, update]);
-    });
-  }
-  return out;
+  return readItemUpdates(ids);
 }
 
 /**

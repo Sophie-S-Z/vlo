@@ -1,3 +1,4 @@
+import { fromBase64, toBase64 } from '@/lib/crypto';
 import { db } from '@/lib/db';
 import type { PresetId } from './engine/presets';
 
@@ -25,19 +26,6 @@ const memory = new Map<PresetId, string>();
 const failures = new Map<PresetId, { count: number; until: number }>();
 
 const metaKey = (preset: PresetId) => `ai-key:${preset}`;
-
-function toBase64(bytes: Uint8Array): string {
-  let text = '';
-  for (const byte of bytes) text += String.fromCharCode(byte);
-  return btoa(text);
-}
-
-function fromBase64(text: string): Uint8Array<ArrayBuffer> {
-  const raw = atob(text);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
 
 async function derive(
   passphrase: string,

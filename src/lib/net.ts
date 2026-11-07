@@ -20,10 +20,26 @@ export async function appFile(path: string): Promise<Uint8Array> {
   return new Uint8Array(await response.arrayBuffer());
 }
 
+/** The Supabase project of this build (spec section 11), or '' when the build has none. */
+export function supabaseUrl(): string {
+  const value = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ?? '';
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.pathname === '/' ? url.origin : '';
+  } catch {
+    return '';
+  }
+}
+
+const supabaseHosts = (): string[] => {
+  const url = supabaseUrl();
+  return url === '' ? [] : [new URL(url).host];
+};
+
 /**
  * The hosts that each purpose may reach, with the port when it is not the default. A leading "*." allows
- * each subdomain. The CSP `connect-src` in vercel.json lists the same hosts. Sharing and usage counts
- * arrive in Phase 5, so their lists are empty and every request for them is refused.
+ * each subdomain. The CSP `connect-src` in vercel.json lists the same hosts, and a unit test checks it.
+ * Sharing and usage counts reach only the Supabase project of this build. A build with none refuses them.
  */
 export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
   ai: [
@@ -35,8 +51,8 @@ export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
     'localhost:1234',
   ],
   'model-download': ['huggingface.co', '*.huggingface.co', '*.hf.co', 'raw.githubusercontent.com'],
-  share: [],
-  usage: [],
+  share: supabaseHosts(),
+  usage: supabaseHosts(),
 };
 
 /** The most entries the log keeps. The oldest go first. */

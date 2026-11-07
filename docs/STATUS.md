@@ -574,6 +574,21 @@ Last update: 2026-11-05
   and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
   run it before each phase gate. Until the minutes reset, run every check in the build container before each
   push.
+- Phase 4: pull request #12 merged on 2026-11-06. The checks by hand for OpenRouter and Groq with a key,
+  the in-browser model on WebGPU, and input method typing inside AI text are still open.
+- Phase 5: the plan is `docs/plans/phase-5.md`, approved on 2026-11-07. E0 to E6 are built on the branch
+  `claude/project-thread-9q00v8`. Sharing stays off in each build until the Supabase project exists
+  (`docs/sharing-setup.md`, decision S1): the product owner makes it and gives the URL and the anon key.
+  Then the values go in a committed `.env`, and the host goes in the CSP in `vercel.json`.
+- Phase 5, Gate 5: a fresh security review found no critical issue. Its high findings are fixed: long quotes,
+  share records kept on Replace import, comments read before Stop sharing, and the project limits in
+  migration 0004. The minor findings are fixed too: purpose data in the seal, a size cap on opening, safe
+  MathML values, the grants and search path of each function, and clearer messages.
+- The craft labels timing test (`craft.spec.ts`, Review Focus 6) fails at times on the first keystroke in
+  the build container: 47 to 120 ms against a 50 ms limit. The main branch fails it 4 times in 5 there, so
+  Phase 5 did not cause it. The later keystrokes take 7 to 29 ms. It needs a look in Phase 6.
+- Phase 5, open by hand: a real Supabase project with the 4 migrations, a share opened on a real phone, and
+  the keepalive workflow once the Actions minutes reset.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
   C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
   built. C4 (Collection Sequencer and Craft labels) is built. C5 (Submissions and Progress) is built. Gate 3 is next.
@@ -630,26 +645,28 @@ Last update: 2026-11-05
 
 ## Decisions
 
-| Date       | Decision                                                                      |
-| ---------- | ----------------------------------------------------------------------------- |
-| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                                 |
-| 2026-11-02 | License: MIT.                                                                 |
-| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                                |
-| 2026-11-02 | Supabase project: create in Phase 5.                                          |
-| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.          |
-| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.           |
-| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.               |
-| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                          |
-| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1).      |
-| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).                    |
-| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                                  |
-| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.                   |
-| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.                   |
-| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.                 |
-| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.                    |
-| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.         |
-| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.       |
-| 2026-11-05 | CI on pull requests: checks, export files and Chromium. All browsers by hand. |
+| Date       | Decision                                                                        |
+| ---------- | ------------------------------------------------------------------------------- |
+| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                                   |
+| 2026-11-02 | License: MIT.                                                                   |
+| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                                  |
+| 2026-11-02 | Supabase project: create in Phase 5.                                            |
+| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.            |
+| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.             |
+| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.                 |
+| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                            |
+| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1).        |
+| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).                      |
+| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                                    |
+| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.                     |
+| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.                     |
+| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.                   |
+| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.                      |
+| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.           |
+| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.         |
+| 2026-11-05 | CI on pull requests: checks, export files and Chromium. All browsers by hand.   |
+| 2026-11-07 | Phase 5 plan approved: decisions S1 to S8 and the PGlite test package.          |
+| 2026-11-07 | Share links are sealed in the browser, with the key in the fragment (ADR 0004). |
 
 ## Spec changes
 
@@ -755,3 +772,9 @@ Last update: 2026-11-05
 | 2026-11-05 | On a phone the Assistant sheet opens only from its button.                                                                                                                                                                                                                     | The mode dialog says that the panel opens beside the text. On a phone a sheet covers the text, so it waits for the writer.                                                                                          |
 | 2026-11-05 | "Do not show this again" for the drawer applies to this device, for each project.                                                                                                                                                                                              | The setting is about the writer's trust in the drawer, not about one project. Each request still goes in the network log.                                                                                           |
 | 2026-11-05 | Ask the manuscript and the continuity check leave out notes.                                                                                                                                                                                                                   | Notes are research, as in exports. A question about the story should come from its text.                                                                                                                            |
+| 2026-11-07 | Vlo calls the Supabase functions through PostgREST with `vloFetch`. It has no supabase-js.                                                                                                                                                                                     | Each call goes in the network log, and the reader view loads no client library (plan decision S2).                                                                                                                  |
+| 2026-11-07 | The share bundle is a reader schema made from the export tree, not `ExportSection` itself. It drops fonts, colors and fills, and each equation goes as a MathML tree.                                                                                                          | The reader view has less to check, and it never loads MathLive or parses markup (Review Focus 1).                                                                                                                   |
+| 2026-11-07 | `ShareRecord` adds `title`, `comments` and `commentsReadAt`.                                                                                                                                                                                                                   | The Share panel lists each link by its title and keeps the comments it read.                                                                                                                                        |
+| 2026-11-07 | The Supabase URL and anon key go in a committed `.env`, and the host goes in `vercel.json` by hand. `vite preview` adds the build's host to the CSP.                                                                                                                           | Vercel headers are static. A unit test checks that the CSP lists exactly the network module's hosts.                                                                                                                |
+| 2026-11-07 | `ai_mode_counts` counts AI requests by mode.                                                                                                                                                                                                                                   | The spec names the key only. Requests by mode show which modes writers use.                                                                                                                                         |
+| 2026-11-07 | A usage report covers the last full ISO week, in local time, and the Library asks only when that week has writing or counts.                                                                                                                                                   | A report of an empty week tells nothing, and the prompt would come every week.                                                                                                                                      |

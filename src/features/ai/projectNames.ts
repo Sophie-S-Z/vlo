@@ -1,7 +1,7 @@
 import type { JSONContent } from '@tiptap/core';
 import { updateToJson } from '@/features/export/read';
 import type { Item } from '@/lib/db';
-import { readItemUpdate } from '@/lib/ydocs';
+import { readItemUpdates } from '@/lib/ydocs';
 import { markedNamesIn, type MarkedName } from './names';
 
 /*
@@ -24,17 +24,12 @@ export async function projectMarkedNames(
 ): Promise<MarkedName[]> {
   const out: MarkedName[] = open ? markedNamesIn(open.doc) : [];
   const rest = items.filter((item) => item.id !== open?.id);
-  const lists = await Promise.all(
-    rest.map(async (item) => {
-      const stamp = stampOf(item);
-      const hit = cache.get(item.id);
-      if (hit?.stamp === stamp) return hit.names;
-      const names = markedNamesIn(updateToJson(await readItemUpdate(item.id)));
-      cache.set(item.id, { stamp, names });
-      return names;
-    }),
-  );
-  for (const list of lists) out.push(...list);
+  const stale = rest.filter((item) => cache.get(item.id)?.stamp !== stampOf(item));
+  for (const [id, update] of await readItemUpdates(stale.map((item) => item.id))) {
+    const item = stale.find((i) => i.id === id);
+    if (item) cache.set(id, { stamp: stampOf(item), names: markedNamesIn(updateToJson(update)) });
+  }
+  for (const item of rest) out.push(...(cache.get(item.id)?.names ?? []));
   return out;
 }
 

@@ -12,6 +12,7 @@ import {
 import { Button } from '@/ui/button';
 import type { Backup } from './file';
 import type { ImportMode } from './backup';
+import { recordError, recordFeature } from '@/features/usage/usage';
 
 /*
  * Import a backup (spec section 9, plan Task B8). A backup of a project that is not on this device goes in
@@ -39,9 +40,11 @@ export function ImportBackup() {
     try {
       const { importBackup } = await import('./backup');
       const id = await importBackup(backup, mode);
+      recordFeature('backup-import');
       setStatus({ step: 'idle' });
       void navigate(`/p/${id}`);
     } catch {
+      recordError('backup-import-failed');
       setStatus({
         step: 'error',
         message:

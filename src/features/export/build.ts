@@ -16,7 +16,10 @@ export type ExportScope =
   | { kind: 'item'; itemId: string }
   | { kind: 'folder'; itemId: string }
   | { kind: 'project' }
-  /** A named order of poems (E2): the poems in that order, under the order's name. */
+  /**
+   * A named order of poems (E2): the poems in that order, under the order's name. A share link (E3) picks
+   * items with an empty name, and the project title names the export.
+   */
   | { kind: 'sequence'; name: string; itemIds: readonly string[] };
 
 /** The items an export holds, in binder order, with their depth under the scope. */
@@ -113,7 +116,9 @@ export function buildExportDoc({ project, items, scope, updates }: BuildInput): 
   const scoped =
     scope.kind === 'project' || scope.kind === 'sequence' ? null : items.find((i) => i.id === scope.itemId);
   const title =
-    scope.kind === 'sequence' ? `${project.title}, ${scope.name}` : (scoped?.title ?? project.title);
+    scope.kind === 'sequence' && scope.name !== ''
+      ? `${project.title}, ${scope.name}`
+      : (scoped?.title ?? project.title);
   return {
     title,
     ...(project.authorName ? { author: project.authorName } : {}),

@@ -107,6 +107,23 @@ export async function readItemUpdate(itemId: string): Promise<Uint8Array> {
   }
 }
 
+/** Item databases opened at the same time, so a long book does not open hundreds at once. */
+export const READ_AT_ONCE = 6;
+
+/** The stored text of each item, as one Yjs update each, in the order of `itemIds`. */
+export async function readItemUpdates(itemIds: readonly string[]): Promise<[string, Uint8Array][]> {
+  const out: [string, Uint8Array][] = [];
+  for (let i = 0; i < itemIds.length; i += READ_AT_ONCE) {
+    const batch = itemIds.slice(i, i + READ_AT_ONCE);
+    const updates = await Promise.all(batch.map(readItemUpdate));
+    batch.forEach((id, j) => {
+      const update = updates[j];
+      if (update) out.push([id, update]);
+    });
+  }
+  return out;
+}
+
 /** Stores a Yjs update as an item's text, and resolves when IndexedDB holds it. */
 export async function writeItemUpdate(itemId: string, update: Uint8Array, now: number): Promise<void> {
   const open = openItemDoc(itemId);

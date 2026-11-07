@@ -2,7 +2,7 @@ import { clock } from '@/lib/clock';
 import { db, readViewRows, viewTables, type Item, type Project } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
-import { readItemUpdate, writeItemUpdate } from '@/lib/ydocs';
+import { READ_AT_ONCE, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
 import { remapNameMarks } from '@/features/people/markAll';
 import { copyViews } from './views';
@@ -14,13 +14,10 @@ import { backupFileName, holdsText, readBackup, writeBackup, type Backup, type B
  * one transaction, so a failed import leaves no half project in the Library.
  */
 
-/** Item databases opened at the same time, so a long book does not open hundreds at once. */
-const AT_ONCE = 6;
-
 async function inBatches<T, R>(values: readonly T[], run: (value: T) => Promise<R>): Promise<R[]> {
   const out: R[] = [];
-  for (let i = 0; i < values.length; i += AT_ONCE)
-    out.push(...(await Promise.all(values.slice(i, i + AT_ONCE).map(run))));
+  for (let i = 0; i < values.length; i += READ_AT_ONCE)
+    out.push(...(await Promise.all(values.slice(i, i + READ_AT_ONCE).map(run))));
   return out;
 }
 
@@ -42,10 +39,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
   if (!rows.project) throw new Error('The project is not on this device.');
   const project = rows.project;
   const textItems = rows.items.filter((item) => holdsText(project, item.kind));
-  const updates = await inBatches(
-    textItems,
-    async (item) => [item.id, await readItemUpdate(item.id)] as const,
-  );
+  const updates = await readItemUpdates(textItems.map((item) => item.id));
   const music = await Promise.all(
     rows.music.map(async ({ data, ...info }): Promise<BackupMusic> => ({
       info,
@@ -133,7 +127,7 @@ function asCopy(backup: Backup): Backup {
 /** Stores a checked backup. Returns the id of the project in the Library. */
 export async function importBackup(source: Backup, mode: ImportMode): Promise<string> {
   const backup = mode === 'copy' ? asCopy(source) : source;
-  if (mode === 'replace') await deleteProject(backup.project.id);
+  if (mode === 'replace') await deleteProject(backup.project.id, { keepShares: true });
   const now = clock.now();
   const written: string[] = [];
   try {
