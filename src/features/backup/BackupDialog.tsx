@@ -6,6 +6,7 @@ import { downloadBytes } from '@/lib/download';
 import { Button } from '@/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Switch } from '@/ui/switch';
+import { recordFeature } from '@/features/usage/usage';
 
 /*
  * The backup dialog (spec section 9, plan Task B8): one file with the whole project, and the writer's
@@ -43,6 +44,7 @@ export function BackupDialog({ project, onClose }: BackupDialogProps) {
       const { backUpProject } = await import('./backup');
       const file = await backUpProject(projectId, { music: music && files.length > 0 });
       downloadBytes(file.name, 'application/zip', file.bytes);
+      recordFeature('backup');
       setStatus({ step: 'done', ...file });
     } catch {
       setStatus({ step: 'error' });

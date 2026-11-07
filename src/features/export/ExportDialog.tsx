@@ -21,6 +21,7 @@ import type { FontSwap } from './fontCheck';
 import type { ExportFormat } from './notices';
 import type { ExportFile, ExportRequest } from './run';
 import { ExportJob, readOwnFonts, saveFile } from './startExport';
+import { recordError, recordFeature } from '@/features/usage/usage';
 
 /*
  * The export dialog (plan Task B2): the format, what the file holds, standard manuscript format for a
@@ -177,8 +178,10 @@ export function ExportDialog({
     try {
       const file = await job.make();
       saveFile(file);
+      recordFeature(`export-${chosen}`);
       setStatus({ step: 'done', file, format: chosen });
     } catch {
+      recordError('export-failed');
       setStatus({ step: 'failed' });
     } finally {
       if (jobRef.current === job) closeJob();

@@ -19,6 +19,7 @@ import { ProjectCard, type LibraryLayout } from './ProjectCard';
 import { RenameDialog } from './RenameDialog';
 import { useLibrary } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { WeeklyReport } from '@/features/usage/WeeklyReport';
 
 const LAYOUT_KEY = 'vlo:libraryLayout';
 
@@ -91,6 +92,8 @@ export function LibraryPage() {
           <NewProjectDialog />
         </div>
       </div>
+
+      <WeeklyReport />
 
       {due.length > 0 && (
         <section

@@ -9,6 +9,7 @@ import { FolderSave } from '@/features/backup/FolderSave';
 import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { UsageSettings } from '@/features/usage/UsageSettings';
 
 const THEME_LABELS: Record<ThemeChoice, string> = {
   system: 'System',
@@ -185,6 +186,10 @@ export function SettingsPage() {
           </p>
           <FolderSave />
           <SafariSteps closable={false} className="mt-4" />
+        </Section>
+
+        <Section title="Usage counts">
+          <UsageSettings />
         </Section>
       </div>
     </div>

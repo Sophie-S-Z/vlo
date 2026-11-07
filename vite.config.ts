@@ -43,7 +43,13 @@ function isWritingFont(name: string): boolean {
   return /\.(woff2?)$/.test(name) && !APP_FONT.test(name);
 }
 
+/** The app version from package.json, for the usage report (plan Task E5). */
+const VERSION = (
+  JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
+).version;
+
 export default defineConfig({
+  define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(VERSION) },
   plugins: [
     react(),
     tailwindcss(),

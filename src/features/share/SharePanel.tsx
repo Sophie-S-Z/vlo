@@ -24,6 +24,7 @@ import {
   type ExpiryDays,
   type PreparedShare,
 } from './share';
+import { recordError, recordFeature } from '@/features/usage/usage';
 
 /*
  * The Share panel (spec section 11, plan Task E3): pick items and an expiry, create a read-and-comment
@@ -306,8 +307,10 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId, 
     setError(null);
     try {
       const record = await createShare(prepared, project.id, days);
+      recordFeature('share-create');
       if (mounted.current) setStatus({ step: 'created', record });
     } catch (problem) {
+      recordError('share-failed');
       if (!mounted.current) return;
       setError(errorText(problem));
       setStatus({ step: 'choose' });

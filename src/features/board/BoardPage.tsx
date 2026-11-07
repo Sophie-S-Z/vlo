@@ -19,6 +19,7 @@ import type { CardActions } from './CardMenu';
 import { CARD_HEIGHT, CARD_WIDTH, GRID, snap, toBoard, type Size, type View } from './geometry';
 import { PlotGridView } from './PlotGridView';
 import { FROM_CARD, useBoard } from './useBoard';
+import { recordFeature } from '@/features/usage/usage';
 
 /*
  * The Story Board screen (spec 8.1, plan Tasks C2 and C3): the canvas, its List view and the Plot Grid.
@@ -41,6 +42,9 @@ function modeOf(value: string | null, small: boolean): Mode {
 
 export function BoardPage() {
   const { projectId = '' } = useParams();
+  useEffect(() => {
+    recordFeature('board');
+  }, []);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const state = useProject(projectId);

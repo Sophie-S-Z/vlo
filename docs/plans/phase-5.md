@@ -133,9 +133,9 @@ S2 needs no package. If you choose `@supabase/supabase-js`, it is a runtime pack
 - Produces: `recordFeature(name: FeatureName): void` and `recordError(code: ErrorCode): void`, which add to this week's local counts in `appMeta` (they do nothing while usage counts are off), and `weeklyReport(now: number): UsageReport | null`.
 - Produces: `FeatureName` (a fixed list, such as `export-docx`, `snapshot-restore`, `focus-mode`, `share-create`, `board`, `timeline`) and `ErrorCode` (a fixed list, such as `export-failed`, `storage-full`, `backup-import-failed`, `share-failed`). Names come from these lists only, never from the writer's text.
 
-- [ ] `weeklyReport` builds `{ templates_used, words_added_band, poems_added_band, features_used, ai_mode_counts, error_codes }` from `sessions`, the projects and the local counts of the last full ISO week. Bands as the spec says.
-- [ ] S6: the Settings switch, the consent dialog, the weekly prompt in the Library with the exact JSON, "Send" and "Skip this week". A send calls `submit_usage` with purpose `usage`. A switch-off clears the local counts.
-- [ ] Tests: each band edge (0, 1, 249, 250, 999, 1000, 4999, 5000); a report of the fixture library holds no title, name or word of text (a scan for each title and each word over 3 letters); a report stays under 4 KB with every feature and error code; with the switch off, no request and no prompt; the sent body is the shown JSON; axe.
+- [x] `weeklyReport` builds `{ templates_used, words_added_band, poems_added_band, features_used, ai_mode_counts, error_codes }` from `sessions`, the projects and the local counts of the last full ISO week. Bands as the spec says.
+- [x] S6: the Settings switch, the consent dialog, the weekly prompt in the Library with the exact JSON, "Send" and "Skip this week". A send calls `submit_usage` with purpose `usage`. A switch-off clears the local counts.
+- [x] Tests: each band edge (0, 1, 249, 250, 999, 1000, 4999, 5000); a report of the fixture library holds no title, name or word of text (a scan for each title and each word over 3 letters); a report stays under 4 KB with every feature and error code; with the switch off, no request and no prompt; the sent body is the shown JSON; axe.
 
 ### Task E6: Free plan workflows and docs (pull request E4)
 

@@ -57,6 +57,7 @@ import {
 import { passagesOf, type Source } from './retrieve';
 import { SendDrawer } from './SendDrawer';
 import { DEFAULT_ENGINE, drawerOff, loadEngineChoice, setDrawerOff, type EngineChoice } from './settings';
+import { recordAiRequest } from '@/features/usage/usage';
 
 /*
  * The Assistant panel (spec section 10, plan decision P5). It loads only outside Pen mode. Every answer
@@ -386,6 +387,7 @@ export default function AssistantPanel({
       actionRef.current?.focus();
       return;
     }
+    recordAiRequest(project.aiMode);
     const entryId = startEntry(
       project.id,
       next.request,

@@ -34,6 +34,7 @@ import { useProject } from './useProject';
 import { GRID_VIEW, ViewTabs } from './ViewTabs';
 import { setAiMode } from '@/features/ai/modes';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { recordFeature } from '@/features/usage/usage';
 
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
 const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
@@ -139,6 +140,7 @@ export function ProjectPage() {
   );
 
   const changeFocusMode = (on: boolean) => {
+    if (on) recordFeature('focus-mode');
     withViewTransition(motion, () => {
       setFocusMode(on);
     });

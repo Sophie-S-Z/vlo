@@ -9,6 +9,7 @@ import { Button } from '@/ui/button';
 import { restoreSnapshot, snapshotsOf, takeSnapshot } from './snapshots';
 import { useWordDiff } from './useWordDiff';
 import type { DiffPart } from './wordDiff';
+import { recordFeature } from '@/features/usage/usage';
 
 const CURRENT = 'current';
 const MANUAL = 'Saved by you';
@@ -112,6 +113,7 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
     setBusy(true);
     try {
       await restoreSnapshot(item, editor, doc, picked.id, kind);
+      recordFeature('snapshot-restore');
       onRestored(
         `Restored the snapshot from ${snapshotName(picked)}. The text before it is saved as a snapshot.`,
       );
