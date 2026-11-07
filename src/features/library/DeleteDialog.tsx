@@ -1,5 +1,7 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import type { Project } from '@/lib/db';
+import { shareState } from '@/features/share/state';
+import { db, type Project } from '@/lib/db';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -18,6 +20,18 @@ interface DeleteDialogProps {
 export function DeleteDialog({ project, onClose }: DeleteDialogProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const projectId = project?.id ?? null;
+  // Deleting the project removes the owner tokens, so the writer could not stop these links after it.
+  const activeLinks = useLiveQuery(
+    async () =>
+      projectId === null
+        ? 0
+        : (await db.shares.where('projectId').equals(projectId).toArray()).filter(
+            (r) => shareState(r) === 'active',
+          ).length,
+    [projectId],
+    0,
+  );
 
   async function confirm(id: string) {
     setBusy(true);
@@ -46,6 +60,16 @@ export function DeleteDialog({ project, onClose }: DeleteDialogProps) {
         <AlertDialogContent>
           <AlertDialogTitle className="[overflow-wrap:anywhere]">Delete {project.title}?</AlertDialogTitle>
           <AlertDialogDescription>This removes it from this device.</AlertDialogDescription>
+          {activeLinks > 0 && (
+            <p className="text-sm">
+              {activeLinks === 1
+                ? 'This project has 1 active share link.'
+                : `This project has ${String(activeLinks)} active share links.`}{' '}
+              Readers can open {activeLinks === 1 ? 'it' : 'them'} until{' '}
+              {activeLinks === 1 ? 'it expires' : 'they expire'}. To stop {activeLinks === 1 ? 'it' : 'them'}{' '}
+              now, cancel, open the project and choose Share, then Stop sharing.
+            </p>
+          )}
           {error !== null && (
             <p role="alert" className="text-sm text-accent-text">
               {error}

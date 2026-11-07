@@ -2,18 +2,33 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 interface VercelHeaders {
   headers: { source: string; headers: { key: string; value: string }[] }[];
 }
 
-/** The headers that Vercel sends on every path, so `vite preview` runs under the production CSP. */
-function productionHeaders(): Record<string, string> {
+/**
+ * The headers that Vercel sends on every path, so `vite preview` runs under the production CSP. A build
+ * with a Supabase project that vercel.json does not list yet, such as the fake project of the browser
+ * tests, adds its origin to connect-src, as vercel.json does for the real project (plan Task E1).
+ */
+function productionHeaders(supabase: string): Record<string, string> {
   const config = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')) as VercelHeaders;
   const all = config.headers.find((h) => h.source === '/(.*)');
-  return Object.fromEntries((all?.headers ?? []).map((h) => [h.key, h.value]));
+  const headers = Object.fromEntries((all?.headers ?? []).map((h) => [h.key, h.value]));
+  const csp = headers['Content-Security-Policy'];
+  let origin = '';
+  try {
+    const url = new URL(supabase);
+    if (url.protocol === 'https:') origin = url.origin;
+  } catch {
+    origin = '';
+  }
+  if (csp && origin !== '' && !csp.includes(origin))
+    headers['Content-Security-Policy'] = csp.replace('connect-src ', `connect-src ${origin} `);
+  return headers;
 }
 
 /**
@@ -144,5 +159,9 @@ export default defineConfig({
       },
     },
   },
-  preview: { headers: productionHeaders() },
+  preview: {
+    headers: productionHeaders(
+      process.env.VITE_SUPABASE_URL ?? loadEnv('production', process.cwd(), 'VITE_').VITE_SUPABASE_URL ?? '',
+    ),
+  },
 });

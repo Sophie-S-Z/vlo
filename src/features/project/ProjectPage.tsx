@@ -1,6 +1,6 @@
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, Share2 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
@@ -40,6 +40,10 @@ const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu'))
 // The export dialog loads the first time the writer opens it. Each format's code loads in the export worker.
 const ExportDialog = lazy(async () => ({
   default: (await import('@/features/export/ExportDialog')).ExportDialog,
+}));
+// The Share panel and the export tree that it builds load the first time the writer opens it.
+const SharePanel = lazy(async () => ({
+  default: (await import('@/features/share/SharePanel')).SharePanel,
 }));
 
 // The Assistant and every AI module load only outside Pen mode (spec section 10, US09).
@@ -81,6 +85,7 @@ export function ProjectPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
   const [modeOpen, setModeOpen] = useState(false);
   const motion = useMotionAllowed();
@@ -265,11 +270,21 @@ export function ProjectPage() {
     {
       id: 'export',
       label: 'Export…',
-      keywords: ['download', 'word', 'docx', 'markdown', 'google docs', 'save as', 'share'],
+      keywords: ['download', 'word', 'docx', 'markdown', 'google docs', 'save as', 'pdf', 'epub'],
       run: () => {
         // The export dialog opens after the menu closes, so the two dialogs never hold focus at once.
         afterMenu.current = () => {
           setExportOpen(true);
+        };
+      },
+    },
+    {
+      id: 'share',
+      label: 'Share for reading…',
+      keywords: ['share', 'link', 'beta reader', 'editor', 'comments', 'feedback', 'stop sharing'],
+      run: () => {
+        afterMenu.current = () => {
+          setShareOpen(true);
         };
       },
     },
@@ -478,6 +493,16 @@ export function ProjectPage() {
                 <Download aria-hidden="true" className="size-4" />
                 <span className="max-sm:sr-only">Export</span>
               </Button>
+              <Button
+                variant="outline"
+                className="max-sm:min-w-11 max-sm:px-0"
+                onClick={() => {
+                  setShareOpen(true);
+                }}
+              >
+                <Share2 aria-hidden="true" className="size-4" />
+                <span className="max-sm:sr-only">Share</span>
+              </Button>
               <FocusControls
                 onFocusMode={() => {
                   changeFocusMode(true);
@@ -595,6 +620,18 @@ export function ProjectPage() {
             <ExportDialog
               open
               onOpenChange={setExportOpen}
+              project={project}
+              items={items}
+              currentItemId={item?.id ?? null}
+              people={people ?? []}
+            />
+          </Suspense>
+        )}
+        {shareOpen && (
+          <Suspense fallback={null}>
+            <SharePanel
+              open
+              onOpenChange={setShareOpen}
               project={project}
               items={items}
               currentItemId={item?.id ?? null}
