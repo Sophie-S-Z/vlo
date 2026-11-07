@@ -205,6 +205,43 @@ export interface NetworkLogEntry {
   status: number | 'error';
 }
 
+/** A reader's comment on a share link, after Vlo opened and checked it (spec section 11, plan S4). */
+export interface StoredComment {
+  id: string;
+  /** The section and block of the bundle that the comment is about. */
+  section: number;
+  block: number;
+  /** The first 12 words of that block, so the writer sees the place after the text changes. */
+  quote: string;
+  name?: string;
+  text: string;
+  /** When the server took the comment, in milliseconds. */
+  at: number;
+}
+
+/**
+ * One share link (spec section 5). The key and the owner token stay on this device only: no request,
+ * backup or export holds them.
+ */
+export interface ShareRecord {
+  /** The id that the server gave. */
+  id: string;
+  projectId: string;
+  itemIds: string[];
+  /** The link's title, as the reader sees it. */
+  title: string;
+  createdAt: number;
+  expiresAt: number;
+  /** Base64url of the 32-byte owner token for revoke_share. */
+  ownerToken: string;
+  /** Base64url of the 32-byte AES-GCM key. */
+  key: string;
+  revoked: boolean;
+  comments: StoredComment[];
+  /** When Vlo last read the comments, or 0. */
+  commentsReadAt: number;
+}
+
 /** Small app-wide values, such as the first-visit flag. */
 export interface AppMeta {
   key: string;
@@ -227,6 +264,7 @@ export class VloDb extends Dexie {
   people!: Table<Person, string>;
   submissions!: Table<Submission, string>;
   networkLog!: Table<NetworkLogEntry, string>;
+  shares!: Table<ShareRecord, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -252,6 +290,8 @@ export class VloDb extends Dexie {
     });
     // Version 4 (Phase 4, Task D1): the network log. A new table only, so no rows change.
     this.version(4).stores({ networkLog: 'id, at' });
+    // Version 5 (Phase 5, Task E1): the share links. A new table only, so no rows change.
+    this.version(5).stores({ shares: 'id, projectId, createdAt' });
   }
 }
 

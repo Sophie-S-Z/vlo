@@ -10,6 +10,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @dnd-kit/core | 6.3.1 | MIT | runtime |
 | @dnd-kit/sortable | 10.0.0 | MIT | runtime |
 | @dnd-kit/utilities | 3.2.2 | MIT | runtime |
+| @electric-sql/pglite | 0.5.11 | Apache-2.0 | build and test |
 | @eslint/js | 9.39.5 | MIT | build and test |
 | @floating-ui/dom | 1.8.0 | MIT | runtime |
 | @fontsource-variable/atkinson-hyperlegible-next | 5.3.0 | OFL-1.1 | runtime |
@@ -32,6 +33,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/kalam | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/spectral | 5.3.0 | OFL-1.1 | runtime |
+| @mlc-ai/web-llm | 0.2.87 | Apache-2.0 | runtime |
 | @pdf-lib/fontkit | 1.1.1 | MIT | runtime |
 | @playwright/test | 1.63.0 | Apache-2.0 | build and test |
 | @tailwindcss/vite | 4.3.3 | MIT | build and test |

@@ -435,3 +435,34 @@ describe('Safari install steps', () => {
     expect(safariDevice({ userAgent: mac, maxTouchPoints: 0, installed: true })).toBeNull();
   });
 });
+
+describe('share links and backups (plan Task E1, Review Focus 5)', () => {
+  test('a backup holds no share key and no owner token, and an import lists no share link', async () => {
+    const { project } = await novelWithText();
+    const key = 'K'.repeat(43);
+    const ownerToken = 'T'.repeat(43);
+    await db.shares.add({
+      id: 'share-1',
+      projectId: project.id,
+      itemIds: [],
+      title: project.title,
+      createdAt: 1,
+      expiresAt: 2,
+      ownerToken,
+      key,
+      revoked: false,
+      comments: [],
+      commentsReadAt: 0,
+    });
+    const file = await backUpProject(project.id, { music: false });
+    const zip = await JSZip.loadAsync(file.bytes);
+    for (const name of Object.keys(zip.files)) {
+      const text = await zip.file(name)?.async('string');
+      expect(text ?? '').not.toContain(key);
+      expect(text ?? '').not.toContain(ownerToken);
+      expect(text ?? '').not.toContain('share-1');
+    }
+    const copyId = await importBackup(await readBackup(file.bytes), 'copy');
+    expect(await db.shares.where('projectId').equals(copyId).count()).toBe(0);
+  });
+});

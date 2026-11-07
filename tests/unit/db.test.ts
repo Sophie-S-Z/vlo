@@ -37,9 +37,9 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 4 has the Phase 1 tables, the music files table, the template view tables and the network log', () => {
+  test('version 5 has the Phase 1 tables, the music, the template views, the network log and the shares', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(4);
+    expect(db.verno).toBe(5);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
@@ -53,10 +53,59 @@ describe('Vlo database', () => {
       'projects',
       'sequences',
       'sessions',
+      'shares',
       'snapshots',
       'submissions',
       'threads',
     ]);
+  });
+
+  test('opening a version 4 database keeps its network log, and adds the shares table', async () => {
+    const name = 'vlo-upgrade-test-4';
+    const old = new Dexie(name);
+    old.version(4).stores({
+      projects: 'id, updatedAt',
+      items: 'id, projectId, [projectId+parentId]',
+      snapshots: 'id, itemId, [itemId+createdAt], projectId',
+      sessions: 'id, projectId',
+      itemTexts: 'itemId, projectId',
+      appMeta: 'key',
+      audioFiles: 'id, addedAt',
+      cards: 'id, projectId, itemId',
+      threads: 'id, projectId',
+      cardLinks: 'id, projectId, fromCardId, toCardId',
+      lifeStages: 'id, projectId',
+      sequences: 'id, projectId',
+      people: 'id, projectId',
+      submissions: 'id, projectId',
+      networkLog: 'id, at',
+    });
+    await old.open();
+    await old.table('projects').add(project('kept'));
+    await old
+      .table('networkLog')
+      .add({ id: 'n1', at: 5, host: 'api.groq.com', path: '/x', purpose: 'ai', bytesSent: 3, status: 200 });
+    old.close();
+
+    const upgraded = new VloDb(name);
+    await upgraded.open();
+    expect(upgraded.verno).toBe(5);
+    expect((await upgraded.networkLog.get('n1'))?.host).toBe('api.groq.com');
+    await upgraded.shares.add({
+      id: 'sh1',
+      projectId: 'kept',
+      itemIds: ['a'],
+      title: 'Salt',
+      createdAt: 6,
+      expiresAt: 7,
+      ownerToken: 'token',
+      key: 'key',
+      revoked: false,
+      comments: [],
+      commentsReadAt: 0,
+    });
+    expect((await upgraded.shares.where('projectId').equals('kept').first())?.title).toBe('Salt');
+    await upgraded.delete();
   });
 
   test('opening a version 1 database keeps its rows and adds the music files table', async () => {
@@ -77,7 +126,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(4);
+    expect(upgraded.verno).toBe(5);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     await upgraded.audioFiles.add({
@@ -121,7 +170,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(4);
+    expect(upgraded.verno).toBe(5);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);
