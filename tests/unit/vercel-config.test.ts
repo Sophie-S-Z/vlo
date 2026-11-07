@@ -103,3 +103,28 @@ describe('vercel.json', () => {
     expect(headersFor('/sw.js')).toMatchObject({ 'Cache-Control': 'no-cache' });
   });
 });
+
+describe('the outgoing hosts (architecture review after Phase 4)', () => {
+  const connectSrc = () =>
+    (headersFor('/(.*)')['Content-Security-Policy'] ?? '')
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('connect-src '))
+      ?.split(/\s+/)
+      .slice(1) ?? [];
+
+  test('connect-src lists exactly the hosts of the network module', async () => {
+    const { HOSTS } = await import('@/lib/net');
+    const local = (host: string) => host.startsWith('localhost:');
+    const expected = Object.values(HOSTS)
+      .flat()
+      .map((host) => `${local(host) ? 'http' : 'https'}://${host}`);
+    expect([...connectSrc()].sort()).toEqual(["'self'", ...new Set(expected)].sort());
+  });
+
+  test('each AI preset goes to a host that the network module allows', async () => {
+    const { hostAllowed } = await import('@/lib/net');
+    const { PRESETS } = await import('@/features/ai/engine/presets');
+    for (const preset of Object.values(PRESETS)) expect(hostAllowed(new URL(preset.base), 'ai')).toBe(true);
+  });
+});

@@ -25,6 +25,11 @@ export interface TemplateDef {
 const proseOrFolder = (kind: ItemKind): 'prose' | 'poem' | null =>
   kind === 'part' || kind === 'chapter' ? null : kind === 'poem' ? 'poem' : 'prose';
 
+/** True when an item of `kind` has its own text. A part or a chapter is a folder and has none. */
+export function holdsText(template: Template, kind: ItemKind): boolean {
+  return TEMPLATES[template].editorKind(kind) !== null;
+}
+
 export const TEMPLATES: Record<Template, TemplateDef> = {
   novel: {
     id: 'novel',

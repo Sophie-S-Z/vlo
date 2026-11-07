@@ -64,8 +64,8 @@ S2 needs no package. If you choose `@supabase/supabase-js`, it is a runtime pack
 
 **Files:** Modify only files that the review names and that Phase 5 also changes.
 
-- [ ] Run `anthropic-skills:improve-codebase-architecture` on `src/features/export`, `src/lib/privacy.ts`, `src/lib/net.ts` and `src/features/ai`. Write the findings to `docs/architecture-review-phase-4.md`.
-- [ ] Fix the findings in the export tree, privacy and network code, each with its existing tests still passing. List the others for Phase 6 in STATUS.
+- [x] Run `anthropic-skills:improve-codebase-architecture` on `src/features/export`, `src/lib/privacy.ts`, `src/lib/net.ts` and `src/features/ai`. Write the findings to `docs/architecture-review-phase-4.md`.
+- [x] Fix the findings in the export tree, privacy and network code, each with its existing tests still passing. List the others for Phase 6 in STATUS.
 
 ### Task E1: Migrations, the RPC client and the local share records (pull request E1)
 
