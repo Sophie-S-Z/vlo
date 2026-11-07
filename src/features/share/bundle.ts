@@ -107,7 +107,7 @@ const MAX_DEPTH = 24;
 /** The most tab stops of a hanging poem line that the reader view shows. */
 export const MAX_HANGING = 20;
 
-const hangingOf = (value: number) => Math.min(MAX_HANGING, Math.max(0, Math.trunc(value)));
+const hangingOf = (value: number) => Math.min(MAX_HANGING, Math.max(0, value));
 
 // Building, on the writer's device.
 

@@ -117,12 +117,12 @@ S2 needs no package. If you choose `@supabase/supabase-js`, it is a runtime pack
 - Consumes: `parseBundle`, `importShareKey`, `openJson`, `sealJson`, `rpc`.
 - Produces: `ReaderComment { v: 1; section: number; block: number; quote: string; name?: string; text: string; at: number }` and `parseComment(value: unknown): ReaderComment | null`.
 
-- [ ] The route reads `#k=` once, then removes the fragment from the address bar with `history.replaceState`, so a screenshot or a copied URL does not show the key.
-- [ ] `ReaderText` renders each block type with React elements only. Math renders from the existing MathML converter through `DOMParser`, and only MathML element names and the attributes `display`, `mathvariant` and `stretchy` go into the page. A non-`https:` link renders as plain text (Review Focus 1).
-- [ ] States: loading; "This link expired on <date>." (US12, with the server's `expired` status); "The writer stopped sharing this link."; "This link is missing its key. Ask the writer for the whole link."; "This link holds text that Vlo cannot read." for a damaged or unchecked bundle.
-- [ ] Comments (S4): a tap on a block opens the comment form below it, with an optional name and "Send comment". Sent comments show under their block. A refusal from the server shows its reason and keeps the typed text (Review Focus 4).
-- [ ] The Share panel lists the comments of each link by item and block quote, with "Refresh comments". Each comment passes `parseComment` first.
-- [ ] Tests: US12 with a 14-day link opened on day 15 (the fake server returns `expired`); US13 at 390 px (read, comment, no account, the writer sees the comment); a crafted bundle with a `<script>` string, an `onerror` attribute string and a `javascript:` link renders as text, and the page holds no `script` element that the app did not ship; a crafted comment the same; the fragment is gone from `location.href` after load; the route loads no editor chunk and no AI chunk, and reads no project row; axe in each state and theme.
+- [x] The route reads `#k=` once, then removes the fragment from the address bar with `history.replaceState`, so a screenshot or a copied URL does not show the key.
+- [x] `ReaderText` renders each block type with React elements only. Math renders from the existing MathML converter through `DOMParser`, and only MathML element names and the attributes `display`, `mathvariant` and `stretchy` go into the page. A non-`https:` link renders as plain text (Review Focus 1).
+- [x] States: loading; "This link expired on <date>." (US12, with the server's `expired` status); "The writer stopped sharing this link."; "This link is missing its key. Ask the writer for the whole link."; "This link holds text that Vlo cannot read." for a damaged or unchecked bundle.
+- [x] Comments (S4): a tap on a block opens the comment form below it, with an optional name and "Send comment". Sent comments show under their block. A refusal from the server shows its reason and keeps the typed text (Review Focus 4).
+- [x] The Share panel lists the comments of each link by item and block quote, with "Refresh comments". Each comment passes `parseComment` first.
+- [x] Tests: US12 with a 14-day link opened on day 15 (the fake server returns `expired`); US13 at 390 px (read, comment, no account, the writer sees the comment); a crafted bundle with a `<script>` string, an `onerror` attribute string and a `javascript:` link renders as text, and the page holds no `script` element that the app did not ship; a crafted comment the same; the fragment is gone from `location.href` after load; the route loads no editor chunk and no AI chunk, and reads no project row; axe in each state and theme.
 
 ### Task E5: Opt-in usage counts (F30) (pull request E4)
 

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, RefreshCw } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { TEMPLATES } from '@/features/library/templates';
 import { markAllInProject } from '@/features/people/markAll';
@@ -9,6 +9,7 @@ import { Button } from '@/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Input } from '@/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { refreshComments } from './comments';
 import { sharingReady, ShareError } from './rpc';
 import {
   createShare,
@@ -46,10 +47,14 @@ interface SharePanelProps {
 }
 
 const date = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
-function errorText(problem: unknown): string {
+function errorText(
+  problem: unknown,
+  fallback = 'Vlo could not make the link. Check the storage space on this device and try again.',
+): string {
   if (problem instanceof ShareError || problem instanceof RangeError) return problem.message;
-  return 'Vlo could not make the link. Check the storage space on this device and try again.';
+  return fallback;
 }
 
 function stateText(record: ShareRecord): string {
@@ -110,6 +115,7 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const state = shareState(record);
   const titles = record.itemIds.map((id) => itemTitles.get(id)).filter((t) => t !== undefined);
   const ids = useId();
@@ -179,6 +185,27 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
               <CopyButton text={shareLink(record)} label={`Copy link: ${record.title}`} />
               <Button
                 type="button"
+                variant="outline"
+                disabled={refreshing}
+                onClick={() => {
+                  setRefreshing(true);
+                  setError(null);
+                  refreshComments(record).then(
+                    () => {
+                      setRefreshing(false);
+                    },
+                    (problem: unknown) => {
+                      setRefreshing(false);
+                      setError(errorText(problem, 'Vlo could not read the comments. Try again.'));
+                    },
+                  );
+                }}
+              >
+                <RefreshCw aria-hidden="true" className="size-4" />
+                {refreshing ? 'Reading comments' : 'Refresh comments'}
+              </Button>
+              <Button
+                type="button"
                 variant="ghost"
                 onClick={() => {
                   setConfirming(true);
@@ -201,6 +228,32 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
             </Button>
           )}
         </div>
+      )}
+      {(record.comments.length > 0 || record.commentsReadAt > 0) && (
+        <section aria-labelledby={`${ids}-comments`} className="grid gap-2 border-t border-rule pt-2">
+          <h4 id={`${ids}-comments`} className="text-sm font-semibold">
+            {record.comments.length === 1 ? '1 comment' : `${String(record.comments.length)} comments`}
+          </h4>
+          {record.comments.length > 0 && (
+            <ul className="grid gap-2 text-sm">
+              {record.comments.map((c) => (
+                <li key={c.id} className="grid gap-0.5 rounded-[var(--radius-card)] bg-surface px-3 py-2">
+                  {c.quote !== '' && (
+                    <span className="text-muted italic [overflow-wrap:anywhere]">On “{c.quote}”</span>
+                  )}
+                  <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{c.text}</span>
+                  <span className="text-muted">
+                    <span className="[overflow-wrap:anywhere]">{c.name ?? 'A reader'}</span>,{' '}
+                    {when.format(c.at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {record.commentsReadAt > 0 && (
+            <p className="text-xs text-muted">Checked {when.format(record.commentsReadAt)}.</p>
+          )}
+        </section>
       )}
     </li>
   );

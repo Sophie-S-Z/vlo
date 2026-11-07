@@ -20,6 +20,12 @@ async function firstVisitLoader() {
 /** The route table. Each phase adds the routes for the screens it builds (spec section 4). */
 export const routes: RouteObject[] = [
   { path: '/welcome', element: <WelcomePage />, errorElement: <RouteError /> },
+  // A share link's reader view (plan Task E4): outside the app shell and the welcome redirect.
+  {
+    path: '/r/:shareId',
+    errorElement: <RouteError />,
+    lazy: async () => ({ Component: (await import('@/features/reader/ReaderPage')).ReaderPage }),
+  },
   {
     path: '/',
     element: <AppShell />,
