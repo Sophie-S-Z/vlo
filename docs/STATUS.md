@@ -584,6 +584,9 @@ Last update: 2026-11-05
   share records kept on Replace import, comments read before Stop sharing, and the project limits in
   migration 0004. The minor findings are fixed too: purpose data in the seal, a size cap on opening, safe
   MathML values, the grants and search path of each function, and clearer messages.
+- The craft labels timing test (`craft.spec.ts`, Review Focus 6) fails at times on the first keystroke in
+  the build container: 47 to 120 ms against a 50 ms limit. The main branch fails it 4 times in 5 there, so
+  Phase 5 did not cause it. The later keystrokes take 7 to 29 ms. It needs a look in Phase 6.
 - Phase 5, open by hand: a real Supabase project with the 4 migrations, a share opened on a real phone, and
   the keepalive workflow once the Actions minutes reset.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
