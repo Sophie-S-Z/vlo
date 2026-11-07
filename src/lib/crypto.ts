@@ -3,6 +3,7 @@
  * A share bundle is JSON, gzipped with the browser's CompressionStream, then sealed with AES-GCM 256 and
  * a new 12-byte IV. The key is 32 random bytes that stay on the writer's device and in the link fragment.
  * Any failure to open a sealed value is one error, `CryptoError('damaged')`, and never a partial text.
+ * Each seal binds its purpose (a bundle or a comment) as AES-GCM additional data.
  */
 
 export class CryptoError extends Error {
@@ -78,9 +79,18 @@ export function newOwnerToken(): string {
   return toBase64Url(randomBytes(KEY_BYTES));
 }
 
+/** What a sealed value is, bound into its seal, so a comment can never open as a bundle. */
+export type SealPurpose = 'bundle' | 'comment';
+
+/** The most bytes that a sealed value may unpack to, so a crafted gzip bomb cannot crash the tab. */
+export const MAX_OPEN_BYTES: Record<SealPurpose, number> = { bundle: 64 * 1024 * 1024, comment: 64 * 1024 };
+
+const context = (purpose: SealPurpose) => new TextEncoder().encode(`vlo:${purpose}:v1`);
+
 async function streamThrough(
   bytes: Uint8Array<ArrayBuffer>,
   stream: CompressionStream | DecompressionStream,
+  limit = Infinity,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const input = new ReadableStream<Uint8Array<ArrayBuffer>>({
     start(controller) {
@@ -96,6 +106,10 @@ async function streamThrough(
     if (done) break;
     parts.push(value);
     size += value.length;
+    if (size > limit) {
+      await reader.cancel();
+      throw new CryptoError('damaged');
+    }
   }
   const out = new Uint8Array(size);
   let at = 0;
@@ -106,24 +120,33 @@ async function streamThrough(
   return out;
 }
 
-/** JSON, gzip, then AES-GCM with a new IV. */
-export async function sealJson(value: unknown, key: CryptoKey): Promise<Sealed> {
+/** JSON, gzip, then AES-GCM with a new IV. The purpose goes in as additional data. */
+export async function sealJson(value: unknown, key: CryptoKey, purpose: SealPurpose): Promise<Sealed> {
   const json = new TextEncoder().encode(JSON.stringify(value));
   const packed = await streamThrough(json, new CompressionStream('gzip'));
   const iv = randomBytes(IV_BYTES);
-  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, packed));
+  const cipher = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: context(purpose) }, key, packed),
+  );
   return { payload: toBase64(cipher), iv: toBase64(iv) };
 }
 
-/** The value from `sealJson`. Any changed byte, wrong key or damaged text throws `CryptoError('damaged')`. */
-export async function openJson(sealed: Sealed, key: CryptoKey): Promise<unknown> {
+/**
+ * The value from `sealJson` with the same purpose. Any changed byte, wrong key, other purpose, damaged
+ * text or text that unpacks past the limit throws `CryptoError('damaged')`.
+ */
+export async function openJson(sealed: Sealed, key: CryptoKey, purpose: SealPurpose): Promise<unknown> {
   try {
     const iv = fromBase64(sealed.iv);
     if (iv.length !== IV_BYTES) throw new CryptoError('damaged');
     const packed = new Uint8Array(
-      await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, fromBase64(sealed.payload)),
+      await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv, additionalData: context(purpose) },
+        key,
+        fromBase64(sealed.payload),
+      ),
     );
-    const json = await streamThrough(packed, new DecompressionStream('gzip'));
+    const json = await streamThrough(packed, new DecompressionStream('gzip'), MAX_OPEN_BYTES[purpose]);
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(json)) as unknown;
   } catch {
     throw new CryptoError('damaged');

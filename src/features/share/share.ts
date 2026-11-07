@@ -9,6 +9,7 @@ import { db, type Item, type Project, type ShareRecord } from '@/lib/db';
 import type { NameCheck, PrivatePerson } from '@/lib/privacy';
 import { readItemUpdates } from '@/lib/ydocs';
 import { toBundle, type ShareBundle } from './bundle';
+import { refreshComments } from './comments';
 import { rpc, ShareError } from './rpc';
 import { shareState } from './state';
 
@@ -76,6 +77,11 @@ export async function prepareShare(input: ShareInput): Promise<PreparedShare> {
   return { bundle: toBundle(doc, await mathmlFor(doc), clock.now()), itemIds, names };
 }
 
+/** A size in megabytes with one decimal, such as 2.8. */
+function megabytes(chars: number): string {
+  return (Math.ceil(chars / 100_000) / 10).toFixed(1);
+}
+
 /** Seals the bundle, sends it, and keeps the link's record on this device. */
 export async function createShare(
   prepared: PreparedShare,
@@ -83,8 +89,12 @@ export async function createShare(
   days: ExpiryDays,
 ): Promise<ShareRecord> {
   const { key, text } = await newShareKey();
-  const sealed = await sealJson(prepared.bundle, key);
-  if (sealed.payload.length > MAX_PAYLOAD) throw new ShareError('too-large');
+  const sealed = await sealJson(prepared.bundle, key, 'bundle');
+  if (sealed.payload.length > MAX_PAYLOAD)
+    throw new ShareError(
+      'too-large',
+      `These items come to ${megabytes(sealed.payload.length)} MB once sealed. A link holds at most ${megabytes(MAX_PAYLOAD)} MB, so pick fewer items.`,
+    );
   const ownerToken = newOwnerToken();
   const id = await rpc<unknown>(
     'create_share',
@@ -128,13 +138,25 @@ export async function projectShares(projectId: string): Promise<ShareRecord[]> {
 }
 
 /**
- * Stops a link. Only revoke_share gets the owner token. When the server has no such link any more, the
- * link cannot be read, so it shows as stopped too.
+ * Stops a link. Only revoke_share gets the owner token. Vlo reads the link's comments first, because the
+ * server gives none after the stop. When the server says no, Vlo asks for the link's state: a link that
+ * the server still serves stays active on this device, so the writer never sees a false "Stopped".
  */
 export async function revokeShare(id: string): Promise<void> {
   const record = await db.shares.get(id);
   if (!record) return;
-  await rpc<boolean>('revoke_share', { p_id: record.id, p_owner_token: record.ownerToken }, 'share');
+  await refreshComments(record).catch(() => undefined);
+  const stopped = await rpc<unknown>(
+    'revoke_share',
+    { p_id: record.id, p_owner_token: record.ownerToken },
+    'share',
+  );
+  if (stopped !== true) {
+    const rows = await rpc<unknown>('get_share', { p_id: record.id }, 'share');
+    const row: unknown = Array.isArray(rows) ? rows[0] : undefined;
+    const status = typeof row === 'object' && row !== null ? (row as { status?: unknown }).status : undefined;
+    if (status === 'ok') throw new ShareError('server');
+  }
   await db.shares.update(id, { revoked: true });
 }
 

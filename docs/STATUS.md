@@ -580,7 +580,11 @@ Last update: 2026-11-05
   `claude/project-thread-9q00v8`. Sharing stays off in each build until the Supabase project exists
   (`docs/sharing-setup.md`, decision S1): the product owner makes it and gives the URL and the anon key.
   Then the values go in a committed `.env`, and the host goes in the CSP in `vercel.json`.
-- Phase 5, open by hand: a real Supabase project with the 3 migrations, a share opened on a real phone, and
+- Phase 5, Gate 5: a fresh security review found no critical issue. Its high findings are fixed: long quotes,
+  share records kept on Replace import, comments read before Stop sharing, and the project limits in
+  migration 0004. The minor findings are fixed too: purpose data in the seal, a size cap on opening, safe
+  MathML values, the grants and search path of each function, and clearer messages.
+- Phase 5, open by hand: a real Supabase project with the 4 migrations, a share opened on a real phone, and
   the keepalive workflow once the Actions minutes reset.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
   C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is

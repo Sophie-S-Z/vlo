@@ -99,7 +99,7 @@ async function fakeSupabase(
       }
       case 'list_comments': {
         const share = fake.shares.get(String(body.p_share_id));
-        await reply(200, share && !share.revoked && share.expiresAt >= now ? share.comments : []);
+        await reply(200, share && !share.revoked ? share.comments : []);
         return;
       }
       default:
@@ -109,13 +109,16 @@ async function fakeSupabase(
   return fake;
 }
 
-/** Seals a value as Vlo does: JSON, gzip, then AES-GCM 256 with a new 12-byte IV. */
+/**
+ * Seals a value as Vlo does: JSON, gzip, then AES-GCM 256 with a new 12-byte IV. The additional data names
+ * the purpose, so a bundle cannot open as a comment.
+ */
 async function seal(value: unknown): Promise<{ key: string; payload: string; iv: string }> {
   const raw = randomBytes(32);
   const key = await webcrypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
   const iv = randomBytes(12);
   const cipher = await webcrypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv, additionalData: Buffer.from('vlo:bundle:v1') },
     key,
     gzipSync(Buffer.from(JSON.stringify(value))),
   );
@@ -217,6 +220,18 @@ test.describe('the reader view', () => {
     const add = fake.calls.find((c) => c.name === 'add_comment');
     expect(Object.keys(add?.body ?? {}).sort()).toEqual(['p_iv', 'p_payload', 'p_share_id']);
     expect(JSON.stringify(add?.body)).not.toMatch(/stop|Ines/);
+
+    // No request from the reader holds the key, in any form, in its address, headers or body.
+    const key = new URL(link).hash.slice(3);
+    const forms = [
+      key,
+      Buffer.from(key, 'base64url').toString('base64'),
+      Buffer.from(key, 'base64url').toString('hex'),
+    ];
+    for (const r of requests) {
+      const sent = [r.url(), JSON.stringify(await r.allHeaders()), r.postData() ?? ''].join('\n');
+      for (const form of forms) expect(sent).not.toContain(form);
+    }
 
     // No editor, AI, export or equation code loads for a reader.
     const loaded = scripts(requests);
@@ -342,7 +357,7 @@ test.describe('the reader view', () => {
     const aes = await webcrypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
     const iv = randomBytes(12);
     const sealed = await webcrypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
+      { name: 'AES-GCM', iv, additionalData: Buffer.from('vlo:comment:v1') },
       aes,
       gzipSync(
         Buffer.from(

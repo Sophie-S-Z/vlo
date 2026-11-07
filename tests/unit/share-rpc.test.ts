@@ -59,7 +59,10 @@ describe('rpc', () => {
       ['comment too large', 'too-large'],
       ['share unavailable', 'unavailable'],
       ['comment limit reached', 'limit'],
+      ['server busy', 'busy'],
+      ['server full', 'busy'],
       ['bad expiry', 'server'],
+      ['bad iv', 'server'],
     ] as const) {
       answer(400, { code: 'P0001', message });
       const failure = rpc('add_comment', {}, 'share');

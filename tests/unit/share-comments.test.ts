@@ -82,10 +82,14 @@ describe('sending and reading', () => {
   test('reading leaves out a comment with another key, a crafted one and a broken row', async () => {
     const { key } = await newShareKey();
     const { key: other } = await newShareKey();
-    const ok = await sealJson(good, key);
-    const later = await sealJson({ ...good, text: 'Second.', at: 9 }, key);
-    const foreign = await sealJson(good, other);
-    const crafted = await sealJson({ ...good, text: { html: '<img src=x onerror=alert(1)>' } }, key);
+    const ok = await sealJson(good, key, 'comment');
+    const later = await sealJson({ ...good, text: 'Second.', at: 9 }, key, 'comment');
+    const foreign = await sealJson(good, other, 'comment');
+    const crafted = await sealJson(
+      { ...good, text: { html: '<img src=x onerror=alert(1)>' } },
+      key,
+      'comment',
+    );
     rows = [
       { id: 'b', ...later, created_at: '2026-11-07T10:00:00Z' },
       { id: 'a', ...ok, created_at: '2026-11-07T09:00:00Z' },
@@ -102,7 +106,7 @@ describe('sending and reading', () => {
 
   test('the writer keeps the comments of a link in its record', async () => {
     const { key, text } = await newShareKey();
-    rows = [{ id: 'a', ...(await sealJson(good, key)), created_at: '2026-11-07T09:00:00Z' }];
+    rows = [{ id: 'a', ...(await sealJson(good, key, 'comment')), created_at: '2026-11-07T09:00:00Z' }];
     await m.db.shares.add({
       id: SHARE_ID,
       projectId: 'p',

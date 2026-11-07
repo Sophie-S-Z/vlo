@@ -193,7 +193,23 @@ describe('Backup round trip', () => {
     const extra: Item = { ...first, id: 'item-after', title: 'After', order: 'a9' };
     await db.items.add(extra);
 
+    // A share link of the project: its key and owner token live only on this device.
+    await db.shares.add({
+      id: 'link-1',
+      projectId: project.id,
+      itemIds: [first.id],
+      title: 'Scene 1',
+      createdAt: 1,
+      expiresAt: Date.now() + 86_400_000,
+      ownerToken: 'owner-token',
+      key: 'share-key',
+      revoked: false,
+      comments: [],
+      commentsReadAt: 0,
+    });
+
     await importBackup(await readBackup(bytes), 'replace');
+    expect(await db.shares.get('link-1')).toMatchObject({ ownerToken: 'owner-token', key: 'share-key' });
     expect(await db.items.get('item-after')).toBeUndefined();
     expect(await textOf(first.id)).toContain('The harbour  lights');
     expect(await textOf(first.id)).not.toContain('after the backup');

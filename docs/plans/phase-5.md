@@ -146,3 +146,5 @@ S2 needs no package. If you choose `@supabase/supabase-js`, it is a runtime pack
 - [x] ADR 0004: client-side encryption, the key in the fragment, the bundle as the export tree, and RPC through `vloFetch` (S2).
 
 **Gate 5:** US12 and US13 pass. A test proves that the Supabase request body contains only ciphertext and never the key. A fresh review agent that has not seen the implementation runs `superpowers:requesting-code-review` as a security review of the share flow and the reader view, and every high finding is fixed. axe passes on every new screen. The open and keystroke budgets still pass, and the initial JavaScript stays under 250 KB gzip.
+
+- [x] Gate 5 security review: no critical finding. Every high and minor finding is fixed, and migration 0004 adds the project limits (`docs/sharing-setup.md`, "The limits").

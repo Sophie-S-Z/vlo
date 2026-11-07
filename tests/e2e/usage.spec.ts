@@ -98,6 +98,7 @@ test('usage counts start off, ask first, and send the exact JSON that the Librar
   >;
   expect(shown).toMatchObject({ templates_used: ['novel'], words_added_band: '1000-4999' });
   expect(JSON.stringify(shown)).not.toContain('Seeded project');
+  await expect(prompt).toContainText(/with the week \(\d{4}-W\d{2}\) and the app version \(0\.1\.0\)/);
   expect(await seriousIssues(page)).toEqual([]);
   expect(calls).toHaveLength(0);
 
@@ -107,6 +108,7 @@ test('usage counts start off, ask first, and send the exact JSON that the Librar
   expect(calls.map((c) => c.name)).toEqual(['submit_usage']);
   expect(calls[0]?.body.p_report).toEqual(shown);
   expect(calls[0]?.body.p_week).toMatch(/^\d{4}-W\d{2}$/);
+  expect(calls[0]?.body.p_app_version).toBe('0.1.0');
 
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();

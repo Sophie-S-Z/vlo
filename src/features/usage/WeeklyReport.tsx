@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { ShareError, sharingReady } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
 import { Button } from '@/ui/button';
-import { handleWeek, sendReport, weeklyReport, type UsageReport } from './usage';
+import { APP_VERSION, handleWeek, sendReport, weeklyReport, type UsageReport } from './usage';
 
 /*
  * The weekly usage prompt in the Library (plan Task E5, decision S6). It shows the exact JSON that goes,
@@ -47,8 +47,8 @@ export function WeeklyReport() {
         Usage counts for last week
       </h2>
       <p className="text-sm text-muted">
-        You turned on usage counts. This is the exact text that Send gives to Vlo, for week {week}. It holds
-        no text, title or name.
+        You turned on usage counts. Send gives Vlo the exact report below, with the week ({week}) and the app
+        version ({APP_VERSION}). It holds no text, title or name.
       </p>
       <pre
         aria-label="The report"

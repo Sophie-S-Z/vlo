@@ -120,6 +120,30 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
   const state = shareState(record);
   const titles = record.itemIds.map((id) => itemTitles.get(id)).filter((t) => t !== undefined);
   const ids = useId();
+  const refresh = (
+    <Button
+      type="button"
+      variant="outline"
+      disabled={refreshing}
+      onClick={() => {
+        setRefreshing(true);
+        setError(null);
+        refreshComments(record).then(
+          () => {
+            setRefreshing(false);
+          },
+          (problem: unknown) => {
+            setRefreshing(false);
+            setError(errorText(problem, 'Vlo could not read the comments. Try again.'));
+          },
+        );
+      }}
+    >
+      <RefreshCw aria-hidden="true" className="size-4" />
+      {refreshing ? 'Reading comments' : 'Refresh comments'}
+    </Button>
+  );
+
   return (
     <li className="grid gap-2 rounded-[var(--radius-card)] border border-rule bg-bg p-3">
       <div className="grid gap-0.5">
@@ -144,7 +168,8 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
       {confirming ? (
         <div role="group" aria-labelledby={`${ids}-confirm`} className="grid gap-2">
           <p id={`${ids}-confirm`} className="text-sm">
-            Readers lose this link at once, and their comments stay on the server until it deletes the link.
+            Readers lose this link at once. Vlo reads its comments first, because the server gives none after
+            the stop.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -184,27 +209,7 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
           {state === 'active' ? (
             <>
               <CopyButton text={shareLink(record)} label={`Copy link: ${record.title}`} />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={refreshing}
-                onClick={() => {
-                  setRefreshing(true);
-                  setError(null);
-                  refreshComments(record).then(
-                    () => {
-                      setRefreshing(false);
-                    },
-                    (problem: unknown) => {
-                      setRefreshing(false);
-                      setError(errorText(problem, 'Vlo could not read the comments. Try again.'));
-                    },
-                  );
-                }}
-              >
-                <RefreshCw aria-hidden="true" className="size-4" />
-                {refreshing ? 'Reading comments' : 'Refresh comments'}
-              </Button>
+              {refresh}
               <Button
                 type="button"
                 variant="ghost"
@@ -216,17 +221,20 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
               </Button>
             </>
           ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                removeShare(record.id).catch((problem: unknown) => {
-                  setError(errorText(problem));
-                });
-              }}
-            >
-              Remove from list
-            </Button>
+            <>
+              {state === 'expired' && refresh}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  removeShare(record.id).catch((problem: unknown) => {
+                    setError(errorText(problem));
+                  });
+                }}
+              >
+                Remove from list
+              </Button>
+            </>
           )}
         </div>
       )}

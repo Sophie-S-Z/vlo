@@ -99,6 +99,30 @@ export const MATH_ATTRS: ReadonlySet<string> = new Set([
   'depth',
 ]);
 
+/** The MathML attributes that give a length. A length has at most 2 digits before the point. */
+const MATH_LENGTHS: ReadonlySet<string> = new Set([
+  'lspace',
+  'rspace',
+  'linethickness',
+  'width',
+  'height',
+  'depth',
+]);
+const LENGTH = /^-?(?:\d{1,2}(?:\.\d{1,4})?|\.\d{1,4})(?:em|ex|px|pt|mu|%)?$/;
+/** A keyword or a list of keywords, such as "true", "bold-italic" or "left center". */
+const KEYWORDS = /^[a-z]+(?:-[a-z]+)*(?: [a-z]+(?:-[a-z]+)*){0,15}$/;
+const MAX_ATTR = 120;
+
+/**
+ * True when a MathML attribute is on the list and its value is a short length or keyword list, so a
+ * crafted bundle cannot make an equation thousands of pixels wide or carry other text in an attribute.
+ */
+export function safeMathAttr(name: string, value: string): boolean {
+  if (!MATH_ATTRS.has(name) || value.length > MAX_ATTR) return false;
+  if (MATH_LENGTHS.has(name)) return LENGTH.test(value) || /^(?:thin|medium|thick)$/.test(value);
+  return KEYWORDS.test(value);
+}
+
 const ALIGNS: readonly Align[] = ['left', 'center', 'right', 'justify'];
 
 /** The most levels of nesting that a bundle may have, so a crafted bundle cannot exhaust the stack. */
@@ -148,7 +172,7 @@ const NOTE_TAGS: ReadonlySet<string> = new Set(['annotation', 'annotation-xml'])
 function cleanMath(node: MathNode, depth: number): MathNode | null {
   if (depth > MAX_DEPTH || !MATH_TAGS.has(node.tag)) return null;
   const attrs: Record<string, string> = {};
-  for (const [name, value] of Object.entries(node.attrs)) if (MATH_ATTRS.has(name)) attrs[name] = value;
+  for (const [name, value] of Object.entries(node.attrs)) if (safeMathAttr(name, value)) attrs[name] = value;
   const children: MathNode[] = [];
   for (const child of node.children) {
     if (NOTE_TAGS.has(child.tag)) continue;
@@ -289,7 +313,7 @@ function math(value: unknown, depth: number): MathNode {
   const attrs: Record<string, string> = {};
   for (const [name, attr] of Object.entries(value.attrs)) {
     if (!isStr(attr)) fail();
-    if (MATH_ATTRS.has(name)) attrs[name] = attr;
+    if (safeMathAttr(name, attr)) attrs[name] = attr;
   }
   return {
     tag: value.tag,
@@ -390,7 +414,10 @@ export function runsText(runs: readonly ShareRun[]): string {
     .trim();
 }
 
-/** The first 12 words of a block, for the place of a comment. */
+/** The longest block quote, in UTF-16 units, that a comment holds. */
+export const MAX_QUOTE = 200;
+
+/** The first 12 words of a block, for the place of a comment, at most MAX_QUOTE long. */
 export function blockQuote(item: ShareBlock): string {
   const all = (b: ShareBlock): string => {
     switch (b.type) {
@@ -409,5 +436,10 @@ export function blockQuote(item: ShareBlock): string {
         return '';
     }
   };
-  return all(item).split(/\s+/).filter(Boolean).slice(0, 12).join(' ');
+  const words = all(item).split(/\s+/).filter(Boolean).slice(0, 12).join(' ');
+  if (words.length <= MAX_QUOTE) return words;
+  // A language with no spaces, or a long address, gives long "words". The cut never splits a character.
+  let cut = words.slice(0, MAX_QUOTE - 1);
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return `${cut}…`;
 }

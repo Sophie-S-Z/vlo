@@ -127,7 +127,7 @@ function asCopy(backup: Backup): Backup {
 /** Stores a checked backup. Returns the id of the project in the Library. */
 export async function importBackup(source: Backup, mode: ImportMode): Promise<string> {
   const backup = mode === 'copy' ? asCopy(source) : source;
-  if (mode === 'replace') await deleteProject(backup.project.id);
+  if (mode === 'replace') await deleteProject(backup.project.id, { keepShares: true });
   const now = clock.now();
   const written: string[] = [];
   try {

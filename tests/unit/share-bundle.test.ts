@@ -11,6 +11,7 @@ import {
   toBundle,
   type ShareBlock,
   type ShareBundle,
+  safeMathAttr,
 } from '@/features/share/bundle';
 import type { PrivatePerson } from '@/lib/privacy';
 import { docFromUpdate } from '@/lib/ydocs';
@@ -317,6 +318,56 @@ describe('parseBundle refuses a crafted bundle', () => {
     });
   });
 
+  test('keeps a math attribute only when its value is a short length or keywords', () => {
+    const attrs = {
+      width: '0.2778em',
+      lspace: '99999em',
+      rspace: 'calc(100vw)',
+      linethickness: 'thick',
+      height: '-.5ex',
+      depth: '12px;color:red',
+      mathvariant: 'bold-italic',
+      columnalign: 'left center right',
+      stretchy: 'false" onload="x',
+      notation: 'x'.repeat(200),
+    };
+    expect(Object.entries(attrs).filter(([name, value]) => safeMathAttr(name, value))).toEqual([
+      ['width', '0.2778em'],
+      ['linethickness', 'thick'],
+      ['height', '-.5ex'],
+      ['mathvariant', 'bold-italic'],
+      ['columnalign', 'left center right'],
+    ]);
+    const value = good();
+    value.sections = [
+      {
+        title: 'S',
+        form: null,
+        blocks: [{ type: 'p', runs: [{ math: { tag: 'math', attrs, text: '', children: [] } }] }],
+      },
+    ];
+    const run = parseBundle(value)?.sections[0]?.blocks[0];
+    expect(run).toEqual({
+      type: 'p',
+      runs: [
+        {
+          math: {
+            tag: 'math',
+            attrs: {
+              width: '0.2778em',
+              linethickness: 'thick',
+              height: '-.5ex',
+              mathvariant: 'bold-italic',
+              columnalign: 'left center right',
+            },
+            text: '',
+            children: [],
+          },
+        },
+      ],
+    });
+  });
+
   test('refuses nesting deeper than the limit, and clamps a hanging indent', () => {
     let deep: unknown = { type: 'p', runs: [] };
     for (let i = 0; i < 40; i++) deep = { type: 'quote', blocks: [deep] };
@@ -361,5 +412,11 @@ describe('helpers', () => {
       }),
     ).toBe('salt year');
     expect(blockQuote({ type: 'break' })).toBe('');
+    // A language with no spaces gives one long word. The quote stays short enough for parseComment.
+    const long = '海'.repeat(500);
+    const quote = blockQuote({ type: 'p', runs: [{ t: long }] });
+    expect(quote.length).toBe(200);
+    expect(quote.endsWith('…')).toBe(true);
+    expect(blockQuote({ type: 'p', runs: [{ t: '😀'.repeat(300) }] }).length).toBeLessThanOrEqual(200);
   });
 });

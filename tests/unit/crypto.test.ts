@@ -6,6 +6,7 @@ import {
   importShareKey,
   newOwnerToken,
   newShareKey,
+  MAX_OPEN_BYTES,
   openJson,
   sealJson,
   toBase64,
@@ -62,15 +63,15 @@ describe('share keys and owner tokens', () => {
 describe('sealJson and openJson', () => {
   test('a bundle comes back the same after a seal and an open with the imported key', async () => {
     const { key, text } = await newShareKey();
-    const sealed = await sealJson(bundle, key);
+    const sealed = await sealJson(bundle, key, 'bundle');
     expect(sealed.payload).not.toContain('Kitchen');
-    expect(await openJson(sealed, await importShareKey(text))).toEqual(bundle);
+    expect(await openJson(sealed, await importShareKey(text), 'bundle')).toEqual(bundle);
   });
 
   test('each seal uses a new 12-byte IV', async () => {
     const { key } = await newShareKey();
-    const one = await sealJson(bundle, key);
-    const two = await sealJson(bundle, key);
+    const one = await sealJson(bundle, key, 'bundle');
+    const two = await sealJson(bundle, key, 'bundle');
     expect(fromBase64(one.iv)).toHaveLength(12);
     expect(one.iv).not.toBe(two.iv);
     expect(one.payload).not.toBe(two.payload);
@@ -79,22 +80,45 @@ describe('sealJson and openJson', () => {
   test('the bundle is gzipped before encryption, so a long text gets smaller', async () => {
     const { key } = await newShareKey();
     const long = { text: 'The tide came in over the stones. '.repeat(2000) };
-    const sealed = await sealJson(long, key);
+    const sealed = await sealJson(long, key, 'bundle');
     expect(sealed.payload.length).toBeLessThan(JSON.stringify(long).length / 10);
   });
 
   test('a changed byte in the payload, the IV or the key fails, and gives no text', async () => {
     const { key, text } = await newShareKey();
-    const sealed = await sealJson(bundle, key);
+    const sealed = await sealJson(bundle, key, 'bundle');
     const bytes = fromBase64(sealed.payload).length;
     for (const at of [0, Math.floor(bytes / 2), bytes - 1])
-      await expect(openJson({ ...sealed, payload: flip(sealed.payload, at) }, key)).rejects.toThrow(
+      await expect(openJson({ ...sealed, payload: flip(sealed.payload, at) }, key, 'bundle')).rejects.toThrow(
         new CryptoError('damaged'),
       );
-    await expect(openJson({ ...sealed, iv: flip(sealed.iv, 0) }, key)).rejects.toThrow(CryptoError);
+    await expect(openJson({ ...sealed, iv: flip(sealed.iv, 0) }, key, 'bundle')).rejects.toThrow(CryptoError);
     const otherKey = fromBase64Url(text);
     otherKey[0] = (otherKey[0] ?? 0) ^ 1;
-    await expect(openJson(sealed, await importShareKey(toBase64Url(otherKey)))).rejects.toThrow(CryptoError);
-    await expect(openJson({ payload: 'not base64 ***', iv: sealed.iv }, key)).rejects.toThrow(CryptoError);
+    await expect(openJson(sealed, await importShareKey(toBase64Url(otherKey)), 'bundle')).rejects.toThrow(
+      CryptoError,
+    );
+    await expect(openJson({ payload: 'not base64 ***', iv: sealed.iv }, key, 'bundle')).rejects.toThrow(
+      CryptoError,
+    );
+  });
+
+  test('a comment cannot open as a bundle, and a bundle cannot open as a comment', async () => {
+    const { key } = await newShareKey();
+    const comment = await sealJson(bundle, key, 'comment');
+    await expect(openJson(comment, key, 'bundle')).rejects.toThrow(new CryptoError('damaged'));
+    const shared = await sealJson(bundle, key, 'bundle');
+    await expect(openJson(shared, key, 'comment')).rejects.toThrow(new CryptoError('damaged'));
+  });
+
+  test('a seal that unpacks past its limit fails, so a gzip bomb cannot crash the tab', async () => {
+    const { key } = await newShareKey();
+    // About 70 KB of one letter packs to a few hundred bytes and passes the 64 KB limit of a comment.
+    const bomb = await sealJson({ text: 'a'.repeat(70_000) }, key, 'comment');
+    expect(fromBase64(bomb.payload).length).toBeLessThan(1000);
+    await expect(openJson(bomb, key, 'comment')).rejects.toThrow(new CryptoError('damaged'));
+    expect(MAX_OPEN_BYTES.comment).toBe(65_536);
+    const big = await sealJson({ text: 'a'.repeat(70_000) }, key, 'bundle');
+    expect(await openJson(big, key, 'bundle')).toEqual({ text: 'a'.repeat(70_000) });
   });
 });

@@ -104,8 +104,12 @@ export async function renameProject(id: string, title: string): Promise<void> {
   await db.projects.update(id, { title: cleanTitle(title), updatedAt: clock.now() });
 }
 
-/** Deletes a project, its rows and every item's stored text. */
-export async function deleteProject(id: string): Promise<void> {
+/**
+ * Deletes a project, its rows and every item's stored text. A Replace import keeps the project's share
+ * links (`keepShares`): it brings back the same project id, and the links' keys and owner tokens exist
+ * only on this device.
+ */
+export async function deleteProject(id: string, options: { keepShares?: boolean } = {}): Promise<void> {
   const itemIds = await db.transaction(
     'rw',
     [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.appMeta, db.shares, ...viewTables()],
@@ -118,7 +122,7 @@ export async function deleteProject(id: string): Promise<void> {
       await db.sessions.where('projectId').equals(id).delete();
       await db.itemTexts.where('projectId').equals(id).delete();
       // The keys and owner tokens of the project's links go with it. The delete dialog warns first.
-      await db.shares.where('projectId').equals(id).delete();
+      if (!options.keepShares) await db.shares.where('projectId').equals(id).delete();
       // The start of today's word count (writing stats).
       await db.appMeta.delete(dayStartKey(id));
       await db.projects.delete(id);

@@ -1,6 +1,7 @@
 import { openJson, sealJson, importShareKey } from '@/lib/crypto';
 import { db, type ShareRecord, type StoredComment } from '@/lib/db';
 import { clock } from '@/lib/clock';
+import { MAX_QUOTE } from './bundle';
 import { rpc } from './rpc';
 
 /*
@@ -24,7 +25,6 @@ export interface ReaderComment {
 
 export const MAX_COMMENT = 2000;
 export const MAX_NAME = 80;
-export const MAX_QUOTE = 200;
 
 /** The most comments that a link holds, as add_comment counts them. */
 export const MAX_COMMENTS = 500;
@@ -77,7 +77,7 @@ export async function readComments(shareId: string, key: CryptoKey): Promise<Lis
     if (typeof row.id !== 'string') continue;
     let comment: ReaderComment | null = null;
     try {
-      comment = parseComment(await openJson({ payload: row.payload, iv: row.iv }, key));
+      comment = parseComment(await openJson({ payload: row.payload, iv: row.iv }, key, 'comment'));
     } catch {
       comment = null;
     }
@@ -90,7 +90,7 @@ export async function readComments(shareId: string, key: CryptoKey): Promise<Lis
 
 /** Seals the comment with the link's key and sends it. Gives the server's id. */
 export async function sendComment(shareId: string, key: CryptoKey, comment: ReaderComment): Promise<string> {
-  const sealed = await sealJson(comment, key);
+  const sealed = await sealJson(comment, key, 'comment');
   const id = await rpc<unknown>(
     'add_comment',
     { p_share_id: shareId, p_payload: sealed.payload, p_iv: sealed.iv },

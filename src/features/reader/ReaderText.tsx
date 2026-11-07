@@ -1,7 +1,7 @@
 import { createContext, createElement, Fragment, useContext, type ReactNode } from 'react';
 import type { MathNode } from '@/features/export/mathml';
 import {
-  MATH_ATTRS,
+  safeMathAttr,
   MATH_TAGS,
   safeLink,
   type ShareBlock,
@@ -20,7 +20,7 @@ export function MathTree({ node, display }: { node: MathNode; display?: 'block' 
     if (!MATH_TAGS.has(n.tag)) return null;
     const props: Record<string, string | number> = {};
     if (key !== undefined) props.key = key;
-    for (const [name, value] of Object.entries(n.attrs)) if (MATH_ATTRS.has(name)) props[name] = value;
+    for (const [name, value] of Object.entries(n.attrs)) if (safeMathAttr(name, value)) props[name] = value;
     if (root && display) props.display = display;
     // A container keeps its children. The space between them is not text.
     const text = n.children.length > 0 && n.text.trim() === '' ? null : n.text;

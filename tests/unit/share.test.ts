@@ -169,6 +169,9 @@ describe('share links', () => {
     const failure = createShare({ bundle, itemIds: ['i'], names: { unmarked: [], changed: [] } }, 'p', 7);
     await expect(failure).rejects.toBeInstanceOf(ShareError);
     await expect(failure).rejects.toMatchObject({ kind: 'too-large' });
+    await expect(failure).rejects.toThrow(
+      /^These items come to \d+\.\d MB once sealed\. A link holds at most 2\.8 MB/,
+    );
     expect(calls).toHaveLength(0);
   });
 
@@ -214,6 +217,31 @@ describe('share links', () => {
     answers.revoke_share = () => new Response(JSON.stringify({ message: 'boom' }), { status: 500 });
     await expect(revokeShare(record.id)).rejects.toMatchObject({ kind: 'server' });
     expect((await m.db.shares.get(record.id))?.revoked).toBe(false);
+  });
+
+  test('Stop sharing reads the comments first, and a false answer keeps a link that the server still shows', async () => {
+    const { createShare, revokeShare } = m;
+    const bundle = { v: 1 as const, title: 'T', createdAt: 1, sections: [] };
+    const record = await createShare(
+      { bundle, itemIds: ['i'], names: { unmarked: [], changed: [] } },
+      'p',
+      7,
+    );
+    answers.list_comments = () => Response.json([]);
+    answers.revoke_share = () => Response.json(false);
+    answers.get_share = () =>
+      Response.json([{ payload: 'x', iv: 'y', expires_at: new Date().toISOString(), status: 'ok' }]);
+    calls = [];
+    await expect(revokeShare(record.id)).rejects.toMatchObject({ kind: 'server' });
+    expect(calls.map((c) => c.name)).toEqual(['list_comments', 'revoke_share', 'get_share']);
+    const kept = await m.db.shares.get(record.id);
+    expect(kept?.revoked).toBe(false);
+    expect(kept?.commentsReadAt).toBeGreaterThan(0);
+
+    answers.get_share = () =>
+      Response.json([{ payload: null, iv: null, expires_at: new Date().toISOString(), status: 'revoked' }]);
+    await revokeShare(record.id);
+    expect((await m.db.shares.get(record.id))?.revoked).toBe(true);
   });
 
   test('a link stops at once when this device cannot keep its record', async () => {

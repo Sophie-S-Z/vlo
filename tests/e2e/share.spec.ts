@@ -116,8 +116,10 @@ test('a link sends the sealed text only, keeps its key in the fragment, and stop
   const stopped = dialog.getByRole('listitem').filter({ hasText: 'Stopped' });
   await expect(stopped).toBeVisible();
 
-  expect(calls.map((c) => c.name)).toEqual(['create_share', 'revoke_share']);
-  expect(calls[1]?.body).toEqual({ p_id: SHARE_ID, p_owner_token: token });
+  // Stop sharing reads the comments first, because the server gives none for a stopped link.
+  expect(calls.map((c) => c.name)).toEqual(['create_share', 'list_comments', 'revoke_share']);
+  expect(calls[1]?.body).toEqual({ p_share_id: SHARE_ID });
+  expect(calls[2]?.body).toEqual({ p_id: SHARE_ID, p_owner_token: token });
 
   // Review Focus 3: no request holds the key, in its URL, its headers or its body.
   for (const call of calls) {

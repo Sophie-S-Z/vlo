@@ -155,18 +155,54 @@ describe('usage counts', () => {
     for (const word of words) expect(json).not.toContain(word);
   });
 
-  test('a report with every feature and error code stays under 4 KB', async () => {
+  test('a report with every template, feature and error code stays under 4 KB', async () => {
     at(LAST_WEEK - 7 * 86_400_000);
     await m.setUsageOn(true);
     at(LAST_WEEK);
-    for (let i = 0; i < 999; i++) {
-      for (const f of m.FEATURES) m.recordFeature(f);
-      for (const c of m.ERROR_CODES) m.recordError(c);
-      for (const mode of ['pen', 'reader', 'cowriter'] as const) m.recordAiRequest(mode);
-    }
+    for (const f of m.FEATURES) m.recordFeature(f);
+    for (const c of m.ERROR_CODES) m.recordError(c);
+    for (const mode of ['pen', 'reader', 'cowriter'] as const) m.recordAiRequest(mode);
     await m.usageSettled();
+    // Counts of ten million each, set at once, give the longest numbers a writer can reach in a week.
+    const state = await m.usageState();
+    const week = m.lastWeek(NOW).week;
+    const counts = state.weeks[week];
+    if (!counts) throw new Error('No counts.');
+    const big = <K extends string>(record: Partial<Record<K, number>>) =>
+      Object.fromEntries(Object.keys(record).map((k) => [k, 10_000_000])) as Partial<Record<K, number>>;
+    await m.db.appMeta.put({
+      key: 'usage',
+      value: {
+        ...state,
+        weeks: { [week]: { features: big(counts.features), ai: big(counts.ai), errors: big(counts.errors) } },
+      },
+    });
+    const settings = { snapshotEveryMinutes: 10, aliasAiRequests: true, streaksEnabled: false, restDays: [] };
+    const templates = ['novel', 'memoir', 'poetry'] as const;
+    for (const [i, template] of templates.entries()) {
+      await m.db.projects.add({
+        id: `t${String(i)}`,
+        title: template,
+        template,
+        aiMode: 'pen',
+        createdAt: 0,
+        updatedAt: 0,
+        settings,
+      });
+      await m.db.sessions.add({
+        id: `s${String(i)}`,
+        projectId: `t${String(i)}`,
+        startedAt: LAST_WEEK,
+        endedAt: LAST_WEEK + 1,
+        wordsAdded: 10_000,
+        poemsAdded: 10_000,
+      });
+    }
+
     const result = await m.weeklyReport(NOW);
     expect(result?.report.features_used).toEqual([...m.FEATURES]);
+    expect(Object.keys(result?.report.error_codes ?? {})).toEqual([...m.ERROR_CODES]);
+    expect(result?.report.templates_used).toHaveLength(templates.length);
     expect(new TextEncoder().encode(JSON.stringify(result?.report)).length).toBeLessThan(4096);
   });
 

@@ -10,7 +10,8 @@ import { supabaseUrl, vloFetch } from '@/lib/net';
 export type RpcName =
   'create_share' | 'get_share' | 'revoke_share' | 'add_comment' | 'list_comments' | 'ping' | 'submit_usage';
 
-export type ShareErrorKind = 'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'server';
+export type ShareErrorKind =
+  'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'busy' | 'server';
 
 const MESSAGES: Record<ShareErrorKind, string> = {
   'not-set-up': 'Sharing is not set up in this build.',
@@ -18,12 +19,17 @@ const MESSAGES: Record<ShareErrorKind, string> = {
   unavailable: 'This link expired, or the writer stopped sharing it.',
   'too-large': 'This is too large to share. Pick fewer items, or a shorter comment.',
   limit: 'This link has the most comments that it can take.',
+  busy: 'The share server is at its limit for now. Try again in an hour.',
   server: 'The share server refused the request. Try again later.',
 };
 
 export class ShareError extends Error {
-  constructor(readonly kind: ShareErrorKind) {
-    super(MESSAGES[kind]);
+  /** A message replaces the fixed text of the kind when it can say more, such as a size. */
+  constructor(
+    readonly kind: ShareErrorKind,
+    message?: string,
+  ) {
+    super(message ?? MESSAGES[kind]);
     this.name = 'ShareError';
   }
 }
@@ -42,6 +48,7 @@ function kindOf(message: string): ShareErrorKind {
   if (message.includes('too large')) return 'too-large';
   if (message.includes('share unavailable')) return 'unavailable';
   if (message.includes('comment limit reached')) return 'limit';
+  if (message.includes('server busy') || message.includes('server full')) return 'busy';
   return 'server';
 }
 

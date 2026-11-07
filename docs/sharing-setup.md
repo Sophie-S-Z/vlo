@@ -21,13 +21,13 @@ Migration 0003 then schedules the daily cleanup, which deletes each share 30 day
 
 ## 3. Apply the migrations
 
-Run the 3 files in order. Each one runs once.
+Run the 4 files in order. Each one runs once.
 
 Option A, in the dashboard:
 
 1. Open SQL Editor and choose New query.
 2. Paste all of `supabase/migrations/0001_shares.sql`, then choose Run.
-3. Do the same for `0002_usage.sql`, then `0003_cleanup.sql`.
+3. Do the same for `0002_usage.sql`, `0003_cleanup.sql` and `0004_limits.sql`.
 
 Option B, with the Supabase CLI on your computer:
 
@@ -60,6 +60,8 @@ Both values are public by design. Each browser that opens Vlo gets them. Row lev
 
 Vercel builds from the committed `.env`, so Vercel needs no new variables. To use other values on Vercel only, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel, under Project Settings, then Environment Variables. A value set there wins over `.env`.
 
+A new project URL also needs a change to `connect-src` in `vercel.json`. Without it, the browser blocks each call to the new host, and readers see "Vlo could not reach the share server." Change both in one pull request.
+
 ## 6. Keep the free project awake
 
 A free Supabase project pauses after 7 days with no requests. The workflow `.github/workflows/keepalive.yml` calls `ping()` every 3 days. It needs two settings on GitHub, under Settings, then Secrets and variables, then Actions:
@@ -84,3 +86,14 @@ While the project is paused, readers see "Vlo could not reach the share server."
 - `shares`: the sealed bundle, its IV, a SHA-256 hash of the owner token, the dates and the revoked flag. The key is never on the server: it is in the link fragment, which browsers do not send.
 - `share_comments`: sealed comments, sealed with the link's key.
 - `usage_reports`: the weekly reports that writers chose to send. Each holds bands and fixed names only.
+
+## The limits
+
+Anyone can read the anon key from the app, so migration 0004 puts limits on the whole project. They keep the free database under its 500 MB.
+
+- At most 120 new links in an hour, and at most 300 MB of sealed text in all.
+- At most 600 new comments in an hour, and 500 comments on one link.
+- At most 2,000 usage reports in 7 days.
+- Each function checks the length and the characters of the IV and the owner token.
+
+When a limit stops a request, the writer or reader sees "The share server is at its limit for now. Try again in an hour." To change a limit, write a new migration with the new number. The daily cleanup frees space 30 days after each link expires.

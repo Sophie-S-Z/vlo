@@ -1,5 +1,15 @@
 import { MessageSquare } from 'lucide-react';
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react';
 import { useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { blockQuote, parseBundle, type ShareBlock, type ShareBundle } from '@/features/share/bundle';
@@ -82,7 +92,7 @@ async function load(shareId: string, keyText: string): Promise<State> {
     return { kind: 'unreadable' };
   let value: unknown;
   try {
-    value = await openJson({ payload: row.payload, iv: row.iv }, key);
+    value = await openJson({ payload: row.payload, iv: row.iv }, key, 'bundle');
   } catch (problem) {
     if (problem instanceof CryptoError) return { kind: 'unreadable' };
     throw problem;
@@ -212,14 +222,29 @@ function CommentList({ comments }: { comments: readonly ListedComment[] }) {
 
 interface ReaderBlockProps {
   block: ShareBlock;
+  /** The place of the block, such as "0:3": its section and its index there. */
+  place: string;
   quote: string;
   comments: readonly ListedComment[];
   open: boolean;
-  onOpen: () => void;
+  onOpen: (place: string) => void;
+  /** The comment form, for the open block only. */
   form: ReactNode;
 }
 
-function ReaderBlock({ block, quote, comments, open, onOpen, form }: ReaderBlockProps) {
+/**
+ * One block with its comments. It renders again only when its own props change, so typing a comment
+ * does not render the whole text again.
+ */
+const ReaderBlock = memo(function ReaderBlock({
+  block,
+  place,
+  quote,
+  comments,
+  open,
+  onOpen,
+  form,
+}: ReaderBlockProps) {
   const label = quote === '' ? 'Comment here' : `Comment on “${quote}”`;
   return (
     <div className="grid gap-3">
@@ -234,7 +259,7 @@ function ReaderBlock({ block, quote, comments, open, onOpen, form }: ReaderBlock
           const target = event.target as HTMLElement;
           if (target.closest('a, button')) return;
           if ((window.getSelection()?.toString() ?? '') !== '') return;
-          onOpen();
+          onOpen(place);
         }}
       >
         <Block block={block} />
@@ -242,7 +267,9 @@ function ReaderBlock({ block, quote, comments, open, onOpen, form }: ReaderBlock
           type="button"
           aria-label={label}
           aria-expanded={open}
-          onClick={onOpen}
+          onClick={() => {
+            onOpen(place);
+          }}
           className={`inline-flex size-10 items-center justify-center gap-1 rounded-md font-ui text-xs text-muted hover:bg-surface hover:text-text focus-visible:opacity-100 max-sm:sr-only max-sm:focus:not-sr-only sm:absolute sm:top-0 sm:-right-14 ${comments.length > 0 || open ? 'sm:opacity-100' : 'sm:opacity-0 sm:group-hover:opacity-100'}`}
         >
           <MessageSquare aria-hidden="true" className="size-4" />
@@ -253,7 +280,9 @@ function ReaderBlock({ block, quote, comments, open, onOpen, form }: ReaderBlock
       {open && form}
     </div>
   );
-}
+});
+
+const NO_COMMENTS: readonly ListedComment[] = [];
 
 function ReaderBody({
   shareId,
@@ -271,8 +300,21 @@ function ReaderBody({
   const [openAt, setOpenAt] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [sent, setSent] = useState('');
-  const notes = bundle.sections.flatMap((s) => notesOf(s.blocks));
-  const top = topHeading(bundle.sections.flatMap((s) => s.blocks));
+  const notes = useMemo(() => bundle.sections.flatMap((s) => notesOf(s.blocks)), [bundle]);
+  const top = useMemo(() => topHeading(bundle.sections.flatMap((s) => s.blocks)), [bundle]);
+  const quotes = useMemo(() => bundle.sections.map((s) => s.blocks.map(blockQuote)), [bundle]);
+  const byPlace = useMemo(() => {
+    const map = new Map<string, ListedComment[]>();
+    for (const c of comments) {
+      const place = `${String(c.comment.section)}:${String(c.comment.block)}`;
+      map.set(place, [...(map.get(place) ?? []), c]);
+    }
+    return map;
+  }, [comments]);
+  const onOpen = useCallback((place: string) => {
+    setSent('');
+    setOpenAt(place);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -329,29 +371,30 @@ function ReaderBody({
         {bundle.sections.map((section, s) => (
           <section key={s} aria-label={section.title || undefined} className="grid gap-5">
             {section.blocks.map((block, b) => {
-              const quote = blockQuote(block);
+              const quote = quotes[s]?.[b] ?? '';
               const place = `${String(s)}:${String(b)}`;
+              const open = openAt === place;
               return (
                 <ReaderBlock
                   key={b}
                   block={block}
+                  place={place}
                   quote={quote}
-                  comments={comments.filter((c) => c.comment.section === s && c.comment.block === b)}
-                  open={openAt === place}
-                  onOpen={() => {
-                    setSent('');
-                    setOpenAt(place);
-                  }}
+                  comments={byPlace.get(place) ?? NO_COMMENTS}
+                  open={open}
+                  onOpen={onOpen}
                   form={
-                    <CommentForm
-                      quote={quote === '' ? 'this part' : quote}
-                      name={name}
-                      onName={setName}
-                      onSend={(text) => send(s, b, quote, text)}
-                      onCancel={() => {
-                        setOpenAt(null);
-                      }}
-                    />
+                    open && (
+                      <CommentForm
+                        quote={quote === '' ? 'this part' : quote}
+                        name={name}
+                        onName={setName}
+                        onSend={(text) => send(s, b, quote, text)}
+                        onCancel={() => {
+                          setOpenAt(null);
+                        }}
+                      />
+                    )
                   }
                 />
               );
@@ -426,7 +469,11 @@ export function ReaderPage() {
         )}
         {state.kind === 'no-key' && (
           <Notice title="This link is missing its key">
-            <p>Ask the writer for the whole link. The key is the part after #k=.</p>
+            <p>
+              Open the link again from the message where you got it. Vlo takes the key out of the address bar
+              when it opens the text, so a reload cannot find the key.
+            </p>
+            <p className="mt-2">If the link has no part after #k=, ask the writer for the whole link.</p>
           </Notice>
         )}
         {state.kind === 'bad-key' && (
