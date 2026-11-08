@@ -87,11 +87,6 @@ export function fillStyle(fill: TextFill): string {
   ].join('; ');
 }
 
-/** The color halfway along the gradient, for formats that can show one color only. */
-export function fillMiddleColor(fill: TextFill): string {
-  return colorAt(fill, 50);
-}
-
 /** The color of the gradient at `at` percent, for a new stop placed between two others. */
 export function colorAt(fill: TextFill, at: number): string {
   const stops = [...fill.stops].sort((a, b) => a.at - b.at);

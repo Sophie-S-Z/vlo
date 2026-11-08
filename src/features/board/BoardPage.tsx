@@ -1,6 +1,6 @@
 import { Layers, Plus, Rows3, Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { useMediaQuery } from '@/app/useMediaQuery';
@@ -20,6 +20,7 @@ import { CARD_HEIGHT, CARD_WIDTH, GRID, snap, toBoard, type Size, type View } fr
 import { PlotGridView } from './PlotGridView';
 import { FROM_CARD, useBoard } from './useBoard';
 import { recordFeature } from '@/features/usage/usage';
+import { ProjectMissing, WrongTemplate } from '@/features/project/ViewNotices';
 
 /*
  * The Story Board screen (spec 8.1, plan Tasks C2 and C3): the canvas, its List view and the Plot Grid.
@@ -120,34 +121,14 @@ export function BoardPage() {
   if (state.status === 'loading' || rows === undefined) return null;
 
   if (state.status === 'missing') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold">Project not found</h1>
-        <p className="mt-4 text-muted">
-          This device has no project at this address. It may have been deleted.
-        </p>
-        <p className="mt-6">
-          <Link to="/">Go to the Library</Link>
-        </p>
-      </section>
-    );
+    return <ProjectMissing />;
   }
 
   const { project } = state;
   const template = TEMPLATES[project.template];
 
   if (project.template !== 'novel') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{project.title}</h1>
-        <p className="mt-4 max-w-prose text-muted">
-          The Story Board is for novel projects. This project is a {template.label.toLowerCase()}.
-        </p>
-        <p className="mt-6">
-          <Link to={`/p/${project.id}`}>Go back to the writing</Link>
-        </p>
-      </section>
-    );
+    return <WrongTemplate project={project} forWhom="The Story Board is for novel projects." />;
   }
 
   const scenes = inBinderOrder.filter((i) => i.kind === 'scene');

@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import { describe, expect, test } from 'vitest';
 import { mathmlFor } from '@/features/export/latex';
-import { safeExportTree } from '@/features/export/run';
+import { safeExportTree } from '@/features/export/safeTree';
 import { markNames } from '@/features/people/markAll';
 import {
   blockQuote,

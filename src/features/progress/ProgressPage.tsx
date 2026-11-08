@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { flattenTree } from '@/features/binder/tree';
@@ -11,6 +11,7 @@ import { CountUp } from './CountUp';
 import { Goals } from './Goals';
 import { useSessionCount } from './progress';
 import { STATUSES, TILE_TONE, Tiles } from './Tiles';
+import { ProjectMissing } from '@/features/project/ViewNotices';
 
 /*
  * Progress (spec 8.4, plan Task C9, F21). Every template has it: the total words and sessions as counting
@@ -38,17 +39,7 @@ export function ProgressPage() {
   if (state.status === 'loading' || sessions === undefined) return null;
 
   if (state.status === 'missing') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold">Project not found</h1>
-        <p className="mt-4 text-muted">
-          This device has no project at this address. It may have been deleted.
-        </p>
-        <p className="mt-6">
-          <Link to="/">Go to the Library</Link>
-        </p>
-      </section>
-    );
+    return <ProjectMissing />;
   }
 
   const { project } = state;

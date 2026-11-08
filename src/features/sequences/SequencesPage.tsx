@@ -1,6 +1,6 @@
 import { Copy, Download, ListOrdered, Pencil, Plus, Trash2 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { TEMPLATES } from '@/features/library/templates';
@@ -27,6 +27,7 @@ import {
   setSequenceOrder,
   useSequences,
 } from './sequences';
+import { ProjectMissing, WrongTemplate } from '@/features/project/ViewNotices';
 
 // The export dialog and its worker load only when the poet exports an order (E2).
 const ExportDialog = lazy(async () => ({
@@ -184,35 +185,14 @@ export function SequencesPage() {
   if (state.status === 'loading' || sequences === undefined) return null;
 
   if (state.status === 'missing') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold">Project not found</h1>
-        <p className="mt-4 text-muted">
-          This device has no project at this address. It may have been deleted.
-        </p>
-        <p className="mt-6">
-          <Link to="/">Go to the Library</Link>
-        </p>
-      </section>
-    );
+    return <ProjectMissing />;
   }
 
   const { project } = state;
   const template = TEMPLATES[project.template];
 
   if (project.template !== 'poetry') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{project.title}</h1>
-        <p className="mt-4 max-w-prose text-muted">
-          The Collection Sequencer is for poetry collections. This project is a {template.label.toLowerCase()}
-          .
-        </p>
-        <p className="mt-6">
-          <Link to={`/p/${project.id}`}>Go back to the writing</Link>
-        </p>
-      </section>
-    );
+    return <WrongTemplate project={project} forWhom="The Collection Sequencer is for poetry collections." />;
   }
 
   const announce = (text: string) => {

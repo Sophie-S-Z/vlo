@@ -1,6 +1,6 @@
 import { CalendarRange, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { useMediaQuery } from '@/app/useMediaQuery';
 import { addItem, nextTitle } from '@/features/binder/items';
@@ -20,6 +20,7 @@ import { TimelineList } from './TimelineList';
 import { SCALE_PRESETS, Track } from './Track';
 import { useLifeStages } from './useTimeline';
 import { recordFeature } from '@/features/usage/usage';
+import { ProjectMissing, WrongTemplate } from '@/features/project/ViewNotices';
 
 /*
  * The Memory Timeline screen (spec 8.2, plan Task C4): the track with its Undated shelf, the List view,
@@ -144,34 +145,14 @@ export function TimelinePage() {
   if (state.status === 'loading' || stages === undefined) return null;
 
   if (state.status === 'missing') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold">Project not found</h1>
-        <p className="mt-4 text-muted">
-          This device has no project at this address. It may have been deleted.
-        </p>
-        <p className="mt-6">
-          <Link to="/">Go to the Library</Link>
-        </p>
-      </section>
-    );
+    return <ProjectMissing />;
   }
 
   const { project } = state;
   const template = TEMPLATES[project.template];
 
   if (project.template !== 'memoir') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{project.title}</h1>
-        <p className="mt-4 max-w-prose text-muted">
-          The Memory Timeline is for memoir projects. This project is a {template.label.toLowerCase()}.
-        </p>
-        <p className="mt-6">
-          <Link to={`/p/${project.id}`}>Go back to the writing</Link>
-        </p>
-      </section>
-    );
+    return <WrongTemplate project={project} forWhom="The Memory Timeline is for memoir projects." />;
   }
 
   const show = (next: Mode) => {

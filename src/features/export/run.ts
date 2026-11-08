@@ -1,12 +1,12 @@
 import { appFile } from '@/lib/net';
-import { nameCheck, shareSafe, type NameCheck, type PrivatePerson } from '@/lib/privacy';
-import { buildExportDoc, exportFileName, type BuildInput } from './build';
+import type { NameCheck, PrivatePerson } from '@/lib/privacy';
+import { exportFileName, type BuildInput } from './build';
 import { checkOwnFonts, ownFontsOf, type FontCheck, type FontSwap } from './fontCheck';
-import { exportWords, type ManuscriptDetails, type ManuscriptSetup } from './manuscript';
+import type { ManuscriptDetails, ManuscriptSetup } from './manuscript';
 import type { ExportDoc } from './model';
 import { exportNotices, type ExportFormat } from './notices';
-import { provenanceSection } from './provenance';
 import type { LoadFile } from './pdf/fonts';
+import { safeExportTree } from './safeTree';
 
 /*
  * One export from start to end: the export tree, the share-safe aliases, the check of the writer's own
@@ -67,37 +67,6 @@ export interface PreparedExport {
   ownFonts: string[];
   /** The unmarked and changed private names, for the check before a share-safe export. */
   names: NameCheck;
-}
-
-/** What leaves the device as an export file or a share link: the writer's text and the privacy switches. */
-export type SafeTreeInput = Pick<
-  ExportRequest,
-  'project' | 'items' | 'scope' | 'updates' | 'people' | 'shareSafe' | 'provenance'
->;
-
-export interface SafeTree {
-  /** The export tree with each private name as its alias when `shareSafe` is on, and the provenance page. */
-  doc: ExportDoc;
-  /** The writer's own words, without the provenance page. */
-  words: number;
-  /** The unmarked and changed private names, read before the aliases go in. */
-  names: NameCheck;
-}
-
-/**
- * The export tree that an export file and a share link both send (spec sections 8.2 and 11). The order
- * matters: the name check reads the real names, the aliases go in next, and the provenance page counts
- * the aliased text, so the page holds no real name.
- */
-export function safeExportTree(input: SafeTreeInput): SafeTree {
-  const built = buildExportDoc({ ...input, updates: new Map(input.updates) });
-  const names = input.shareSafe ? nameCheck(built, input.people) : { unmarked: [], changed: [] };
-  const safe = shareSafe(built, input.people, input.shareSafe);
-  const words = exportWords(safe);
-  const doc = input.provenance
-    ? { ...safe, sections: [...safe.sections, provenanceSection(safe, new Date(input.provenance.at))] }
-    : safe;
-  return { doc, words, names };
 }
 
 /** Builds the export tree and lists the own fonts that the file needs. */

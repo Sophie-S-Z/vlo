@@ -5,6 +5,7 @@ import { PreferencesProvider } from '@/app/PreferencesProvider';
 import { AppShell } from '@/app/AppShell';
 import { RouteError } from '@/app/RouteError';
 import { routes } from '@/app/routes';
+import { createProject } from '@/features/library/projects';
 import { markOnboarded } from '@/features/onboarding/firstVisit';
 import { db } from '@/lib/db';
 
@@ -80,6 +81,31 @@ test('/p/:projectId loads the project screen, which reports a missing project', 
   expect(
     await screen.findByRole('heading', { level: 1, name: 'Project not found' }, { timeout: 5_000 }),
   ).toBeTruthy();
+});
+
+test.each(['board', 'timeline', 'people', 'sequences', 'submissions', 'progress'])(
+  'the %s view reports a missing project with a link to the Library',
+  async (view) => {
+    renderAt(`/p/missing/${view}`);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Project not found' }, { timeout: 5_000 }),
+    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Go to the Library' }).getAttribute('href')).toBe('/');
+  },
+);
+
+test.each([
+  ['board', 'poetry', 'The Story Board is for novel projects. This project is a poetry collection.'],
+  ['timeline', 'novel', 'The Memory Timeline is for memoir projects. This project is a novel.'],
+  ['people', 'novel', 'People and private names are for memoir projects. This project is a novel.'],
+  ['sequences', 'memoir', 'The Collection Sequencer is for poetry collections. This project is a memoir.'],
+] as const)('the %s view of a %s project says which template it is for', async (view, template, text) => {
+  const { project } = await createProject({ title: 'Salt Year', template });
+  renderAt(`/p/${project.id}/${view}`);
+  expect(await screen.findByText(text, {}, { timeout: 5_000 })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Go back to the writing' }).getAttribute('href')).toBe(
+    `/p/${project.id}`,
+  );
 });
 
 test.each([

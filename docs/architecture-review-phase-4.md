@@ -14,7 +14,7 @@ Scope: `src/features/export`, `src/lib/privacy.ts`, `src/lib/net.ts` and `src/fe
 2. **The privacy order was inside `prepareExport`.**
    - An outgoing tree has to follow a fixed order: build the tree, check the names on the real text, put the aliases in, then add the provenance page, which counts the aliased text.
    - `prepareExport` mixed that order with the manuscript and font steps, so a share bundle would have had to copy it.
-   - Fix: `safeExportTree(input)` in `src/features/export/run.ts` owns the order. `prepareExport` and the share bundle both call it.
+   - Fix: `safeExportTree(input)` owns the order. `prepareExport` and the share bundle both call it. It is in `src/features/export/safeTree.ts`, so the Share panel does not load the PDF font code.
 3. **The crypto and base64 helpers were private to `keys.ts`.**
    - Share links need base64url, a random raw key and gzip before encryption.
    - Fix: Task E2 moves the helpers to `src/lib/crypto.ts`. `keys.ts` keeps only its storage and the lockout.

@@ -1,6 +1,6 @@
 import { Trash2, UserPlus, Wand2, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { TEMPLATES } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
@@ -21,6 +21,7 @@ import {
   updatePerson,
   usePeople,
 } from './people';
+import { ProjectMissing, WrongTemplate } from '@/features/project/ViewNotices';
 
 /*
  * People and private names (spec 8.2, plan Task C5). The writer adds each real person with the ways the
@@ -364,34 +365,14 @@ export function PeoplePage() {
   if (state.status === 'loading' || people === undefined) return null;
 
   if (state.status === 'missing') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold">Project not found</h1>
-        <p className="mt-4 text-muted">
-          This device has no project at this address. It may have been deleted.
-        </p>
-        <p className="mt-6">
-          <Link to="/">Go to the Library</Link>
-        </p>
-      </section>
-    );
+    return <ProjectMissing />;
   }
 
   const { project } = state;
   const template = TEMPLATES[project.template];
 
   if (project.template !== 'memoir') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{project.title}</h1>
-        <p className="mt-4 max-w-prose text-muted">
-          People and private names are for memoir projects. This project is a {template.label.toLowerCase()}.
-        </p>
-        <p className="mt-6">
-          <Link to={`/p/${project.id}`}>Go back to the writing</Link>
-        </p>
-      </section>
-    );
+    return <WrongTemplate project={project} forWhom="People and private names are for memoir projects." />;
   }
 
   const announce = (text: string) => {

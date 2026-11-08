@@ -1,3 +1,4 @@
+import { rpc } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
 import { db, type AiMode, type Template } from '@/lib/db';
 
@@ -218,7 +219,6 @@ export const APP_VERSION: string = (import.meta.env.VITE_APP_VERSION as string |
 
 /** Sends the report exactly as the writer saw it, then marks the week. */
 export async function sendReport(week: string, report: UsageReport): Promise<void> {
-  const { rpc } = await import('@/features/share/rpc');
   await rpc('submit_usage', { p_week: week, p_app_version: APP_VERSION, p_report: report }, 'usage');
   await handleWeek(week);
 }
