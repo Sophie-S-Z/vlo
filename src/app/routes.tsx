@@ -73,6 +73,14 @@ export const routes: RouteObject[] = [
         path: 'ai-policy',
         lazy: async () => ({ Component: (await import('@/features/policy/AiPolicyPage')).AiPolicyPage }),
       },
+      {
+        path: 'privacy',
+        lazy: async () => ({ Component: (await import('@/features/policy/PrivacyPage')).PrivacyPage }),
+      },
+      {
+        path: 'help',
+        lazy: async () => ({ Component: (await import('@/features/help/HelpPage')).HelpPage }),
+      },
       { path: '*', element: <NotFound /> },
     ],
   },
