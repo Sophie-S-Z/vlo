@@ -1,7 +1,8 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { Editor as TiptapEditor } from '@tiptap/react';
-import { History, X } from 'lucide-react';
+import { ChartNoAxesColumn, History, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StatsBar } from '@/features/analysis/StatsBar';
 import { setCraftItem } from '@/features/craft/craftStore';
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
@@ -33,6 +34,11 @@ import { TAB_ORIGIN } from './tabSync';
 import { useItemDoc } from './useItemDoc';
 import { WordCount } from './WordCount';
 import { setWritingPrefs, useWritingPrefs } from './writingPrefs';
+
+// Insights (statistics, AI check, originality) loads only when the writer opens it.
+const AnalysisPanel = lazy(async () => ({
+  default: (await import('@/features/analysis/AnalysisPanel')).AnalysisPanel,
+}));
 
 // The history panel and the diff library load only when the writer opens History.
 const HistoryPanel = lazy(async () => ({
@@ -78,6 +84,9 @@ export function EditorPane({
   const { id, projectId } = item;
   const target = useMemo(() => ({ id, projectId }), [id, projectId]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  // The words that a report asked to show. They take the selection after Insights closes.
+  const showRange = useRef<{ from: number; to: number } | null>(null);
   const [notice, setNotice] = useState('');
   const readText = useCallback(() => (latest.current ? docText(latest.current, kind) : null), [kind]);
   const currentText = useCallback(() => readText() ?? '', [readText]);
@@ -191,6 +200,55 @@ export function EditorPane({
               />
               <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />
               <SoundControl scene={scene} />
+              <Dialog open={insightsOpen} onOpenChange={setInsightsOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" disabled={!editor}>
+                    <ChartNoAxesColumn aria-hidden="true" className="size-4" />
+                    <span className="max-sm:sr-only">Insights</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  className="top-0 right-0 left-auto h-dvh max-h-dvh w-[min(36rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 content-start overflow-y-auto rounded-none border-y-0 border-r-0"
+                  onCloseAutoFocus={(event) => {
+                    const range = showRange.current;
+                    showRange.current = null;
+                    if (!range || !editor || editor.isDestroyed) return;
+                    event.preventDefault();
+                    editor.chain().focus().setTextSelection(range).scrollIntoView().run();
+                  }}
+                >
+                  <DialogClose asChild>
+                    <Button
+                      variant="ghost"
+                      aria-label="Close insights"
+                      className="absolute top-4 right-4 px-3"
+                    >
+                      <X aria-hidden="true" className="size-4" />
+                    </Button>
+                  </DialogClose>
+                  <div className="grid gap-1 pr-10">
+                    <DialogTitle>Insights</DialogTitle>
+                    <DialogDescription>
+                      Statistics, readability, keywords, an AI writing check and an originality check for{' '}
+                      {item.title}. Everything except the web search runs on this device.
+                    </DialogDescription>
+                  </div>
+                  {editor && (
+                    <Suspense fallback={<p className="text-muted">Loading insights.</p>}>
+                      <AnalysisPanel
+                        editor={editor}
+                        kind={kind}
+                        itemId={item.id}
+                        projectId={item.projectId}
+                        onShow={(from, to) => {
+                          showRange.current = { from, to };
+                          setInsightsOpen(false);
+                        }}
+                      />
+                    </Suspense>
+                  )}
+                </DialogContent>
+              </Dialog>
               <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
                 <DialogTrigger asChild>
                   <Button variant="ghost" disabled={!editor || !open}>
@@ -280,6 +338,7 @@ export function EditorPane({
               templates={templates}
             />
           )}
+          {state.status === 'ready' && editor && <StatsBar editor={editor} kind={kind} />}
         </article>
       </div>
     </ManuscriptContext>

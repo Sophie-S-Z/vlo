@@ -1,8 +1,13 @@
 # Vlo status
 
-Last update: 2026-11-05
+Last update: 2026-11-08
 
 ## Done
+
+- Writing insights (ADR 0006): a stats bar under the text, an Insights panel with full statistics,
+  readability and keyword density, an AI writing check trained and tested with `scripts/train-ai-detector.mjs`,
+  and an originality check against the writer's own work, pasted sources and, on request, Wikipedia and
+  OpenAlex (network purpose `originality`).
 
 - Spec saved as `docs/VLO_SPEC.md`.
 - Section 17 questions answered.
