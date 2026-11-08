@@ -10,7 +10,11 @@ import { db, type AiMode, type Project, type Template } from '@/lib/db';
 export const MODES: readonly AiMode[] = ['pen', 'reader', 'cowriter'];
 
 export const MODE_INFO: Record<AiMode, { label: string; summary: string }> = {
-  pen: { label: 'Pen', summary: 'No AI. Vlo loads no AI code and sends nothing.' },
+  pen: {
+    label: 'Pen',
+    summary:
+      'No AI. Vlo loads no AI code, and sends nothing unless you press "Check the web too" in Insights.',
+  },
   reader: {
     label: 'Reader',
     summary: 'AI reads and gives notes in a side panel. It never writes your text.',
@@ -29,7 +33,7 @@ export function changesFor(
   if (mode === 'pen')
     return [
       'The Assistant panel closes, and Vlo stops loading its AI code for this project.',
-      'Vlo sends nothing. The network log shows each request from before.',
+      'Vlo sends nothing unless you press "Check the web too" in Insights. The network log shows each request from before.',
       'Text that the AI wrote keeps its mark.',
     ];
   const lines = [

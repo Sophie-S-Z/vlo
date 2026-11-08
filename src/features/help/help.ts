@@ -85,9 +85,10 @@ export const HELP = {
     {
       title: 'Choose an AI mode',
       steps: [
-        'Each project starts in Pen mode. Pen mode loads no AI code and sends nothing.',
+        'Each project starts in Pen mode. Pen mode loads no AI code, and it sends nothing unless you press "Check the web too" in Insights.',
         'Choose the AI mode button to switch a project to Reader or Co-writer mode.',
         'Reader mode gives feedback in the side panel only. Co-writer mode can draft words, and marks them.',
+        'The deep AI check in Insights needs Reader or Co-writer mode too, because it loads a language model.',
         'Before each request, Vlo shows the exact text and where it goes. The network log lists each request.',
       ],
     },

@@ -22,7 +22,7 @@ The text of the request, which Vlo shows you before it goes unless you turned th
 
 ### In-browser model files
 
-Only when you load an in-browser model for Reader or Co-writer mode.
+Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check.
 
 Requests for the model files. No text goes with them.
 

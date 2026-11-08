@@ -120,13 +120,27 @@ test('the originality check finds a pasted source on the device and a web page o
   expect(await seriousIssues(page)).toEqual([]);
 });
 
-test('the deep check names its model and says when the browser has no WebGPU', async ({ page }) => {
+test('the deep check waits for Reader mode, names its model and says when the browser has no WebGPU', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => undefined });
   });
   await newNovel(page, AI_ESSAY);
   await page.getByRole('button', { name: 'Insights' }).click();
   const dialog = insights(page);
+  await dialog.getByRole('tab', { name: 'AI check' }).click();
+  // Pen mode loads no AI code (decision of 2026-11-08), so the deep check asks for another mode.
+  await expect(dialog.getByText('it works only in Reader or Co-writer mode')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Run the deep check' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: /^AI mode: / }).click();
+  const mode = page.getByRole('dialog', { name: 'AI mode' });
+  await mode.getByRole('radio', { name: /^Reader/ }).click();
+  await mode.getByRole('button', { name: 'Switch to Reader mode' }).click();
+  await expect(page.getByRole('button', { name: /^AI mode: / })).toHaveAccessibleName('AI mode: Reader');
+  await page.getByRole('button', { name: 'Insights' }).click();
   await dialog.getByRole('tab', { name: 'AI check' }).click();
   await expect(dialog.getByRole('heading', { name: 'Deep check, with a language model' })).toBeVisible();
   await expect(dialog.getByRole('combobox', { name: 'Model' })).toHaveValue(/Qwen2\.5-1\.5B/);

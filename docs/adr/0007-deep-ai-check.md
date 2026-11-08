@@ -21,3 +21,7 @@ The style check of ADR 0006 caught only 3 of 14 texts by a 2026 model. The produ
 - Its accuracy is measured on each device, on 26 passages, and not on a large test set. A later step can run the full test set through the model on a machine that can download it, and set fixed cuts.
 - Known limits of all likelihood checks apply: text that a model knows by heart scores high, simple writing by learners of English can score high, and a person who rewrites AI text lowers its score.
 - The co-writer and the deep check share one model, so each waits for the other.
+
+Update, 2026-11-08: the deep check needs Reader or Co-writer mode, because Pen mode loads no AI code. In Pen
+mode the AI tab says so, and the check's code (`DeepCheck.tsx` and the WebLLM wrapper) loads as its own chunk
+only outside Pen mode (product owner decision).

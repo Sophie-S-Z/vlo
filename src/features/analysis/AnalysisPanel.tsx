@@ -1,7 +1,9 @@
 import type { Editor as TiptapEditor } from '@tiptap/react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Tabs } from 'radix-ui';
 import { useMemo } from 'react';
 import { markedNamesIn } from '@/features/ai/names';
+import { db } from '@/lib/db';
 import { aiOriginWords, mappedText } from './editorText';
 import { AiTab } from './panel/AiTab';
 import { OriginalityTab } from './panel/OriginalityTab';
@@ -30,6 +32,8 @@ export function AnalysisPanel({ editor, kind, itemId, projectId, onShow }: Analy
   const provenance = useMemo(() => aiOriginWords(editor.state.doc), [editor]);
   const markedNames = useMemo(() => markedNamesIn(editor.getJSON()).map((n) => n.text), [editor]);
   const { stats, error } = useItemStats(mapped.text, kind);
+  // The deep check loads a language model, and Pen mode loads no AI code, so it needs Reader or Co-writer.
+  const aiMode = useLiveQuery(async () => (await db.projects.get(projectId))?.aiMode, [projectId]);
   const show = (from: number, to: number) => {
     onShow(mapped.at(from), mapped.at(to));
   };
@@ -72,7 +76,12 @@ export function AnalysisPanel({ editor, kind, itemId, projectId, onShow }: Analy
       </Tabs.Content>
       {/* The AI tab stays mounted, so a deep check keeps running when the writer looks at another tab. */}
       <Tabs.Content value="ai" forceMount className="data-[state=inactive]:hidden">
-        <AiTab text={mapped.text} provenance={provenance} onShow={show} />
+        <AiTab
+          text={mapped.text}
+          provenance={provenance}
+          deepCheck={aiMode === 'reader' || aiMode === 'cowriter'}
+          onShow={show}
+        />
       </Tabs.Content>
       <Tabs.Content value="originality">
         <OriginalityTab

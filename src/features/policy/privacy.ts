@@ -28,7 +28,7 @@ export const PRIVACY = {
     },
     'model-download': {
       title: 'In-browser model files',
-      when: 'Only when you load an in-browser model for Reader or Co-writer mode.',
+      when: 'Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check.',
       sends: 'Requests for the model files. No text goes with them.',
     },
     share: {

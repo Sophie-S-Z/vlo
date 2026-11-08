@@ -631,6 +631,9 @@ Last update: 2026-11-08
   the budget checks (open under 300 ms, plain typing, typing with a moving scene and with 500 shimmering
   runs, each under 50 ms). CI WebKit runs on Linux and holds these to 700, 100, 150 and 120 ms ceilings.
   Timing each part of the moving scene alone showed the page shadow and the scene layer cost the most.
+- After a deep AI check in Reader mode, a switch back to Pen frees the model only when the Assistant code
+  loaded too. On a large screen it always loads, because the Assistant opens in Reader mode. On a phone the
+  model can stay in memory until the tab closes. It sends nothing.
 - Architecture review findings 4 to 8 (`docs/architecture-review-phase-6.md`) wait for a later release:
   Replace import keeps no device copy on failure, the export worker steps depend on their order, the
   co-writer Insert logic is inside the panel, Mark all has its own reader, and two pass-through wrappers.
@@ -697,11 +700,14 @@ Last update: 2026-11-08
 | 2026-11-07 | Share links are sealed in the browser, with the key in the fragment (ADR 0004).  |
 | 2026-11-08 | Phase 6 plan approved: T1, T2, T4, T5 and T6 as recommended.                     |
 | 2026-11-08 | Launch with sharing and usage counts off; the Supabase project comes later (T3). |
+| 2026-11-08 | Pen mode blocks the deep AI check. The web originality check stays in Pen mode.  |
+| 2026-11-08 | Production address: https://vlo-eight.vercel.app/                                |
 
 ## Spec changes
 
 | Date       | Change                                                                                                                                                                                                                                                                         | Reason                                                                                                                                                                                                              |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-08 | AI policy statement 3 (version 2): Pen mode loads no AI code and sends nothing unless you press "Check the web too". The deep AI check needs Reader or Co-writer mode.                                                                                                         | The web originality check sends up to 6 phrases on a press in any mode, and the old words said Pen mode sends nothing (product owner decision).                                                                     |
 | 2026-11-02 | `vercel.json` replaces `public/_headers`.                                                                                                                                                                                                                                      | Hosting moved to Vercel.                                                                                                                                                                                            |
 | 2026-11-02 | The CSP has no Supabase host until Phase 5.                                                                                                                                                                                                                                    | The spec value is a placeholder.                                                                                                                                                                                    |
 | 2026-11-02 | Routes arrive in the phase that builds their screen.                                                                                                                                                                                                                           | No placeholder screens (section 0, rule 8).                                                                                                                                                                         |
