@@ -7,6 +7,8 @@
 export interface GuideSection {
   title: string;
   steps: string[];
+  /** Shown only in a build with a Supabase project (plan decision T3: launch with sharing off). */
+  needsSharing?: true;
 }
 
 export interface SupportLine {
@@ -91,6 +93,7 @@ export const HELP = {
     },
     {
       title: 'Share for reading',
+      needsSharing: true,
       steps: [
         'In a project, choose Share. Pick the items and how long the link works.',
         'Choose Create link, then copy the link to your readers. They need no account.',

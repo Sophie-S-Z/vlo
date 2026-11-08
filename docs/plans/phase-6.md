@@ -23,6 +23,8 @@
 | T5 | User guide | The guide is the `/help` page in the app, so it works offline. The README links to it. One copy of the words, kept in `src/features/help/help.ts`. | A separate `docs/user-guide.md` and a short `/help` page with the support links only. |
 | T6 | Contact on `/privacy` | The GitHub issues page of the repository (works if T1 makes it public). | An email address that you give me. |
 
+Answered on 2026-11-08: T1, T2, T4, T5 and T6 as recommended. T3: launch with sharing and usage counts off. The Help page leaves out the sharing steps in a build with no Supabase project.
+
 ## Packages
 
 None.

@@ -665,28 +665,30 @@ Last update: 2026-11-08
 
 ## Decisions
 
-| Date       | Decision                                                                        |
-| ---------- | ------------------------------------------------------------------------------- |
-| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                                   |
-| 2026-11-02 | License: MIT.                                                                   |
-| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                                  |
-| 2026-11-02 | Supabase project: create in Phase 5.                                            |
-| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.            |
-| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.             |
-| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.                 |
-| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                            |
-| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1).        |
-| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).                      |
-| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                                    |
-| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.                     |
-| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.                     |
-| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.                   |
-| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.                      |
-| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.           |
-| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.         |
-| 2026-11-05 | CI on pull requests: checks, export files and Chromium. All browsers by hand.   |
-| 2026-11-07 | Phase 5 plan approved: decisions S1 to S8 and the PGlite test package.          |
-| 2026-11-07 | Share links are sealed in the browser, with the key in the fragment (ADR 0004). |
+| Date       | Decision                                                                         |
+| ---------- | -------------------------------------------------------------------------------- |
+| 2026-11-02 | Repository: `Sophie-S-Z/vlo`.                                                    |
+| 2026-11-02 | License: MIT.                                                                    |
+| 2026-11-02 | Hosting: Vercel, built from GitHub (ADR 0002).                                   |
+| 2026-11-02 | Supabase project: create in Phase 5.                                             |
+| 2026-11-02 | Phones: full editing. Board and timeline show as lists under 600 px.             |
+| 2026-11-02 | AI presets: OpenRouter, Anthropic, Groq, Gemini, Ollama, LM Studio.              |
+| 2026-11-02 | Manuscript font: Newsreader 12 pt, with a Courier-style option.                  |
+| 2026-11-02 | Marketing site: https://vlo-landing-page.vercel.app/                             |
+| 2026-11-02 | Phase 1 motion uses CSS and View Transitions, no GSAP (plan decision 1).         |
+| 2026-11-02 | Plain-text copies of items live in `itemTexts` (ADR 0003).                       |
+| 2026-11-03 | Phase 2 order: editor upgrade, then exports.                                     |
+| 2026-11-03 | Gradient and metallic text shimmers only when typing stops.                      |
+| 2026-11-03 | Math: MathLive. Page format: one sheet with page-end lines.                      |
+| 2026-11-03 | Sound: generated in the browser, plus the writer's own files.                    |
+| 2026-11-03 | Google Docs: a Word download, then open it in Google Docs.                       |
+| 2026-11-03 | About 20 Vlo fonts plus own fonts, with a warning before a font swap.            |
+| 2026-11-05 | Phase 3 plan approved as written: no GSAP, extras E1 to E5, 3 packages.          |
+| 2026-11-05 | CI on pull requests: checks, export files and Chromium. All browsers by hand.    |
+| 2026-11-07 | Phase 5 plan approved: decisions S1 to S8 and the PGlite test package.           |
+| 2026-11-07 | Share links are sealed in the browser, with the key in the fragment (ADR 0004).  |
+| 2026-11-08 | Phase 6 plan approved: T1, T2, T4, T5 and T6 as recommended.                     |
+| 2026-11-08 | Launch with sharing and usage counts off; the Supabase project comes later (T3). |
 
 ## Spec changes
 

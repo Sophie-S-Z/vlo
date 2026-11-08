@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { HELP } from '@/features/help/help';
+import { HelpPage } from '@/features/help/HelpPage';
 import { PRIVACY } from '@/features/policy/privacy';
 import { HOSTS } from '@/lib/net';
 
@@ -29,5 +32,16 @@ describe('the Help page', () => {
     for (const line of HELP.support) expect(new URL(line.url).protocol).toBe('https:');
     expect(new URL(PRIVACY.contact.url).protocol).toBe('https:');
     for (const section of HELP.guide) expect(section.steps.length).toBeLessThanOrEqual(6);
+  });
+
+  it('leaves out the sharing steps in a build with no Supabase project (plan decision T3)', () => {
+    expect(HOSTS.share).toEqual([]);
+    render(
+      <MemoryRouter>
+        <HelpPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('heading', { level: 2, name: 'Export' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { level: 2, name: 'Share for reading' })).toBeNull();
   });
 });

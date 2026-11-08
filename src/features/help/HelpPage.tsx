@@ -1,4 +1,5 @@
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { HOSTS } from '@/lib/net';
 import { HELP } from './help';
 
 /* The Help page and user guide (plan Task F4): how to use Vlo, and support for painful material. */
@@ -7,6 +8,7 @@ const date = new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' 
 
 export function HelpPage() {
   useDocumentTitle('Help');
+  const sharing = HOSTS.share.length > 0;
   return (
     <article className="mx-auto grid max-w-prose gap-8">
       <header className="grid gap-2">
@@ -41,16 +43,18 @@ export function HelpPage() {
           emergency, call your local emergency number.
         </p>
       </section>
-      {HELP.guide.map((section) => (
-        <section key={section.title} className="grid gap-2">
-          <h2 className="font-display text-2xl font-semibold">{section.title}</h2>
-          <ol className="grid list-decimal gap-1 pl-6">
-            {section.steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-        </section>
-      ))}
+      {HELP.guide
+        .filter((section) => sharing || section.needsSharing !== true)
+        .map((section) => (
+          <section key={section.title} className="grid gap-2">
+            <h2 className="font-display text-2xl font-semibold">{section.title}</h2>
+            <ol className="grid list-decimal gap-1 pl-6">
+              {section.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </section>
+        ))}
     </article>
   );
 }
