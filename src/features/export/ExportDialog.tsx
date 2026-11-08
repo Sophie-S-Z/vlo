@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { updateProjectSettings } from '@/features/library/projects';
 import { markAllInProject } from '@/features/people/markAll';
-import { db, type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
+import { type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
 import { clock } from '@/lib/clock';
 import type { NameCheck } from '@/lib/privacy';
 import { Button } from '@/ui/button';
@@ -15,6 +15,7 @@ import { Label } from '@/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { FAILED, NameCheckLists } from '@/features/people/NameCheckLists';
+import { privatePeople } from '@/features/people/people';
 import { Textarea } from '@/ui/textarea';
 import { folderOf, type ExportScope } from './build';
 import type { FontSwap } from './fontCheck';
@@ -188,18 +189,6 @@ export function ExportDialog({
     }
   }
 
-  /**
-   * The people as stored now. The list in the props can be a step behind, such as just after the writer
-   * adds a person, and a share-safe export must never miss a name.
-   */
-  async function currentPeople(): Promise<readonly Person[]> {
-    try {
-      return await db.people.where('projectId').equals(project.id).toArray();
-    } catch {
-      return people;
-    }
-  }
-
   async function exportNow() {
     if (usesManuscript && manuscript.name.trim() === '') {
       setNameError(true);
@@ -223,7 +212,7 @@ export function ExportDialog({
       items: [...items],
       scope: scopeOf(scope),
       format,
-      people: (await currentPeople()).map((p) => ({ id: p.id, variants: p.variants })),
+      people: await privatePeople(project.id),
       shareSafe: safe,
       ...(usesManuscript ? { manuscript: details } : {}),
       ...(offersProvenance && provenance ? { provenance: { at: clock.now() } } : {}),
@@ -296,7 +285,7 @@ export function ExportDialog({
                     setMarking(false);
                     setStatus((now) => (now.step === 'names' && now.job === job ? { ...now, marked } : now));
                   };
-                  currentPeople()
+                  privatePeople(project.id)
                     .then((list) => markAllInProject(project.id, list))
                     .then(
                       (result) => {

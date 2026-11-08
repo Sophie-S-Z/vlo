@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Editor } from '@tiptap/core';
 import * as Y from 'yjs';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -86,6 +87,16 @@ describe('originality matching', () => {
     expect(phrases).toEqual([
       'The migration of monarch butterflies covers thousands of miles across North America',
     ]);
+  });
+
+  test('a search phrase with a private name never goes to the web (spec F17)', () => {
+    const memoir = readFileSync('tests/fixtures/memoir.md', 'utf8');
+    expect(searchPhrases(memoir, 6).join(' ')).toMatch(/Rosa/);
+    // Real names come from the People screen, and "Gran" stands for a name the writer marked in the text.
+    const names = ['Aunt Rosa', 'Rosa', 'Uncle Teo', 'Teo', 'Gran'];
+    expect(searchPhrases(memoir, 6, DEFAULT_OPTIONS, names).join(' ')).not.toMatch(/Rosa|Teo/);
+    const marked = 'Gran walked the whole length of the harbour wall before the evening tide came in.';
+    expect(searchPhrases(marked, 6, DEFAULT_OPTIONS, names)).toEqual([]);
   });
 
   test('pasted sources and links are cleaned', () => {

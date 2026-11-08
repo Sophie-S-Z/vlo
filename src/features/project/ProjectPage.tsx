@@ -628,7 +628,6 @@ export function ProjectPage() {
               project={project}
               items={items}
               currentItemId={item?.id ?? null}
-              people={people ?? []}
             />
           </Suspense>
         )}

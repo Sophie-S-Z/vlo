@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { privatePeople } from '@/features/people/people';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Textarea } from '@/ui/textarea';
@@ -44,11 +45,14 @@ const ORIGIN_LABEL = { own: 'Your writing', pasted: 'Pasted source', web: 'Web' 
 
 export function OriginalityTab({
   text,
+  markedNames,
   itemId,
   projectId,
   onShow,
 }: {
   text: string;
+  /** The names that the writer marked in this item, which can differ from every name on the People screen. */
+  markedNames: readonly string[];
   itemId: string;
   projectId: string;
   onShow: (from: number, to: number) => void;
@@ -87,7 +91,9 @@ export function OriginalityTab({
         abort.current?.abort();
         const controller = new AbortController();
         abort.current = controller;
-        const phrases = searchPhrases(text, WEB_PHRASES, options);
+        const people = await privatePeople(projectId);
+        const names = [...people.flatMap((p) => p.variants.map((v) => v.real)), ...markedNames];
+        const phrases = searchPhrases(text, WEB_PHRASES, options, names);
         const found = await webSources(phrases, controller.signal);
         sources.push(...found.sources);
         setWebNote(

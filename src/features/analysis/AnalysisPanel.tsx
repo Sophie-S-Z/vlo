@@ -1,6 +1,7 @@
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { Tabs } from 'radix-ui';
 import { useMemo } from 'react';
+import { markedNamesIn } from '@/features/ai/names';
 import { aiOriginWords, mappedText } from './editorText';
 import { AiTab } from './panel/AiTab';
 import { OriginalityTab } from './panel/OriginalityTab';
@@ -27,6 +28,7 @@ const TAB =
 export function AnalysisPanel({ editor, kind, itemId, projectId, onShow }: AnalysisPanelProps) {
   const mapped = useMemo(() => mappedText(editor.state.doc), [editor]);
   const provenance = useMemo(() => aiOriginWords(editor.state.doc), [editor]);
+  const markedNames = useMemo(() => markedNamesIn(editor.getJSON()).map((n) => n.text), [editor]);
   const { stats, error } = useItemStats(mapped.text, kind);
   const show = (from: number, to: number) => {
     onShow(mapped.at(from), mapped.at(to));
@@ -73,7 +75,13 @@ export function AnalysisPanel({ editor, kind, itemId, projectId, onShow }: Analy
         <AiTab text={mapped.text} provenance={provenance} onShow={show} />
       </Tabs.Content>
       <Tabs.Content value="originality">
-        <OriginalityTab text={mapped.text} itemId={itemId} projectId={projectId} onShow={show} />
+        <OriginalityTab
+          text={mapped.text}
+          markedNames={markedNames}
+          itemId={itemId}
+          projectId={projectId}
+          onShow={show}
+        />
       </Tabs.Content>
     </Tabs.Root>
   );

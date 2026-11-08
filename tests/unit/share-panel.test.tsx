@@ -42,7 +42,6 @@ describe('Share panel', () => {
         project={PROJECT}
         items={[]}
         currentItemId={null}
-        people={[]}
       />,
     );
     expect(await screen.findByText('Sharing is not set up in this build.')).toBeTruthy();
