@@ -16,7 +16,10 @@ Last update: 2026-11-08
     Share left the focus on the page body after they closed (`src/ui/dialog.tsx`).
   - F3: every budget of spec section 12 has a test. Local Chromium and phone profile results:
     - Library LCP, cold load at 4x CPU, 150 ms and 1.6 Mbit/s: 1.73 to 1.83 s (budget 2.5 s).
-    - INP over a visit to every screen and the main dialogs at 4x CPU: 80 to 96 ms (budget 200 ms).
+    - INP over a visit to every screen, the main dialogs and the network log at 4x CPU: 96 to 128 ms in 6
+      runs with one worker (budget 200 ms). The slowest steps are the first key, a dialog that opens and
+      the Escape that closes it. With two workers it reached 152 to 200 ms, and one run failed at 200 ms
+      before its retry passed. CI runs one worker.
     - DOCX export of the 100,000-word novel: 0.43 to 0.60 s, longest main-thread task 57 ms (budget 10 s).
     - Open the 10,000-word scene: 93 to 123 ms. Keystroke p95: 17.5 to 18.5 ms. With 500 shimmer runs:
       20.5 to 21.0 ms. Initial JavaScript: 208 KB gzip (budget 250 KB).
