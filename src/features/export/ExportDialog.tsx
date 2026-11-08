@@ -1,7 +1,7 @@
 import { BookOpen, FileText, FileType, Printer } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef } from '@/features/library/templates';
 import { updateProjectSettings } from '@/features/library/projects';
 import { markAllInProject } from '@/features/people/markAll';
 import { db, type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
@@ -123,12 +123,12 @@ export function ExportDialog({
   sequence,
 }: ExportDialogProps) {
   const ids = useId();
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
   const current = items.find((i) => i.id === currentItemId && template.editorKind(i.kind) !== null) ?? null;
   const folder = current ? folderOf(items, current.id) : null;
   const [format, setFormat] = useState<ExportFormat>('docx');
   const [scope, setScope] = useState<ScopeChoice>(sequence ? 'sequence' : current ? 'item' : 'project');
-  const [safe, setSafe] = useState(project.template === 'memoir');
+  const [safe, setSafe] = useState(hasTemplate(project, 'memoir'));
   // A project with AI text, or in Co-writer mode, can add the AI provenance page (F26).
   const offersProvenance = project.aiMode === 'cowriter' || project.settings.aiInsertedAt !== undefined;
   const [provenance, setProvenance] = useState(project.settings.aiInsertedAt !== undefined);
@@ -147,7 +147,7 @@ export function ExportDialog({
     [],
   );
 
-  const offersManuscript = project.template === 'novel' && (format === 'docx' || format === 'pdf');
+  const offersManuscript = hasTemplate(project, 'novel') && (format === 'docx' || format === 'pdf');
   const usesManuscript = offersManuscript && manuscript.on;
 
   const closeJob = () => {

@@ -54,8 +54,8 @@ interface EditorPaneProps {
   scene?: string | undefined;
   /** Changes the project's font, page format or scene. */
   onSettings?: (change: { font?: FontValue; page?: PageFormat; scene?: SceneChoice }) => void;
-  /** The project's template, for the tools that only some templates offer. */
-  template?: Template | undefined;
+  /** The project's templates, for the tools that only some templates offer. */
+  templates?: readonly Template[] | undefined;
 }
 
 /** The open item: its editor, save status and counts. Only this item's Yjs document loads. Key it by item id. */
@@ -68,7 +68,7 @@ export function EditorPane({
   page: storedPage,
   scene: storedScene,
   onSettings,
-  template,
+  templates,
 }: EditorPaneProps) {
   const state = useItemDoc(item.id);
   const [save, setSave] = useState<SaveState>('saved');
@@ -95,7 +95,7 @@ export function EditorPane({
   }, [editor]);
 
   // The Craft switch of the open poem (spec 8.3). Only a poem of a poetry collection has one.
-  const craftable = kind === 'poem' && template === 'poetry';
+  const craftable = kind === 'poem' && (templates?.includes('poetry') ?? false);
   const craft = item.craft === true;
   useEffect(() => {
     setCraftItem(craftable ? id : null, craft);
@@ -277,7 +277,7 @@ export function EditorPane({
               page={page}
               zoom={zoom}
               onPages={setPages}
-              template={template}
+              templates={templates}
             />
           )}
         </article>

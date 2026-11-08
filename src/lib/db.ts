@@ -2,15 +2,20 @@ import { Dexie, type Table } from 'dexie';
 
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
 
-export type Template = 'novel' | 'memoir' | 'poetry';
+/** A kind of writing. A project has one or more (`Project.templates`). */
+export type Template = 'novel' | 'memoir' | 'poetry' | 'open';
 export type AiMode = 'pen' | 'reader' | 'cowriter';
-export type ItemKind = 'part' | 'chapter' | 'scene' | 'memory' | 'poem' | 'note';
+export type ItemKind = 'part' | 'chapter' | 'scene' | 'memory' | 'poem' | 'page' | 'note';
 export type Status = 'idea' | 'draft' | 'revised' | 'done';
 
 export interface Project {
   id: string;
   title: string;
-  template: Template;
+  /**
+   * The kinds of writing in the project, in `TEMPLATE_ORDER`, at least one. Before database version 6 a
+   * project had one `template`; the upgrade puts it in this list.
+   */
+  templates: Template[];
   aiMode: AiMode;
   authorName?: string;
   createdAt: number;
@@ -292,6 +297,18 @@ export class VloDb extends Dexie {
     this.version(4).stores({ networkLog: 'id, at' });
     // Version 5 (Phase 5, Task E1): the share links. A new table only, so no rows change.
     this.version(5).stores({ shares: 'id, projectId, createdAt' });
+    // Version 6: a project can mix templates. Each project's one `template` becomes a list of one.
+    this.version(6)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table('projects')
+          .toCollection()
+          .modify((project: Partial<Project> & { template?: Template }) => {
+            if (!Array.isArray(project.templates)) project.templates = [project.template ?? 'novel'];
+            delete project.template;
+          }),
+      );
   }
 }
 

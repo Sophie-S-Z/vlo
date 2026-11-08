@@ -22,7 +22,7 @@ afterEach(async () => {
 
 describe('createProject', () => {
   test('a new project starts in Pen mode with the spec defaults', async () => {
-    const { project } = await createProject({ title: 'Salt', template: 'poetry' });
+    const { project } = await createProject({ title: 'Salt', templates: ['poetry'] });
     expect(project.aiMode).toBe('pen');
     expect(project.settings).toEqual({
       snapshotEveryMinutes: 10,
@@ -34,12 +34,12 @@ describe('createProject', () => {
   });
 
   test('memoir projects alias AI requests by default', async () => {
-    const { project } = await createProject({ title: 'Coast', template: 'memoir' });
+    const { project } = await createProject({ title: 'Coast', templates: ['memoir'] });
     expect(project.settings.aliasAiRequests).toBe(true);
   });
 
   test('the starter items exist in order, and the first writable item is returned', async () => {
-    const { project, firstItemId } = await createProject({ title: 'Debt', template: 'novel' });
+    const { project, firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
     const items = await db.items.where('projectId').equals(project.id).toArray();
     const roots = sortByOrder(items.filter((i) => i.parentId === null));
     expect(roots.map((i) => i.kind)).toEqual(['chapter']);
@@ -50,7 +50,7 @@ describe('createProject', () => {
   });
 
   test('the first project asks the browser for persistent storage and records the answer', async () => {
-    await createProject({ title: 'One', template: 'poetry' });
+    await createProject({ title: 'One', templates: ['poetry'] });
     await vi.waitFor(async () => {
       expect((await db.appMeta.get('persistence'))?.value).toBe('granted');
     });
@@ -62,7 +62,7 @@ describe('createProject', () => {
       configurable: true,
       value: { persist: () => new Promise<boolean>((resolve) => (answer = resolve)) },
     });
-    const { firstItemId } = await createProject({ title: 'One', template: 'poetry' });
+    const { firstItemId } = await createProject({ title: 'One', templates: ['poetry'] });
     expect(firstItemId).toBeTruthy();
     expect(await db.appMeta.get('persistence')).toBeUndefined();
     answer(false);
@@ -74,7 +74,7 @@ describe('createProject', () => {
 
 describe('renameProject', () => {
   test('changes the title and the updated time', async () => {
-    const { project } = await createProject({ title: 'Old', template: 'poetry' });
+    const { project } = await createProject({ title: 'Old', templates: ['poetry'] });
     await renameProject(project.id, 'New');
     const back = await db.projects.get(project.id);
     expect(back?.title).toBe('New');
@@ -82,15 +82,15 @@ describe('renameProject', () => {
   });
 
   test('refuses an empty title', async () => {
-    const { project } = await createProject({ title: 'Keep', template: 'poetry' });
+    const { project } = await createProject({ title: 'Keep', templates: ['poetry'] });
     await expect(renameProject(project.id, '   ')).rejects.toThrow('title');
   });
 });
 
 describe('deleteProject', () => {
   test('removes every row and item database of that project only', async () => {
-    const keep = await createProject({ title: 'Keep', template: 'poetry' });
-    const gone = await createProject({ title: 'Gone', template: 'poetry' });
+    const keep = await createProject({ title: 'Keep', templates: ['poetry'] });
+    const gone = await createProject({ title: 'Gone', templates: ['poetry'] });
     for (const id of [keep.firstItemId, gone.firstItemId]) {
       const open = openItemDoc(id);
       await open.ready;

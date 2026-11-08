@@ -55,9 +55,16 @@ async function fixtureLibrary() {
   const base = { aiMode: 'pen' as const, createdAt: 0, updatedAt: 0 };
   const settings = { snapshotEveryMinutes: 10, aliasAiRequests: true, streaksEnabled: false, restDays: [] };
   await m.db.projects.bulkAdd([
-    { ...base, id: 'p1', title: 'Summers with Rosa', template: 'memoir', authorName: 'Ada Marlow', settings },
-    { ...base, id: 'p2', title: 'Tide Tables', template: 'poetry', settings },
-    { ...base, id: 'p3', title: 'Quiet Novel', template: 'novel', settings },
+    {
+      ...base,
+      id: 'p1',
+      title: 'Summers with Rosa',
+      templates: ['memoir'],
+      authorName: 'Ada Marlow',
+      settings,
+    },
+    { ...base, id: 'p2', title: 'Tide Tables', templates: ['poetry'], settings },
+    { ...base, id: 'p3', title: 'Quiet Novel', templates: ['novel'], settings },
   ]);
   await m.db.itemTexts.bulkAdd([
     { itemId: 'i1', projectId: 'p1', text: 'Aunt Rosa drove us to the coast every August.', updatedAt: 0 },
@@ -183,7 +190,7 @@ describe('usage counts', () => {
       await m.db.projects.add({
         id: `t${String(i)}`,
         title: template,
-        template,
+        templates: [template],
         aiMode: 'pen',
         createdAt: 0,
         updatedAt: 0,

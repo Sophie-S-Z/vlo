@@ -29,7 +29,7 @@ afterEach(async () => {
 });
 
 async function memoir() {
-  const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
+  const { project } = await createProject({ title: 'Salt Kitchen', templates: ['memoir'] });
   const first = (await db.items.where('projectId').equals(project.id).toArray()).find(
     (i) => i.kind === 'memory',
   );

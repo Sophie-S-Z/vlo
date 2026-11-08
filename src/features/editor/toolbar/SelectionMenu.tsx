@@ -24,13 +24,13 @@ const shouldShow: ShouldShow = ({ editor, view, state, from, to, element }) => {
 export function SelectionMenu({
   editor,
   form,
-  template,
+  templates,
 }: {
   editor: Editor;
   form: EditorForm;
-  template?: Template | undefined;
+  templates?: readonly Template[] | undefined;
 }) {
-  const commands = useMemo(() => commandsFor(form, template).filter((c) => c.selection), [form, template]);
+  const commands = useMemo(() => commandsFor(form, templates).filter((c) => c.selection), [form, templates]);
   const state = useCommandState(editor, commands);
   // Phones show their own copy and paste bar above a selection, so Vlo's menu goes below it there.
   const touch = useMediaQuery('(pointer: coarse), (max-width: 639px)');

@@ -28,7 +28,7 @@ afterEach(async () => {
 
 /** A novel with a row in each view table. Each reference points to a row of the project. */
 async function novelWithViews() {
-  const { project } = await createProject({ title: 'Salt Year', template: 'novel' });
+  const { project } = await createProject({ title: 'Salt Year', templates: ['novel'] });
   const first = (await db.items.where('projectId').equals(project.id).toArray()).find(
     (i) => i.kind === 'scene',
   );
@@ -164,7 +164,7 @@ describe('View rows in a backup', () => {
   });
 
   test('a copy points each private-name mark in the text and the snapshots to the new person', async () => {
-    const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
+    const { project } = await createProject({ title: 'Salt Kitchen', templates: ['memoir'] });
     const memory = (await db.items.where('projectId').equals(project.id).toArray()).find(
       (i) => i.kind === 'memory',
     );
@@ -197,7 +197,7 @@ describe('View rows in a backup', () => {
   });
 
   test('a version 1 backup, which has no view rows, still imports', async () => {
-    const { project } = await createProject({ title: 'Old file', template: 'novel' });
+    const { project } = await createProject({ title: 'Old file', templates: ['novel'] });
     const zip = await JSZip.loadAsync((await backUpProject(project.id, { music: false })).bytes);
     const manifest = JSON.parse((await zip.file('project.json')?.async('string')) ?? '{}') as Record<
       string,

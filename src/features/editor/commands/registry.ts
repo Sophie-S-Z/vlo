@@ -806,14 +806,14 @@ export function command(id: string): EditorCommand {
   return found;
 }
 
-/** True when a project of this template offers the command. */
-export function offeredIn(cmd: EditorCommand, template: Template | undefined): boolean {
-  return cmd.templates === undefined || (template !== undefined && cmd.templates.includes(template));
+/** True when a project of these templates offers the command: one of them is enough. */
+export function offeredIn(cmd: EditorCommand, templates: readonly Template[] | undefined): boolean {
+  return cmd.templates === undefined || (templates?.some((t) => cmd.templates?.includes(t)) ?? false);
 }
 
-/** The commands that this form offers in a project of this template, in registry order. */
-export function commandsFor(form: EditorForm, template?: Template): EditorCommand[] {
-  return COMMANDS.filter((c) => c.forms.includes(form) && offeredIn(c, template));
+/** The commands that this form offers in a project of these templates, in registry order. */
+export function commandsFor(form: EditorForm, templates?: readonly Template[]): EditorCommand[] {
+  return COMMANDS.filter((c) => c.forms.includes(form) && offeredIn(c, templates));
 }
 
 /** True when `query` finds the command by its label or a keyword. Every query word must match. */

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { hasTemplate } from '@/features/library/templates';
 import { Link, useLocation } from 'react-router';
 import { ModeBadge } from '@/features/ai/ModeBadge';
 import type { Project } from '@/lib/db';
@@ -38,10 +39,11 @@ function tabsFor(project: Project): Tab[] {
   return [write, ...viewsOf(project), ...shared];
 }
 
-/** The views of one template, between Write and the shared views. */
+/** The views of the project's templates, between Write and the shared views. Open writing has none. */
 function viewsOf(project: Project): Tab[] {
-  if (project.template === 'novel')
-    return [
+  const tabs: Tab[] = [];
+  if (hasTemplate(project, 'novel'))
+    tabs.push(
       {
         label: 'Board',
         to: '/board',
@@ -52,14 +54,15 @@ function viewsOf(project: Project): Tab[] {
         to: `/board?view=${GRID_VIEW}`,
         active: (path, search) => path.endsWith('/board') && search.get('view') === GRID_VIEW,
       },
-    ];
-  if (project.template === 'memoir')
-    return [
+    );
+  if (hasTemplate(project, 'memoir'))
+    tabs.push(
       { label: 'Timeline', to: '/timeline', active: (path) => path.endsWith('/timeline') },
       { label: 'People', to: '/people', active: (path) => path.endsWith('/people') },
-    ];
-  // Poetry.
-  return [{ label: 'Sequences', to: '/sequences', active: (path) => path.endsWith('/sequences') }];
+    );
+  if (hasTemplate(project, 'poetry'))
+    tabs.push({ label: 'Sequences', to: '/sequences', active: (path) => path.endsWith('/sequences') });
+  return tabs;
 }
 
 export function ViewTabs({

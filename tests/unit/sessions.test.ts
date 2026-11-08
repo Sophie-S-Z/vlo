@@ -38,7 +38,7 @@ test('deleting words never records a negative session', async () => {
 });
 
 test('projectTotals sums word counts and counts poems', async () => {
-  const { project, firstItemId } = await createProject({ title: 'Salt', template: 'poetry' });
+  const { project, firstItemId } = await createProject({ title: 'Salt', templates: ['poetry'] });
   await db.items.update(firstItemId, { wordCount: 12 });
   expect(await projectTotals(project.id)).toEqual({ words: 12, poems: 1 });
 });

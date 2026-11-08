@@ -16,7 +16,7 @@ async function newMemoir(page: Page) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await dialog.getByRole('radio', { name: /Memoir/ }).click();
+  await dialog.getByRole('checkbox', { name: /Memoir/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
   await expect(text(page)).toBeFocused();
 }

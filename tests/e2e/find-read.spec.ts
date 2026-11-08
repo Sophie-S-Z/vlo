@@ -172,7 +172,7 @@ test('find works in a poem and keeps its spaces', async ({ page }) => {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await dialog.getByRole('radio', { name: /Poetry collection/ }).click();
+  await dialog.getByRole('checkbox', { name: /Poetry collection/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
   const poem = page.getByRole('textbox', { name: 'Poem 1' });
   await expect(poem).toBeFocused();

@@ -25,7 +25,7 @@ afterEach(async () => {
  * chapter 2 has scene C, and chapter 3 has scene D inside a part.
  */
 async function fixture() {
-  const { project } = await createProject({ title: 'Salt Year', template: 'novel' });
+  const { project } = await createProject({ title: 'Salt Year', templates: ['novel'] });
   const starter = await db.items.where('projectId').equals(project.id).toArray();
   const chapter1 = starter.find((i) => i.kind === 'chapter');
   const sceneA = starter.find((i) => i.kind === 'scene');
@@ -118,7 +118,7 @@ describe('Plot Grid', () => {
   });
 
   test('a board with no threads has one "No thread" column', async () => {
-    const { project } = await createProject({ title: 'Empty', template: 'novel' });
+    const { project } = await createProject({ title: 'Empty', templates: ['novel'] });
     const rows = await rowsOf(project.id);
     const grid = plotGrid(rows.items, rows.cards, rows.links, rows.threads);
     expect(grid.columns).toEqual([{ id: NONE, title: 'No thread', color: null }]);
@@ -168,7 +168,7 @@ describe('Plot Grid', () => {
 
 describe('Thread order', () => {
   test('a thread moves one place at a time, and the ends stay put', async () => {
-    const { project } = await createProject({ title: 'Salt Year', template: 'novel' });
+    const { project } = await createProject({ title: 'Salt Year', templates: ['novel'] });
     const one = await addThread(project.id, 'One', 'amber');
     await addThread(project.id, 'Two', 'sage');
     const three = await addThread(project.id, 'Three', 'sky');

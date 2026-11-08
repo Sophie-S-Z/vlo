@@ -31,7 +31,7 @@ export function ModeDialog({
   const [saving, setSaving] = useState(false);
   const current = project.aiMode;
   const changes = changesFor(chosen, {
-    template: project.template,
+    templates: project.templates,
     aliasAiRequests: project.settings.aliasAiRequests,
   });
 

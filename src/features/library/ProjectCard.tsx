@@ -7,7 +7,7 @@ import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 import { backupDue, backupLabel } from '@/features/backup/reminder';
 import { formatWords } from './format';
-import { TEMPLATES } from './templates';
+import { projectDef } from './templates';
 
 export type LibraryLayout = 'grid' | 'list';
 
@@ -50,7 +50,7 @@ export function ProjectCard({
           list ? 'flex-wrap items-baseline gap-x-4 gap-y-1 py-3 pr-14 pl-5' : 'min-h-40 flex-col p-5',
         )}
       >
-        <p className={cn('text-sm text-muted', list && 'order-2')}>{TEMPLATES[project.template].label}</p>
+        <p className={cn('text-sm text-muted', list && 'order-2')}>{projectDef(project).label}</p>
         <h2
           className={cn(
             'font-display leading-tight font-semibold [overflow-wrap:anywhere]',

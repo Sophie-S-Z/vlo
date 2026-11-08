@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
-import { holdsText as templateHoldsText, TEMPLATES } from '@/features/library/templates';
+import { holdsText as templateHoldsText, TEMPLATE_ORDER } from '@/features/library/templates';
 import {
   BackupError,
   checkOrder,
@@ -28,6 +28,7 @@ import type {
   Session,
   Snapshot,
   Status,
+  Template,
   ViewRows,
 } from '@/lib/db';
 
@@ -38,13 +39,14 @@ import type {
  * - `items/<id>.md`: a readable copy of each item, for a writer who has no Vlo at hand;
  * - `snapshots/<id>.yjs`: the Yjs update of each snapshot;
  * - `music/<id>`: each of the writer's music files, only when the writer asks for them.
- * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Vlo still reads version 1.
+ * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Version 3 gives the project a
+ * list of templates (`templates`) in place of one `template`. Vlo still reads versions 1 and 2.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -69,9 +71,9 @@ export interface Backup {
   views: ViewRows;
 }
 
-const KINDS: readonly ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'note'];
+const KINDS: readonly ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'page', 'note'];
 const STATUSES: readonly Status[] = ['idea', 'draft', 'revised', 'done'];
-const TEMPLATE_IDS = Object.keys(TEMPLATES);
+const TEMPLATE_IDS: readonly string[] = TEMPLATE_ORDER;
 const AI_MODES = ['pen', 'reader', 'cowriter'];
 
 /** The file name for a backup made on `date`, such as "Salt Year backup 2026-11-04.vlo.zip". */
@@ -82,8 +84,8 @@ export function backupFileName(title: string, date: Date): string {
 }
 
 /** True when the item kind holds text in this template. Folders hold only their children. */
-export function holdsText(project: Pick<Project, 'template'>, kind: ItemKind): boolean {
-  return templateHoldsText(project.template, kind);
+export function holdsText(project: Pick<Project, 'templates'>, kind: ItemKind): boolean {
+  return templateHoldsText(project.templates, kind);
 }
 
 /** A snapshot row without its Yjs bytes, which go in their own file. */
@@ -133,12 +135,34 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
 
 export { BackupError };
 
+/**
+ * Checks the project's templates. A backup of version 1 or 2 has one `template`; the check puts it in a
+ * list, as the database upgrade to version 6 does.
+ */
+function checkTemplates(value: Json, what: string): void {
+  if (value.templates === undefined) {
+    const one = text(value, 'template', what);
+    if (!TEMPLATE_IDS.includes(one)) fail(`${DAMAGED} ${what} has a wrong template.`);
+    value.templates = [one];
+    delete value.template;
+  }
+  const list = value.templates;
+  if (
+    !Array.isArray(list) ||
+    list.length === 0 ||
+    !list.every((t) => typeof t === 'string' && TEMPLATE_IDS.includes(t)) ||
+    new Set(list).size !== list.length
+  )
+    fail(`${DAMAGED} ${what} has a wrong template.`);
+  value.templates = TEMPLATE_ORDER.filter((t: Template) => (list as string[]).includes(t));
+}
+
 function checkProject(value: unknown): Project {
   if (!isObject(value)) fail(`${DAMAGED} It has no project.`);
   const what = 'The project';
   id(value, 'id', what);
   text(value, 'title', what);
-  if (!TEMPLATE_IDS.includes(text(value, 'template', what))) fail(`${DAMAGED} ${what} has a wrong template.`);
+  checkTemplates(value, what);
   if (!AI_MODES.includes(text(value, 'aiMode', what))) fail(`${DAMAGED} ${what} has a wrong aiMode.`);
   optionalText(value, 'authorName', what);
   count(value, 'createdAt', what);

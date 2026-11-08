@@ -19,7 +19,7 @@ afterEach(async () => {
 });
 
 test('a poem starts with the labels off, and the switch stays with that poem only', async () => {
-  const { project } = await createProject({ title: 'Salt Hours', template: 'poetry' });
+  const { project } = await createProject({ title: 'Salt Hours', templates: ['poetry'] });
   const [poem] = await db.items.where('projectId').equals(project.id).toArray();
   if (!poem) throw new Error('The collection has no poem.');
   expect(poem.craft).toBeUndefined();

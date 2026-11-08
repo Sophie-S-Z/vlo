@@ -102,7 +102,7 @@ describe('sorting', () => {
 
 describe('submissions in the database', () => {
   test('add, edit, status, delete with undo, and the rules for a row', async () => {
-    const { project } = await createProject({ title: 'Salt Hours', template: 'poetry' });
+    const { project } = await createProject({ title: 'Salt Hours', templates: ['poetry'] });
     const poem = await addItem(project.id, null, 'poem', 'Low Tide');
     const draft: SubmissionDraft = {
       itemIds: [poem.id],
@@ -140,7 +140,7 @@ describe('submissions in the database', () => {
   });
 
   test('follow-up days are kept for each venue in the project settings', async () => {
-    const { project } = await createProject({ title: 'Salt Hours', template: 'poetry' });
+    const { project } = await createProject({ title: 'Salt Hours', templates: ['poetry'] });
     await setFollowUpDays(project.id, ' Agni ', 45);
     await setFollowUpDays(project.id, 'Granta', 120);
     const stored = (await db.projects.get(project.id))?.settings;

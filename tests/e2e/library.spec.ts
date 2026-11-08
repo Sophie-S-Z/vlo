@@ -5,7 +5,7 @@ import { skipOnboarding } from './support/onboarding';
 async function createPoetry(page: Page) {
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await dialog.getByRole('radio', { name: /Poetry collection/ }).click();
+  await dialog.getByRole('checkbox', { name: /Poetry collection/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
 }
 
@@ -41,13 +41,13 @@ test('keyboard only: create a Memoir project with a typed title', async ({ page 
   await newButton.focus();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await expect(dialog.getByRole('radio', { name: /Novel/ })).toBeFocused();
-  // Radix checks a radio when focus arrives while an arrow key is down. Playwright's press releases the key
-  // before the focus move, so the test holds the key the way a person does.
-  await page.keyboard.down('ArrowRight');
-  await expect(dialog.getByRole('radio', { name: /Memoir/ })).toBeChecked();
-  await page.keyboard.up('ArrowRight');
+  await expect(dialog.getByRole('checkbox', { name: /Novel/ })).toBeFocused();
   await page.keyboard.press('Tab');
+  await page.keyboard.press('Space');
+  // The first pick replaces the Novel suggestion.
+  await expect(dialog.getByRole('checkbox', { name: /Memoir/ })).toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: /Novel/ })).not.toBeChecked();
+  for (let i = 0; i < 3; i += 1) await page.keyboard.press('Tab');
   await expect(dialog.getByLabel('Title')).toBeFocused();
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.type('Tide Tables');

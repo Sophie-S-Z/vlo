@@ -29,7 +29,7 @@ async function writeDoc(id: string) {
 }
 
 test('addItem puts the new item after its last sibling and touches the project', async () => {
-  const { project, firstItemId } = await createProject({ title: 'Debt', template: 'novel' });
+  const { project, firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
   const chapter = (await db.items.get(firstItemId))?.parentId ?? null;
   const scene = await addItem(project.id, chapter, 'scene', 'Scene 2');
   const first = await db.items.get(firstItemId);
@@ -40,14 +40,14 @@ test('addItem puts the new item after its last sibling and touches the project',
 });
 
 test('nextTitle numbers by kind across the project', async () => {
-  const { project } = await createProject({ title: 'Debt', template: 'novel' });
+  const { project } = await createProject({ title: 'Debt', templates: ['novel'] });
   expect(await nextTitle(project.id, 'scene', 'Scene')).toBe('Scene 2');
   expect(await nextTitle(project.id, 'chapter', 'Chapter')).toBe('Chapter 2');
   expect(await nextTitle(project.id, 'note', 'Note')).toBe('Note 1');
 });
 
 test('moveItem changes exactly one item row', async () => {
-  const { project, firstItemId } = await createProject({ title: 'Debt', template: 'novel' });
+  const { project, firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
   const spy = vi.spyOn(db.items, 'update');
   await moveItem(firstItemId, null, 'Zz');
   expect(spy).toHaveBeenCalledTimes(1);
@@ -58,19 +58,19 @@ test('moveItem changes exactly one item row', async () => {
 });
 
 test('updateItem changes title, synopsis and status', async () => {
-  const { firstItemId } = await createProject({ title: 'Salt', template: 'poetry' });
+  const { firstItemId } = await createProject({ title: 'Salt', templates: ['poetry'] });
   await updateItem(firstItemId, { title: 'Tide', synopsis: 'Low water.', status: 'revised' });
   const item = await db.items.get(firstItemId);
   expect(item).toMatchObject({ title: 'Tide', synopsis: 'Low water.', status: 'revised' });
 });
 
 test('updateItem refuses an empty title', async () => {
-  const { firstItemId } = await createProject({ title: 'Salt', template: 'poetry' });
+  const { firstItemId } = await createProject({ title: 'Salt', templates: ['poetry'] });
   await expect(updateItem(firstItemId, { title: '  ' })).rejects.toThrow('title');
 });
 
 test('deleteItem removes the item, its descendants, their rows and their text databases', async () => {
-  const { project, firstItemId: scene } = await createProject({ title: 'Debt', template: 'novel' });
+  const { project, firstItemId: scene } = await createProject({ title: 'Debt', templates: ['novel'] });
   const chapter = (await db.items.get(scene))?.parentId ?? '';
   const keep = await addItem(project.id, null, 'note', 'Note 1');
   for (const id of [scene, keep.id]) {

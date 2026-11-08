@@ -15,7 +15,7 @@ async function novelWithWords(page: Page) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await dialog.getByRole('radio', { name: /Novel/ }).click();
+  await dialog.getByRole('checkbox', { name: /Novel/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
   const scene = page.getByRole('textbox', { name: 'Scene 1' });
   await expect(scene).toBeFocused();
@@ -164,7 +164,7 @@ test('Progress has a tab on every template and a command', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'New project' }).click();
     const dialog = page.getByRole('dialog', { name: 'New project' });
-    await dialog.getByRole('radio', { name: template }).click();
+    await dialog.getByRole('checkbox', { name: template }).click();
     await dialog.getByRole('button', { name: 'Create project' }).click();
     await expect(page.getByRole('navigation', { name: 'Project views' }).getByRole('link').last()).toHaveText(
       'Progress',

@@ -166,7 +166,7 @@ export function generateLargeProject(seed: number): LargeProject {
   const project: Project = {
     id: projectId,
     title: 'The hundred thousand',
-    template: 'novel',
+    templates: ['novel'],
     aiMode: 'pen',
     createdAt,
     updatedAt: createdAt + serial,

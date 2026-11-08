@@ -19,7 +19,7 @@ export async function seedProjects(page: Page, count: number): Promise<void> {
           tx.objectStore('projects').put({
             id: `seed-${String(i)}`,
             title: `Seeded project ${String(i + 1)}`,
-            template: (['novel', 'memoir', 'poetry'] as const)[i % 3],
+            templates: [(['novel', 'memoir', 'poetry'] as const)[i % 3]],
             aiMode: 'pen',
             createdAt: now - i * 1000,
             updatedAt: now - i * 1000,

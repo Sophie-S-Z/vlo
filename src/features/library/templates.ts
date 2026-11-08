@@ -7,8 +7,11 @@ export interface StarterItem {
 }
 
 export interface TemplateDef {
+  /** The template, or the first template of a project that mixes several. */
   id: Template;
   label: string;
+  /** A short name for a list of templates, such as "Novel + Memoir". */
+  shortLabel: string;
   description: string;
   /** Default title for a new project. */
   untitled: string;
@@ -26,14 +29,15 @@ const proseOrFolder = (kind: ItemKind): 'prose' | 'poem' | null =>
   kind === 'part' || kind === 'chapter' ? null : kind === 'poem' ? 'poem' : 'prose';
 
 /** True when an item of `kind` has its own text. A part or a chapter is a folder and has none. */
-export function holdsText(template: Template, kind: ItemKind): boolean {
-  return TEMPLATES[template].editorKind(kind) !== null;
+export function holdsText(templates: readonly Template[], kind: ItemKind): boolean {
+  return projectDef(templates).editorKind(kind) !== null;
 }
 
 export const TEMPLATES: Record<Template, TemplateDef> = {
   novel: {
     id: 'novel',
     label: 'Novel',
+    shortLabel: 'Novel',
     description: 'Parts, chapters and scenes. Draft scenes in any order.',
     untitled: 'Untitled novel',
     kinds: ['part', 'chapter', 'scene', 'note'],
@@ -49,6 +53,7 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
   memoir: {
     id: 'memoir',
     label: 'Memoir',
+    shortLabel: 'Memoir',
     description: 'Memories you can shape by time or by theme.',
     untitled: 'Untitled memoir',
     kinds: ['part', 'memory', 'note'],
@@ -63,6 +68,7 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
   poetry: {
     id: 'poetry',
     label: 'Poetry collection',
+    shortLabel: 'Poetry',
     description: 'Poems that keep every space, in sections you can reorder.',
     untitled: 'Untitled collection',
     kinds: ['part', 'poem', 'note'],
@@ -74,6 +80,102 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
     starter: [{ kind: 'poem', title: 'Poem 1' }],
     editorKind: proseOrFolder,
   },
+  open: {
+    id: 'open',
+    label: 'Open writing',
+    shortLabel: 'Open',
+    description:
+      'A blank page for any writing: essays, letters, scripts, journals and more. Put pages in folders.',
+    untitled: 'Untitled writing',
+    kinds: ['part', 'page', 'note'],
+    kindLabel: { part: 'Folder', page: 'Page', note: 'Note' },
+    // A folder can hold other folders, so the writer can make any shape.
+    childKinds: {
+      root: ['part', 'page', 'note'],
+      part: ['part', 'page', 'note'],
+    },
+    starter: [{ kind: 'page', title: 'Page 1' }],
+    editorKind: proseOrFolder,
+  },
 };
 
-export const TEMPLATE_ORDER: readonly Template[] = ['novel', 'memoir', 'poetry'];
+export const TEMPLATE_ORDER: readonly Template[] = ['novel', 'memoir', 'poetry', 'open'];
+
+/** The templates in `TEMPLATE_ORDER`, each one time. An empty or unknown list gives a novel. */
+export function cleanTemplates(templates: readonly string[]): Template[] {
+  const clean = TEMPLATE_ORDER.filter((t) => templates.includes(t));
+  return clean.length > 0 ? clean : ['novel'];
+}
+
+/** True when the project has the template. */
+export function hasTemplate(project: { templates: readonly Template[] }, template: Template): boolean {
+  return project.templates.includes(template);
+}
+
+/** A short name for the templates, such as "Novel" or "Novel + Memoir". */
+export function templatesLabel(templates: readonly Template[]): string {
+  return projectDef(templates).label;
+}
+
+function union<T>(lists: readonly (readonly T[] | undefined)[]): T[] {
+  const out: T[] = [];
+  for (const list of lists) for (const value of list ?? []) if (!out.includes(value)) out.push(value);
+  return out;
+}
+
+/** Puts several templates in one definition. The first template that names a kind gives its label. */
+function mergeTemplates(templates: readonly Template[]): TemplateDef {
+  const defs = templates.map((t) => TEMPLATES[t]);
+  const kinds = union(defs.map((d) => d.kinds));
+  const kindLabel: Partial<Record<ItemKind, string>> = {};
+  for (const kind of kinds) kindLabel[kind] = defs.find((d) => d.kindLabel[kind])?.kindLabel[kind] ?? kind;
+  const parents = union(defs.map((d) => Object.keys(d.childKinds) as (ItemKind | 'root')[]));
+  const childKinds: Partial<Record<ItemKind | 'root', ItemKind[]>> = {};
+  for (const parent of parents) childKinds[parent] = union(defs.map((d) => d.childKinds[parent]));
+  return {
+    id: defs[0]?.id ?? 'novel',
+    label: defs.map((d) => d.shortLabel).join(' + '),
+    shortLabel: defs.map((d) => d.shortLabel).join(' + '),
+    description: defs.map((d) => d.description).join(' '),
+    untitled: 'Untitled project',
+    kinds,
+    kindLabel,
+    childKinds,
+    starter: defs.flatMap((d) => d.starter),
+    editorKind: proseOrFolder,
+  };
+}
+
+const merged = new Map<string, TemplateDef>();
+
+/**
+ * The definition for a project's templates: the template itself, or all of them in one when the writer
+ * picked several. The binder kinds, the nesting rules and the starter items are the sum of each template.
+ * The same list gives the same object, so React can compare it.
+ */
+export function projectDef(source: readonly Template[] | { templates: readonly Template[] }): TemplateDef {
+  const templates = cleanTemplates('templates' in source ? source.templates : source);
+  const [only] = templates;
+  if (templates.length === 1 && only) return TEMPLATES[only];
+  const key = templates.join('+');
+  let def = merged.get(key);
+  if (!def) {
+    def = mergeTemplates(templates);
+    merged.set(key, def);
+  }
+  return def;
+}
+
+const lists = new Map<string, readonly Template[]>();
+
+/** The templates in a clean order, as one shared array for each list, so React can compare it. */
+export function templateList(templates: readonly Template[]): readonly Template[] {
+  const clean = cleanTemplates(templates);
+  const key = clean.join('+');
+  let list = lists.get(key);
+  if (!list) {
+    list = Object.freeze(clean);
+    lists.set(key, list);
+  }
+  return list;
+}

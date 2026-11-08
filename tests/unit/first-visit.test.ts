@@ -23,7 +23,7 @@ test('a profile that already has a project does not need onboarding', async () =
   await db.projects.add({
     id: 'p',
     title: 'Kept',
-    template: 'novel',
+    templates: ['novel'],
     aiMode: 'pen',
     createdAt: 1,
     updatedAt: 1,

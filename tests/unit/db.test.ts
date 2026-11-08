@@ -6,12 +6,19 @@ function project(id: string): Project {
   return {
     id,
     title: 'Salt',
-    template: 'poetry',
+    templates: ['poetry'],
     aiMode: 'pen',
     createdAt: 1,
     updatedAt: 1,
     settings: { snapshotEveryMinutes: 10, aliasAiRequests: false, streaksEnabled: false, restDays: [] },
   };
+}
+
+/** A project as Vlo stored it before version 6, with one template. */
+function legacyProject(id: string): Omit<Project, 'templates'> & { template: 'poetry' } {
+  const row: Partial<Project> = project(id);
+  delete row.templates;
+  return { ...(row as Omit<Project, 'templates'>), template: 'poetry' };
 }
 
 function item(id: string, projectId: string, parentId: string | null, order: string): Item {
@@ -37,9 +44,9 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 5 has the Phase 1 tables, the music, the template views, the network log and the shares', () => {
+  test('version 6 has the Phase 1 tables, the music, the template views, the network log and the shares', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(5);
+    expect(db.verno).toBe(6);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
@@ -81,7 +88,7 @@ describe('Vlo database', () => {
       networkLog: 'id, at',
     });
     await old.open();
-    await old.table('projects').add(project('kept'));
+    await old.table('projects').add(legacyProject('kept'));
     await old
       .table('networkLog')
       .add({ id: 'n1', at: 5, host: 'api.groq.com', path: '/x', purpose: 'ai', bytesSent: 3, status: 200 });
@@ -89,7 +96,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(5);
+    expect(upgraded.verno).toBe(6);
     expect((await upgraded.networkLog.get('n1'))?.host).toBe('api.groq.com');
     await upgraded.shares.add({
       id: 'sh1',
@@ -120,14 +127,15 @@ describe('Vlo database', () => {
       appMeta: 'key',
     });
     await old.open();
-    await old.table('projects').add(project('kept'));
+    await old.table('projects').add(legacyProject('kept'));
     await old.table('items').add(item('a', 'kept', null, 'a0'));
     old.close();
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(5);
+    expect(upgraded.verno).toBe(6);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
+    expect((await upgraded.projects.get('kept'))?.templates).toEqual(['poetry']);
     expect(await upgraded.items.count()).toBe(1);
     await upgraded.audioFiles.add({
       id: 'f1',
@@ -155,7 +163,7 @@ describe('Vlo database', () => {
       audioFiles: 'id, addedAt',
     });
     await old.open();
-    await old.table('projects').add(project('kept'));
+    await old.table('projects').add(legacyProject('kept'));
     await old.table('items').add(item('a', 'kept', null, 'a0'));
     await old.table('audioFiles').add({
       id: 'f1',
@@ -170,7 +178,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(5);
+    expect(upgraded.verno).toBe(6);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);
@@ -192,6 +200,53 @@ describe('Vlo database', () => {
     });
     expect((await upgraded.cards.where('itemId').equals('a').first())?.title).toBe('Storm');
     expect((await upgraded.sequences.where('projectId').equals('kept').first())?.name).toBe('Chapbook');
+    await upgraded.delete();
+  });
+
+  test('opening a version 5 database puts each project template in a list', async () => {
+    const name = 'vlo-upgrade-test-5';
+    const old = new Dexie(name);
+    old.version(5).stores({
+      projects: 'id, updatedAt',
+      items: 'id, projectId, [projectId+parentId]',
+      snapshots: 'id, itemId, [itemId+createdAt], projectId',
+      sessions: 'id, projectId',
+      itemTexts: 'itemId, projectId',
+      appMeta: 'key',
+      audioFiles: 'id, addedAt',
+      cards: 'id, projectId, itemId',
+      threads: 'id, projectId',
+      cardLinks: 'id, projectId, fromCardId, toCardId',
+      lifeStages: 'id, projectId',
+      sequences: 'id, projectId',
+      people: 'id, projectId',
+      submissions: 'id, projectId',
+      networkLog: 'id, at',
+      shares: 'id, projectId, createdAt',
+    });
+    await old.open();
+    await old
+      .table('projects')
+      .bulkAdd([
+        legacyProject('poems'),
+        { ...legacyProject('memoir'), template: 'memoir' },
+        { ...legacyProject('odd') },
+      ]);
+    // A row with no template at all becomes a novel.
+    await old.table('projects').update('odd', { template: undefined });
+    await old.table('items').add(item('a', 'poems', null, 'a0'));
+    old.close();
+
+    const upgraded = new VloDb(name);
+    await upgraded.open();
+    expect(upgraded.verno).toBe(6);
+    const rows = await upgraded.projects.toArray();
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    expect(byId.get('poems')?.templates).toEqual(['poetry']);
+    expect(byId.get('memoir')?.templates).toEqual(['memoir']);
+    expect(byId.get('odd')?.templates).toEqual(['novel']);
+    for (const row of rows) expect(row).not.toHaveProperty('template');
+    expect(await upgraded.items.count()).toBe(1);
     await upgraded.delete();
   });
 

@@ -1,4 +1,5 @@
 import { appFile } from '@/lib/net';
+import { hasTemplate } from '@/features/library/templates';
 import type { NameCheck, PrivatePerson } from '@/lib/privacy';
 import { exportFileName, type BuildInput } from './build';
 import { checkOwnFonts, ownFontsOf, type FontCheck, type FontSwap } from './fontCheck';
@@ -54,7 +55,7 @@ export function embedsFonts(format: ExportFormat): boolean {
 export function usesManuscript(request: Pick<ExportRequest, 'project' | 'format' | 'manuscript'>): boolean {
   return (
     request.manuscript !== undefined &&
-    request.project.template === 'novel' &&
+    hasTemplate(request.project, 'novel') &&
     (request.format === 'docx' || request.format === 'pdf')
   );
 }

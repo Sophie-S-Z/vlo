@@ -5,7 +5,7 @@ import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { useMediaQuery } from '@/app/useMediaQuery';
 import { addItem, nextTitle } from '@/features/binder/items';
 import { flattenTree } from '@/features/binder/tree';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import type { Item } from '@/lib/db';
@@ -149,9 +149,9 @@ export function TimelinePage() {
   }
 
   const { project } = state;
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
 
-  if (project.template !== 'memoir') {
+  if (!hasTemplate(project, 'memoir')) {
     return <WrongTemplate project={project} forWhom="The Memory Timeline is for memoir projects." />;
   }
 

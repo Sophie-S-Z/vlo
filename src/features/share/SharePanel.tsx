@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Check, Copy, RefreshCw } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef } from '@/features/library/templates';
 import { markAllInProject } from '@/features/people/markAll';
 import { FAILED, NameCheckLists } from '@/features/people/NameCheckLists';
 import { db, type Item, type Person, type Project, type ShareRecord } from '@/lib/db';
@@ -270,9 +270,9 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
 
 export function SharePanel({ open, onOpenChange, project, items, currentItemId, people }: SharePanelProps) {
   const ids = useId();
-  const template = TEMPLATES[project.template];
-  const memoir = project.template === 'memoir';
-  const shareable = useMemo(() => shareableItems(project.template, items), [project.template, items]);
+  const template = projectDef(project);
+  const memoir = hasTemplate(project, 'memoir');
+  const shareable = useMemo(() => shareableItems(project.templates, items), [project.templates, items]);
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => {
     const current = shareable.find((i) => i.id === currentItemId);
     return new Set(current ? [current.id] : shareable.map((i) => i.id));

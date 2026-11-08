@@ -105,20 +105,20 @@ function Separator() {
 export function Toolbar({
   editor,
   kind,
-  template,
+  templates,
 }: {
   editor: Editor;
   kind: EditorForm;
-  template?: Template | undefined;
+  templates?: readonly Template[] | undefined;
 }) {
   const layout = LAYOUTS[kind];
   // The tools of this template only, such as the private-name tools of a memoir, end the More menu.
   const own = useMemo(
     () =>
-      commandsFor(kind, template)
+      commandsFor(kind, templates)
         .filter((c) => c.templates !== undefined)
         .map((c) => c.id),
-    [kind, template],
+    [kind, templates],
   );
   const all = useMemo(() => {
     const ids = [

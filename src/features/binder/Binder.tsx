@@ -12,7 +12,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { TEMPLATES } from '@/features/library/templates';
+import { projectDef } from '@/features/library/templates';
 import type { Item, ItemKind, Project, Status } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
@@ -59,7 +59,7 @@ function describeMove(nodes: readonly FlatNode[], item: Item, placement: Placeme
 }
 
 export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
-  const template = TEMPLATES[project.template];
+  const template = useMemo(() => projectDef(project.templates), [project.templates]);
   const nodes = useMemo(() => flattenTree(items), [items]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);

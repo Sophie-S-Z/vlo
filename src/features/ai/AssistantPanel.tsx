@@ -7,7 +7,7 @@ import { docBody } from '@/features/editor/itemText';
 import { leafText } from '@/features/editor/leafText';
 import { updateItem } from '@/features/binder/items';
 import { updateProjectSettings } from '@/features/library/projects';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { db, type Item, type Person, type Project } from '@/lib/db';
 import type { PrivatePerson } from '@/lib/privacy';
@@ -160,7 +160,7 @@ export default function AssistantPanel({
   onInserted,
 }: AssistantPanelProps) {
   const id = useId();
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
   const cowriter = project.aiMode === 'cowriter';
   const entries = useEntries(project.id);
   const [choice, setChoice] = useState<EngineChoice | null>(null);
@@ -204,7 +204,7 @@ export default function AssistantPanel({
   // A switch from Co-writer to Reader leaves no drafting action chosen.
   const action: ActionId = !cowriter && isCowriterAction(chosen) ? 'feedback' : chosen;
 
-  const aliasOn = project.template === 'memoir' && project.settings.aliasAiRequests;
+  const aliasOn = hasTemplate(project, 'memoir') && project.settings.aliasAiRequests;
   const privatePeople: PrivatePerson[] = (people ?? []).map((p) => ({ id: p.id, variants: p.variants }));
   const inBrowser = choice?.kind !== 'provider';
   const budget = inBrowser ? BUDGET.webllm : BUDGET.provider;

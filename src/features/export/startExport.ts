@@ -17,7 +17,7 @@ import type { ExportFile, ExportRequest } from './run';
 export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Promise<[string, Uint8Array][]> {
   const ids = scopeItems(request.items, request.scope)
     .map((n) => n.item)
-    .filter((item) => holdsText(request.project.template, item.kind))
+    .filter((item) => holdsText(request.project.templates, item.kind))
     .map((item) => item.id);
   return readItemUpdates(ids);
 }

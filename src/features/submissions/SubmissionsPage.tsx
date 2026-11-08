@@ -3,7 +3,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 're
 import { Link, useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { flattenTree, openTargets } from '@/features/binder/tree';
-import { TEMPLATES } from '@/features/library/templates';
+import { projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import { formatDate } from '@/features/timeline/dates';
@@ -187,7 +187,7 @@ export function SubmissionsPage() {
         .filter((i) => i.kind !== 'note'),
     [items],
   );
-  const template = state.status === 'ready' ? TEMPLATES[state.project.template] : null;
+  const template = state.status === 'ready' ? projectDef(state.project) : null;
   /** The item that a piece title opens: a part or chapter opens its first scene. */
   const targets = useMemo(
     () => (template ? openTargets(items, template.editorKind) : new Map<string, Item>()),
@@ -210,7 +210,7 @@ export function SubmissionsPage() {
   }
 
   const { project } = state;
-  const { label: templateLabel } = TEMPLATES[project.template];
+  const { label: templateLabel } = projectDef(project);
   const announce = (text: string) => {
     setDeleted(null);
     setMessage(text);

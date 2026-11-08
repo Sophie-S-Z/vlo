@@ -22,7 +22,7 @@ async function newPoem(page: Page) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await dialog.getByRole('radio', { name: /Poetry/ }).click();
+  await dialog.getByRole('checkbox', { name: /Poetry/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
   await expect(poem(page)).toBeFocused();
 }

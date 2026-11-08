@@ -35,7 +35,7 @@ afterEach(async () => {
 async function novelWithText() {
   const { project } = await createProject({
     title: 'Salt Year',
-    template: 'novel',
+    templates: ['novel'],
     authorName: 'Ada Marlow',
   });
   const items = await db.items.where('projectId').equals(project.id).toArray();
@@ -130,7 +130,7 @@ describe('Backup file', () => {
   });
 
   test('the readable copy of a poem keeps every leading space as a no-break space', async () => {
-    const { project } = await createProject({ title: 'Tide', template: 'poetry' });
+    const { project } = await createProject({ title: 'Tide', templates: ['poetry'] });
     const poem = (await db.items.where('projectId').equals(project.id).toArray()).find(
       (i) => i.kind === 'poem',
     );
@@ -352,6 +352,35 @@ describe('Reading a backup', () => {
     await expect(reads(await zip.generateAsync({ type: 'uint8array' }))).rejects.toThrow(
       /Vlo cannot read the text of/,
     );
+  });
+
+  test('reads a version 2 backup with one template as a list of one', async () => {
+    const zip = await backupZip();
+    const bytes = await withManifest(zip, (m) => {
+      m.version = 2;
+      const project = m.project as Record<string, unknown>;
+      delete project.templates;
+      project.template = 'novel';
+    });
+    const backup = await reads(bytes);
+    expect(backup.project.templates).toEqual(['novel']);
+    expect(backup.project).not.toHaveProperty('template');
+  });
+
+  test('keeps a mix of templates in template order, and refuses an empty or unknown one', async () => {
+    const zip = await backupZip();
+    const mixed = await reads(
+      await withManifest(zip, (m) => ((m.project as Record<string, unknown>).templates = ['open', 'novel'])),
+    );
+    expect(mixed.project.templates).toEqual(['novel', 'open']);
+    for (const templates of [[], ['story'], ['novel', 'novel'], 'novel']) {
+      const fresh = await backupZip();
+      await expect(
+        reads(
+          await withManifest(fresh, (m) => ((m.project as Record<string, unknown>).templates = templates)),
+        ),
+      ).rejects.toThrow(/has a wrong template/);
+    }
   });
 
   test('refuses rows that do not fit together', async () => {
