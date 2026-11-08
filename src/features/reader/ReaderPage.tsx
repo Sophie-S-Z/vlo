@@ -410,7 +410,11 @@ function ReaderBody({
               {notes.map(({ fn, note }) => (
                 <li key={fn} id={`note-${String(fn)}`} value={fn}>
                   <NoteText note={note} />{' '}
-                  <a href={`#note-ref-${String(fn)}`} aria-label={`Back to note ${String(fn)} in the text`}>
+                  <a
+                    href={`#note-ref-${String(fn)}`}
+                    className="underline"
+                    aria-label={`Back to note ${String(fn)} in the text`}
+                  >
                     ↩
                   </a>
                 </li>

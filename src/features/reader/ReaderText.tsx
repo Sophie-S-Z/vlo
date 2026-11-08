@@ -58,6 +58,7 @@ export function Runs({ runs }: { runs: readonly ShareRun[] }) {
               <a
                 href={`#note-${String(run.fn)}`}
                 id={`note-ref-${String(run.fn)}`}
+                className="underline"
                 aria-label={`Note ${String(run.fn)}`}
               >
                 {run.fn}
