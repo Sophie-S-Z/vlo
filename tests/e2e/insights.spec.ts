@@ -23,6 +23,8 @@ async function newNovel(page: Page, words: string) {
   await expect(text(page)).toBeFocused();
   await page.keyboard.insertText(words);
   await expect(text(page)).toContainText(words.slice(0, 40));
+  // The word count rolls in after the save, so the checks below start once it is still.
+  await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
 }
 
 test('the stats bar counts after a pause and can be changed or hidden', async ({ page }) => {
@@ -61,6 +63,8 @@ test('Insights shows the statistics, the keywords and the AI check, and shows a 
 
   await dialog.getByRole('tab', { name: 'AI check' }).click();
   await dialog.getByRole('button', { name: 'Check this item' }).click();
+  // The status says "Vlo could not run the check" when the worker fails, so a failure names the cause.
+  await expect(dialog.getByRole('status').filter({ hasText: /check/ })).toHaveText('The check is done.');
   await expect(dialog.getByText('Many signs of AI writing')).toBeVisible();
   await expect(dialog.getByText('No text in this item came from')).toBeVisible();
   await expect(dialog.getByText('Phrases that AI models overuse')).toBeVisible();

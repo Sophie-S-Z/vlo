@@ -10,6 +10,10 @@ import { BUNDLE, DAY, fakeSupabase, shareOf } from './support/share';
  * against a fake Supabase project that keeps its shares and comments in memory.
  */
 
+// Playwright routes the fake Supabase requests only in Chromium once the service worker controls the
+// page, so these tests run with no service worker. The PWA tests cover the worker.
+test.use({ serviceWorkers: 'block' });
+
 /** The JavaScript files that the page loaded. */
 function scripts(requests: Request[]): string[] {
   return requests.map((r) => new URL(r.url()).pathname).filter((p) => p.endsWith('.js'));
