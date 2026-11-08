@@ -8,6 +8,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
+  // The timing tests hold ceilings that were set with one test at a time. The runners of a public
+  // repository have 4 cores, so the default would run 2 workers and the timing tests would share the CPU.
+  workers: isCI ? 1 : '50%',
   reporter: isCI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://localhost:4173',

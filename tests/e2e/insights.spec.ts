@@ -21,7 +21,11 @@ async function newNovel(page: Page, words: string) {
     .getByRole('button', { name: 'Create project' })
     .click();
   await expect(text(page)).toBeFocused();
-  await page.keyboard.insertText(words);
+  // Enter makes each paragraph, so every browser gets the same paragraphs. A pasted line break differs.
+  for (const [i, paragraph] of words.split(/\n+/).entries()) {
+    if (i > 0) await page.keyboard.press('Enter');
+    await page.keyboard.insertText(paragraph);
+  }
   await expect(text(page)).toContainText(words.slice(0, 40));
   // The word count rolls in after the save, so the checks below start once it is still.
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
