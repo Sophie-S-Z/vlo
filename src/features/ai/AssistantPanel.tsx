@@ -1,15 +1,13 @@
-import type { JSONContent } from '@tiptap/core';
 import { Square, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { getActiveEditor } from '@/features/editor/commands/editorBus';
 import { insertAiText } from '@/features/editor/extensions/aiOrigin';
-import { docBody } from '@/features/editor/itemText';
 import { leafText } from '@/features/editor/leafText';
 import { updateItem } from '@/features/binder/items';
 import { updateProjectSettings } from '@/features/library/projects';
-import { hasTemplate, projectDef } from '@/features/library/templates';
+import { hasTemplate } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
-import { db, type Item, type Person, type Project } from '@/lib/db';
+import type { Item, Project } from '@/lib/db';
 import type { PrivatePerson } from '@/lib/privacy';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
@@ -28,13 +26,7 @@ import {
   type Entry,
   type Target,
 } from './assistantStore';
-import {
-  CONTINUE_WORDS,
-  COWRITER_ACTIONS,
-  cowriterRequest,
-  splitAlternatives,
-  type CowriterAction,
-} from './cowriter';
+import { CONTINUE_WORDS, COWRITER_ACTIONS, splitAlternatives } from './cowriter';
 import { providerEngine } from './engine/engine';
 import { PRESETS } from './engine/presets';
 import { EngineError, type Engine } from './engine/types';
@@ -42,19 +34,8 @@ import { cancelWebLlmLoad, LOAD_CANCELLED, loadWebLlm, unloadWebLlm } from './en
 import { engineName, EngineSettings } from './EngineSettings';
 import { KeyDialog } from './KeyDialog';
 import { sessionKey } from './keys';
-import { withMarkedNames } from './names';
-import { projectMarkedNames } from './projectNames';
-import {
-  checkFits,
-  privateRequest,
-  READER_ACTIONS,
-  readerRequest,
-  restoreNames,
-  type AiRequest,
-  type ItemContext,
-  type ReaderAction,
-} from './reader';
-import { passagesOf, type Source } from './retrieve';
+import { READER_ACTIONS, restoreNames, type AiRequest } from './reader';
+import { buildAiRequest, isCowriterAction, type ActionId } from './request';
 import { SendDrawer } from './SendDrawer';
 import { DEFAULT_ENGINE, drawerOff, loadEngineChoice, setDrawerOff, type EngineChoice } from './settings';
 import { recordAiRequest } from '@/features/usage/usage';
@@ -64,18 +45,6 @@ import { recordAiRequest } from '@/features/usage/usage';
  * stays here. In Reader mode no answer has a way into the manuscript. In Co-writer mode, Insert puts a
  * draft in the text with the aiOrigin mark, and only when the writer presses it.
  */
-
-type ActionId = ReaderAction | CowriterAction;
-
-const isCowriterAction = (action: ActionId): action is CowriterAction =>
-  COWRITER_ACTIONS.some((a) => a.id === action);
-
-/** The most tokens of the writer's text in one request: small for the in-browser model. */
-const BUDGET = { webllm: 1500, provider: 12000 } as const;
-/** The most tokens of other passages for the in-browser model. Other engines take the default of 3,000. */
-const WEBLLM_PASSAGES = 1000;
-/** The in-browser models read 4,096 tokens. The rough count can be low, so a request stays under this. */
-const WEBLLM_LIMIT = 3500;
 
 /** The words that a rewrite replaces, found again after the text changed. */
 function findTarget(doc: PmNode, target: Target, sep: string): Target | null {
@@ -122,8 +91,6 @@ export interface AssistantPanelProps {
   /** The open item, if it has an editor. */
   item: Item | undefined;
   kind: 'prose' | 'poem' | null;
-  /** The people of the project, or undefined while they load. */
-  people: readonly Person[] | undefined;
   /** Runs after an Insert, so a phone can close the sheet and show the text. */
   onInserted?: () => void;
 }
@@ -151,16 +118,8 @@ const STATUS_TEXT: Record<Entry['status'], string> = {
   error: 'Stopped with an error',
 };
 
-export default function AssistantPanel({
-  project,
-  items,
-  item,
-  kind,
-  people,
-  onInserted,
-}: AssistantPanelProps) {
+export default function AssistantPanel({ project, items, item, kind, onInserted }: AssistantPanelProps) {
   const id = useId();
-  const template = projectDef(project);
   const cowriter = project.aiMode === 'cowriter';
   const entries = useEntries(project.id);
   const [choice, setChoice] = useState<EngineChoice | null>(null);
@@ -205,50 +164,9 @@ export default function AssistantPanel({
   const action: ActionId = !cowriter && isCowriterAction(chosen) ? 'feedback' : chosen;
 
   const aliasOn = hasTemplate(project, 'memoir') && project.settings.aliasAiRequests;
-  const privatePeople: PrivatePerson[] = (people ?? []).map((p) => ({ id: p.id, variants: p.variants }));
-  const inBrowser = choice?.kind !== 'provider';
-  const budget = inBrowser ? BUDGET.webllm : BUDGET.provider;
-  const kindName = (i: Item) => (template.kindLabel[i.kind] ?? i.kind).toLowerCase();
-
-  /** The open item's text from the editor, which is newer than the stored copy. */
-  const liveItem = (): ItemContext | undefined => {
-    if (!item || !kind) return undefined;
-    const editor = getActiveEditor()?.editor;
-    const text = editor && !editor.isDestroyed ? docBody(editor.state.doc, kind) : '';
-    return { id: item.id, title: item.title, kind: kindName(item), text };
-  };
-
-  /** Every passage of the manuscript, with the open item read from the editor. Notes are research. */
-  const passages = async (open: ItemContext | undefined) => {
-    const texts = await db.itemTexts.where('projectId').equals(project.id).toArray();
-    const byId = new Map(items.map((i) => [i.id, i]));
-    const sources: Source[] = [];
-    for (const row of texts) {
-      const it = byId.get(row.itemId);
-      if (!it || it.kind === 'note' || template.editorKind(it.kind) === null) continue;
-      sources.push({
-        itemId: it.id,
-        title: it.title,
-        text: open?.id === it.id ? open.text : row.text,
-      });
-    }
-    return passagesOf(sources);
-  };
 
   const hostOf = (c: EngineChoice) =>
     c.kind === 'webllm' ? 'this browser' : new URL(PRESETS[c.preset].base).host;
-
-  /** The people of a memoir request, with each name that the writer marked anywhere in the memoir. */
-  const requestPeople = async (): Promise<PrivatePerson[]> => {
-    if (!aliasOn) return privatePeople;
-    const editor = getActiveEditor()?.editor;
-    const openDoc =
-      item && editor && !editor.isDestroyed
-        ? { id: item.id, doc: editor.getJSON() as JSONContent }
-        : undefined;
-    const written = items.filter((i) => template.editorKind(i.kind) !== null);
-    return withMarkedNames(privatePeople, await projectMarkedNames(written, openDoc));
-  };
 
   const prepare = async () => {
     if (working.current) return;
@@ -265,70 +183,28 @@ export default function AssistantPanel({
   const prepareNow = async () => {
     setError('');
     if (!choice) return;
-    if (aliasOn && people === undefined) {
-      setError('Vlo is still reading the people of this memoir. Ask again in a moment.');
+    const editor = getActiveEditor()?.editor;
+    const built = await buildAiRequest({
+      project,
+      items,
+      action,
+      question,
+      words,
+      instruction,
+      topic,
+      open: item && kind && editor && !editor.isDestroyed ? { item, kind, state: editor.state } : undefined,
+      inBrowser: choice.kind !== 'provider',
+    });
+    if (!built.ok) {
+      setError(built.message);
       return;
-    }
-    const open = liveItem();
-    let request: AiRequest;
-    let target: Pending['target'];
-    try {
-      if (isCowriterAction(action)) {
-        const editor = getActiveEditor()?.editor;
-        if (!open || !editor || editor.isDestroyed) throw new RangeError('Open an item first.');
-        const { from, to } = editor.state.selection;
-        const sep = kind === 'poem' ? '\n' : '\n\n';
-        const before = editor.state.doc.textBetween(0, from, sep, leafText);
-        const selection = editor.state.doc.textBetween(from, to, sep, leafText);
-        request = cowriterRequest(action, {
-          item: open,
-          before,
-          selection,
-          words,
-          instruction,
-          topic,
-          budget,
-        });
-        if (action === 'rewrite' || action === 'alternatives') target = { from, to, text: selection };
-      } else {
-        const needsAll = action === 'ask' || action === 'continuity';
-        request = readerRequest(action, {
-          ...(open ? { item: open } : {}),
-          question,
-          passages: needsAll ? await passages(open) : [],
-          budget,
-          ...(inBrowser ? { passageBudget: WEBLLM_PASSAGES } : {}),
-        });
-      }
-    } catch (problem) {
-      setError(
-        problem instanceof RangeError ? problem.message : 'Vlo could not read the text for this request.',
-      );
-      return;
-    }
-    let safePeople: PrivatePerson[];
-    try {
-      safePeople = await requestPeople();
-    } catch {
-      // A memoir request never goes without every marked name.
-      setError('Vlo could not read the marked names of this memoir, so it sent nothing.');
-      return;
-    }
-    const sent = privateRequest(request, safePeople, aliasOn);
-    if (inBrowser) {
-      try {
-        checkFits(sent, WEBLLM_LIMIT);
-      } catch (problem) {
-        setError(problem instanceof RangeError ? problem.message : 'This request is too long.');
-        return;
-      }
     }
     const next: Pending = {
-      request: sent,
+      request: built.request,
       host: hostOf(choice),
-      aliased: aliasOn && sent !== request,
-      people: safePeople,
-      ...(target ? { target } : {}),
+      aliased: built.aliased,
+      people: built.people,
+      ...(built.target ? { target: built.target } : {}),
     };
     if (choice.kind === 'provider' && !PRESETS[choice.preset].local && !sessionKey(choice.preset)) {
       setKeyFor(next);
