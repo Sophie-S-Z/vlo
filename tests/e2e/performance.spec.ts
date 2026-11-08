@@ -340,6 +340,18 @@ test.describe('a mid-range phone', () => {
     await dialog.getByRole('button', { name: 'Create project' }).click();
     await expect(page.locator('.vlo-manuscript')).toBeFocused();
     await page.keyboard.type('The harbour lights came on one by one.', { delay: 30 });
+    for (const [opener, name] of [
+      ['Search', 'Command menu'],
+      ['Export', 'Export'],
+      ['Share', 'Share for reading'],
+      ['Insights', 'Insights'],
+      ['History', 'History'],
+    ] as const) {
+      await page.getByRole('button', { name: opener, exact: true }).click();
+      await expect(page.getByRole('dialog', { name })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name })).toBeHidden();
+    }
     const views = page.getByRole('navigation', { name: 'Project views' });
     for (const view of ['Board', 'Plot Grid', 'Timeline', 'People', 'Sequences', 'Submissions', 'Progress']) {
       await views.getByRole('link', { name: view }).click();
@@ -347,6 +359,8 @@ test.describe('a mid-range phone', () => {
     }
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.getByRole('switch', { name: 'Calm mode' }).click();
+    await page.getByRole('contentinfo').getByRole('link', { name: 'See the network log' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Network log');
     // The last event waits for its next paint before the browser reports it.
     await page.waitForTimeout(500);
     const times = Object.values(await page.evaluate(() => window.__interactions)).sort((a, b) => b - a);
@@ -397,5 +411,7 @@ test('DOCX: the 100,000-word novel exports in under 10 s and never blocks the ma
   expect(xml).toContain(seeded.longSceneEnd);
   expect(xml.length).toBeGreaterThan(500_000);
   expect(took).toBeLessThan(10_000);
-  expect(longest).toBeLessThan(200);
+  // Only Chromium reports long tasks. Elsewhere the time budget still holds.
+  if (await page.evaluate(() => PerformanceObserver.supportedEntryTypes.includes('longtask')))
+    expect(longest).toBeLessThan(200);
 });

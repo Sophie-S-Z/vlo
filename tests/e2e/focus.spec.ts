@@ -151,7 +151,7 @@ test('leaving the project ends a running session with the words it added', async
   await expect(page.getByRole('button', { name: /^Session timer, / })).toBeVisible();
   await scene(page, 1).click();
   await page.keyboard.type('Rain on the ledger tonight.');
-  await expect(page.getByText('5 words')).toBeVisible();
+  await expect(page.getByText('5 words', { exact: true })).toBeVisible();
   const left = Date.now();
   await page.getByRole('link', { name: 'Library' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();

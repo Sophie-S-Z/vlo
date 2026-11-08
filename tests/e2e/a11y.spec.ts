@@ -72,6 +72,44 @@ for (const theme of THEMES) {
   });
 }
 
+/** The main dialogs of a project, by the name of the button that opens each one and the dialog's name. */
+const DIALOGS: [opener: string | RegExp, dialog: string][] = [
+  ['Search', 'Command menu'],
+  ['Export', 'Export'],
+  ['Share', 'Share for reading'],
+  [/^AI mode: /, 'AI mode'],
+  ['Insights', 'Insights'],
+  ['History', 'History'],
+];
+
+for (const theme of THEMES) {
+  test(`each main dialog has no serious axe issues in ${theme}, and Escape gives the focus back`, async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await setTheme(page, theme);
+    await page.goto('/welcome');
+    await page.getByRole('button', { name: 'Skip' }).click();
+    const found: Record<string, string[]> = {};
+    const check = async (opener: ReturnType<Page['getByRole']>, name: string) => {
+      await opener.click();
+      const dialog = page.getByRole('dialog', { name });
+      await expect(dialog).toBeVisible();
+      const issues = await seriousIssues(page);
+      if (issues.length > 0) found[name] = issues;
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+      await expect(opener).toBeFocused();
+    };
+    await check(page.getByRole('button', { name: 'New project' }), 'New project');
+    await newMixedProject(page);
+    for (const [opener, name] of DIALOGS) {
+      await check(page.getByRole('button', { name: opener, exact: true }), name);
+    }
+    expect(found).toEqual({});
+  });
+}
+
 test('every control that Tab reaches shows a focus ring', async ({ page }) => {
   test.setTimeout(120_000);
   const found: Record<string, string[]> = {};

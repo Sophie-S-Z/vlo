@@ -6,15 +6,17 @@ Last update: 2026-11-08
 
 - Phase 6 (plan `docs/plans/phase-6.md`), on the branch `claude/project-thread-lclnsv`:
   - F1: the architecture review (`docs/architecture-review-phase-6.md`). Fixed: the web originality check
-    left real names in its search phrases; export and Share fell back to an empty people list on a failed
-    read (now `privatePeople` throws); the AI request was built inside the Assistant panel (now
+    left real names in its search phrases; export and Share fell back to the people list in their props on a
+    failed read, which can be a step behind or empty (now `privatePeople` throws); the AI request was built inside the Assistant panel (now
     `buildAiRequest` in `src/features/ai/request.ts`, with unit tests).
   - F2: `a11y.spec.ts` runs axe on every route, the reader view included, in Ink, Paper and Sepia, and checks
-    a visible focus ring on each control. Fixed: the empty Memory Timeline track had no keyboard focus, and
-    the reader view's note links had too little contrast and no underline.
+    a visible focus ring on each control. Fixed: the Memory Timeline track had no keyboard focus, and
+    the reader view's note links had too little contrast and no underline. Each main dialog passes axe in
+    each theme too, and Escape gives the focus back to the button that opened it. Fixed: Search, Export and
+    Share left the focus on the page body after they closed (`src/ui/dialog.tsx`).
   - F3: every budget of spec section 12 has a test. Local Chromium and phone profile results:
     - Library LCP, cold load at 4x CPU, 150 ms and 1.6 Mbit/s: 1.73 to 1.83 s (budget 2.5 s).
-    - INP over a visit to every screen at 4x CPU: 80 to 96 ms (budget 200 ms).
+    - INP over a visit to every screen and the main dialogs at 4x CPU: 80 to 96 ms (budget 200 ms).
     - DOCX export of the 100,000-word novel: 0.43 to 0.60 s, longest main-thread task 57 ms (budget 10 s).
     - Open the 10,000-word scene: 93 to 123 ms. Keystroke p95: 17.5 to 18.5 ms. With 500 shimmer runs:
       20.5 to 21.0 ms. Initial JavaScript: 208 KB gzip (budget 250 KB).
@@ -644,7 +646,10 @@ Last update: 2026-11-08
 - Two board timing tests are sensitive to load in the build container. "US05: a double-click on a linked
   card opens its scene in under 1 s" failed twice and "a pinch over 200 cards keeps 60 frames a second"
   failed twice on the phone profile, each time with two workers running other tests beside them. Each
-  passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker.
+  passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker. On 2026-11-08 the pinch
+  failed alone too, at a median of 33.3 ms in place of 16.7 ms: 2 runs of 4 on the Phase 4 code, and 1 of 4
+  on the Phase 6 branch. So the cause is the container, and no change made the board slower. CI retries
+  each failed test once.
 - Live CORS check with no key (Gate 4, plan decision P4), from the build container on 2026-11-05:
   Anthropic and Gemini answer the browser preflight with `access-control-allow-origin` for the headers that
   Vlo sends. The container's network allowlist blocks OpenRouter and Groq (proxy 403), so their check waits

@@ -131,7 +131,7 @@ test('a footnote from the / menu in a poem line keeps every space', async ({ pag
   await expect.poll(() => lineText(line)).toBe('  salt   on  the sill');
   await expect(notes(page).getByRole('button')).toHaveText(['Edit footnote 1: From the shore.']);
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
-  await expect(page.getByText('4 words')).toBeVisible();
+  await expect(page.getByText('4 words', { exact: true })).toBeVisible();
 });
 
 test('a footnote added in one tab renumbers the references in the other tab', async ({ page, context }) => {
