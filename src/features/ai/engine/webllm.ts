@@ -1,4 +1,6 @@
-import type { MLCEngine } from '@mlc-ai/web-llm';
+import type { LogitProcessor, MLCEngine } from '@mlc-ai/web-llm';
+import type { Scorer } from '@/features/analysis/deep/run';
+import { tokenStat, type TokenStat } from '@/features/analysis/deep/score';
 import { hostAllowed, logRequest } from '@/lib/net';
 import { EngineError, type Engine, type GenerateRequest } from './types';
 
@@ -80,11 +82,15 @@ async function logDownloads<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Loads a model (downloading it the first time) and gives its engine. */
-export async function loadWebLlm(
+/** True while the deep check reads a text, and the count of co-writer answers that run now. */
+let scoring = false;
+let generating = 0;
+
+/** Loads a model (downloading it the first time) and gives the library's engine. */
+async function engineFor(
   modelId: string,
   onProgress: (share: number, text: string) => void,
-): Promise<Engine> {
+): Promise<{ model: WebLlmModel; engine: MLCEngine }> {
   const model = WEBLLM_MODELS.find((m) => m.id === modelId);
   if (!model) throw new RangeError(`Vlo does not offer the model ${modelId}.`);
   if (!(await hasWebGpu()))
@@ -127,7 +133,15 @@ export async function loadWebLlm(
       loaded = { model: modelId, engine };
     }
   }
-  const engine = loaded.engine;
+  return { model, engine: loaded.engine };
+}
+
+/** Loads a model (downloading it the first time) and gives its engine. */
+export async function loadWebLlm(
+  modelId: string,
+  onProgress: (share: number, text: string) => void,
+): Promise<Engine> {
+  const { model, engine } = await engineFor(modelId, onProgress);
   return {
     id: 'webllm',
     label: 'In this browser',
@@ -137,6 +151,12 @@ export async function loadWebLlm(
       const stop = () => {
         void engine.interruptGenerate();
       };
+      if (scoring)
+        throw new EngineError(
+          'server',
+          'The deep AI check is using the model. Wait for it to end, or stop it.',
+        );
+      generating += 1;
       request.signal?.addEventListener('abort', stop, { once: true });
       try {
         const chunks = await engine.chat.completions.create({
@@ -150,8 +170,78 @@ export async function loadWebLlm(
           if (piece) yield piece;
         }
       } finally {
+        generating -= 1;
         request.signal?.removeEventListener('abort', stop);
       }
+    },
+  };
+}
+
+/**
+ * The parts of WebLLM's model pipeline that the deep check needs. WebLLM 0.2.87 has no public call for the
+ * tokenizer or for the logits of a given text, so the check uses two fields of the pipeline. The version is
+ * pinned, and tests/unit/deep-webllm.test.ts checks that the library still has these fields.
+ */
+interface PipelineFields {
+  tokenizer: { encode: (text: string) => ArrayLike<number> };
+  logitProcessor?: LogitProcessor | undefined;
+}
+
+function pipelineOf(engine: MLCEngine, modelId: string): PipelineFields {
+  const map = (engine as unknown as { loadedModelIdToPipeline?: unknown }).loadedModelIdToPipeline;
+  const pipeline: unknown = map instanceof Map ? map.get(modelId) : undefined;
+  const tokenizer = (pipeline as { tokenizer?: { encode?: unknown } } | undefined)?.tokenizer;
+  if (typeof tokenizer?.encode !== 'function')
+    throw new EngineError('server', 'This version of the in-browser engine cannot run the deep AI check.');
+  return pipeline as PipelineFields;
+}
+
+/** Loads a model for the deep AI check, which reads a text and scores each token. */
+export async function loadWebLlmScorer(
+  modelId: string,
+  onProgress: (share: number, text: string) => void,
+): Promise<Scorer> {
+  const { model, engine } = await engineFor(modelId, onProgress);
+  const pipeline = pipelineOf(engine, modelId);
+  return {
+    model: modelId,
+    label: model.label,
+    tokenize: (text) => Array.from(pipeline.tokenizer.encode(text)),
+    async read(ids, signal, onStep) {
+      if (generating > 0)
+        throw new EngineError(
+          'server',
+          'The co-writer is using the model. Wait for it to end, then try again.',
+        );
+      if (scoring) throw new EngineError('server', 'The deep AI check is already running.');
+      scoring = true;
+      const before = pipeline.logitProcessor;
+      const stats: TokenStat[] = [];
+      let target = -1;
+      // The logits of each step pass through unchanged. The check only reads them.
+      pipeline.logitProcessor = {
+        processLogits: (logits) => {
+          if (target >= 0) stats.push(tokenStat(logits, target));
+          return logits;
+        },
+        processSampledToken: () => undefined,
+        resetState: () => undefined,
+      };
+      try {
+        await engine.resetChat(false, modelId);
+        for (let i = 0; i + 1 < ids.length; i += 1) {
+          if (signal.aborted) throw new DOMException('The deep check stopped.', 'AbortError');
+          target = ids[i + 1] ?? -1;
+          await engine.forwardTokensAndSample([ids[i] ?? 0], i === 0, modelId);
+          onStep();
+        }
+      } finally {
+        target = -1;
+        pipeline.logitProcessor = before;
+        scoring = false;
+        await engine.resetChat(false, modelId).catch(() => undefined);
+      }
+      return stats;
     },
   };
 }
