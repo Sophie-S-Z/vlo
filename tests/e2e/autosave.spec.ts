@@ -44,7 +44,7 @@ test('the save check mark says Saved after the pause, and the word count updates
   await page.keyboard.type('One two three');
   const status = page.getByRole('status').filter({ hasText: /Saved|could not save/ });
   await expect(status).toHaveText('Saved');
-  await expect(page.getByText('3 words')).toBeVisible();
+  await expect(page.getByText('3 words', { exact: true })).toBeVisible();
   await expect(page.getByText('· 1 line')).toBeVisible();
   await page.goto('/');
   await expect(page.getByRole('list', { name: 'Projects' }).getByText('3 words')).toBeVisible();

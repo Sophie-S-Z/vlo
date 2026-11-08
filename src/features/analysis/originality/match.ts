@@ -1,3 +1,4 @@
+import { matchNames } from '@/lib/privacy';
 import { STOP_WORDS } from '../stats';
 import { sentencesOf, type Span } from '../text';
 
@@ -316,18 +317,27 @@ export function checkOriginality(
 
 /**
  * Phrases for a web search: up to `limit` runs of 8 to 12 words from different sentences, chosen for
- * their rare, long words, because a search for common words finds nothing useful. Quoted text is left out.
+ * their rare, long words, because a search for common words finds nothing useful. Quoted text is left out,
+ * and so is each phrase that holds one of `privateNames`, because a real name never leaves the device
+ * (spec F17).
  */
 export function searchPhrases(
   text: string,
   limit: number,
   options: MatchOptions = DEFAULT_OPTIONS,
+  privateNames: readonly string[] = [],
 ): string[] {
   const excluded = excludedSpans(text, options);
+  const names = matchNames(text, privateNames);
   const scored: { phrase: string; score: number }[] = [];
   for (const sentence of sentencesOf(text)) {
     if (inside(excluded, sentence) || sentence.words.length < 10) continue;
-    const words = sentence.words.slice(0, 12).map((w) => w.text);
+    const picked = sentence.words.slice(0, 12);
+    const from = picked[0]?.from ?? sentence.from;
+    const to = picked.at(-1)?.to ?? sentence.to;
+    // Names match on the text as written, so "Anne-Marie" and "Dr. Okafor" across a sentence end count too.
+    if (names.some((name) => name.from < to && name.to > from)) continue;
+    const words = picked.map((w) => w.text);
     const score = words.reduce(
       (sum, w) => sum + (STOP_WORDS.has(w.toLowerCase()) ? 0 : Math.min(10, w.length)),
       0,

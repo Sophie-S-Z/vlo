@@ -36,14 +36,7 @@ describe('Share panel', () => {
     vi.stubGlobal('fetch', fetch);
     const { SharePanel } = await import('@/features/share/SharePanel');
     render(
-      <SharePanel
-        open
-        onOpenChange={() => undefined}
-        project={PROJECT}
-        items={[]}
-        currentItemId={null}
-        people={[]}
-      />,
+      <SharePanel open onOpenChange={() => undefined} project={PROJECT} items={[]} currentItemId={null} />,
     );
     expect(await screen.findByText('Sharing is not set up in this build.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Create link' })).toBeNull();

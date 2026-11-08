@@ -98,6 +98,12 @@ export function AppShell() {
           </p>
           <UpdatePrompt />
           <p className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link to="/help" className="underline">
+              Help
+            </Link>
+            <Link to="/privacy" className="underline">
+              Privacy
+            </Link>
             <Link to="/ai-policy" className="underline">
               AI policy
             </Link>

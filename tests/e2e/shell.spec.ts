@@ -1,5 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
-import { seriousIssues } from './support/axe';
+import { expect, test } from '@playwright/test';
 import { skipOnboarding } from './support/onboarding';
 
 const ROUTES = [
@@ -7,14 +6,8 @@ const ROUTES = [
   { path: '/settings', heading: 'Settings' },
   { path: '/nope', heading: 'Page not found' },
 ];
-const THEMES = ['ink', 'paper', 'sepia'] as const;
 
-async function setTheme(page: Page, theme: (typeof THEMES)[number]) {
-  await page.addInitScript((t) => {
-    localStorage.setItem('vlo:preferences', JSON.stringify({ theme: t, calm: false }));
-  }, theme);
-}
-
+// a11y.spec.ts runs axe on these routes in each theme.
 for (const { path, heading } of ROUTES) {
   for (const width of [360, 1280]) {
     test(`${path} has no horizontal scroll at ${String(width)} px`, async ({ page }) => {
@@ -24,17 +17,6 @@ for (const { path, heading } of ROUTES) {
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow).toBeLessThanOrEqual(0);
-    });
-  }
-
-  for (const theme of THEMES) {
-    test(`${path} has no serious axe issues in ${theme}`, async ({ page }) => {
-      await setTheme(page, theme);
-      if (path === '/') await skipOnboarding(page);
-      await page.goto(path);
-      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      expect(await seriousIssues(page)).toEqual([]);
     });
   }
 }

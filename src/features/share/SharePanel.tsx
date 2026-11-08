@@ -4,7 +4,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { markAllInProject } from '@/features/people/markAll';
 import { FAILED, NameCheckLists } from '@/features/people/NameCheckLists';
-import { db, type Item, type Person, type Project, type ShareRecord } from '@/lib/db';
+import { privatePeople } from '@/features/people/people';
+import { type Item, type Project, type ShareRecord } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Input } from '@/ui/input';
@@ -44,7 +45,6 @@ interface SharePanelProps {
   items: readonly Item[];
   /** The item open in the editor, picked first. */
   currentItemId: string | null;
-  people: readonly Person[];
 }
 
 const date = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
@@ -268,7 +268,7 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
   );
 }
 
-export function SharePanel({ open, onOpenChange, project, items, currentItemId, people }: SharePanelProps) {
+export function SharePanel({ open, onOpenChange, project, items, currentItemId }: SharePanelProps) {
   const ids = useId();
   const template = projectDef(project);
   const memoir = hasTemplate(project, 'memoir');
@@ -301,15 +301,6 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId, 
   const busy = status.step === 'working';
   const pickedCount = shareable.filter((i) => picked.has(i.id)).length;
 
-  /** The people as stored now, so a link never misses a person the writer just added. */
-  async function currentPeople(): Promise<readonly Person[]> {
-    try {
-      return await db.people.where('projectId').equals(project.id).toArray();
-    } catch {
-      return people;
-    }
-  }
-
   async function send(prepared: PreparedShare) {
     setStatus({ step: 'working' });
     setError(null);
@@ -333,7 +324,7 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId, 
         project,
         items,
         itemIds: [...picked],
-        people: (await currentPeople()).map((p) => ({ id: p.id, variants: p.variants })),
+        people: await privatePeople(project.id),
       });
       if (!mounted.current) return;
       if (memoir && (prepared.names.unmarked.length > 0 || prepared.names.changed.length > 0)) {
@@ -389,7 +380,7 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId, 
                       now.step === 'names' && now.prepared === prepared ? { ...now, marked: count } : now,
                     );
                   };
-                  currentPeople()
+                  privatePeople(project.id)
                     .then((list) => markAllInProject(project.id, list))
                     .then(
                       (result) => {

@@ -1,5 +1,5 @@
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import type { ComponentProps } from 'react';
+import { useRef, type ComponentProps } from 'react';
 import { cn } from './cn';
 
 /*
@@ -18,11 +18,34 @@ export const dialogOverlayClass =
 export const dialogPanelClass =
   'fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[var(--radius-card)] border border-rule bg-surface p-6 text-text shadow-lg outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95';
 
-export function DialogContent({ className, ...props }: ComponentProps<typeof DialogPrimitive.Content>) {
+/**
+ * On close, the focus goes back to the control that had it when the dialog opened (WCAG 2.4.3). Radix alone
+ * sends it to the trigger, so a dialog that opens from state with no trigger left it on the page body.
+ */
+export function DialogContent({
+  className,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
+  ...props
+}: ComponentProps<typeof DialogPrimitive.Content>) {
+  const opener = useRef<HTMLElement | null>(null);
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className={dialogOverlayClass} />
-      <DialogPrimitive.Content className={cn(dialogPanelClass, className)} {...props} />
+      <DialogPrimitive.Content
+        className={cn(dialogPanelClass, className)}
+        onOpenAutoFocus={(event) => {
+          opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          if (event.defaultPrevented || !opener.current?.isConnected) return;
+          event.preventDefault();
+          opener.current.focus();
+        }}
+        {...props}
+      />
     </DialogPrimitive.Portal>
   );
 }

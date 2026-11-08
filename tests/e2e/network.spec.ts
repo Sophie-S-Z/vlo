@@ -136,11 +136,17 @@ test('US09: a 60 second Pen session sends no request off the app, and the log sa
   await page.keyboard.press('End');
   await page.keyboard.type(' The last one came home late.', { delay: 15 });
 
+  // The Help and Privacy pages send nothing either.
+  for (const name of ['Help', 'Privacy']) {
+    await page.getByRole('contentinfo').getByRole('link', { name }).click();
+    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+  }
+
   // The session lasts at least 60 seconds, as US09 asks.
   const rest = 60_000 - (Date.now() - started);
   if (rest > 0) await page.waitForTimeout(rest);
 
-  await page.getByRole('link', { name: 'See the network log' }).click();
+  await page.getByRole('contentinfo').getByRole('link', { name: 'See the network log' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Network log' })).toBeVisible();
   await expect(count(page)).toHaveText('0 requests. Your project is in Pen mode, so Vlo sends nothing.');
   await expect(page.getByRole('table')).toHaveCount(0);

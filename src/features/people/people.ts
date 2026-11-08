@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
 import { db, type Person } from '@/lib/db';
 import { newId } from '@/lib/ids';
-import type { NameVariant } from '@/lib/privacy';
+import type { NameVariant, PrivatePerson } from '@/lib/privacy';
 
 /*
  * The people of a memoir (spec 8.2, plan Task C5). Each person has a label and the ways the text names
@@ -26,6 +26,16 @@ export function usePeople(projectId: string): Person[] | undefined {
     async () => sortPeople(await db.people.where('projectId').equals(projectId).toArray()),
     [projectId],
   );
+}
+
+/**
+ * The people of a project as stored now, for a copy that leaves the writer's text: an export, a share
+ * link, an AI request or a web search. A list that a component holds can be a step behind, such as just
+ * after the writer adds a person. A failed read throws, so nothing goes out without its aliases.
+ */
+export async function privatePeople(projectId: string): Promise<PrivatePerson[]> {
+  const people = await db.people.where('projectId').equals(projectId).toArray();
+  return people.map((p) => ({ id: p.id, variants: p.variants }));
 }
 
 /**

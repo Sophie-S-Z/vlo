@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Button } from '@/ui/button';
 import { LOW_SHARE, MIN_REPORT_WORDS, SIGNAL_LABEL, tellsByGroup, type AiReport } from '../ai/detect';
 import { FLAG_INFO, type FlagKind } from '../ai/integrity';
 import { TELL_INFO } from '../ai/tells';
 import { aiCheckInWorker } from '../analysisClient';
-import { DeepCheck } from './DeepCheck';
+
+// The deep check loads only in Reader or Co-writer mode, so a project in Pen mode loads none of its AI code.
+const DeepCheck = lazy(async () => ({ default: (await import('./DeepCheck')).DeepCheck }));
 
 /*
  * The AI check report. It leads with a plain result in three bands, then shows why: the measures that
@@ -54,10 +56,13 @@ const BAND_TEXT = {
 export function AiTab({
   text,
   provenance,
+  deepCheck,
   onShow,
 }: {
   text: string;
   provenance: { ai: number; total: number };
+  /** True in Reader or Co-writer mode. */
+  deepCheck: boolean;
   onShow: (from: number, to: number) => void;
 }) {
   const [report, setReport] = useState<AiReport | null>(null);
@@ -104,7 +109,16 @@ export function AiTab({
               : ''}
       </p>
       {report && <AiResult report={report} text={text} onShow={onShow} />}
-      <DeepCheck text={text} styleBand={report?.enough ? report.band : null} onShow={onShow} />
+      {deepCheck ? (
+        <Suspense fallback={<p className="text-muted">Loading the deep check.</p>}>
+          <DeepCheck text={text} styleBand={report?.enough ? report.band : null} onShow={onShow} />
+        </Suspense>
+      ) : (
+        <p className="text-muted">
+          The deep check loads a language model, so it works only in Reader or Co-writer mode. Choose the AI
+          mode button to switch this project.
+        </p>
+      )}
       <details className="rounded-md border border-rule p-3">
         <summary className="cursor-pointer font-medium">How the check works, and its limits</summary>
         <div className="mt-2 grid gap-2 text-muted">

@@ -10,11 +10,11 @@ test('the footer opens the AI policy, which states the four rules', async ({ pag
   await expect(page).toHaveURL(/\/ai-policy$/);
   await expect(page).toHaveTitle(/AI policy/);
   await expect(page.getByRole('heading', { level: 1, name: 'AI policy' })).toBeVisible();
-  await expect(page.getByText('Version 1, November 5, 2026')).toBeVisible();
+  await expect(page.getByText('Version 2, November 8, 2026')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
     'Vlo trains no model on your text.',
     'No Vlo server receives your manuscript text.',
-    'Pen mode loads no AI code and sends nothing.',
+    'Pen mode loads no AI code and sends nothing unless you press "Check the web too".',
     'With your own provider key, the provider’s terms apply, and Vlo shows them first.',
   ]);
   expect(await seriousIssues(page)).toEqual([]);

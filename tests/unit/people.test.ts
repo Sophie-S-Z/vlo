@@ -12,6 +12,7 @@ import {
   addPerson,
   cleanVariants,
   deletePerson,
+  privatePeople,
   restorePerson,
   sortPeople,
   updatePerson,
@@ -114,6 +115,17 @@ describe('people in the database', () => {
   afterEach(async () => {
     Reflect.deleteProperty(navigator, 'storage');
     await db.delete();
+  });
+
+  test('privatePeople gives the stored people of one project, and a failed read throws', async () => {
+    const { project } = await createProject({ title: 'Salt Kitchen', templates: ['memoir'] });
+    const { project: other } = await createProject({ title: 'Other', templates: ['memoir'] });
+    const rosa = await addPerson(project.id, '', [{ real: 'Rosa', alias: 'Maria' }]);
+    await addPerson(other.id, '', [{ real: 'Teo', alias: 'Sam' }]);
+    expect(await privatePeople(project.id)).toEqual([{ id: rosa.id, variants: rosa.variants }]);
+    // An outgoing copy must never go without its aliases, so no empty list stands in for a failed read.
+    db.close();
+    await expect(privatePeople(project.id)).rejects.toThrow();
   });
 
   test('add, change, delete with undo, and one person for each real name', async () => {

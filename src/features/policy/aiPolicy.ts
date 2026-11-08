@@ -4,8 +4,8 @@
  */
 
 export const AI_POLICY = {
-  version: 1,
-  date: '2026-11-05',
+  version: 2,
+  date: '2026-11-08',
   statements: [
     {
       title: 'Vlo trains no model on your text.',
@@ -18,9 +18,9 @@ export const AI_POLICY = {
         'Vlo keeps your writing in this browser. An AI request goes straight from this browser to the engine you pick, and never through a Vlo server.',
     },
     {
-      title: 'Pen mode loads no AI code and sends nothing.',
+      title: 'Pen mode loads no AI code and sends nothing unless you press "Check the web too".',
       detail:
-        'Each project starts in Pen mode. Vlo loads its AI code only after you switch a project to Reader or Co-writer mode, and the network log shows each request that leaves this device.',
+        'Each project starts in Pen mode. Vlo loads its AI code, the deep AI check included, only after you switch a project to Reader or Co-writer mode. In Pen mode, only the web originality check in Insights sends anything: up to 6 short phrases from the open item, after you press its button. The network log shows each request that leaves this device.',
     },
     {
       title: 'With your own provider key, the provider’s terms apply, and Vlo shows them first.',
