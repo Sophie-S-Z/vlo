@@ -74,9 +74,3 @@ function subscribe(listener: () => void) {
 export function useWritingPrefs(): WritingPrefs {
   return useSyncExternalStore(subscribe, getWritingPrefs, getWritingPrefs);
 }
-
-/** For tests: read the stored value again. */
-export function reloadWritingPrefs(): void {
-  current = load();
-  for (const listener of listeners) listener();
-}

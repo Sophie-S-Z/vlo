@@ -2,7 +2,7 @@ import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
 import { Download, Search, Share2 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Binder } from '@/features/binder/Binder';
 import { cardTransitionName, FROM_CARD } from '@/features/board/useBoard';
@@ -35,6 +35,7 @@ import { GRID_VIEW, ViewTabs } from './ViewTabs';
 import { setAiMode } from '@/features/ai/modes';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { recordFeature } from '@/features/usage/usage';
+import { ProjectMissing } from './ViewNotices';
 
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
 const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
@@ -223,17 +224,7 @@ export function ProjectPage() {
   if (state.status === 'loading') return null;
 
   if (state.status === 'missing') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold">Project not found</h1>
-        <p className="mt-4 text-muted">
-          This device has no project at this address. It may have been deleted.
-        </p>
-        <p className="mt-6">
-          <Link to="/">Go to the Library</Link>
-        </p>
-      </section>
-    );
+    return <ProjectMissing />;
   }
 
   const { project, items } = state;

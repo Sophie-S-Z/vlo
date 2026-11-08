@@ -307,7 +307,6 @@ export const VIEW_TABLE_NAMES = [
   'people',
   'submissions',
 ] as const;
-export type ViewTableName = (typeof VIEW_TABLE_NAMES)[number];
 
 /** The rows of the Phase 3 tables of one project, by table. */
 export interface ViewRows {

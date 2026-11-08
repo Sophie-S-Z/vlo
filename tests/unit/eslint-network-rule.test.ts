@@ -27,7 +27,8 @@ const banned = [
   'new window.RTCPeerConnection()',
 ];
 
-describe('network lint rule', () => {
+// The first call builds the type-aware lint program, which can take more than the default 5 s on a busy machine.
+describe('network lint rule', { timeout: 30_000 }, () => {
   test.each(banned)('flags %s outside net.ts', async (code) => {
     expect(await networkErrors(code, 'src/features/x.ts')).toHaveLength(1);
   });

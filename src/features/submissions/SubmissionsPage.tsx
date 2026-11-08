@@ -30,6 +30,7 @@ import {
   type SortKey,
   type SubmissionDraft,
 } from './submissions';
+import { ProjectMissing } from '@/features/project/ViewNotices';
 
 /*
  * The Submissions tracker (spec 8.4, plan Task C8, F20, E4). Every template has it. A sortable table
@@ -205,17 +206,7 @@ export function SubmissionsPage() {
   if (state.status === 'loading' || submissions === undefined) return null;
 
   if (state.status === 'missing') {
-    return (
-      <section>
-        <h1 className="font-display text-4xl font-semibold">Project not found</h1>
-        <p className="mt-4 text-muted">
-          This device has no project at this address. It may have been deleted.
-        </p>
-        <p className="mt-6">
-          <Link to="/">Go to the Library</Link>
-        </p>
-      </section>
-    );
+    return <ProjectMissing />;
   }
 
   const { project } = state;

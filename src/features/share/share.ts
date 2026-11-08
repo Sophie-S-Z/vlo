@@ -1,7 +1,7 @@
 import { flattenTree } from '@/features/binder/tree';
 import type { ExportScope } from '@/features/export/build';
 import { mathmlFor } from '@/features/export/latex';
-import { safeExportTree } from '@/features/export/run';
+import { safeExportTree } from '@/features/export/safeTree';
 import { holdsText } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { newOwnerToken, newShareKey, sealJson } from '@/lib/crypto';

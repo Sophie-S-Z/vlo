@@ -18,7 +18,6 @@ export const BOARD_COLORS = [
   { id: 'rose', label: 'Rose', hue: '#c75f76' },
   { id: 'lilac', label: 'Lilac', hue: '#8f6fc4' },
 ] as const;
-export type BoardColor = (typeof BOARD_COLORS)[number]['id'];
 
 const hueOf = (color: string) => BOARD_COLORS.find((c) => c.id === color)?.hue ?? null;
 
@@ -32,10 +31,6 @@ export function cardBackground(color: string): string {
 export function threadStroke(color: string): string {
   const hue = hueOf(color) ?? '#8a8070';
   return `color-mix(in oklab, ${hue} 70%, var(--text))`;
-}
-
-export function colorLabel(color: string): string {
-  return BOARD_COLORS.find((c) => c.id === color)?.label ?? 'Paper';
 }
 
 async function touch(projectId: string): Promise<void> {
