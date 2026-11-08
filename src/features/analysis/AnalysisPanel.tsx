@@ -68,7 +68,8 @@ export function AnalysisPanel({ editor, kind, itemId, projectId, onShow }: Analy
           <p className="text-muted">{error ? 'Vlo could not count this item.' : 'Counting.'}</p>
         )}
       </Tabs.Content>
-      <Tabs.Content value="ai">
+      {/* The AI tab stays mounted, so a deep check keeps running when the writer looks at another tab. */}
+      <Tabs.Content value="ai" forceMount className="data-[state=inactive]:hidden">
         <AiTab text={mapped.text} provenance={provenance} onShow={show} />
       </Tabs.Content>
       <Tabs.Content value="originality">

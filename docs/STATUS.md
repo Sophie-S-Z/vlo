@@ -8,6 +8,8 @@ Last update: 2026-11-08
   readability and keyword density, an AI writing check trained and tested with `scripts/train-ai-detector.mjs`,
   and an originality check against the writer's own work, pasted sources and, on request, Wikipedia and
   OpenAlex (network purpose `originality`).
+- Deep AI check (ADR 0007): the co-writer's in-browser model scores the text with the Fast-DetectGPT
+  criterion, with cuts set on the device from reference passages (`scripts/build-deep-references.mjs`).
 
 - Spec saved as `docs/VLO_SPEC.md`.
 - Section 17 questions answered.

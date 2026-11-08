@@ -4,6 +4,7 @@ import { LOW_SHARE, MIN_REPORT_WORDS, SIGNAL_LABEL, tellsByGroup, type AiReport 
 import { FLAG_INFO, type FlagKind } from '../ai/integrity';
 import { TELL_INFO } from '../ai/tells';
 import { aiCheckInWorker } from '../analysisClient';
+import { DeepCheck } from './DeepCheck';
 
 /*
  * The AI check report. It leads with a plain result in three bands, then shows why: the measures that
@@ -103,6 +104,7 @@ export function AiTab({
               : ''}
       </p>
       {report && <AiResult report={report} text={text} onShow={onShow} />}
+      <DeepCheck text={text} styleBand={report?.enough ? report.band : null} onShow={onShow} />
       <details className="rounded-md border border-rule p-3">
         <summary className="cursor-pointer font-medium">How the check works, and its limits</summary>
         <div className="mt-2 grid gap-2 text-muted">
@@ -120,7 +122,8 @@ export function AiTab({
           <p>
             Newer models and AI text that a person edits are harder. In a test of 14 texts by a 2026 model, it
             caught only 3. Turnitin and other detectors share this limit, and they do not publish how they
-            work.
+            work. The deep check, below the result, measures the text in a different way, with a language
+            model.
           </p>
           <p>
             Do not use this result alone to decide that a person used AI. Look at the marked passages, and ask

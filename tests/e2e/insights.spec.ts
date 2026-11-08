@@ -119,3 +119,23 @@ test('the originality check finds a pasted source on the device and a web page o
   for (const url of asked) expect(url).not.toContain('And%20this%20ending');
   expect(await seriousIssues(page)).toEqual([]);
 });
+
+test('the deep check names its model and says when the browser has no WebGPU', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, get: () => undefined });
+  });
+  await newNovel(page, AI_ESSAY);
+  await page.getByRole('button', { name: 'Insights' }).click();
+  const dialog = insights(page);
+  await dialog.getByRole('tab', { name: 'AI check' }).click();
+  await expect(dialog.getByRole('heading', { name: 'Deep check, with a language model' })).toBeVisible();
+  await expect(dialog.getByRole('combobox', { name: 'Model' })).toHaveValue(/Qwen2\.5-1\.5B/);
+  expect(await seriousIssues(page)).toEqual([]);
+  await dialog.getByRole('button', { name: 'Run the deep check' }).click();
+  await expect(dialog.getByRole('status').filter({ hasText: 'no WebGPU' })).toBeVisible();
+
+  // The AI tab stays mounted, so its state lasts while the writer looks at another tab.
+  await dialog.getByRole('tab', { name: 'Stats' }).click();
+  await dialog.getByRole('tab', { name: 'AI check' }).click();
+  await expect(dialog.getByRole('status').filter({ hasText: 'no WebGPU' })).toBeVisible();
+});
