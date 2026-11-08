@@ -53,6 +53,9 @@ export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
   'model-download': ['huggingface.co', '*.huggingface.co', '*.hf.co', 'raw.githubusercontent.com'],
   share: supabaseHosts(),
   usage: supabaseHosts(),
+  // The web part of the originality check, only when the writer presses its button: short phrases go to
+  // Wikipedia's search and to OpenAlex, a free index of research papers. Neither needs a key.
+  originality: ['en.wikipedia.org', 'api.openalex.org'],
 };
 
 /** The most entries the log keeps. The oldest go first. */

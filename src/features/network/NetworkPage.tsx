@@ -15,6 +15,7 @@ const PURPOSE_LABEL: Record<NetPurpose, string> = {
   'model-download': 'Model download',
   share: 'Share link',
   usage: 'Usage count',
+  originality: 'Originality check',
 };
 
 const MODE_LABEL: Record<AiMode, string> = { pen: 'Pen', reader: 'Reader', cowriter: 'Co-writer' };
