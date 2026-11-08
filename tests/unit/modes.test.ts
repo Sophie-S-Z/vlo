@@ -20,7 +20,7 @@ afterEach(async () => {
 
 describe('setAiMode', () => {
   it('starts in Pen mode and stores each mode', async () => {
-    const { project } = await createProject({ title: 'Tide', template: 'novel' });
+    const { project } = await createProject({ title: 'Tide', templates: ['novel'] });
     expect(project.aiMode).toBe('pen');
     await setAiMode(project.id, 'reader');
     expect((await db.projects.get(project.id))?.aiMode).toBe('reader');
@@ -35,7 +35,7 @@ describe('setAiMode', () => {
   });
 
   it('refuses a mode that Vlo does not have', async () => {
-    const { project } = await createProject({ title: 'Tide', template: 'novel' });
+    const { project } = await createProject({ title: 'Tide', templates: ['novel'] });
     // @ts-expect-error A wrong mode from outside the types.
     await expect(setAiMode(project.id, 'robot')).rejects.toThrow(RangeError);
     expect((await db.projects.get(project.id))?.aiMode).toBe('pen');
@@ -44,20 +44,20 @@ describe('setAiMode', () => {
 
 describe('changesFor', () => {
   it('says that Reader text never enters the manuscript, and that nothing leaves before a request', () => {
-    const lines = changesFor('reader', { template: 'novel', aliasAiRequests: false }).join(' ');
+    const lines = changesFor('reader', { templates: ['novel'], aliasAiRequests: false }).join(' ');
     expect(lines).toContain('never enter your manuscript');
     expect(lines).toContain('Nothing leaves this device until you ask');
     expect(lines).not.toContain('alias');
   });
 
   it('says that Co-writer marks each AI word, and that a memoir sends aliases', () => {
-    const lines = changesFor('cowriter', { template: 'memoir', aliasAiRequests: true }).join(' ');
+    const lines = changesFor('cowriter', { templates: ['memoir'], aliasAiRequests: true }).join(' ');
     expect(lines).toContain('marks each AI word');
     expect(lines).toContain('aliases, never real names');
   });
 
   it('says that Pen mode unloads the AI code and sends nothing', () => {
-    expect(changesFor('pen', { template: 'novel', aliasAiRequests: false }).join(' ')).toContain(
+    expect(changesFor('pen', { templates: ['novel'], aliasAiRequests: false }).join(' ')).toContain(
       'sends nothing',
     );
   });

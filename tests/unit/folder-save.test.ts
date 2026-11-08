@@ -95,7 +95,7 @@ afterEach(async () => {
 });
 
 async function novel() {
-  const { project } = await createProject({ title: 'Salt: Year', template: 'novel' });
+  const { project } = await createProject({ title: 'Salt: Year', templates: ['novel'] });
   const scene = (await db.items.where('projectId').equals(project.id).toArray()).find(
     (i) => i.kind === 'scene',
   );

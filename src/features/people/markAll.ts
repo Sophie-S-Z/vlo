@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import { DOC_SCHEMA, docSchema, stampDocSchema } from '@/features/editor/docSchema';
 import { sendToTabs } from '@/features/editor/tabSync';
-import { TEMPLATES } from '@/features/library/templates';
+import { projectDef } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { matchNames, type PrivatePerson } from '@/lib/privacy';
@@ -164,7 +164,7 @@ const AT_ONCE = 6;
 async function textItems(projectId: string): Promise<string[]> {
   const project = await db.projects.get(projectId);
   if (!project) return [];
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
   const items = await db.items.where('projectId').equals(projectId).toArray();
   return items.filter((i) => template.editorKind(i.kind) !== null).map((i) => i.id);
 }

@@ -3,7 +3,7 @@ import { useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { flattenTree } from '@/features/binder/tree';
-import { TEMPLATES } from '@/features/library/templates';
+import { projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import { cn } from '@/ui/cn';
@@ -43,7 +43,7 @@ export function ProgressPage() {
   }
 
   const { project } = state;
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
   const words = items.reduce((sum, item) => sum + item.wordCount, 0);
   const byStatus = new Map(STATUSES.map((s) => [s, items.filter((i) => i.status === s).length]));
 

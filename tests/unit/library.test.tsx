@@ -3,7 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { PreferencesProvider } from '@/app/PreferencesProvider';
 import { LibraryPage } from '@/features/library/LibraryPage';
-import { db, type Item, type Project } from '@/lib/db';
+import { db, type Item, type Project, type Template } from '@/lib/db';
 
 beforeEach(async () => {
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -25,11 +25,11 @@ afterEach(async () => {
   await db.delete();
 });
 
-function project(id: string, title: string, template: Project['template'], updatedAt: number): Project {
+function project(id: string, title: string, template: Template, updatedAt: number): Project {
   return {
     id,
     title,
-    template,
+    templates: [template],
     aiMode: 'pen',
     createdAt: 1,
     updatedAt,
@@ -120,14 +120,14 @@ describe('New project', () => {
     const router = renderLibrary();
     fireEvent.click(await screen.findByRole('button', { name: 'New project' }));
     const dialog = await screen.findByRole('dialog', { name: 'New project' });
-    expect(within(dialog).getAllByRole('radio')).toHaveLength(3);
-    fireEvent.click(within(dialog).getByRole('radio', { name: /Poetry collection/ }));
+    expect(within(dialog).getAllByRole('checkbox')).toHaveLength(4);
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Poetry collection/ }));
     const title = within(dialog).getByLabelText('Title');
     expect((title as HTMLInputElement).value).toBe('Untitled collection');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Create project' }));
     await screen.findByText('Project screen');
     const [created] = await db.projects.toArray();
-    expect(created?.template).toBe('poetry');
+    expect(created?.templates).toEqual(['poetry']);
     expect(created?.title).toBe('Untitled collection');
     const poem = await db.items
       .where('projectId')
@@ -144,8 +144,39 @@ describe('New project', () => {
     const title = within(dialog).getByLabelText<HTMLInputElement>('Title');
     expect(title.value).toBe('Untitled novel');
     fireEvent.change(title, { target: { value: 'Tide Tables' } });
-    fireEvent.click(within(dialog).getByRole('radio', { name: /Memoir/ }));
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Memoir/ }));
     expect(title.value).toBe('Tide Tables');
+  });
+
+  test('the first pick replaces Novel, and later picks mix templates in one project', async () => {
+    renderLibrary();
+    fireEvent.click(await screen.findByRole('button', { name: 'New project' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New project' });
+    const box = (name: RegExp) => within(dialog).getByRole('checkbox', { name });
+    const title = within(dialog).getByLabelText<HTMLInputElement>('Title');
+    expect(box(/Novel/).getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(box(/Open writing/));
+    expect(box(/Novel/).getAttribute('aria-checked')).toBe('false');
+    expect(box(/Open writing/).getAttribute('aria-checked')).toBe('true');
+    expect(title.value).toBe('Untitled writing');
+    // The last pick stays, so a project always has one template.
+    fireEvent.click(box(/Open writing/));
+    expect(box(/Open writing/).getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(box(/Memoir/));
+    fireEvent.click(box(/Poetry collection/));
+    expect(title.value).toBe('Untitled project');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create project' }));
+    await screen.findByText('Project screen');
+    const [created] = await db.projects.toArray();
+    expect(created?.templates).toEqual(['memoir', 'poetry', 'open']);
+    expect(created?.settings.aliasAiRequests).toBe(true);
+    const kinds = (
+      await db.items
+        .where('projectId')
+        .equals(created?.id ?? '')
+        .toArray()
+    ).map((i) => i.kind);
+    expect(kinds.sort()).toEqual(['memory', 'page', 'poem']);
   });
 
   test('an empty title shows an error and creates nothing', async () => {

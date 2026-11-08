@@ -29,7 +29,7 @@ export const ERROR_CODES = ['export-failed', 'backup-import-failed', 'share-fail
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 const AI_MODES: readonly AiMode[] = ['pen', 'reader', 'cowriter'];
-const TEMPLATES: readonly Template[] = ['novel', 'memoir', 'poetry'];
+const TEMPLATES: readonly Template[] = ['novel', 'memoir', 'poetry', 'open'];
 
 export const BANDS = ['0', '1-249', '250-999', '1000-4999', '5000+'] as const;
 export type Band = (typeof BANDS)[number];
@@ -185,7 +185,7 @@ export async function weeklyReport(now: number): Promise<{ week: string; report:
   const words = sessions.reduce((n, s) => n + s.wordsAdded, 0);
   const poems = sessions.reduce((n, s) => n + s.poemsAdded, 0);
   const report: UsageReport = {
-    templates_used: TEMPLATES.filter((t) => projects.some((p) => p?.template === t)),
+    templates_used: TEMPLATES.filter((t) => projects.some((p) => p?.templates.includes(t))),
     words_added_band: band(words),
     poems_added_band: band(poems),
     features_used: FEATURES.filter((f) => (counts.features[f] ?? 0) > 0),

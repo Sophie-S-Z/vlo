@@ -62,10 +62,10 @@ export function item(id: string, kind: ItemKind, title: string, parentId: string
 export function project(
   template: Template,
   extra: { authorName?: string; settings?: Partial<Project['settings']> } = {},
-): Pick<Project, 'title' | 'template' | 'authorName' | 'settings'> {
+): Pick<Project, 'title' | 'templates' | 'authorName' | 'settings'> {
   return {
     title: 'Salt Year',
-    template,
+    templates: [template],
     ...(extra.authorName ? { authorName: extra.authorName } : {}),
     settings: {
       snapshotEveryMinutes: 10,

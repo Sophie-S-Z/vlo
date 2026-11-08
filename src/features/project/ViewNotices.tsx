@@ -16,13 +16,24 @@ export function ProjectMissing() {
   );
 }
 
-/** For a view of another template. `forWhom` is a sentence such as "The Story Board is for novel projects." */
+/** A sentence that names the project's templates, such as "This project is a novel." */
+function whatItIs(project: Project): string {
+  const names = project.templates.map((t) => TEMPLATES[t].label.toLowerCase());
+  if (names.length === 1)
+    return project.templates[0] === 'open'
+      ? 'This project is open writing.'
+      : `This project is a ${names[0] ?? ''}.`;
+  const last = names.pop() ?? '';
+  return `This project is a mix of ${names.join(', ')} and ${last}.`;
+}
+
+/** For a view of a template that the project does not have. `forWhom` is a sentence such as "The Story Board is for novel projects." */
 export function WrongTemplate({ project, forWhom }: { project: Project; forWhom: string }) {
   return (
     <section>
       <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{project.title}</h1>
       <p className="mt-4 max-w-prose text-muted">
-        {forWhom} This project is a {TEMPLATES[project.template].label.toLowerCase()}.
+        {forWhom} {whatItIs(project)}
       </p>
       <p className="mt-6">
         <Link to={`/p/${project.id}`}>Go back to the writing</Link>

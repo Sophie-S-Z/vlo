@@ -1,5 +1,5 @@
 import { flattenTree } from '@/features/binder/tree';
-import { TEMPLATES } from '@/features/library/templates';
+import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
 import type { Item, Project } from '@/lib/db';
 import type { Block, ExportDoc, ExportSection } from './model';
@@ -72,7 +72,7 @@ export function exportFileName(title: string): string {
 }
 
 export interface BuildInput {
-  project: Pick<Project, 'title' | 'template' | 'authorName' | 'settings'>;
+  project: Pick<Project, 'title' | 'templates' | 'authorName' | 'settings'>;
   items: readonly Item[];
   scope: ExportScope;
   /** Each item's Yjs update, by item id. A missing update reads as an empty item. */
@@ -80,7 +80,7 @@ export interface BuildInput {
 }
 
 export function buildExportDoc({ project, items, scope, updates }: BuildInput): ExportDoc {
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
   const list = scopeItems(items, scope);
   const notes = noteCounter();
   const sections: ExportSection[] = [];

@@ -65,8 +65,8 @@ interface EditorProps {
   zoom?: number;
   /** Receives the page count, or null when no sheet shows. */
   onPages?: (pages: number | null) => void;
-  /** The project's template, for the tools that only some templates offer. */
-  template?: Template | undefined;
+  /** The project's templates, for the tools that only some templates offer. */
+  templates?: readonly Template[] | undefined;
 }
 
 const HELP = {
@@ -94,8 +94,8 @@ function editorAttributes(
 }
 
 /** Tools for the / menu: label matches first, then keyword matches, each in registry order. */
-function slashItems(kind: EditorProps['kind'], template: Template | undefined) {
-  const tools = commandsFor(kind, template).filter((c) => c.slash);
+function slashItems(kind: EditorProps['kind'], templates: readonly Template[] | undefined) {
+  const tools = commandsFor(kind, templates).filter((c) => c.slash);
   return (query: string): EditorCommand[] => {
     const found = tools.filter((c) => matchesCommand(c, query));
     const q = query.trim().toLowerCase();
@@ -126,7 +126,7 @@ export function Editor({
   page = 'pageless',
   zoom = 100,
   onPages,
-  template,
+  templates,
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
@@ -146,7 +146,7 @@ export function Editor({
         AliasPreview,
         CraftSwitch,
         SlashMenu.configure({
-          items: slashItems(kind, template),
+          items: slashItems(kind, templates),
           listId,
           onChoose: (cmd, e) => {
             runCommand(e, cmd, 'caret');
@@ -223,7 +223,7 @@ export function Editor({
 
   // The project font is the manuscript font for the text, the notes and the panels' samples.
   const craft = useCraft();
-  const craftOn = kind === 'poem' && template === 'poetry' && craft.on;
+  const craftOn = kind === 'poem' && (templates?.includes('poetry') ?? false) && craft.on;
 
   const stack = fontStack(font, BASE_STACK);
   const rootStyle = { '--font-manuscript': stack } as CSSProperties;
@@ -232,7 +232,7 @@ export function Editor({
     <div className="grid gap-3" data-vlo-editor="" style={rootStyle}>
       {/* The toolbar, the find bar and the read aloud bar stay at the top while the text scrolls. */}
       <div className="sticky top-0 z-10 -mx-1 grid bg-bg">
-        <Toolbar editor={editor} kind={kind} template={template} />
+        <Toolbar editor={editor} kind={kind} templates={templates} />
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
       </div>
@@ -244,7 +244,7 @@ export function Editor({
         </div>
         <FootnoteList editor={editor} />
       </PageFrame>
-      <SelectionMenu editor={editor} form={kind} template={template} />
+      <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />
       <PanelHost editor={editor} form={kind} />
       <p id={helpId} className="text-xs text-muted">

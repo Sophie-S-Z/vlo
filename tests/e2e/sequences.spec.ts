@@ -24,7 +24,7 @@ async function newCollection(page: Page, isMobile: boolean) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await dialog.getByRole('radio', { name: /Poetry/ }).click();
+  await dialog.getByRole('checkbox', { name: /Poetry/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Poem 1' })).toBeVisible();
   for (const n of [2, 3]) {

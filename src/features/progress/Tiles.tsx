@@ -4,7 +4,7 @@ import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { openTargets } from '@/features/binder/tree';
 import { formatWords } from '@/features/library/format';
-import { TEMPLATES } from '@/features/library/templates';
+import { projectDef } from '@/features/library/templates';
 import type { Item, Project, Status } from '@/lib/db';
 import { cn } from '@/ui/cn';
 
@@ -31,7 +31,7 @@ export function Tiles({ project, items }: { project: Project; items: readonly It
   const motion = useMotionAllowed();
   const listRef = useRef<HTMLUListElement>(null);
   const played = useRef(false);
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
   const targets = useMemo(() => openTargets(items, template.editorKind), [items, template]);
 
   // Once, when the map first shows. All reads come before the animations start.

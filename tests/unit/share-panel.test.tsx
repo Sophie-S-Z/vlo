@@ -10,7 +10,7 @@ import type { Project } from '@/lib/db';
 const PROJECT: Project = {
   id: 'p1',
   title: 'Salt Year',
-  template: 'novel',
+  templates: ['novel'],
   aiMode: 'pen',
   createdAt: 0,
   updatedAt: 0,

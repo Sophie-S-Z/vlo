@@ -20,7 +20,7 @@ afterEach(async () => {
 });
 
 test('writeItemText stores the text, the word count and the project change time', async () => {
-  const { project, firstItemId } = await createProject({ title: 'Debt', template: 'novel' });
+  const { project, firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   await writeItemText(item, "Mira's ledger was wet. It was 1994.", 'prose');
@@ -31,7 +31,7 @@ test('writeItemText stores the text, the word count and the project change time'
 });
 
 test('writeItemText counts lines for poems', async () => {
-  const { firstItemId } = await createProject({ title: 'Salt', template: 'poetry' });
+  const { firstItemId } = await createProject({ title: 'Salt', templates: ['poetry'] });
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   await writeItemText(item, 'Salt on the sill.\n    The tide goes out\n\nI keep\n', 'poem');
@@ -39,7 +39,7 @@ test('writeItemText counts lines for poems', async () => {
 });
 
 test('writeItemText does nothing for a deleted item', async () => {
-  const { firstItemId } = await createProject({ title: 'Salt', template: 'poetry' });
+  const { firstItemId } = await createProject({ title: 'Salt', templates: ['poetry'] });
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   await db.items.delete(firstItemId);
@@ -62,7 +62,7 @@ test('docText keeps a line break between words, so they count apart', () => {
 });
 
 test('writeItemText adds the net change in words to the day', async () => {
-  const { project, firstItemId } = await createProject({ title: 'Debt', template: 'novel' });
+  const { project, firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   const today = dayKey(Date.now());

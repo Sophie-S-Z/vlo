@@ -5,7 +5,7 @@ import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { useMediaQuery } from '@/app/useMediaQuery';
 import { flattenTree } from '@/features/binder/tree';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { GRID_VIEW, ViewTabs } from '@/features/project/ViewTabs';
 import type { Card } from '@/lib/db';
@@ -125,9 +125,9 @@ export function BoardPage() {
   }
 
   const { project } = state;
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
 
-  if (project.template !== 'novel') {
+  if (!hasTemplate(project, 'novel')) {
     return <WrongTemplate project={project} forWhom="The Story Board is for novel projects." />;
   }
 

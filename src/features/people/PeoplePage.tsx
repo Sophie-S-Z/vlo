@@ -2,7 +2,7 @@ import { Trash2, UserPlus, Wand2, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import type { Person } from '@/lib/db';
@@ -369,9 +369,9 @@ export function PeoplePage() {
   }
 
   const { project } = state;
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
 
-  if (project.template !== 'memoir') {
+  if (!hasTemplate(project, 'memoir')) {
     return <WrongTemplate project={project} forWhom="People and private names are for memoir projects." />;
   }
 

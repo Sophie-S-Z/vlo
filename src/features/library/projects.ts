@@ -5,11 +5,12 @@ import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
 import { requestPersistence } from '@/lib/storage';
 import { deleteItemDoc } from '@/lib/itemDocName';
-import { TEMPLATES, type StarterItem } from './templates';
+import { cleanTemplates, projectDef, type StarterItem } from './templates';
 
 export interface NewProjectInput {
   title: string;
-  template: Template;
+  /** One or more templates. The project gets the binder kinds and the views of each. */
+  templates: readonly Template[];
   authorName?: string;
 }
 
@@ -24,18 +25,19 @@ export async function createProject(
   input: NewProjectInput,
 ): Promise<{ project: Project; firstItemId: string }> {
   const now = clock.now();
-  const def = TEMPLATES[input.template];
+  const templates = cleanTemplates(input.templates);
+  const def = projectDef(templates);
   const project: Project = {
     id: newId(),
     title: cleanTitle(input.title),
-    template: input.template,
+    templates,
     aiMode: 'pen',
     ...(input.authorName ? { authorName: input.authorName } : {}),
     createdAt: now,
     updatedAt: now,
     settings: {
       snapshotEveryMinutes: 10,
-      aliasAiRequests: input.template === 'memoir',
+      aliasAiRequests: templates.includes('memoir'),
       streaksEnabled: false,
       restDays: [],
     },
@@ -66,7 +68,7 @@ export async function createProject(
   add(def.starter, null);
 
   const first = items.find((i) => def.editorKind(i.kind) !== null);
-  if (!first) throw new Error(`Template ${def.id} has no writable starter item.`);
+  if (!first) throw new Error(`Template ${templates.join('+')} has no writable starter item.`);
 
   const isFirstProject = (await db.projects.count()) === 0;
   await db.transaction('rw', db.projects, db.items, async () => {

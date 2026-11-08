@@ -15,7 +15,7 @@ async function newProject(page: Page, kind: 'novel' | 'poetry') {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  if (kind === 'poetry') await dialog.getByRole('radio', { name: /Poetry collection/ }).click();
+  if (kind === 'poetry') await dialog.getByRole('checkbox', { name: /Poetry collection/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
   await expect(kind === 'poetry' ? poem(page) : scene(page)).toBeFocused();
 }

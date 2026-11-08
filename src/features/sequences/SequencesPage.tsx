@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from 'rea
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef } from '@/features/library/templates';
 import { usePeople } from '@/features/people/people';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
@@ -189,9 +189,9 @@ export function SequencesPage() {
   }
 
   const { project } = state;
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
 
-  if (project.template !== 'poetry') {
+  if (!hasTemplate(project, 'poetry')) {
     return <WrongTemplate project={project} forWhom="The Collection Sequencer is for poetry collections." />;
   }
 

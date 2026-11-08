@@ -33,7 +33,7 @@ afterEach(async () => {
 
 /** A collection with four poems: Poem 1 at the top, then a section that holds Poems 2 to 4. */
 async function collection() {
-  const { project } = await createProject({ title: 'Salt Hours', template: 'poetry' });
+  const { project } = await createProject({ title: 'Salt Hours', templates: ['poetry'] });
   const section = await addItem(project.id, null, 'part', 'Tides');
   for (const n of [2, 3, 4]) await addItem(project.id, section.id, 'poem', `Poem ${String(n)}`);
   await addItem(project.id, null, 'note', 'Ideas');

@@ -29,7 +29,7 @@ async function newProject(page: Page) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const create = page.getByRole('dialog', { name: 'New project' });
-  await create.getByRole('radio', { name: /Novel/ }).click();
+  await create.getByRole('checkbox', { name: /Novel/ }).click();
   await create.getByRole('button', { name: 'Create project' }).click();
   await expect(text(page)).toBeFocused();
 }

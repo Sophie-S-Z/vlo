@@ -24,7 +24,7 @@ async function newCollection(page: Page, isMobile: boolean) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   const dialog = page.getByRole('dialog', { name: 'New project' });
-  await dialog.getByRole('radio', { name: /Poetry/ }).click();
+  await dialog.getByRole('checkbox', { name: /Poetry/ }).click();
   await dialog.getByRole('button', { name: 'Create project' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Poem 1' })).toBeVisible();
   if (isMobile) await page.getByRole('button', { name: 'Binder' }).click();
@@ -227,7 +227,7 @@ test('every template has the Submissions tab, and the command palette opens it',
     await page.goto('/');
     await page.getByRole('button', { name: 'New project' }).click();
     const dialog = page.getByRole('dialog', { name: 'New project' });
-    await dialog.getByRole('radio', { name: template }).click();
+    await dialog.getByRole('checkbox', { name: template }).click();
     await dialog.getByRole('button', { name: 'Create project' }).click();
     const tabs = page.getByRole('navigation', { name: 'Project views' }).getByRole('link');
     await expect(tabs.nth(-2)).toHaveText('Submissions');

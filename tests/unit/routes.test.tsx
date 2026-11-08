@@ -100,7 +100,7 @@ test.each([
   ['people', 'novel', 'People and private names are for memoir projects. This project is a novel.'],
   ['sequences', 'memoir', 'The Collection Sequencer is for poetry collections. This project is a memoir.'],
 ] as const)('the %s view of a %s project says which template it is for', async (view, template, text) => {
-  const { project } = await createProject({ title: 'Salt Year', template });
+  const { project } = await createProject({ title: 'Salt Year', templates: [template] });
   renderAt(`/p/${project.id}/${view}`);
   expect(await screen.findByText(text, {}, { timeout: 5_000 })).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Go back to the writing' }).getAttribute('href')).toBe(

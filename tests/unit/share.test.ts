@@ -74,7 +74,7 @@ afterEach(async () => {
 });
 
 async function memoir(): Promise<{ project: Project; items: Item[] }> {
-  const { project } = await m.createProject({ title: 'Summers with Rosa', template: 'memoir' });
+  const { project } = await m.createProject({ title: 'Summers with Rosa', templates: ['memoir'] });
   const first = (await m.db.items.where('projectId').equals(project.id).toArray()).find(
     (i) => i.kind === 'memory',
   );
@@ -124,7 +124,7 @@ describe('share links', () => {
 
   test('a link holds the picked items in binder order, under the project title', async () => {
     const { prepareShare } = m;
-    const { project } = await m.createProject({ title: 'Salt Year', template: 'novel' });
+    const { project } = await m.createProject({ title: 'Salt Year', templates: ['novel'] });
     const chapter = (await m.db.items.where('projectId').equals(project.id).toArray()).find(
       (i) => i.kind === 'chapter',
     );
@@ -256,7 +256,7 @@ describe('share links', () => {
 
   test('deleting a project removes its links from this device', async () => {
     const { createShare } = m;
-    const { project } = await m.createProject({ title: 'Gone', template: 'novel' });
+    const { project } = await m.createProject({ title: 'Gone', templates: ['novel'] });
     const bundle = { v: 1 as const, title: 'T', createdAt: 1, sections: [] };
     await createShare({ bundle, itemIds: ['i'], names: { unmarked: [], changed: [] } }, project.id, 7);
     await m.deleteProject(project.id);

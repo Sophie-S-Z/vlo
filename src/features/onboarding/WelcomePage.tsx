@@ -3,9 +3,8 @@ import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { createProject } from '@/features/library/projects';
-import { TemplatePicker } from '@/features/library/TemplatePicker';
-import { TEMPLATES } from '@/features/library/templates';
-import type { Template } from '@/lib/db';
+import { TemplatePicker, useTemplatePick } from '@/features/library/TemplatePicker';
+import { projectDef } from '@/features/library/templates';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
@@ -20,15 +19,15 @@ export function WelcomePage() {
   useDocumentTitle('Welcome');
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [template, setTemplate] = useState<Template>('novel');
-  // null keeps the template's default title until the writer types.
+  const { pick, toggle } = useTemplatePick();
+  // null keeps the templates' default title until the writer types.
   const [title, setTitle] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
   const titleId = useId();
   const errorId = useId();
-  const shownTitle = title ?? TEMPLATES[template].untitled;
+  const shownTitle = title ?? projectDef(pick.value).untitled;
 
   // Each new step moves focus to its heading, so a screen reader reads where the writer is.
   useEffect(() => {
@@ -53,7 +52,7 @@ export function WelcomePage() {
       return false;
     }
     try {
-      const { project, firstItemId } = await createProject({ title: shownTitle, template });
+      const { project, firstItemId } = await createProject({ title: shownTitle, templates: pick.value });
       await markOnboarded();
       await navigate(`/p/${project.id}?item=${firstItemId}`);
       return true;
@@ -86,7 +85,7 @@ export function WelcomePage() {
 
           {step === 0 && (
             <div className="mt-8">
-              <TemplatePicker value={template} onChange={setTemplate} label="What do you write?" />
+              <TemplatePicker pick={pick} onToggle={toggle} label="What do you write?" />
             </div>
           )}
 

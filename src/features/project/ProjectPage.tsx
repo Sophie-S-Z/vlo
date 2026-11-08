@@ -22,7 +22,7 @@ import { resetNames, setNamePeople } from '@/features/people/nameStore';
 import { usePeople } from '@/features/people/people';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
-import { TEMPLATES } from '@/features/library/templates';
+import { hasTemplate, projectDef, templateList } from '@/features/library/templates';
 import { db, type AiMode, type Item, type Project } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
@@ -65,7 +65,7 @@ function layerOpen(): boolean {
 
 /** The item to open: the one in the address, else the first item that has an editor. */
 function openItem(project: Project, items: readonly Item[], requested: string | null): Item | undefined {
-  const def = TEMPLATES[project.template];
+  const def = projectDef(project);
   return (
     items.find((i) => i.id === requested && def.editorKind(i.kind) !== null) ??
     items.find((i) => def.editorKind(i.kind) !== null)
@@ -94,7 +94,7 @@ export function ProjectPage() {
   const navigate = useNavigate();
   const activeEditor = useActiveEditor();
   const people = usePeople(projectId);
-  const memoir = state.status === 'ready' && state.project.template === 'memoir';
+  const memoir = state.status === 'ready' && hasTemplate(state.project, 'memoir');
   const aiMode = state.status === 'ready' ? state.project.aiMode : null;
 
   // On a large screen the Assistant opens beside the text when the writer turns AI on. On a phone it is a
@@ -228,7 +228,7 @@ export function ProjectPage() {
   }
 
   const { project, items } = state;
-  const template = TEMPLATES[project.template];
+  const template = projectDef(project);
   const item = openItem(project, items, params.get('item'));
   const kind = item ? template.editorKind(item.kind) : null;
   const totalWords = items.reduce((sum, i) => sum + i.wordCount, 0);
@@ -326,7 +326,7 @@ export function ProjectPage() {
             },
           },
         ]),
-    ...(project.template === 'novel'
+    ...(hasTemplate(project, 'novel')
       ? [
           {
             id: 'board',
@@ -346,7 +346,7 @@ export function ProjectPage() {
           },
         ]
       : []),
-    ...(project.template === 'memoir'
+    ...(hasTemplate(project, 'memoir')
       ? [
           {
             id: 'timeline',
@@ -366,7 +366,7 @@ export function ProjectPage() {
           },
         ]
       : []),
-    ...(project.template === 'poetry'
+    ...(hasTemplate(project, 'poetry')
       ? [
           {
             id: 'sequences',
@@ -409,7 +409,7 @@ export function ProjectPage() {
       },
     },
     ...(activeEditor
-      ? commandsFor(activeEditor.form, project.template).map((cmd): CommandAction => ({
+      ? commandsFor(activeEditor.form, project.templates).map((cmd): CommandAction => ({
           id: cmd.id,
           label: cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label,
           group: 'format',
@@ -561,7 +561,7 @@ export function ProjectPage() {
                     page={project.settings.page}
                     scene={project.settings.scene}
                     onSettings={changeSettings}
-                    template={project.template}
+                    templates={templateList(project.templates)}
                   />
                 </MotionViewTransition>
               </>

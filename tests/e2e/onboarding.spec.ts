@@ -19,7 +19,7 @@ test('US15: a first visit reaches typing in the first poem in five actions, with
 
   await expect(page.getByRole('heading', { level: 1, name: 'What do you write?' })).toBeVisible();
   await expect(skip).toBeVisible();
-  await page.getByRole('radio', { name: /Poetry collection/ }).click(); // action 1
+  await page.getByRole('checkbox', { name: /Poetry collection/ }).click(); // action 1
   await page.getByRole('button', { name: 'Next' }).click(); // action 2
 
   await expect(page.getByRole('heading', { level: 1, name: 'Your words stay yours' })).toBeVisible();
@@ -47,10 +47,10 @@ test('US15: a first visit reaches typing in the first poem in five actions, with
 
 test('Back returns to the step before and keeps the choice', async ({ page }) => {
   await page.goto('/welcome');
-  await page.getByRole('radio', { name: /Memoir/ }).click();
+  await page.getByRole('checkbox', { name: /Memoir/ }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Back' }).click();
-  await expect(page.getByRole('radio', { name: /Memoir/ })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /Memoir/ })).toBeChecked();
 });
 
 test('Skip goes to the Library, and the welcome screen never comes back', async ({ page }) => {

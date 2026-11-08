@@ -117,7 +117,7 @@ describe('people in the database', () => {
   });
 
   test('add, change, delete with undo, and one person for each real name', async () => {
-    const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
+    const { project } = await createProject({ title: 'Salt Kitchen', templates: ['memoir'] });
     const rosa = await addPerson(project.id, '', [
       { real: 'Aunt Rosa', alias: 'Aunt Maria' },
       { real: 'Rosa', alias: 'Maria' },
@@ -148,7 +148,7 @@ describe('people in the database', () => {
   });
 
   test('undo keeps a name that another person took in the meantime with that person', async () => {
-    const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
+    const { project } = await createProject({ title: 'Salt Kitchen', templates: ['memoir'] });
     const rosa = await addPerson(project.id, '', [
       { real: 'Aunt Rosa', alias: 'Aunt Maria' },
       { real: 'Rosa', alias: 'Maria' },
@@ -169,7 +169,7 @@ describe('people in the database', () => {
   });
 
   test('Mark all marks the stored text of each item and sends the marks to open editors', async () => {
-    const { project } = await createProject({ title: 'Salt Kitchen', template: 'memoir' });
+    const { project } = await createProject({ title: 'Salt Kitchen', templates: ['memoir'] });
     const memory = (await db.items.where('projectId').equals(project.id).toArray()).find(
       (i) => i.kind === 'memory',
     );

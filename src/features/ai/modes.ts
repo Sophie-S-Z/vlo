@@ -1,4 +1,5 @@
 import { clock } from '@/lib/clock';
+import { hasTemplate } from '@/features/library/templates';
 import { db, type AiMode, type Project, type Template } from '@/lib/db';
 
 /*
@@ -23,7 +24,7 @@ export const MODE_INFO: Record<AiMode, { label: string; summary: string }> = {
 /** What a change to `mode` does, line by line, for the confirm step of the mode dialog. */
 export function changesFor(
   mode: AiMode,
-  project: { template: Template; aliasAiRequests: boolean },
+  project: { templates: readonly Template[]; aliasAiRequests: boolean },
 ): string[] {
   if (mode === 'pen')
     return [
@@ -41,8 +42,12 @@ export function changesFor(
       ? 'Answers stay in the panel and never enter your manuscript.'
       : 'When you ask, the AI drafts in the panel. Insert puts a draft in your text, and Vlo marks each AI word.',
   );
-  if (project.template === 'memoir' && project.aliasAiRequests)
-    lines.push('This memoir sends aliases, never real names.');
+  if (hasTemplate(project, 'memoir') && project.aliasAiRequests)
+    lines.push(
+      project.templates.length === 1
+        ? 'This memoir sends aliases, never real names.'
+        : 'The memoir in this project sends aliases, never real names.',
+    );
   return lines;
 }
 

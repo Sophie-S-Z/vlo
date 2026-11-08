@@ -2,7 +2,7 @@ import { flattenTree } from '@/features/binder/tree';
 import type { ExportScope } from '@/features/export/build';
 import { mathmlFor } from '@/features/export/latex';
 import { safeExportTree } from '@/features/export/safeTree';
-import { holdsText } from '@/features/library/templates';
+import { hasTemplate, holdsText } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { newOwnerToken, newShareKey, sealJson } from '@/lib/crypto';
 import { db, type Item, type Project, type ShareRecord } from '@/lib/db';
@@ -32,7 +32,7 @@ const DAY_MS = 86_400_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface ShareInput {
-  project: Pick<Project, 'title' | 'template' | 'authorName' | 'settings'>;
+  project: Pick<Project, 'title' | 'templates' | 'authorName' | 'settings'>;
   items: readonly Item[];
   /** The items to share. Vlo puts them in binder order. */
   itemIds: readonly string[];
@@ -48,10 +48,10 @@ export interface PreparedShare {
 }
 
 /** The items that a link can hold: each item with text, in binder order. */
-export function shareableItems(template: Project['template'], items: readonly Item[]): Item[] {
+export function shareableItems(templates: Project['templates'], items: readonly Item[]): Item[] {
   return flattenTree(items)
     .map((n) => n.item)
-    .filter((item) => holdsText(template, item.kind));
+    .filter((item) => holdsText(templates, item.kind));
 }
 
 /**
@@ -60,7 +60,7 @@ export function shareableItems(template: Project['template'], items: readonly It
  */
 export async function prepareShare(input: ShareInput): Promise<PreparedShare> {
   const wanted = new Set(input.itemIds);
-  const picked = shareableItems(input.project.template, input.items).filter((item) => wanted.has(item.id));
+  const picked = shareableItems(input.project.templates, input.items).filter((item) => wanted.has(item.id));
   const first = picked[0];
   if (!first) throw new RangeError('Pick at least one item to share.');
   const itemIds = picked.map((item) => item.id);
@@ -72,7 +72,7 @@ export async function prepareShare(input: ShareInput): Promise<PreparedShare> {
     scope,
     updates: await readItemUpdates(itemIds),
     people: [...input.people],
-    shareSafe: input.project.template === 'memoir',
+    shareSafe: hasTemplate(input.project, 'memoir'),
   });
   return { bundle: toBundle(doc, await mathmlFor(doc), clock.now()), itemIds, names };
 }
