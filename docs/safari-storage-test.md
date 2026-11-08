@@ -71,7 +71,7 @@ This test finds what Safari does in fact, and if those 3 answers are enough.
 CI runs WebKit on Linux, which paints in software. STATUS lists these checks as "by hand in Phase 6". Do them once on the Mac in the installed web app.
 
 1. Open Settings and turn off Calm mode.
-2. Import the backup of the 100,000-word test project. Claude gives you the file `vlo-large-backup.zip` in the project files. In the Library, choose Import backup.
+2. Import the backup of the 100,000-word test project. The file is `vlo-large-backup.zip` in the project files (`backups/`). In the Library, choose Import backup.
 3. Open the 10,000-word scene from the binder. Expected: the text shows in under 300 ms. Measure from the click to the first paint of the text in the Safari Web Inspector, Timelines tab.
 4. Type 20 keys at a steady speed in the middle of the scene. Expected: each key shows in under 50 ms in the Timelines tab.
 5. Open the "Scene" button in the editor and pick a moving scene. Do step 4 again. Expected: under 50 ms.

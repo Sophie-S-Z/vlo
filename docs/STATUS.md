@@ -4,6 +4,27 @@ Last update: 2026-11-08
 
 ## Done
 
+- Phase 6 (plan `docs/plans/phase-6.md`), on the branch `claude/project-thread-lclnsv`:
+  - F1: the architecture review (`docs/architecture-review-phase-6.md`). Fixed: the web originality check
+    left real names in its search phrases; export and Share fell back to an empty people list on a failed
+    read (now `privatePeople` throws); the AI request was built inside the Assistant panel (now
+    `buildAiRequest` in `src/features/ai/request.ts`, with unit tests).
+  - F2: `a11y.spec.ts` runs axe on every route, the reader view included, in Ink, Paper and Sepia, and checks
+    a visible focus ring on each control. Fixed: the empty Memory Timeline track had no keyboard focus, and
+    the reader view's note links had too little contrast and no underline.
+  - F3: every budget of spec section 12 has a test. Local Chromium and phone profile results:
+    - Library LCP, cold load at 4x CPU, 150 ms and 1.6 Mbit/s: 1.73 to 1.83 s (budget 2.5 s).
+    - INP over a visit to every screen at 4x CPU: 80 to 96 ms (budget 200 ms).
+    - DOCX export of the 100,000-word novel: 0.43 to 0.60 s, longest main-thread task 57 ms (budget 10 s).
+    - Open the 10,000-word scene: 93 to 123 ms. Keystroke p95: 17.5 to 18.5 ms. With 500 shimmer runs:
+      20.5 to 21.0 ms. Initial JavaScript: 208 KB gzip (budget 250 KB).
+    - The craft labels first key passed 10 runs in a row (17 to 25 ms). The slow first key did not come
+      back with one worker, so no cause was found. The earlier failures came with other tests running.
+  - F4: `/privacy` (with `docs/privacy.md`) and `/help`, the user guide with support links for writers who
+    work on painful material, linked from the footer.
+  - F5: `README.md` for contributors and `docs/safari-storage-test.md` with the 14-day Safari plan and the
+    real Safari budget checks. The 100,000-word backup for those checks is in the project files.
+
 - Writing insights (ADR 0006): a stats bar under the text, an Insights panel with full statistics,
   readability and keyword density, an AI writing check trained and tested with `scripts/train-ai-detector.mjs`,
   and an originality check against the writer's own work, pasted sources and, on request, Wikipedia and
@@ -591,9 +612,6 @@ Last update: 2026-11-08
   share records kept on Replace import, comments read before Stop sharing, and the project limits in
   migration 0004. The minor findings are fixed too: purpose data in the seal, a size cap on opening, safe
   MathML values, the grants and search path of each function, and clearer messages.
-- The craft labels timing test (`craft.spec.ts`, Review Focus 6) fails at times on the first keystroke in
-  the build container: 47 to 120 ms against a 50 ms limit. The main branch fails it 4 times in 5 there, so
-  Phase 5 did not cause it. The later keystrokes take 7 to 29 ms. It needs a look in Phase 6.
 - Phase 5, open by hand: a real Supabase project with the 4 migrations, a share opened on a real phone, and
   the keepalive workflow once the Actions minutes reset.
 - Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
@@ -604,14 +622,13 @@ Last update: 2026-11-08
   window by hand.
 - Left for later: an EPUBCheck run in CI. EPUBCheck needs Java and a download from outside npm, so B2 uses
   its own structure test.
-- Real Safari: check the 300 ms open budget by hand in Phase 6. CI WebKit runs on Linux and has a 700 ms ceiling.
-- Real Safari: check typing with 500 shimmering runs (budget 50 ms) by hand. Pull request A1 merged, and this
-  check has no result yet. CI WebKit has a 120 ms ceiling for that test.
-- Real Safari: check plain typing on the 10,000-word scene (budget 50 ms) by hand in Phase 6. CI WebKit has a
-  100 ms ceiling for that test.
-- Real Safari: check typing with a moving scene (budget 50 ms) by hand in Phase 6. CI WebKit has a 150 ms
-  ceiling for that test. It takes 122 to 207 ms there. Timing each part alone showed the page shadow and the
-  scene layer cost the most. A scene image and a shadow layer did not help, so they were taken back.
+- Real Safari, by hand with `docs/safari-storage-test.md`: the 14-day storage runs, the offline open, and
+  the budget checks (open under 300 ms, plain typing, typing with a moving scene and with 500 shimmering
+  runs, each under 50 ms). CI WebKit runs on Linux and holds these to 700, 100, 150 and 120 ms ceilings.
+  Timing each part of the moving scene alone showed the page shadow and the scene layer cost the most.
+- Architecture review findings 4 to 8 (`docs/architecture-review-phase-6.md`) wait for a later release:
+  Replace import keeps no device copy on failure, the export worker steps depend on their order, the
+  co-writer Insert logic is inside the panel, Mark all has its own reader, and two pass-through wrappers.
 - CI Firefox: 3 to 9 tests a run time out in their first page.goto, on every run since the first phases. Each
   one passes on its retry. The stuck load never reaches DOMContentLoaded, so the stall is before the page
   runs. A wait for the HTML first and a fixed 127.0.0.1 address did not change it, so both were taken back.
@@ -628,10 +645,6 @@ Last update: 2026-11-08
   card opens its scene in under 1 s" failed twice and "a pinch over 200 cards keeps 60 frames a second"
   failed twice on the phone profile, each time with two workers running other tests beside them. Each
   passed every time alone (US05 9 times, the pinch 2 times). CI runs one worker.
-- "Review Focus 6" in craft.spec (typing with Craft labels on a 300-line poem) fails most runs alone in the
-  build container: 3 of 4 runs with the AI mark taken out of the poem schema, and 4 of 4 with it. In each run
-  only the first key is slow (39 to 125 ms), and the other 7 keys take 10 to 37 ms. CI runs it on a quieter
-  machine.
 - Live CORS check with no key (Gate 4, plan decision P4), from the build container on 2026-11-05:
   Anthropic and Gemini answer the browser preflight with `access-control-allow-origin` for the headers that
   Vlo sends. The container's network allowlist blocks OpenRouter and Groq (proxy 403), so their check waits
