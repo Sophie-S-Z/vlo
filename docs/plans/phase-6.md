@@ -60,8 +60,8 @@ None.
 
 **Interfaces:**
 
-- Produces: `projectPeople(projectId: string): Promise<PrivatePerson[]>` in `src/lib/privacy.ts` (finding 5), used by the export dialog, the Share panel and the AI path.
-- Produces: `buildAiRequest(input): Promise<{ ok: true; request: AiRequest; restore: (answer: string) => string } | { ok: false; message: string }>` in `src/features/ai/request.ts` (finding 7). It does the order: text, passages, people, aliases, size check. The key check stays in the panel.
+- Produces: `privatePeople(projectId: string): Promise<PrivatePerson[]>` in `src/features/people/people.ts` (finding 5), used by the export dialog, the Share panel, the AI path and the web originality check. It stays out of `src/lib/privacy.ts`, which holds only pure text code.
+- Produces: `buildAiRequest(input: RequestInput): Promise<{ ok: true; request: AiRequest; aliased: boolean; people: PrivatePerson[]; target?: Target } | { ok: false; message: string }>` in `src/features/ai/request.ts` (finding 7). It does the order: text, passages, people, aliases, size check. The panel restores names in an answer with `restoreNames(answer, people, aliasOn)`. The key check stays in the panel.
 
 - [ ] Run `anthropic-skills:improve-codebase-architecture` on all of `src/`. Write the findings to `docs/architecture-review-phase-6.md`, ranked by risk to a writer, with findings 5 to 7 of the Phase 4 review in the list.
 - [ ] Run `npx vitest run tests/unit/private-names-leak.test.ts tests/unit/privacy.test.ts` and the assistant browser tests. Expected: PASS before any change.

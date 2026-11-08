@@ -320,8 +320,8 @@ export function Track({ memories, stages, pxPerDay, onPxPerDay, actions, onDate,
         ref={scroller}
         role="region"
         aria-label="Memory Timeline"
-        // The track scrolls sideways. With no dated memory it holds no control, so it takes the focus itself
-        // and the arrow keys can scroll it (WCAG 2.1.1).
+        // The track scrolls sideways, so it takes the focus and the arrow keys can scroll it, even when it
+        // holds no dated memory to focus (WCAG 2.1.1).
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={0}
         className="relative touch-none overflow-x-auto overflow-y-hidden rounded-[var(--radius-card)] border border-rule bg-bg select-none"

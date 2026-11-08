@@ -207,18 +207,19 @@ export function ExportDialog({
         () => undefined,
       );
     }
-    const request: Omit<ExportRequest, 'updates'> = {
-      project,
-      items: [...items],
-      scope: scopeOf(scope),
-      format,
-      people: await privatePeople(project.id),
-      shareSafe: safe,
-      ...(usesManuscript ? { manuscript: details } : {}),
-      ...(offersProvenance && provenance ? { provenance: { at: clock.now() } } : {}),
-    };
     closeJob();
     try {
+      const request: Omit<ExportRequest, 'updates'> = {
+        project,
+        items: [...items],
+        scope: scopeOf(scope),
+        format,
+        // A failed read of the people fails the export, so a share-safe file never goes without aliases.
+        people: await privatePeople(project.id),
+        shareSafe: safe,
+        ...(usesManuscript ? { manuscript: details } : {}),
+        ...(offersProvenance && provenance ? { provenance: { at: clock.now() } } : {}),
+      };
       const { job, ownFonts, names } = await ExportJob.start(request);
       jobRef.current = job;
       if (safe && (names.unmarked.length > 0 || names.changed.length > 0)) {

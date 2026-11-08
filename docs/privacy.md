@@ -7,8 +7,8 @@ Version 1, 8 November 2026. The app shows these words at `/privacy` (`src/featur
 - Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser.
 - The real names and aliases on the People screen stay in this browser.
 - Snapshots stay in this browser. A backup or a folder save goes only to the place that you pick.
-- A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase.
-- The key and the owner token of each share link stay on this device. A backup file leaves them out.
+- A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.
+- The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.
 - The network log stays in this browser.
 - Vlo loads no third-party script, font, analytics or tracking pixel. No Vlo account exists.
 
@@ -16,9 +16,9 @@ Version 1, 8 November 2026. The app shows these words at `/privacy` (`src/featur
 
 ### AI requests
 
-Only in a project in Reader or Co-writer mode, after you press the button that sends a request.
+Only in a project in Reader or Co-writer mode, after you press the button that sends a request or loads the model list of a provider.
 
-The text of the request, which Vlo shows you before it goes unless you turned that off. In a memoir, the aliases replace the real names when that switch is on. A local server on this computer keeps the text on the device.
+The text of the request, which Vlo shows you before it goes unless you turned that off, and the provider key. In a memoir, the aliases replace the real names when that switch is on. A local server on this computer keeps the text on the device.
 
 ### In-browser model files
 
@@ -28,9 +28,9 @@ Requests for the model files. No text goes with them.
 
 ### Share links and comments
 
-Only when you create a link, when a reader opens it or comments, and when you stop sharing.
+Only when you create a link, refresh its comments or stop sharing, and when a reader opens it or comments.
 
-The chosen items and the comments, encrypted in the browser. The key stays in the link and never goes to the server. In a memoir, the aliases replace the real names.
+The chosen items and the comments, encrypted in the browser. The key stays in the link and never goes to the server. The owner token, which lets you stop the link, goes too, and the server keeps only its hash. In a memoir, the aliases replace the real names.
 
 ### Weekly usage counts
 

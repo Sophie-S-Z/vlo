@@ -97,6 +97,13 @@ describe('originality matching', () => {
     expect(searchPhrases(memoir, 6, DEFAULT_OPTIONS, names).join(' ')).not.toMatch(/Rosa|Teo/);
     const marked = 'Gran walked the whole length of the harbour wall before the evening tide came in.';
     expect(searchPhrases(marked, 6, DEFAULT_OPTIONS, names)).toEqual([]);
+    // The words of a phrase lose their punctuation, so the check reads the text as written.
+    const hyphen =
+      'Every summer my cousin Anne-Marie walked along the crumbling harbour wall collecting glass.';
+    expect(searchPhrases(hyphen, 6, DEFAULT_OPTIONS, ['Anne-Marie'])).toEqual([]);
+    const title =
+      'We waited for Dr. Okafor walked the whole length of the harbour wall before the tide came.';
+    expect(searchPhrases(title, 6, DEFAULT_OPTIONS, ['Dr. Okafor']).join(' ')).not.toMatch(/Okafor/);
   });
 
   test('pasted sources and links are cleaned', () => {

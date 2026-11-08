@@ -328,11 +328,16 @@ export function searchPhrases(
   privateNames: readonly string[] = [],
 ): string[] {
   const excluded = excludedSpans(text, options);
+  const names = matchNames(text, privateNames);
   const scored: { phrase: string; score: number }[] = [];
   for (const sentence of sentencesOf(text)) {
     if (inside(excluded, sentence) || sentence.words.length < 10) continue;
-    const words = sentence.words.slice(0, 12).map((w) => w.text);
-    if (matchNames(words.join(' '), privateNames).length > 0) continue;
+    const picked = sentence.words.slice(0, 12);
+    const from = picked[0]?.from ?? sentence.from;
+    const to = picked.at(-1)?.to ?? sentence.to;
+    // Names match on the text as written, so "Anne-Marie" and "Dr. Okafor" across a sentence end count too.
+    if (names.some((name) => name.from < to && name.to > from)) continue;
+    const words = picked.map((w) => w.text);
     const score = words.reduce(
       (sum, w) => sum + (STOP_WORDS.has(w.toLowerCase()) ? 0 : Math.min(10, w.length)),
       0,
