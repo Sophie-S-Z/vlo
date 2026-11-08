@@ -1,5 +1,8 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import JSZip from 'jszip';
 import { skipOnboarding } from './support/onboarding';
+import { seedProjects } from './support/seed';
 import { seedLarge } from './support/seed-bundle';
 
 /* Gate 1: the budgets in VLO_SPEC section 12, measured on the seeded 100,000-word project. */
@@ -17,6 +20,10 @@ declare global {
     /** When a new manuscript element went into the page, at the end of the task that built it. */
     __manuscriptAt: number[];
     __keyDelays: number[];
+    /** The long main-thread tasks during an export. */
+    __longTasks: number[];
+    /** The longest event of each interaction, by interaction id. */
+    __interactions: Record<string, number>;
     /** Calls `done` once the next frame has rendered. */
     __afterPaint: (done: () => void) => void;
   }
@@ -269,4 +276,126 @@ test('typing stays under 50 ms at p95 with 500 shimmering runs on screen, and th
   // is checked by hand before this test's pull request merges (product owner decision, 2026-11-03).
   expect(p95).toBeLessThan(browserName === 'webkit' ? 120 : 50);
   await expect.poll(playState, { timeout: 4_000 }).toBe('running');
+});
+
+/* Phase 6 Task F3: the budgets of spec section 12 that Gate 1 did not measure. */
+
+test.describe('a mid-range phone', () => {
+  // A cold load: no service worker answers from its cache.
+  test.use({ serviceWorkers: 'block', viewport: { width: 412, height: 823 } });
+
+  test('LCP: the Library paints its largest element in under 2.5 s', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Only Chromium has the CDP throttling.');
+    await skipOnboarding(page);
+    await seedProjects(page, 3);
+    // The Lighthouse mobile profile (plan Global Constraints).
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Network.enable');
+    await cdp.send('Network.clearBrowserCache');
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 150,
+      downloadThroughput: (1.6 * 1024 * 1024) / 8,
+      uploadThroughput: (750 * 1024) / 8,
+    });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Seeded project 3')).toBeVisible();
+    const lcp = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          new PerformanceObserver((list) => {
+            resolve(Math.max(...list.getEntries().map((e) => e.startTime)));
+          }).observe({ type: 'largest-contentful-paint', buffered: true });
+        }),
+    );
+    console.log(`[${browserName}] Library LCP on a mid-range phone: ${lcp.toFixed(0)} ms`);
+    expect(lcp).toBeLessThan(2500);
+  });
+
+  test('INP: every screen answers its interactions in under 200 ms', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Only Chromium has the CDP throttling and interaction ids.');
+    test.slow();
+    // The observer starts with the page, because the browser keeps only entries over 104 ms for later.
+    await page.addInitScript(() => {
+      window.__interactions = {};
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as PerformanceEventTiming[]) {
+          if (entry.interactionId === 0) continue;
+          // An interaction takes its longest event, the way INP counts it.
+          const key = String(entry.interactionId);
+          window.__interactions[key] = Math.max(window.__interactions[key] ?? 0, entry.duration);
+        }
+      }).observe({ type: 'event', durationThreshold: 16 } as PerformanceObserverInit);
+    });
+    await skipOnboarding(page);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    await page.getByRole('button', { name: 'New project' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New project' });
+    for (const template of [/Memoir/, /Poetry/, /Novel/]) {
+      await dialog.getByRole('checkbox', { name: template }).click();
+    }
+    await dialog.getByRole('button', { name: 'Create project' }).click();
+    await expect(page.locator('.vlo-manuscript')).toBeFocused();
+    await page.keyboard.type('The harbour lights came on one by one.', { delay: 30 });
+    const views = page.getByRole('navigation', { name: 'Project views' });
+    for (const view of ['Board', 'Plot Grid', 'Timeline', 'People', 'Sequences', 'Submissions', 'Progress']) {
+      await views.getByRole('link', { name: view }).click();
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    }
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('switch', { name: 'Calm mode' }).click();
+    // The last event waits for its next paint before the browser reports it.
+    await page.waitForTimeout(500);
+    const times = Object.values(await page.evaluate(() => window.__interactions)).sort((a, b) => b - a);
+    // INP leaves out the slowest interaction of each 50, so one hiccup in a long visit does not count.
+    const inp = times[Math.floor(times.length / 50)] ?? 0;
+    console.log(
+      `[${browserName}] INP at 4x CPU slowdown: ${inp.toFixed(0)} ms, worst ${(times[0] ?? 0).toFixed(0)} ms, over ${String(times.length)} slow interactions`,
+    );
+    expect(inp).toBeLessThan(200);
+  });
+});
+
+test('DOCX: the 100,000-word novel exports in under 10 s and never blocks the main thread', async ({
+  page,
+  browserName,
+}) => {
+  test.slow();
+  await skipOnboarding(page);
+  const seeded = await seedLarge(page);
+  await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}`);
+  await expect(page.getByRole('textbox', { name: seeded.longSceneTitle })).toBeVisible();
+  await page.getByRole('button', { name: 'Export' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Export' });
+  await dialog.getByRole('radio', { name: /The whole project/ }).click();
+  await page.evaluate(() => {
+    window.__longTasks = [];
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) window.__longTasks.push(entry.duration);
+    }).observe({ type: 'longtask' });
+  });
+  const download = page.waitForEvent('download', { timeout: 30_000 });
+  const start = Date.now();
+  await dialog.getByRole('button', { name: 'Export', exact: true }).click();
+  const file = await download;
+  const took = Date.now() - start;
+  const longest = Math.max(0, ...(await page.evaluate(() => window.__longTasks)));
+  console.log(
+    `[${browserName}] DOCX of 100,000 words: ${String(took)} ms, longest main-thread task ${longest.toFixed(0)} ms`,
+  );
+  expect(file.suggestedFilename()).toMatch(/\.docx$/);
+  // The file holds the whole novel, not only the open scene.
+  const xml =
+    (await (
+      await JSZip.loadAsync(await readFile(await file.path()))
+    )
+      .file('word/document.xml')
+      ?.async('string')) ?? '';
+  expect(xml).toContain(seeded.longSceneEnd);
+  expect(xml.length).toBeGreaterThan(500_000);
+  expect(took).toBeLessThan(10_000);
+  expect(longest).toBeLessThan(200);
 });
