@@ -28,12 +28,44 @@ export interface RunStyle {
   link?: string;
 }
 
+/** A waiting suggestion on a text, kept only by a Word export with tracked changes (F45). */
+export interface TextChange {
+  kind: 'insert' | 'delete';
+  /** Who made it. Empty for the writer. */
+  by: string;
+  at: number;
+}
+
+/** The writer's comment on a text, kept only by a Word export with comments (F45). */
+export interface TextComment {
+  id: string;
+  text: string;
+  by: string;
+  at: number;
+}
+
+/** What a Word export keeps for an editor (F45). Every other export keeps neither. */
+export interface ExportReview {
+  changes: boolean;
+  comments: boolean;
+}
+
+export const NO_REVIEW: ExportReview = { changes: false, comments: false };
+
 export type Run =
   /**
    * `person` is the id of the person when the text is a marked private name. `ai` names the provider and
    * the model when the text carries the aiOrigin mark.
    */
-  | { type: 'text'; text: string; style: RunStyle; person?: string; ai?: string }
+  | {
+      type: 'text';
+      text: string;
+      style: RunStyle;
+      person?: string;
+      ai?: string;
+      change?: TextChange;
+      comment?: TextComment;
+    }
   | { type: 'break' }
   | { type: 'math'; latex: string; style: RunStyle }
   | { type: 'footnote'; number: number; note: NoteContent };
@@ -138,20 +170,38 @@ export function runsText(runs: readonly Run[]): string {
     .join('');
 }
 
+/**
+ * The name of the bookmark at the start of an item's section in a Word export (F45). Word allows 40
+ * characters, and a UUID gives 36.
+ */
+export function bookmarkName(itemId: string): string {
+  return `vlo_${itemId.replace(/-/g, '')}`;
+}
+
+/** Every run of some blocks, in reading order. */
+export function runsOf(blocks: readonly Block[]): Run[] {
+  return blocks.flatMap((block): Run[] => {
+    switch (block.type) {
+      case 'paragraph':
+      case 'heading':
+        return block.runs;
+      case 'list':
+        return block.items.flatMap(runsOf);
+      case 'quote':
+        return runsOf(block.blocks);
+      case 'stanza':
+        return block.lines.flatMap((line) => line.runs);
+      default:
+        return [];
+    }
+  });
+}
+
 /** The footnotes of a document in order. Their numbers count from 1 across the whole export. */
 export function footnotesOf(doc: ExportDoc): { number: number; note: NoteContent }[] {
-  const notes: { number: number; note: NoteContent }[] = [];
-  const visit = (blocks: readonly Block[]) => {
-    for (const block of blocks) {
-      if (block.type === 'paragraph' || block.type === 'heading') collect(block.runs);
-      else if (block.type === 'list') block.items.forEach(visit);
-      else if (block.type === 'quote') visit(block.blocks);
-      else if (block.type === 'stanza') for (const line of block.lines) collect(line.runs);
-    }
-  };
-  const collect = (runs: readonly Run[]) => {
-    for (const run of runs) if (run.type === 'footnote') notes.push({ number: run.number, note: run.note });
-  };
-  for (const section of doc.sections) visit(section.blocks);
-  return notes;
+  return doc.sections.flatMap((section) =>
+    runsOf(section.blocks).flatMap((run) =>
+      run.type === 'footnote' ? [{ number: run.number, note: run.note }] : [],
+    ),
+  );
 }

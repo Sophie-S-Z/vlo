@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import type { JSONContent } from '@tiptap/core';
 import { buildExportDoc } from '@/features/export/build';
-import { footnotesOf, runsText, type ExportDoc, type Run } from '@/features/export/model';
+import { footnotesOf, runsText, type ExportDoc, type ExportReview, type Run } from '@/features/export/model';
 import { aliasesOf, aliasText, nameCheck, shareSafe, type PrivatePerson } from '@/lib/privacy';
 import { item, MEMOIR_TEXT, project, proseUpdate, updateOf } from './export-fixtures';
 
@@ -298,5 +298,59 @@ describe('names in every place of the text (code review)', () => {
 
   test('an alias with a dollar sign stays as typed', () => {
     expect(aliasText('Rosa came.', [{ name: 'Rosa', alias: '$& $1 $$' }])).toBe('$& $1 $$ came.');
+  });
+});
+
+/* Plan Task I2 (roadmap F45): a Word file for an editor holds deleted words and comments too. */
+describe('names in tracked changes and comments', () => {
+  const comment = { type: 'comment', attrs: { id: 'c1', text: 'Ask Teo first.', at: 1, by: '' } };
+  const deleted = { type: 'suggestion', attrs: { id: 's1', kind: 'delete', pass: 1, at: 1, by: '' } };
+  const inserted = { type: 'suggestion', attrs: { id: 's2', kind: 'insert', pass: 1, at: 1, by: '' } };
+  const reviewDoc = (review?: ExportReview) =>
+    buildExportDoc({
+      project: project('memoir'),
+      items: [item('m1', 'memory', 'Letters')],
+      scope: { kind: 'item', itemId: 'm1' },
+      updates: new Map([
+        [
+          'm1',
+          updateOf(
+            {
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    { type: 'text', text: 'Rosa', marks: [deleted] },
+                    { type: 'text', text: 'Ines', marks: [inserted] },
+                    { type: 'text', text: ' wrote ', marks: [comment] },
+                    { type: 'text', text: 'twice.', marks: [comment, { type: 'bold' }] },
+                  ],
+                },
+              ],
+            },
+            'prose',
+          ),
+        ],
+      ]),
+      ...(review ? { review } : {}),
+    });
+
+  // "Rosa" is struck and "Ines" takes its place, with no space between them.
+  test('the check reads deleted words and each comment once, only when the file keeps them', () => {
+    expect(nameCheck(reviewDoc(), PEOPLE).unmarked).toEqual([]);
+    expect(nameCheck(reviewDoc({ changes: true, comments: true }), PEOPLE).unmarked).toEqual([
+      { name: 'Rosa', count: 1 },
+      { name: 'Teo', count: 1 },
+    ]);
+  });
+
+  test('share-safe swaps the names in deleted words and in comments', () => {
+    const runs = textRuns(shareSafe(reviewDoc({ changes: true, comments: true }), PEOPLE, true));
+    expect(runs.find((r) => r.change?.kind === 'delete')?.text).toBe('Mae');
+    expect(runs.filter((r) => r.comment).map((r) => r.comment?.text)).toEqual([
+      'Ask Sol first.',
+      'Ask Sol first.',
+    ]);
   });
 });

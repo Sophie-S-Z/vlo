@@ -247,6 +247,16 @@ function checkProject(value: unknown): Project {
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);
+  const tracking = settings.tracking;
+  if (
+    tracking !== undefined &&
+    !(
+      isObject(tracking) &&
+      typeof tracking.on === 'boolean' &&
+      [1, 2, 3, 4, 5].includes(tracking.pass as number)
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
   const followUp = settings.followUpDays;
   if (
     followUp !== undefined &&

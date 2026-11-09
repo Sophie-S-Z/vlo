@@ -11,6 +11,7 @@ import { EscapeTab } from './escapeTab';
 import { PrivateName } from '@/features/people/personMark';
 import { AiOriginMark } from './aiOrigin';
 import { CommentMark } from './comment';
+import { SuggestionMark } from './suggestion';
 import { Footnote } from './footnote';
 import { MathInline } from './math';
 import { ClearFormatting, inlineFormatting } from './formatting';
@@ -320,6 +321,7 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     PrivateName,
     AiOriginMark,
     CommentMark,
+    SuggestionMark,
     Footnote,
     MathInline,
     EscapeTab,

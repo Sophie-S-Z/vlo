@@ -13,7 +13,7 @@ import type { ExportRequest } from './run';
 /** What leaves the device as an export file or a share link: the writer's text and the privacy switches. */
 export type SafeTreeInput = Pick<
   ExportRequest,
-  'project' | 'items' | 'scope' | 'updates' | 'people' | 'shareSafe' | 'provenance'
+  'project' | 'items' | 'scope' | 'updates' | 'people' | 'shareSafe' | 'provenance' | 'review'
 >;
 
 export interface SafeTree {

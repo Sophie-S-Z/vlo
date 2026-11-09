@@ -227,9 +227,16 @@ function piecesOf(group: readonly TextRun[], lookup: Lookup): Piece[] {
   return pieces;
 }
 
-/** A text run without the person id, which no file format needs. The AI mark stays for provenance. */
+/** A copy of `run` with no person id, which no file format needs. */
 function plain(run: TextRun, text: string = run.text): TextRun {
-  return { type: 'text', text, style: run.style, ...(run.ai === undefined ? {} : { ai: run.ai }) };
+  return {
+    type: 'text',
+    text,
+    style: run.style,
+    ...(run.ai === undefined ? {} : { ai: run.ai }),
+    ...(run.change === undefined ? {} : { change: run.change }),
+    ...(run.comment === undefined ? {} : { comment: run.comment }),
+  };
 }
 
 /**
@@ -343,8 +350,11 @@ function mapRuns(runs: readonly Run[], on: RunHandlers): Run[] {
     if (group.length > 0) out.push(...on.group(group));
     group = [];
   };
+  const struck = (run: TextRun | undefined) => run?.change?.kind === 'delete';
   for (const run of runs) {
     if (run.type === 'text') {
+      // Deleted words and the words that take their place are two texts, so a name in each is found.
+      if (group.length > 0 && struck(group[group.length - 1]) !== struck(run)) flush();
       group.push(run);
       continue;
     }
@@ -382,7 +392,13 @@ export function shareSafe(doc: ExportDoc, people: readonly PrivatePerson[], on: 
   const lookup = lookupOf(people);
   if (!on || lookup.all.length === 0) return doc;
   const handlers: RunHandlers = {
-    group: (group) => aliasGroup(group, lookup),
+    // A comment that a Word export keeps (F45) gets the aliases in its text too.
+    group: (group) =>
+      aliasGroup(group, lookup).map((run) =>
+        run.comment
+          ? { ...run, comment: { ...run.comment, text: aliasText(run.comment.text, lookup.all) } }
+          : run,
+      ),
     // A note's runs are read as one text too, so a name in two styles is still found.
     note: (note) => joinRuns(aliasAcross(note, lookup.all, (run, text) => ({ ...run, text }))),
     latex: (latex) => aliasText(latex, lookup.all),
@@ -432,8 +448,15 @@ export function nameCheck(doc: ExportDoc, people: readonly PrivatePerson[]): Nam
   const add = (counts: Map<string, number>, name: string) => {
     counts.set(name, (counts.get(name) ?? 0) + 1);
   };
+  // A comment spans runs, so each comment is read once.
+  const comments = new Set<string>();
   const handlers: RunHandlers = {
     group: (group) => {
+      for (const run of group) {
+        if (!run.comment || comments.has(run.comment.id)) continue;
+        comments.add(run.comment.id);
+        for (const m of findMatches(run.comment.text, lookup.all)) add(unmarked, m.name);
+      }
       for (const piece of piecesOf(group, lookup)) {
         const text = piece.runs.map((r) => r.text).join('');
         if (!piece.marked) {

@@ -23,6 +23,7 @@ import { CaretBlock } from './extensions/caretBlock';
 import { ClickBelow } from './extensions/clickBelow';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
+import { ChangesList } from './ChangesList';
 import { CommentList } from './CommentList';
 import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
@@ -275,6 +276,7 @@ export function Editor({
         </div>
         <FootnoteList editor={editor} />
       </PageFrame>
+      <ChangesList editor={editor} />
       <CommentList editor={editor} />
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import JSZip from 'jszip';
 import { skipOnboarding } from './support/onboarding';
+import { useTool } from './support/tools';
 import { seedProjects } from './support/seed';
 import { seedLarge } from './support/seed-bundle';
 
@@ -218,6 +219,8 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
   expect(open.total).toBeLessThan(browserName === 'webkit' ? 700 : 300);
   await expect(editor).toBeVisible();
 
+  // Review Focus 6 of Phase 9: Track changes is on, so each key also gets its insert mark.
+  await useTool(page, 'Track changes');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.evaluate(() => {
@@ -241,6 +244,7 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
 
   // The scans ran on the scene, so the budget above holds with the marks on screen.
   await expect(editor.locator('.vlo-style').first()).toBeAttached();
+  await expect(editor.locator('.vlo-change[data-change="insert"]').first()).toBeAttached();
   await expect(editor.locator('[spellcheck="false"]').first()).toBeAttached();
 
   const opened = await page.evaluate(() => [...new Set(window.__itemOpens)]);

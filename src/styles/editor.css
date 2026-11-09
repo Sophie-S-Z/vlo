@@ -734,3 +734,44 @@ html[data-calm='true'] .vlo-fill-shimmer {
     animation: none;
   }
 }
+
+/*
+ * Track changes (F44): new words are underlined and deleted words are struck through, in the color of
+ * their revision pass. The colors come from the text palette, which meets 4.5:1 in each theme.
+ */
+[data-pass='1'] {
+  --vlo-pass: var(--vlo-text-sky);
+}
+[data-pass='2'] {
+  --vlo-pass: var(--vlo-text-rose);
+}
+[data-pass='3'] {
+  --vlo-pass: var(--vlo-text-moss);
+}
+[data-pass='4'] {
+  --vlo-pass: var(--vlo-text-plum);
+}
+[data-pass='5'] {
+  --vlo-pass: var(--vlo-text-amber);
+}
+.vlo-manuscript .vlo-change {
+  color: var(--vlo-pass);
+  text-decoration-color: var(--vlo-pass);
+  text-decoration-thickness: 2px;
+  box-decoration-break: clone;
+}
+.vlo-manuscript .vlo-change[data-change='insert'] {
+  text-decoration-line: underline;
+  text-underline-offset: 0.2em;
+}
+.vlo-manuscript .vlo-change[data-change='delete'] {
+  text-decoration-line: line-through;
+}
+.vlo-pass-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--vlo-pass);
+}

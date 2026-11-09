@@ -4,6 +4,7 @@ import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } 
 import { clock } from '@/lib/clock';
 import { newId } from '@/lib/ids';
 import { openPanel } from '../commands/editorBus';
+import { COMMENT } from '../format/comment';
 
 /*
  * Comments in the text (roadmap F43, plan Task H3). A comment is a mark on the words that holds the
@@ -25,11 +26,13 @@ declare module '@tiptap/core' {
   }
 }
 
-export const COMMENT = 'comment';
+export { COMMENT };
 
 export interface CommentEntry {
   id: string;
   text: string;
+  /** Who wrote it, such as an editor or a beta reader. Empty for the writer. */
+  by: string;
   /** When the writer made the comment, in milliseconds. */
   at: number;
   /** The start of its first words and the end of its last words. */
@@ -57,6 +60,7 @@ function collect(doc: ProseMirrorNode): CommentEntry[] {
       byId.set(id, {
         id,
         text: String(mark.attrs.text),
+        by: String(mark.attrs.by ?? ''),
         at: Number.isFinite(at) ? at : 0,
         from: pos,
         to: end,
@@ -125,6 +129,7 @@ export const CommentMark = Mark.create({
       id: { default: '', renderHTML: (attrs: { id: string }) => ({ 'data-comment-id': attrs.id }) },
       text: { default: '', rendered: false },
       at: { default: 0, rendered: false },
+      by: { default: '', rendered: false },
     };
   },
 

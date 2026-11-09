@@ -7,8 +7,21 @@ import { parseNote } from '@/features/editor/format/notes';
 import { resolveColor } from '@/features/editor/format/palette';
 import { personIdOf, PRIVATE_NAME } from '@/features/people/markName';
 import { AI_ORIGIN, aiLabelOf } from '@/features/editor/format/aiOrigin';
+import { SUGGESTION } from '@/features/editor/format/suggestion';
+import { COMMENT } from '@/features/editor/format/comment';
 import { YFRAGMENT } from '@/lib/ydocs';
-import type { Align, Block, ExportForm, PoemLine, Run, RunStyle } from './model';
+import {
+  NO_REVIEW,
+  type Align,
+  type Block,
+  type ExportForm,
+  type ExportReview,
+  type PoemLine,
+  type Run,
+  type RunStyle,
+  type TextChange,
+  type TextComment,
+} from './model';
 
 /*
  * Reads an item's Yjs document into export blocks. This file runs in the export worker, so it uses no
@@ -184,18 +197,44 @@ function aiOf(marks: JSONContent['marks']): string | null {
   return mark ? aiLabelOf(mark.attrs ?? {}) : null;
 }
 
-function inlineRuns(content: JSONContent[] | undefined, notes: NoteCounter): Run[] {
+/**
+ * The suggestion of a text, or null. Exports take the text as accepted (decision R2), so a deleted word
+ * is left out, unless a Word export keeps the changes as tracked changes (F45).
+ */
+function changeOf(marks: JSONContent['marks']): TextChange | null {
+  const attrs = marks?.find((m) => m.type === SUGGESTION)?.attrs;
+  const kind: unknown = attrs?.kind;
+  if (!attrs || (kind !== 'insert' && kind !== 'delete')) return null;
+  const at = Number(attrs.at);
+  return { kind, by: String(attrs.by ?? ''), at: Number.isFinite(at) ? at : 0 };
+}
+
+/** The writer's comment on a text, or null (F43). Only a Word export with comments on reads it. */
+function commentOf(marks: JSONContent['marks']): TextComment | null {
+  const attrs = marks?.find((m) => m.type === COMMENT)?.attrs;
+  if (typeof attrs?.id !== 'string' || typeof attrs.text !== 'string' || attrs.text.trim() === '')
+    return null;
+  const at = Number(attrs.at);
+  return { id: attrs.id, text: attrs.text, by: String(attrs.by ?? ''), at: Number.isFinite(at) ? at : 0 };
+}
+
+function inlineRuns(content: JSONContent[] | undefined, notes: NoteCounter, review: ExportReview): Run[] {
   const runs: Run[] = [];
   for (const node of content ?? []) {
+    const change = changeOf(node.marks);
+    if (change?.kind === 'delete' && !review.changes) continue;
     if (node.type === 'text' && typeof node.text === 'string' && node.text !== '') {
       const person = personOf(node.marks);
       const ai = aiOf(node.marks);
+      const comment = review.comments ? commentOf(node.marks) : null;
       runs.push({
         type: 'text',
         text: node.text,
         style: styleOf(node.marks),
         ...(person === null ? {} : { person }),
         ...(ai === null ? {} : { ai }),
+        ...(change && review.changes ? { change } : {}),
+        ...(comment ? { comment } : {}),
       });
     } else if (node.type === 'hardBreak') {
       runs.push({ type: 'break' });
@@ -214,13 +253,13 @@ function lineSpacing(value: unknown): number | undefined {
   return [1, 1.15, 1.5, 2].includes(n) ? n : undefined;
 }
 
-function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter): Block[] {
+function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, review: ExportReview): Block[] {
   const blocks: Block[] = [];
   for (const node of content ?? []) {
     const attrs = node.attrs;
     switch (node.type) {
       case 'paragraph': {
-        const block: Block = { type: 'paragraph', runs: inlineRuns(node.content, notes) };
+        const block: Block = { type: 'paragraph', runs: inlineRuns(node.content, notes, review) };
         const a = align(attrs);
         if (a) block.align = a;
         const spacing = lineSpacing(attrs?.lineSpacing);
@@ -233,7 +272,7 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter): Bl
       case 'heading': {
         // The text's own headings sit under the item title, so level 2 in the editor is level 3 here.
         const level = Number(attrs?.level) === 3 ? 4 : 3;
-        const block: Block = { type: 'heading', level, runs: inlineRuns(node.content, notes) };
+        const block: Block = { type: 'heading', level, runs: inlineRuns(node.content, notes, review) };
         const a = align(attrs);
         if (a) block.align = a;
         blocks.push(block);
@@ -248,12 +287,12 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter): Bl
           start: Number.isInteger(start) && start > 0 ? start : 1,
           items: (node.content ?? [])
             .filter((child) => child.type === 'listItem')
-            .map((child) => proseBlocks(child.content, notes)),
+            .map((child) => proseBlocks(child.content, notes, review)),
         });
         break;
       }
       case 'blockquote':
-        blocks.push({ type: 'quote', blocks: proseBlocks(node.content, notes) });
+        blocks.push({ type: 'quote', blocks: proseBlocks(node.content, notes, review) });
         break;
       case 'sceneBreak':
         blocks.push({ type: 'sceneBreak' });
@@ -270,7 +309,7 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter): Bl
   return blocks;
 }
 
-function poemBlocks(content: JSONContent[] | undefined, notes: NoteCounter): Block[] {
+function poemBlocks(content: JSONContent[] | undefined, notes: NoteCounter, review: ExportReview): Block[] {
   const blocks: Block[] = [];
   for (const stanza of content ?? []) {
     if (stanza.type !== 'stanza') continue;
@@ -279,7 +318,7 @@ function poemBlocks(content: JSONContent[] | undefined, notes: NoteCounter): Blo
       .map((line) => {
         const hanging = Number(line.attrs?.hanging);
         return {
-          runs: inlineRuns(line.content, notes),
+          runs: inlineRuns(line.content, notes, review),
           hanging: Number.isFinite(hanging) && hanging > 0 ? Math.min(hanging, 20) : 0,
         };
       });
@@ -289,8 +328,14 @@ function poemBlocks(content: JSONContent[] | undefined, notes: NoteCounter): Blo
 }
 
 /** The blocks of one item. Empty trailing paragraphs and stanzas are dropped. */
-export function itemBlocks(json: JSONContent, form: ExportForm, notes: NoteCounter): Block[] {
-  const blocks = form === 'poem' ? poemBlocks(json.content, notes) : proseBlocks(json.content, notes);
+export function itemBlocks(
+  json: JSONContent,
+  form: ExportForm,
+  notes: NoteCounter,
+  review: ExportReview = NO_REVIEW,
+): Block[] {
+  const blocks =
+    form === 'poem' ? poemBlocks(json.content, notes, review) : proseBlocks(json.content, notes, review);
   while (blocks.length > 0 && isEmpty(blocks[blocks.length - 1])) blocks.pop();
   return blocks;
 }

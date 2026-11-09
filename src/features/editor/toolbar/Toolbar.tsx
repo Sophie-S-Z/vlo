@@ -58,6 +58,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     more: [
       'link',
       'comment',
+      'track-changes',
       'superscript',
       'subscript',
       'size',
@@ -89,6 +90,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     ],
     more: [
       'comment',
+      'track-changes',
       'superscript',
       'subscript',
       'size',

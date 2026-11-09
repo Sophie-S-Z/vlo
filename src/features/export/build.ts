@@ -3,7 +3,7 @@ import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
 import type { Item, Project } from '@/lib/db';
-import type { Block, ExportDoc, ExportSection } from './model';
+import type { Block, ExportDoc, ExportReview, ExportSection } from './model';
 import { itemBlocks, noteCounter, updateToJson } from './read';
 
 /*
@@ -78,9 +78,11 @@ export interface BuildInput {
   scope: ExportScope;
   /** Each item's Yjs update, by item id. A missing update reads as an empty item. */
   updates: ReadonlyMap<string, Uint8Array>;
+  /** The tracked changes and comments that a Word export keeps for an editor (F45). None when absent. */
+  review?: ExportReview;
 }
 
-export function buildExportDoc({ project, items, scope, updates }: BuildInput): ExportDoc {
+export function buildExportDoc({ project, items, scope, updates, review }: BuildInput): ExportDoc {
   const template = projectDef(project);
   const list = scopeItems(items, scope);
   const notes = noteCounter();
@@ -101,7 +103,7 @@ export function buildExportDoc({ project, items, scope, updates }: BuildInput): 
       continue;
     }
     const update = updates.get(item.id);
-    const body = update ? itemBlocks(updateToJson(update), form, notes) : [];
+    const body = update ? itemBlocks(updateToJson(update), form, notes, review) : [];
     const blocks: Block[] = [];
     if (item.kind === 'scene') {
       if (lastWasScene) blocks.push({ type: 'sceneBreak' });

@@ -22,7 +22,8 @@ export function CommentList({ editor }: { editor: Editor }) {
   const headingId = useId();
   const comments = useEditorState({
     editor,
-    selector: ({ editor: e }) => commentsOf(e.state).map(({ id, text, quote }) => ({ id, text, quote })),
+    selector: ({ editor: e }) =>
+      commentsOf(e.state).map(({ id, text, quote, by }) => ({ id, text, quote, by })),
   });
   if (comments.length === 0) return null;
 
@@ -42,7 +43,9 @@ export function CommentList({ editor }: { editor: Editor }) {
               }}
               className="min-h-11 flex-1 rounded-md px-2 py-1 text-left text-sm hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent"
             >
-              <span className="block text-muted">“{shortQuote(comment.quote)}”</span>
+              <span className="block text-muted">
+                “{shortQuote(comment.quote)}”{comment.by ? `, ${comment.by}` : ''}
+              </span>
               <span className="block [overflow-wrap:anywhere] whitespace-pre-wrap">{comment.text}</span>
             </button>
             <Button

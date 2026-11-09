@@ -48,7 +48,17 @@ export interface Project {
     language?: string;
     /** The writer's labels for items, at most `MAX_LABELS` (F40). */
     labels?: Label[];
+    /** Track changes and the revision pass that new changes take (F44). Off when absent. */
+    tracking?: Tracking;
   };
+}
+
+/** A revision pass of Track changes. Each pass has its own color (F44). */
+export type Pass = 1 | 2 | 3 | 4 | 5;
+
+export interface Tracking {
+  on: boolean;
+  pass: Pass;
 }
 
 /** A date as YYYY-MM-DD and the project's total words to reach by the end of that day (F46). */
