@@ -125,15 +125,15 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G6: Simple and Full tool levels (F36)
 
-**Files:** Modify `src/features/editor/writingPrefs.ts` (`toolLevel`), `src/features/editor/toolbar/Toolbar.tsx`, `src/features/settings/SettingsPage.tsx`, `src/features/onboarding/firstVisit.ts`. Create `tests/unit/tool-level.test.ts`, `tests/e2e/tool-level.spec.ts`.
+**Files:** Modify `src/features/editor/writingPrefs.ts` (`toolLevel`, `startWithSimpleTools`), `src/features/editor/toolbar/Toolbar.tsx`, `src/features/settings/SettingsPage.tsx`, `src/features/onboarding/firstVisit.ts`, `tests/e2e/support/onboarding.ts`. Create `tests/unit/tool-level.test.tsx`, `tests/e2e/tool-level.spec.ts`.
 
 **Interfaces:**
 
-- Produces: `SIMPLE_TOOLS: Record<EditorForm, readonly string[]>`, 8 registry ids or fewer for each form. Prose: `undo`, `redo`, `bold`, `italic`, `heading-2`, `quote`, `footnote`, then More. Poem: `undo`, `redo`, `bold`, `italic`, `hang-less`, `hang-more`, then More.
+- Produces: `WritingPrefs.toolLevel: 'simple' | 'full'`. The Simple level is the phone toolbar at every width: prose shows Undo, Redo, Text style, Bold, Italic and More; a poem shows Undo, Redo, the hanging indent controls and More. The More menu holds every other tool, so the toolbar needs no second list of tools.
 
-- [ ] Tests first: each id in `SIMPLE_TOOLS` is in the registry; at the Simple level the toolbar renders 8 controls or fewer; every registry tool is in the More menu or the toolbar at each level.
-- [ ] The default follows decision P4. The toolbar's More menu ends with "Show all tools" or "Show fewer tools", and Settings has the same choice.
-- [ ] `tool-level.spec.ts`: at the Simple level, each registry tool runs from the command menu in 2 actions or fewer (open the menu, pick the tool), and axe passes. Commit.
+- [x] Tests first: at the Simple level each toolbar shows 8 controls or fewer; every tool of the Full toolbar is in the toolbar or the More menu at the Simple level; a new writer starts at Simple and a stored level stays.
+- [x] The default follows decision P4: the welcome (only a writer with no projects sees it) sets Simple. With no stored level (an existing writer), the toolbar shows every tool. The toolbar's More menu ends with "Show all tools" or "Show fewer tools", and Settings > Writing has the same choice. The e2e helper `skipOnboarding` starts the other tests at Full.
+- [x] `tool-level.spec.ts`: a new writer gets the Simple toolbar, a hidden tool runs from the More menu in 2 actions (open the menu, pick the tool), both switches work, and axe passes. Commit.
 
 ### Task G7: Gate for pull request G-C
 

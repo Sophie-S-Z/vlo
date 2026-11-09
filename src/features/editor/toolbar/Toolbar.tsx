@@ -17,12 +17,14 @@ import { focusText, getPanelRequest, runCommand, type PanelAnchor } from '../com
 import type { Template } from '@/lib/db';
 import { command, commandsFor, type EditorCommand, type EditorForm } from '../commands/registry';
 import { MAX_HANGING_EM } from '../extensions/poem';
+import { setWritingPrefs, useWritingPrefs } from '../writingPrefs';
 import { ToolButton, toolClass } from './ToolButton';
 import { NO_STATE, useCommandState, type CommandState } from './useCommandState';
 
 /*
- * The slim bar above the page. Arrow keys move inside it, so it is one Tab stop. Under 640 px the
- * secondary tools move into the More menu. Focus mode hides the bar (data-chrome).
+ * The slim bar above the page. Arrow keys move inside it, so it is one Tab stop. Under 640 px, and at
+ * every width at the Simple tool level (F36), the secondary tools move into the More menu. Focus mode
+ * hides the bar (data-chrome).
  */
 
 interface Segment {
@@ -112,6 +114,7 @@ export function Toolbar({
   templates?: readonly Template[] | undefined;
 }) {
   const layout = LAYOUTS[kind];
+  const simple = useWritingPrefs().toolLevel === 'simple';
   // The tools of this template only, such as the private-name tools of a memoir, end the More menu.
   const own = useMemo(
     () =>
@@ -165,6 +168,7 @@ export function Toolbar({
   const AlignIcon = alignActive.icon;
   const narrowOnly = layout.segments.filter((s) => s.wide).flatMap((s) => s.tools);
   if (layout.alignMenu.length > 0) narrowOnly.push(...layout.alignMenu);
+  const segments = simple ? layout.segments.filter((s) => !s.wide) : layout.segments;
 
   const menuItem = (id: string, narrow = false) => {
     const cmd = command(id);
@@ -213,7 +217,7 @@ export function Toolbar({
         data-vlo-toolbar=""
         className="flex flex-wrap items-center gap-0.5 border-b border-rule bg-bg px-1 py-1"
       >
-        {layout.segments[0] && <SegmentButtons segment={layout.segments[0]} at={at} onRun={run} />}
+        {segments[0] && <SegmentButtons segment={segments[0]} at={at} onRun={run} />}
 
         {layout.blockMenu.length > 0 && (
           <>
@@ -248,14 +252,14 @@ export function Toolbar({
           </>
         )}
 
-        {layout.segments.slice(1).map((segment) => (
+        {segments.slice(1).map((segment) => (
           <Fragment key={segment.tools.join()}>
             <Separator />
             <SegmentButtons segment={segment} at={at} onRun={run} />
           </Fragment>
         ))}
 
-        {layout.alignMenu.length > 0 && (
+        {layout.alignMenu.length > 0 && !simple && (
           <>
             <Separator />
             <DropdownMenu modal={false}>
@@ -333,11 +337,20 @@ export function Toolbar({
               focusText(editor);
             }}
           >
-            {narrowOnly.map((id) => menuItem(id, true))}
-            {narrowOnly.length > 0 && <DropdownMenuSeparator className="sm:hidden" />}
+            {narrowOnly.map((id) => menuItem(id, !simple))}
+            {narrowOnly.length > 0 && <DropdownMenuSeparator className={cn(!simple && 'sm:hidden')} />}
             {layout.more.map((id) => menuItem(id))}
             {own.length > 0 && <DropdownMenuSeparator />}
             {own.map((id) => menuItem(id))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="pl-9"
+              onSelect={() => {
+                setWritingPrefs({ toolLevel: simple ? 'full' : 'simple' });
+              }}
+            >
+              {simple ? 'Show all tools' : 'Show fewer tools'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </ToolbarPrimitive.Root>

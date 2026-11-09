@@ -172,6 +172,15 @@ export function SettingsPage() {
                 setAnnouncement(on ? 'Smart punctuation in poems on.' : 'Smart punctuation in poems off.');
               }}
             />
+            <SettingSwitch
+              label="Show all tools in the toolbar"
+              hint="When this is off, the toolbar shows the main tools only, and the More menu holds the others."
+              checked={writing.toolLevel === 'full'}
+              onChange={(on) => {
+                setWritingPrefs({ toolLevel: on ? 'full' : 'simple' });
+                setAnnouncement(on ? 'All tools in the toolbar.' : 'Main tools in the toolbar.');
+              }}
+            />
           </div>
         </Section>
 
