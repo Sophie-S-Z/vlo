@@ -143,15 +143,15 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 
 ### Task H8: Quick capture (F48)
 
-**Files:** Create `src/features/capture/CapturePage.tsx`, `src/features/capture/capture.ts`, `tests/unit/capture.test.ts`, `tests/e2e/capture.spec.ts`. Modify `vite.config.ts` (manifest `shortcuts` and `share_target`), `src/app/routes.tsx`, `src/features/library/LibraryPage.tsx`, `src/features/help/help.ts`.
+**Files:** Create `src/features/capture/CapturePage.tsx`, `src/features/capture/capture.ts`, `tests/unit/capture.test.ts`, `tests/e2e/capture.spec.ts`. Modify `vite.config.ts` (manifest `shortcuts` and `share_target`), `src/app/routes.tsx`, `src/features/library/LibraryPage.tsx`, `src/features/import/tree.ts` (exports `editorSchemas`), `src/features/help/help.ts`.
 
 **Interfaces:**
 
-- Produces: `captureNote(projectId, { title?: string; text: string; url?: string }): Promise<string>`. It finds or makes the top "Inbox" folder and adds a note item with the text, in one transaction.
+- Produces: `captureNote(projectId | null, { title?: string; text: string }): Promise<{ projectId; itemId }>`. It writes the note's text, then finds or makes the top "Inbox" folder and adds the note item in one transaction. With no project, it makes an Open writing project. `sharedText(text, url)` puts the link on a line of its own.
 
-- [ ] Tests first: the first capture makes the Inbox, the second uses it; the text keeps its line breaks; a link is a line of text; a device with no project gets a new Open writing project.
-- [ ] `/capture?title=&text=&url=` shows the text in a field, a project picker and Save. A failed save keeps the text on the screen with the message.
-- [ ] `capture.spec.ts`: open the share URL, save, and the note is in the Inbox after a reload. Commit.
+- [x] Tests first: the first capture makes the Inbox, the second uses it; the text keeps its line breaks; a link is a line of text; a device with no project gets a new Open writing project.
+- [x] `/capture?title=&text=&url=` shows the text in a field, a project picker and Save note. A failed save keeps the text on the screen with the message. The Library has Quick note.
+- [x] `capture.spec.ts`: open the share URL, save, and the note is in the Inbox after a reload; the manifest names the shortcut and the share target.
 
 ### Task H9: Chinese and Japanese counts (F38)
 
