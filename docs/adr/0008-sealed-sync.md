@@ -1,0 +1,30 @@
+# ADR 0008: Sealed sync between a writer's devices
+
+- Status: accepted
+- Date: 2026-11-09
+
+## Context
+
+Writers move between a laptop and a phone, and the roadmap asks for sync with no account (F49, decisions R5 to R9). Vlo is local-first (ADR 0001): each device holds its own IndexedDB, and the only server is the free Supabase project of the share links (ADR 0004). The server must not read a word, a title or a name, and two devices that write offline must not lose a word. Real-time co-writing stays out (decision D2).
+
+## Decision
+
+- **A sync space.** The first device makes a random 32-byte token, and `create_sync_space` gives a space id. The server keeps only the SHA-256 of the token. The device also makes a random 32-byte AES-GCM key and a random device id. Neither leaves the writer's devices except in the pairing link `/pair#p=<space id, key and token>`, whose fragment no browser sends. The pair page takes the fragment once, as the reader view does.
+- **Blobs.** Each device keeps one sealed blob for each key on the relay: one rows blob for each project (the project row, the binder and every planning table of decision R5, and research files up to 2 MB) and one text blob for each item (its whole Yjs state). A put replaces that device's blob for that key, so the relay holds only the newest blob of each device. Each blob carries the `DOC_SCHEMA` of the device that wrote it.
+- **The seal.** JSON, gzip, then AES-GCM 256 with a new 12-byte IV, as for a share, with the purpose `vlo:sync:v1` as additional data. A sync blob cannot open as a bundle or a comment, and the other way round.
+- **Keys the server cannot read.** A blob key is `HMAC-SHA256(sync key, "rows:" + project id)` or `HMAC-SHA256(sync key, "text:" + item id)` in base64url. The server sees 43 random characters, never a project or item id.
+- **Rows merge by time.** A Dexie middleware stamps each put and delete on a synced table with the device's clock. When a remote row and a local row differ, the newer stamp wins, and a delete is a row with `gone`. A day's word count keeps the larger number of each device, so no day loses words.
+- **Text merges by Yjs.** A remote text blob goes into the item's Yjs document, so both devices' words are in the text (roadmap rule 1). Before a merge changes an item that also changed on this device since the last sync, Vlo takes a snapshot "Before sync" (decision R6).
+- **The cursor.** `sync_list` gives the blobs of the other devices from a time on, oldest first, and stops after 8 MB. A device reads again from the last time that it got until nothing is new. Postgres stamps a put at the start of its transaction, so a put that commits late can carry an earlier time than one already read. Each round reads from 30 seconds before the last cursor, and a blob that was already applied applies again with no change.
+- **A newer Vlo.** A device never applies a blob with a newer `schema` than its own. It shows "Update Vlo on this device to sync" and keeps its own text.
+- **The relay.** Migration 0005 adds `sync_spaces` and `sync_blobs`, closed by row level security with no policies, and functions that check the token on each call. Limits (decision R8): a blob of at most 2.8 MB of base64, 100 MB and 5 devices for each space, 20 new spaces in an hour, and 150 MB of sync for the whole project, so share links keep their room in the free 500 MB. A daily pg_cron job deletes a space with no use for 90 days. Each request goes through `vloFetch` with the purpose `sync`, so the network log shows it.
+- **What stays on each device.** Snapshots, sound files, the network log, share links and their keys, provider keys, settings of the device (theme, tool level) and the sync record itself. Backups and exports leave out the sync record.
+
+## Consequences
+
+- Supabase holds cipher text, sizes, times and random device ids. A leak of its database shows how much a writer syncs and when, not what.
+- Anyone with the pairing link can read and change the writer's projects until sync stops. Settings says so, and "Stop sync on all devices" deletes the space.
+- A text blob holds the whole Yjs state of an item, so a long text sends its whole state after each change. For a novel of 100,000 words this is a few hundred KB gzipped, well under the 2.8 MB limit.
+- Two devices that change the same synopsis or card offline keep the newer change, and the older change is lost (decision R6). Text loses no change, because Yjs merges it.
+- A device clock that is far wrong can make its row changes win or lose. The relay time orders the reads, so only the merge of a row reads the device clock.
+- A person who reads the anon key can make spaces and fill the hourly limit, as for share links. Then a writer waits up to an hour to turn on sync.

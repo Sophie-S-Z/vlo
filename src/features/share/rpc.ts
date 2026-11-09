@@ -1,14 +1,28 @@
 import { supabaseUrl, vloFetch } from '@/lib/net';
 
 /*
- * The Supabase calls of share links and usage counts (spec section 11, plan decision S2). Each call is a
+ * The Supabase calls of share links, usage counts and sync (spec section 11, plan decision S2). Each call is a
  * PostgREST RPC through the network module, so it goes in the network log. Vlo calls functions only and
  * reads no table. The anon key is public by design: row level security with no policies keeps every
  * table closed, and each function checks its own input.
  */
 
 export type RpcName =
-  'create_share' | 'get_share' | 'revoke_share' | 'add_comment' | 'list_comments' | 'ping' | 'submit_usage';
+  | 'create_share'
+  | 'get_share'
+  | 'revoke_share'
+  | 'add_comment'
+  | 'list_comments'
+  | 'ping'
+  | 'submit_usage'
+  // Sync between the writer's devices (F49, migration 0005).
+  | 'create_sync_space'
+  | 'sync_put'
+  | 'sync_list'
+  | 'sync_devices'
+  | 'sync_drop'
+  | 'leave_sync'
+  | 'delete_sync_space';
 
 export type ShareErrorKind =
   'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'busy' | 'server';
@@ -56,7 +70,7 @@ function kindOf(message: string): ShareErrorKind {
 export async function rpc<T>(
   name: RpcName,
   args: Record<string, unknown>,
-  purpose: 'share' | 'usage',
+  purpose: 'share' | 'usage' | 'sync',
 ): Promise<T> {
   if (!sharingReady()) throw new ShareError('not-set-up');
   const key = anonKey();

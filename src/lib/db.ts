@@ -267,7 +267,7 @@ export interface AudioFile {
 }
 
 /** Why a request left the app (spec section 5). */
-export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality';
+export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality' | 'sync';
 
 /** One request that left the app's origin (spec section 5, F25). It never holds a key, a header or a body. */
 export interface NetworkLogEntry {

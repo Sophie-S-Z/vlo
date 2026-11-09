@@ -1,10 +1,10 @@
 # Vlo privacy
 
-Version 1, 8 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 2, 9 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
-- Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser.
+- Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.
 - The real names and aliases on the People screen stay in this browser.
 - Snapshots stay in this browser. A backup or a folder save goes only to the place that you pick.
 - A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.
@@ -43,6 +43,12 @@ Counts in bands, the templates and features that you used, AI mode counts and er
 Only when you press "Check the web too" in Insights.
 
 Up to 6 short phrases from the open item. A phrase that holds a private name stays on the device.
+
+### Sync between your devices
+
+Only after you turn on sync in Settings, and only between the devices that you pair.
+
+Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.
 
 ## Contact
 

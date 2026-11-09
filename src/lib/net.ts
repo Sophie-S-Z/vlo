@@ -39,7 +39,7 @@ const supabaseHosts = (): string[] => {
 /**
  * The hosts that each purpose may reach, with the port when it is not the default. A leading "*." allows
  * each subdomain. The CSP `connect-src` in vercel.json lists the same hosts, and a unit test checks it.
- * Sharing and usage counts reach only the Supabase project of this build. A build with none refuses them.
+ * Sharing, usage counts and sync reach only the Supabase project of this build. A build with none refuses them.
  */
 export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
   ai: [
@@ -53,6 +53,7 @@ export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
   'model-download': ['huggingface.co', '*.huggingface.co', '*.hf.co', 'raw.githubusercontent.com'],
   share: supabaseHosts(),
   usage: supabaseHosts(),
+  sync: supabaseHosts(),
   // The web part of the originality check, only when the writer presses its button: short phrases go to
   // Wikipedia's search and to OpenAlex, a free index of research papers. Neither needs a key.
   originality: ['en.wikipedia.org', 'api.openalex.org'],

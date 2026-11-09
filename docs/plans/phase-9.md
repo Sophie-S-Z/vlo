@@ -125,12 +125,12 @@ Pull request I-A: Tasks I1 to I3 (no server). I-B: Task I4. I-C: Tasks I5 to I8.
 
 **Interfaces:**
 
-- Produces: tables `sync_spaces (id uuid, token_hash bytea, created_at, used_at)` and `sync_blobs (space_id, device text, key text, payload text, iv text, size int, updated_at timestamptz, primary key (space_id, device, key))`, closed by row level security with no policies.
-- Produces: functions `create_sync_space(p_token text) → uuid`, `sync_put(p_space uuid, p_token text, p_device text, p_key text, p_payload text, p_iv text) → timestamptz`, `sync_list(p_space, p_token, p_since timestamptz) → setof (device, key, payload, iv, updated_at)` ordered by `updated_at` and cut at 8 MB, `sync_drop(p_space, p_token, p_device, p_key)`, `leave_sync(p_space, p_token, p_device)`, `delete_sync_space(p_space, p_token)`.
-- Produces: limits (decision R8): a blob of at most 2.8 MB of base64, 100 MB for each space, 5 devices, 20 new spaces an hour for the project, and a daily cleanup of spaces with no use for 90 days.
+- Produces: tables `sync_spaces (id uuid, token_hash text, created_at, used_at)` and `sync_blobs (space_id, device text, key text, payload text, iv text, size int, updated_at timestamptz, primary key (space_id, device, key))`, closed by row level security with no policies.
+- Produces: functions `create_sync_space(p_token text) → uuid`, `sync_put(p_space uuid, p_token text, p_device text, p_key text, p_payload text, p_iv text) → timestamptz`, `sync_list(p_space, p_token, p_device, p_since timestamptz) → setof (device, key, payload, iv, updated_at)` with the blobs of the other devices at or after `p_since`, ordered by `updated_at` and cut after 8 MB, `sync_devices(p_space, p_token) → setof (device, updated_at, size)`, `sync_drop(p_space, p_token, p_device, p_key)`, `leave_sync(p_space, p_token, p_device)`, `delete_sync_space(p_space, p_token)`.
+- Produces: limits (decision R8): a blob of at most 2.8 MB of base64, 100 MB for each space, 5 devices, 20 new spaces an hour for the project, 150 MB of sync for the whole project so share links keep their room, and a daily cleanup `cleanup_sync()` of spaces with no use for 90 days. A wrong token raises `unknown space`.
 
-- [ ] Tests first in PGlite: a wrong token gets no rows and changes nothing; a put replaces the device's blob for that key; `sync_list` gives the blobs after `p_since` and stops at 8 MB; a sixth device, a blob over the limit and a space over 100 MB fail with their own error codes; `leave_sync` deletes only that device's blobs; the cleanup deletes an old space.
-- [ ] ADR 0008: the design, the seal purpose `vlo:sync:v1`, HMAC keys, newest-wins rows, Yjs text, the 30-second read overlap that makes the cursor safe, and what stays on the device. Commit.
+- [x] Tests first in PGlite: a wrong token gets no rows and changes nothing; a put replaces the device's blob for that key; `sync_list` gives the blobs after `p_since` and stops at 8 MB; a sixth device, a blob over the limit and a space over 100 MB fail with their own error codes; `leave_sync` deletes only that device's blobs; the cleanup deletes an old space.
+- [x] ADR 0008: the design, the seal purpose `vlo:sync:v1`, HMAC keys, newest-wins rows, Yjs text, the 30-second read overlap that makes the cursor safe, and what stays on the device. Commit.
 
 ### Task I6: Sync on the device (F49)
 
