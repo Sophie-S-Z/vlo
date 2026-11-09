@@ -486,6 +486,14 @@ export function ProjectPage() {
       },
     },
     {
+      id: 'feedback',
+      label: 'Open Feedback',
+      keywords: ['feedback', 'beta readers', 'replies', 'reactions', 'answers', 'questions', 'comments'],
+      run: () => {
+        void navigate(`/p/${project.id}/feedback`);
+      },
+    },
+    {
       id: 'submissions',
       label: 'Open Submissions',
       keywords: ['submissions', 'venues', 'journals', 'sent', 'follow up', 'tracker'],

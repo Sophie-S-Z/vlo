@@ -133,7 +133,10 @@ export const HELP = {
       steps: [
         'In a project, choose Share. Pick the items and how long the link works.',
         'Choose Create link, then copy the link to your readers. They need no account.',
-        'Comments from readers show in the Share panel. Stop sharing ends the link at once.',
+        'You can ask your readers up to 5 questions. They see them after the text.',
+        'A reader selects words or taps a paragraph, then adds a comment, a reaction or both.',
+        'The Feedback tab lists the replies of every link by item. Make a comment puts a reply on its words.',
+        'Stop sharing ends the link at once.',
       ],
     },
     {

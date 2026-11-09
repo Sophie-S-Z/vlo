@@ -24,7 +24,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/ui/dialog';
+import { takeWordsToShow } from './commands/editorBus';
 import { Editor } from './Editor';
+import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
 import { cleanPageFormat, PAGE_SIZES } from './format/page';
 import { docBody, docText, writeItemText } from './itemText';
@@ -181,9 +183,23 @@ export function EditorPane({
     });
   }, [open, snapshotEveryMinutes, readText, target]);
 
-  const onEditor = useCallback((next: TiptapEditor | null) => {
-    setEditor(next);
-  }, []);
+  const onEditor = useCallback(
+    (next: TiptapEditor | null) => {
+      setEditor(next);
+      // Another screen, such as Feedback, can ask this editor to select some words when it opens. The
+      // selection waits for the editor's own focus at its first render.
+      const words = next && !beside ? takeWordsToShow(id) : null;
+      if (!next || words === null) return;
+      const show = () => {
+        const match = findWords(next.state.doc, words);
+        if (match) next.chain().focus().setTextSelection(match).scrollIntoView().run();
+        else setNotice('The words of the reply are not in this text now.');
+      };
+      if (next.isInitialized) show();
+      else next.once('create', show);
+    },
+    [beside, id],
+  );
 
   const font = cleanFontValue(storedFont) ?? DEFAULT_FONT;
   const page = cleanPageFormat(storedPage);

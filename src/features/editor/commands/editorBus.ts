@@ -102,6 +102,21 @@ export function usePanelRequest(): PanelRequest | null {
   return useSyncExternalStore(panel.subscribe, panel.get, panel.get);
 }
 
+/** The words that another screen asks an item's editor to select when it opens, such as a reader's quote. */
+let wordsToShow: { itemId: string; words: string } | null = null;
+
+export function showWordsOnOpen(itemId: string, words: string): void {
+  wordsToShow = { itemId, words };
+}
+
+/** The words that the editor of this item must select, once. */
+export function takeWordsToShow(itemId: string): string | null {
+  if (wordsToShow?.itemId !== itemId) return null;
+  const { words } = wordsToShow;
+  wordsToShow = null;
+  return words;
+}
+
 /** Gives the text focus now. TipTap's own focus command waits a frame, and keys typed in that frame are lost. */
 export function focusText(editor: Editor): void {
   if (!editor.isDestroyed && !editor.view.hasFocus()) editor.view.focus();

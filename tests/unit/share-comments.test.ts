@@ -44,16 +44,40 @@ const good = {
   at: 5,
 };
 
+/** The link of the version 2 tests: one question, and on the reader's device the text of each block. */
+const LIMITS = { questions: 1, blocks: [['', '', 'The harbour lights came on one by one.']] };
+const words = { ...good, v: 2, quote: 'lights came', start: 12, end: 23, reaction: 'moved' };
+
 describe('parseComment', () => {
   test('takes a comment that Vlo makes, and trims an empty name away', () => {
-    expect(m.parseComment(good)).toEqual(good);
-    const noName = m.parseComment({ ...good, name: '  ' });
+    expect(m.parseComment(good, LIMITS)).toEqual(good);
+    const noName = m.parseComment({ ...good, name: '  ' }, LIMITS);
     expect(noName).not.toHaveProperty('name');
     expect(noName?.text).toBe('Lovely.');
   });
 
+  test('takes a version 2 comment on words, a reaction with no text, and an answer', () => {
+    expect(m.parseComment(words, LIMITS)).toEqual(words);
+    // The writer's device has no bundle, so it checks the words against their offsets only.
+    expect(m.parseComment(words, { questions: 0 })).toEqual(words);
+    const reaction = { ...good, v: 2, text: '', reaction: 'funny' };
+    expect(m.parseComment(reaction, LIMITS)).toEqual(reaction);
+    const answer = { ...good, v: 2, quote: '', question: 0, text: 'The ending.' };
+    expect(m.parseComment(answer, LIMITS)).toEqual(answer);
+  });
+
   test.each([
-    ['another version', { ...good, v: 2 }],
+    ['another version', { ...good, v: 3 }],
+    ['an unknown reaction', { ...words, reaction: 'angry' }],
+    ['a start after the end', { ...words, start: 23, end: 12 }],
+    ['a start with no end', { ...words, end: undefined }],
+    ['an end past the block', { ...words, start: 30, end: 41 }],
+    ['offsets that do not hold the quote', { ...words, start: 11, end: 22 }],
+    ['a block that the link does not have', { ...words, block: 7 }],
+    ['a question index past the questions', { ...good, v: 2, question: 1 }],
+    ['an answer with a reaction', { ...good, v: 2, question: 0, reaction: 'loved' }],
+    ['an answer over the limit', { ...good, v: 2, question: 0, text: 'x'.repeat(2001) }],
+    ['no text and no reaction', { ...good, v: 2, text: ' ' }],
     ['a negative block', { ...good, block: -1 }],
     ['a block that is not a whole number', { ...good, block: 1.5 }],
     ['an empty text', { ...good, text: '   ' }],
@@ -65,7 +89,7 @@ describe('parseComment', () => {
     ['an array', [good]],
     ['null', null],
   ])('refuses %s', (_name, value) => {
-    expect(m.parseComment(value)).toBeNull();
+    expect(m.parseComment(value, LIMITS)).toBeNull();
   });
 });
 
@@ -98,7 +122,7 @@ describe('sending and reading', () => {
       { id: 'e', payload: 7, iv: 'x', created_at: '' },
       'not a row',
     ];
-    const listed = await m.readComments(SHARE_ID, key);
+    const listed = await m.readComments(SHARE_ID, key, LIMITS);
     expect(listed.map((c) => c.id)).toEqual(['a', 'b']);
     expect(listed[0]?.at).toBe(Date.parse('2026-11-07T09:00:00Z'));
     expect(listed[1]?.comment.text).toBe('Second.');
@@ -106,7 +130,12 @@ describe('sending and reading', () => {
 
   test('the writer keeps the comments of a link in its record', async () => {
     const { key, text } = await newShareKey();
-    rows = [{ id: 'a', ...(await sealJson(good, key, 'comment')), created_at: '2026-11-07T09:00:00Z' }];
+    const answer = { ...good, v: 2, quote: '', question: 0, text: 'The ending.' };
+    rows = [
+      { id: 'a', ...(await sealJson(good, key, 'comment')), created_at: '2026-11-07T09:00:00Z' },
+      { id: 'b', ...(await sealJson(words, key, 'comment')), created_at: '2026-11-07T09:10:00Z' },
+      { id: 'c', ...(await sealJson(answer, key, 'comment')), created_at: '2026-11-07T09:20:00Z' },
+    ];
     await m.db.shares.add({
       id: SHARE_ID,
       projectId: 'p',
@@ -117,6 +146,7 @@ describe('sending and reading', () => {
       ownerToken: 'o',
       key: text,
       revoked: false,
+      questions: ['What did you feel at the end?'],
       comments: [],
       commentsReadAt: 0,
     });
@@ -133,6 +163,28 @@ describe('sending and reading', () => {
         name: 'Ines',
         text: 'Lovely.',
         at: Date.parse('2026-11-07T09:00:00Z'),
+      },
+      {
+        id: 'b',
+        section: 0,
+        block: 2,
+        quote: 'lights came',
+        start: 12,
+        end: 23,
+        reaction: 'moved',
+        name: 'Ines',
+        text: 'Lovely.',
+        at: Date.parse('2026-11-07T09:10:00Z'),
+      },
+      {
+        id: 'c',
+        section: 0,
+        block: 2,
+        quote: '',
+        question: 0,
+        name: 'Ines',
+        text: 'The ending.',
+        at: Date.parse('2026-11-07T09:20:00Z'),
       },
     ]);
     expect(stored?.commentsReadAt).toBeGreaterThan(0);

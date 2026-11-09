@@ -183,12 +183,18 @@ describe('parseBundle refuses a crafted bundle', () => {
     sections: [{ title: 'S', form: 'prose', blocks: [{ type: 'p', runs: [{ t: 'hi' }] }] }],
   });
 
-  test('a good bundle passes', () => {
+  test('a good bundle passes, with up to 5 questions', () => {
     expect(parseBundle(good())).toEqual(good());
+    const asked = { ...good(), questions: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5'] };
+    expect(parseBundle(asked)).toEqual(asked);
   });
 
   test.each([
     ['an unknown version', { ...good(), v: 2 }],
+    ['6 questions', { ...good(), questions: ['1', '2', '3', '4', '5', '6'] }],
+    ['a question over the limit', { ...good(), questions: ['x'.repeat(301)] }],
+    ['an empty question', { ...good(), questions: [' '] }],
+    ['a number for a question', { ...good(), questions: [7] }],
     ['a missing title', { ...good(), title: undefined }],
     ['a number for the author', { ...good(), author: 7 }],
     ['a string where the sections go', { ...good(), sections: 'none' }],

@@ -75,6 +75,12 @@ export function findMatches(doc: ProseMirrorNode, query: FindQuery): FindMatch[]
   return matches;
 }
 
+/** The first place of these exact words in the document, or null, such as for a reader's quote. */
+export function findWords(doc: ProseMirrorNode, words: string): FindMatch | null {
+  if (words.trim() === '') return null;
+  return findMatches(doc, { text: words, caseSensitive: true, wholeWord: false })[0] ?? null;
+}
+
 function decorate(doc: ProseMirrorNode, matches: readonly FindMatch[], current: number): DecorationSet {
   if (matches.length === 0) return DecorationSet.empty;
   return DecorationSet.create(

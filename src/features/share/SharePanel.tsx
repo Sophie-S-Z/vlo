@@ -9,8 +9,10 @@ import { type Item, type Project, type ShareRecord } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
-import { refreshComments } from './comments';
+import { MAX_QUESTION, MAX_QUESTIONS } from './bundle';
+import { REACTION_LABELS, refreshComments } from './comments';
 import { sharingReady, ShareError } from './rpc';
 import {
   createShare,
@@ -247,10 +249,19 @@ function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: Read
             <ul className="grid gap-2 text-sm">
               {record.comments.map((c) => (
                 <li key={c.id} className="grid gap-0.5 rounded-[var(--radius-card)] bg-surface px-3 py-2">
-                  {c.quote !== '' && (
-                    <span className="text-muted italic [overflow-wrap:anywhere]">On “{c.quote}”</span>
+                  {c.question !== undefined ? (
+                    <span className="text-muted italic [overflow-wrap:anywhere]">
+                      Answer to “{record.questions?.[c.question] ?? ''}”
+                    </span>
+                  ) : (
+                    c.quote !== '' && (
+                      <span className="text-muted italic [overflow-wrap:anywhere]">On “{c.quote}”</span>
+                    )
                   )}
-                  <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{c.text}</span>
+                  {c.reaction && <span className="font-medium">{REACTION_LABELS[c.reaction]}</span>}
+                  {c.text !== '' && (
+                    <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{c.text}</span>
+                  )}
                   <span className="text-muted">
                     <span className="[overflow-wrap:anywhere]">{c.name ?? 'A reader'}</span>,{' '}
                     {when.format(c.at)}
@@ -278,6 +289,10 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId }
     return new Set(current ? [current.id] : shareable.map((i) => i.id));
   });
   const [days, setDays] = useState<ExpiryDays>(14);
+  const [questions, setQuestions] = useState<string[]>([]);
+  // One empty field after the questions, until there are 5.
+  const questionFields =
+    questions.length < MAX_QUESTIONS && (questions.at(-1) ?? 'none') !== '' ? [...questions, ''] : questions;
   const [status, setStatus] = useState<Status>({ step: 'choose' });
   const [error, setError] = useState<string | null>(null);
   const [marking, setMarking] = useState(false);
@@ -325,6 +340,7 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId }
         items,
         itemIds: [...picked],
         people: await privatePeople(project.id),
+        questions,
       });
       if (!mounted.current) return;
       if (memoir && (prepared.names.unmarked.length > 0 || prepared.names.changed.length > 0)) {
@@ -553,6 +569,26 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId }
                   </label>
                 ))}
               </RadioGroup>
+            </fieldset>
+
+            <fieldset className="grid gap-3" disabled={busy}>
+              <legend className="mb-1 text-sm font-semibold">Questions for your readers (optional)</legend>
+              <p className="text-sm text-muted">Readers see them after the text. Ask up to 5.</p>
+              {questionFields.map((question, i) => (
+                <div key={i} className="grid gap-1.5">
+                  <Label htmlFor={`${ids}-question-${String(i)}`}>Question {i + 1}</Label>
+                  <Input
+                    id={`${ids}-question-${String(i)}`}
+                    value={question}
+                    maxLength={MAX_QUESTION}
+                    onChange={(event) => {
+                      const next = [...questions];
+                      next[i] = event.target.value;
+                      setQuestions(next);
+                    }}
+                  />
+                </div>
+              ))}
             </fieldset>
 
             {memoir && (

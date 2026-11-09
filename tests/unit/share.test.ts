@@ -90,7 +90,13 @@ describe('share links', () => {
     const { prepareShare, createShare, shareLink } = m;
     const { project, items } = await memoir();
     const ids = items.filter((i) => i.kind === 'memory').map((i) => i.id);
-    const prepared = await prepareShare({ project, items, itemIds: ids, people: PEOPLE });
+    const prepared = await prepareShare({
+      project,
+      items,
+      itemIds: ids,
+      people: PEOPLE,
+      questions: ['Is the ending clear?'],
+    });
     expect(JSON.stringify(prepared.bundle)).not.toContain('Rosa');
     expect(prepared.bundle.title).toBe('Summers with Maria');
     expect(prepared.names.unmarked.map((n) => n.name)).toEqual(['Rosa']);
@@ -115,7 +121,13 @@ describe('share links', () => {
     for (const form of forms) expect(sent).not.toContain(form);
     expect(JSON.stringify(call?.body)).not.toContain('Maria');
 
-    expect(record).toMatchObject({ id: SHARE_ID, projectId: project.id, revoked: false, comments: [] });
+    expect(record).toMatchObject({
+      id: SHARE_ID,
+      projectId: project.id,
+      revoked: false,
+      questions: ['Is the ending clear?'],
+      comments: [],
+    });
     expect(record.expiresAt - record.createdAt).toBe(14 * 86_400_000);
     expect(await m.db.shares.get(SHARE_ID)).toEqual(record);
     expect(shareLink(record, 'https://vlo.app')).toBe(`https://vlo.app/r/${SHARE_ID}#k=${record.key}`);
@@ -138,8 +150,11 @@ describe('share links', () => {
       items,
       itemIds: [...scenes.map((s) => s.id)].reverse(),
       people: [],
+      questions: [' Where did you stop reading? ', ''],
     });
     expect(prepared.bundle.title).toBe('Salt Year');
+    // The questions go in the bundle, trimmed, and an empty one stays out.
+    expect(prepared.bundle.questions).toEqual(['Where did you stop reading?']);
     expect(prepared.itemIds).toEqual(
       scenes
         .map((s) => s.id)

@@ -1,21 +1,14 @@
 import type { Mark, MarkType, Node as ProseMirrorNode, NodeType } from '@tiptap/pm/model';
 import { Transform } from '@tiptap/pm/transform';
-import { initProseMirrorDoc, updateYFragment } from '@tiptap/y-tiptap';
 import { diffArrays } from 'diff';
-import * as Y from 'yjs';
-import { DOC_SCHEMA, docSchema, stampDocSchema } from '@/features/editor/docSchema';
 import { COMMENT } from '@/features/editor/format/comment';
+import { changeStoredDoc, type StoredTarget } from '@/features/editor/storedDoc';
 import { SUGGESTION } from '@/features/editor/format/suggestion';
-import { docBody, docText, writeItemText } from '@/features/editor/itemText';
-import { sendToTabs } from '@/features/editor/tabSync';
 import { NODE_MARK } from '@/features/editor/textMap';
-import { takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
-import type { Item, Pass } from '@/lib/db';
+import type { Pass } from '@/lib/db';
 import { newId } from '@/lib/ids';
-import { openItemDoc, YFRAGMENT } from '@/lib/ydocs';
 import type { ReviewChange, ReviewParagraph } from './review';
-import { editorSchemas } from './tree';
 
 /*
  * Puts an editor's Word changes into an item (F45, decision R3). Each Word paragraph goes on the Vlo
@@ -264,11 +257,8 @@ export function unplacedAll(paragraphs: readonly ReviewParagraph[]): Unplaced[] 
   );
 }
 
-export interface ReviewTarget {
-  item: Pick<Item, 'id' | 'projectId'>;
-  form: 'prose' | 'poem';
+export interface ReviewTarget extends StoredTarget {
   pass: Pass;
-  language?: string;
 }
 
 /**
@@ -276,35 +266,19 @@ export interface ReviewTarget {
  * named "Before Word changes" keeps the text as it was.
  */
 export async function placeReview(
-  { item, form, pass, language }: ReviewTarget,
+  target: ReviewTarget,
   paragraphs: readonly ReviewParagraph[],
 ): Promise<Placement> {
-  const open = openItemDoc(item.id);
-  try {
-    await open.ready;
-    // A newer Vlo saved this item. This build leaves it as it is.
-    if (docSchema(open.doc) > DOC_SCHEMA)
-      return { changes: 0, comments: 0, unplaced: unplacedAll(paragraphs) };
-    const fragment = open.doc.getXmlFragment(YFRAGMENT);
-    const { doc, meta } = initProseMirrorDoc(fragment, editorSchemas[form]);
-    const { tr, placement } = placeChanges(doc, paragraphs, pass, clock.now());
-    if (!tr.docChanged) return placement;
-    await takeSnapshot(item, open.doc, docText(doc, form), BEFORE_WORD);
-    const updates: Uint8Array[] = [];
-    const keep = (update: Uint8Array) => {
-      updates.push(update);
-    };
-    open.doc.on('update', keep);
-    open.doc.transact(() => {
-      updateYFragment(open.doc, fragment, tr.doc, meta);
-      stampDocSchema(open.doc);
-    });
-    open.doc.off('update', keep);
-    await open.confirmSaved(clock.now());
-    sendToTabs(item.id, Y.mergeUpdates(updates));
-    await writeItemText(item, docText(tr.doc, form), form, docBody(tr.doc, form), language);
-    return placement;
-  } finally {
-    await open.close();
-  }
+  // When a newer Vlo saved the item, `change` does not run, and this build places nothing.
+  let placement: Placement = { changes: 0, comments: 0, unplaced: unplacedAll(paragraphs) };
+  await changeStoredDoc(
+    target,
+    (doc) => {
+      const placed = placeChanges(doc, paragraphs, target.pass, clock.now());
+      placement = placed.placement;
+      return placed.tr;
+    },
+    BEFORE_WORD,
+  );
+  return placement;
 }

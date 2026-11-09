@@ -623,6 +623,15 @@ Last update: 2026-11-09
     goes on the paragraph with the same text, as a waiting change with the editor's name. A snapshot
     "Before Word changes" comes first. The summary lists each change on a paragraph that the writer
     changed after the export.
+
+  Pull request I-B holds Task I4:
+  - I4: a share link can ask up to 5 questions. A reader selects words or taps a paragraph, then adds a
+    comment, one of 6 reactions, or both, and answers the questions after the text. Reader comments are
+    version 2, and `parseComment` checks each offset, reaction and question index. The Feedback tab (Full
+    level, and "Open Feedback" in the command menu) lists the replies of every link by item, filters them
+    by reaction, shows a reply's words in the text, and makes a reply a comment with the reader's name.
+    The server and the migrations do not change.
+
 - Phase 8 (plan `docs/plans/phase-8.md`, the roadmap's "Match the best" features F39 to F43, F46 to F48
   and the rest of F38). The product owner approved decisions Q1 to Q9 as recommended on 2026-11-09.
   Pull request #22 merged with Tasks H1 to H6: the Outline with labels, deadline goals, comments in the
