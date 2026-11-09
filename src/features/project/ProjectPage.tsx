@@ -37,6 +37,9 @@ import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { recordFeature } from '@/features/usage/usage';
 import { ProjectMissing } from './ViewNotices';
 
+/** Folder save also runs this often while the project is open, so a long session has a recent copy. */
+const FOLDER_SAVE_EVERY_MS = 10 * 60_000;
+
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
 const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
 // The export dialog loads the first time the writer opens it. Each format's code loads in the export worker.
@@ -162,8 +165,9 @@ export function ProjectPage() {
     [],
   );
 
-  // Folder save (F29): when the writer leaves the project or the tab, Vlo writes the project to the
-  // folder the writer picked, if the writing changed. The code loads only when a save may run.
+  // Folder save (F29, F32): when the writer leaves the project or the tab, and every 10 minutes, Vlo
+  // writes the project to the folder the writer picked, if the writing changed. The code loads only
+  // when a save may run.
   useEffect(() => {
     const save = () => {
       void db.appMeta
@@ -179,8 +183,10 @@ export function ProjectPage() {
       if (document.visibilityState === 'hidden') save();
     };
     document.addEventListener('visibilitychange', onHide);
+    const timer = setInterval(save, FOLDER_SAVE_EVERY_MS);
     return () => {
       document.removeEventListener('visibilitychange', onHide);
+      clearInterval(timer);
       save();
     };
   }, [projectId]);

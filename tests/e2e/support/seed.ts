@@ -43,3 +43,33 @@ export async function seedProjects(page: Page, count: number): Promise<void> {
   }, count);
   await page.reload();
 }
+
+/** Moves the creation time of every project `age` milliseconds into the past. */
+export async function ageProjects(page: Page, age: number) {
+  await page.evaluate(async (ms) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('vlo');
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        reject(request.error ?? new Error('open failed'));
+      };
+    });
+    await new Promise<void>((resolve, reject) => {
+      const store = db.transaction('projects', 'readwrite').objectStore('projects');
+      const all = store.getAll();
+      all.onsuccess = () => {
+        for (const project of all.result as { createdAt: number }[])
+          store.put({ ...project, createdAt: Date.now() - ms });
+        store.transaction.oncomplete = () => {
+          resolve();
+        };
+      };
+      all.onerror = () => {
+        reject(all.error ?? new Error('read failed'));
+      };
+    });
+    db.close();
+  }, age);
+}

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useMatch } from 'react-router';
+import { SafetyBadge } from '@/features/backup/SafetyBadge';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -59,20 +60,23 @@ export function AppShell() {
           >
             Vlo
           </NavLink>
-          <nav aria-label="Main">
-            <ul className="flex items-center gap-1">
-              <li>
-                <NavLink to="/" end className={navClass}>
-                  Library
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/settings" className={navClass}>
-                  Settings
-                </NavLink>
-              </li>
-            </ul>
-          </nav>
+          <div className="flex items-center gap-1">
+            <SafetyBadge />
+            <nav aria-label="Main">
+              <ul className="flex items-center gap-1">
+                <li>
+                  <NavLink to="/" end className={navClass}>
+                    Library
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/settings" className={navClass}>
+                    Settings
+                  </NavLink>
+                </li>
+              </ul>
+            </nav>
+          </div>
         </div>
       </header>
       <main

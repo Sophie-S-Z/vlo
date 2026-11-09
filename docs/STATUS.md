@@ -1,6 +1,6 @@
 # Vlo status
 
-Last update: 2026-11-08
+Last update: 2026-11-09
 
 ## Done
 
@@ -609,6 +609,15 @@ Last update: 2026-11-08
 
 ## In progress
 
+- Phase 7 (plan `docs/plans/phase-7.md`, the roadmap's safety features F31 to F38, chosen on 2026-11-09).
+  Decisions P1 to P7 wait for the product owner's approval. Pull request G-A holds Tasks G1 to G3:
+  - G1: a safety badge in the site header (Safe, Check, At risk) with the reasons and a Back up button.
+  - G2: folder save keeps a dated backup for each of the last 10 days and runs every 10 minutes in a
+    project. With no folder save, the Library asks for a backup after each change, and one press makes it.
+  - G3: "Download all my writing" in Settings: Markdown files in binder order and an index.html page.
+  - Checks in the build container on 2026-11-09: the Chromium suite passed (212 tests). Initial
+    JavaScript: 211 KB gzip. The LibreOffice equation test fails here because the container has no
+    LibreOffice Math module; it fails the same way on `main`.
 - Phase 2: every pull request merged.
 - CI: the repository is public, so Actions minutes are free. A pull request runs the checks, the export files
   job and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;

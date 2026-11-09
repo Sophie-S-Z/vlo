@@ -1,5 +1,6 @@
 import { LayoutGrid, List } from 'lucide-react';
 import { ToggleGroup } from 'radix-ui';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { startTransition, useState } from 'react';
 import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
@@ -7,10 +8,12 @@ import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FolderAllow } from '@/features/backup/FolderAllow';
 import { ImportBackup } from '@/features/backup/ImportBackup';
-import { backupDue } from '@/features/backup/reminder';
+import { downloadBackup } from '@/features/backup/downloadBackup';
+import { FOLDER_KEY } from '@/features/backup/folderKeys';
+import { backupDue, changedSinceBackup } from '@/features/backup/reminder';
 import { SafariSteps } from '@/features/backup/SafariSteps';
 import { clock } from '@/lib/clock';
-import type { Project } from '@/lib/db';
+import { db, type Project } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { DeleteDialog } from './DeleteDialog';
@@ -60,8 +63,29 @@ export function LibraryPage() {
   const [backingUp, setBackingUp] = useState<Project | null>(null);
   // The time the Library opened, for the backup dates on the cards.
   const [now] = useState(() => clock.now());
+  // With folder save on, the folder keeps the copies, so the Library asks only after 7 days. Else it
+  // asks after each change, and one press makes the backup (roadmap F32).
+  const folderOn = useLiveQuery(
+    async () => (await db.appMeta.get(FOLDER_KEY).catch(() => undefined)) !== undefined,
+    [],
+    true,
+  );
   const due =
-    library.status === 'ready' ? library.projects.filter(({ project }) => backupDue(project, now)) : [];
+    library.status === 'ready'
+      ? library.projects.filter(
+          ({ project }) => backupDue(project, now) || (!folderOn && changedSinceBackup(project)),
+        )
+      : [];
+  const [quick, setQuick] = useState<{ busy: string | null; message: string }>({ busy: null, message: '' });
+  const backUpNow = async (project: Project) => {
+    setQuick({ busy: project.id, message: 'Making the backup.' });
+    try {
+      const file = await downloadBackup(project.id, { music: false });
+      setQuick({ busy: null, message: `Vlo saved ${file.name} to your downloads.` });
+    } catch {
+      setQuick({ busy: null, message: 'Vlo could not make the backup. Reload Vlo and try again.' });
+    }
+  };
 
   return (
     <section className="grain">
@@ -104,7 +128,7 @@ export function LibraryPage() {
             Time for a backup
           </h2>
           <p className="text-sm text-muted">
-            {due.length === 1 ? 'This project has' : 'These projects have'} no backup from the last 7 days.
+            {due.length === 1 ? 'This project has' : 'These projects have'} work that is not in a backup file.
             Browsers can clear the data of a website, and a backup file keeps a copy of your work.
           </p>
           <ul className="grid gap-2">
@@ -115,17 +139,22 @@ export function LibraryPage() {
                   type="button"
                   variant="outline"
                   aria-label={`Back up ${project.title}`}
-                  onClick={() => {
-                    setBackingUp(project);
-                  }}
+                  disabled={quick.busy !== null}
+                  onClick={() => void backUpNow(project)}
                 >
-                  Back up
+                  {quick.busy === project.id ? 'Backing up…' : 'Back up'}
                 </Button>
               </li>
             ))}
           </ul>
         </section>
       )}
+      <p
+        role="status"
+        className={quick.busy === null && quick.message ? 'mt-4 text-sm text-muted' : 'sr-only'}
+      >
+        {quick.message}
+      </p>
 
       <FolderAllow />
       <SafariSteps closable className="mt-8" />

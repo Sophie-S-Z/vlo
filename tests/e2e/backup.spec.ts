@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { ageProjects } from './support/seed';
 
 /* Plan Task B8 and US04: back up a project, import it in a fresh profile, the reminder and the Safari steps. */
 
@@ -138,55 +139,38 @@ test('a file that is not a backup gets a clear message', async ({ page }, testIn
   await expect(page.getByRole('button', { name: 'Import backup' })).toBeEnabled();
 });
 
-test('after 7 days without a backup, the Library reminds the writer, and a backup ends the reminder', async ({
+test('after a change with no folder save, the Library asks for a backup, and one press makes it', async ({
   page,
 }) => {
   await novelWithText(page);
-  // The project was made 8 days ago.
-  await page.evaluate(async (age) => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('vlo');
-      request.onsuccess = () => {
-        resolve(request.result);
-      };
-      request.onerror = () => {
-        reject(request.error ?? new Error('open failed'));
-      };
-    });
-    await new Promise<void>((resolve, reject) => {
-      const store = db.transaction('projects', 'readwrite').objectStore('projects');
-      const all = store.getAll();
-      all.onsuccess = () => {
-        for (const project of all.result as { createdAt: number }[])
-          store.put({ ...project, createdAt: Date.now() - age });
-        store.transaction.oncomplete = () => {
-          resolve();
-        };
-      };
-      all.onerror = () => {
-        reject(all.error ?? new Error('read failed'));
-      };
-    });
-    db.close();
-  }, 8 * DAY);
-  await page.reload();
-
   const reminder = page.getByRole('region', { name: 'Time for a backup' });
-  await expect(reminder).toContainText('This project has no backup from the last 7 days.');
+  await expect(reminder).toContainText('This project has work that is not in a backup file.');
   await expect(card(page)).toContainText('No backup yet');
   expect(await seriousIssues(page)).toEqual([]);
-  await reminder.getByRole('button', { name: 'Back up Salt Year' }).click();
   const download = page.waitForEvent('download');
-  await page
-    .getByRole('dialog', { name: 'Back up Salt Year' })
-    .getByRole('button', { name: 'Download backup' })
-    .click();
-  await download;
-  await page
-    .getByRole('dialog', { name: 'Your backup is ready' })
-    .getByRole('button', { name: 'Done' })
-    .click();
+  await reminder.getByRole('button', { name: 'Back up Salt Year' }).click();
+  expect((await download).suggestedFilename()).toMatch(/^Salt Year backup \d{4}-\d{2}-\d{2}\.vlo\.zip$/);
   await expect(reminder).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: 'to your downloads' })).toContainText(
+    'Vlo saved Salt Year backup',
+  );
+  await expect(card(page)).toContainText('Backed up today');
+});
+
+test('a project with no change and no backup after 7 days gets the reminder too', async ({ page }) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New project' });
+  await dialog.getByLabel('Title').fill('Salt Year');
+  await dialog.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('textbox', { name: 'Scene 1' })).toBeFocused();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
+  const reminder = page.getByRole('region', { name: 'Time for a backup' });
+  await expect(card(page)).toBeVisible();
+  await expect(reminder).toHaveCount(0);
+  await ageProjects(page, 8 * DAY);
+  await page.reload();
+  await expect(reminder).toContainText('This project has work that is not in a backup file.');
 });
 
 const SAFARI_MAC =
@@ -218,4 +202,24 @@ test('Safari shows the steps to install Vlo, and the writer can close them', asy
   } finally {
     await safari.close();
   }
+});
+
+test('Settings downloads all the writing as Markdown files and a page that needs no Vlo', async ({
+  page,
+}) => {
+  await novelWithText(page);
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Settings' }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download all my writing' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^My writing \d{4}-\d{2}-\d{2}\.zip$/);
+  const zip = await JSZip.loadAsync(await readFile(await file.path()));
+  expect(
+    Object.keys(zip.files)
+      .filter((name) => !name.endsWith('/'))
+      .sort(),
+  ).toEqual(['Salt Year/01 Chapter 1/01 Scene 1.md', 'Salt Year/index.html', 'index.html']);
+  expect(await zip.file('Salt Year/01 Chapter 1/01 Scene 1.md')?.async('string')).toMatch(SHOWN);
+  await expect(page.getByRole('status').filter({ hasText: 'My writing' })).toContainText('to your downloads');
+  expect(await seriousIssues(page)).toEqual([]);
 });

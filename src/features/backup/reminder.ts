@@ -2,7 +2,8 @@ import type { Project } from '@/lib/db';
 
 /*
  * The backup date on each project card and the reminder (spec section 9). Safari can clear site data
- * after 7 days without a visit, so the reminder comes after 7 days without a backup.
+ * after 7 days without a visit, so a project is due after 7 days without a backup. With no folder save,
+ * the Library also asks for a backup after each change (roadmap F32).
  */
 
 export const REMIND_AFTER_DAYS = 7;
@@ -28,6 +29,13 @@ export function backupDue(
   const last = project.lastBackupAt;
   if (last !== undefined && project.updatedAt <= last) return false;
   return now - (last ?? project.createdAt) >= REMIND_AFTER_DAYS * DAY;
+}
+
+/** True when the writing changed after the last backup, or after the project was made. */
+export function changedSinceBackup(
+  project: Pick<Project, 'createdAt' | 'updatedAt' | 'lastBackupAt'>,
+): boolean {
+  return project.updatedAt > (project.lastBackupAt ?? project.createdAt);
 }
 
 /** The backup date for a project card, such as "Backed up 3 days ago". */
