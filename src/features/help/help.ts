@@ -27,6 +27,7 @@ export const HELP = {
         'In the Library, choose New project.',
         'Pick one or more shapes: Novel, Memoir, Poetry collection or Open writing.',
         'Choose Create project. The first item opens, ready for your words.',
+        'For a fast note, choose Quick note in the Library. The note goes into the Inbox folder at the top of the project.',
       ],
     },
     {
@@ -84,6 +85,7 @@ export const HELP = {
         'A clipping is text that you paste, with its link. Vlo keeps the link as text and never opens it.',
         'Research stays on this device. Backups and "Download all my writing" include it, and exports leave it out.',
         'Vlo takes files up to 50 MB, and warns when the research of a project is over 100 MB.',
+        'On a wide screen, choose Open beside in the item menu, or the Open beside button of a research file. The item or file shows next to the open item, and both texts save. Swap panes and Close pane are above it.',
       ],
     },
     {
@@ -130,6 +132,7 @@ export const HELP = {
         'On an iPhone or iPad, tap Share in Safari, then Add to Home Screen.',
         'On a Mac with Safari, choose File, then Add to Dock.',
         'After one visit, Vlo opens and saves with no network.',
+        'An installed Vlo is in the share menu of your phone or computer. Share a page or some text to Vlo, and it opens as a quick note.',
       ],
     },
     {

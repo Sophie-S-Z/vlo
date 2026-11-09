@@ -184,6 +184,21 @@ describe('Backup round trip', () => {
     }
   });
 
+  // Plan Task H9 (roadmap F38): a backup from before the change holds word counts.
+  test('a Japanese backup counts characters when it goes in', async () => {
+    const { project, scenes } = await novelWithText();
+    const scene = scenes[0];
+    if (!scene) throw new Error('The novel has no scene.');
+    await db.projects.update(project.id, { settings: { ...project.settings, language: 'ja' } });
+    await db.itemTexts.update(scene.id, { text: '東京へ行く。' });
+    await db.items.update(scene.id, { wordCount: 2 });
+    const backup = await readBackup((await backUpProject(project.id, { music: false })).bytes);
+
+    const copyId = await importBackup(backup, 'copy');
+    const copied = await db.items.where('projectId').equals(copyId).toArray();
+    expect(copied.find((i) => i.title === scene.title && i.wordCount === 5)).toBeDefined();
+  });
+
   test('replace puts the backup in place of the project, and drops what came after it', async () => {
     const { project, scenes } = await novelWithText();
     const { bytes } = await backUpProject(project.id, { music: false });

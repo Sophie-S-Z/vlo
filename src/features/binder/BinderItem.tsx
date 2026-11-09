@@ -33,6 +33,7 @@ export type BinderMove = 'up' | 'down' | 'indent' | 'outdent';
 /** One stable set of actions for every row. Move targets are worked out only when a menu opens. */
 export interface BinderItemActions {
   open: (item: Item) => void;
+  openBeside: (item: Item) => void;
   rename: (item: Item) => void;
   synopsis: (item: Item) => void;
   remove: (item: Item) => void;
@@ -69,6 +70,8 @@ interface BinderItemProps {
   depth: number;
   template: TemplateDef;
   isOpen: boolean;
+  /** A wide screen can open the item beside the open one (F39). */
+  canOpenBeside: boolean;
   /** True while this row is dragged to a place the template does not allow. */
   refused: boolean;
   /** The item's label (F40), or null. */
@@ -81,6 +84,7 @@ export const BinderItem = memo(function BinderItem({
   depth,
   template,
   isOpen,
+  canOpenBeside,
   refused,
   label,
   actions,
@@ -164,6 +168,8 @@ export const BinderItem = memo(function BinderItem({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
+            // The menu is tall. On a short screen it scrolls, so every action stays in reach.
+            className="max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
             onCloseAutoFocus={(event) => {
               // Open and Add move the cursor into the editor. Returning focus to this button would take it back.
               if (toEditor.current) event.preventDefault();
@@ -178,6 +184,15 @@ export const BinderItem = memo(function BinderItem({
                 }}
               >
                 Open
+              </DropdownMenuItem>
+            )}
+            {writable && canOpenBeside && !isOpen && (
+              <DropdownMenuItem
+                onSelect={() => {
+                  actions.openBeside(item);
+                }}
+              >
+                Open beside
               </DropdownMenuItem>
             )}
             <DropdownMenuItem

@@ -20,6 +20,7 @@ import { GripVertical, MoreHorizontal } from 'lucide-react';
 import { memo, useRef, useState, type ReactNode } from 'react';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { formatWords } from '@/features/library/format';
+import type { CountUnit } from '@/lib/wordcount';
 import type { Item } from '@/lib/db';
 import { cn } from '@/ui/cn';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
@@ -54,9 +55,19 @@ interface CardProps {
   actions: SequenceActions;
   noun: string;
   details: ((item: Item) => ReactNode) | undefined;
+  unit: CountUnit;
 }
 
-const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions, noun, details }: CardProps) {
+const PoemCard = memo(function PoemCard({
+  poem,
+  index,
+  count,
+  motion,
+  actions,
+  noun,
+  details,
+  unit,
+}: CardProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: poem.id, transition: motion ? SPRING : null });
   const [open, setOpen] = useState(false);
@@ -107,7 +118,7 @@ const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions, n
             details(poem)
           ) : (
             <p className="mt-0.5 text-xs text-muted">
-              {formatWords(poem.wordCount)}, {STATUS_LABEL[poem.status].toLowerCase()}
+              {formatWords(poem.wordCount, unit)}, {STATUS_LABEL[poem.status].toLowerCase()}
             </p>
           )}
         </div>
@@ -161,6 +172,7 @@ export function SequenceList({
   actions,
   noun = 'poem',
   details,
+  unit = 'words',
 }: {
   name: string;
   poems: readonly Item[];
@@ -170,6 +182,8 @@ export function SequenceList({
   noun?: string;
   /** The line under a card's title. A poem shows its words and status. */
   details?: (item: Item) => ReactNode;
+  /** The count unit of the project's language (F38). */
+  unit?: CountUnit;
 }) {
   const sensors = useSensors(
     useSensor(MouseSensor, MOUSE_OPTIONS),
@@ -218,6 +232,7 @@ export function SequenceList({
               actions={actions}
               noun={noun}
               details={details}
+              unit={unit}
             />
           ))}
         </ol>

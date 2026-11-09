@@ -1,4 +1,4 @@
-import { FileAudio, FileImage, FileText, FileType, Plus, StickyNote } from 'lucide-react';
+import { Columns2, FileAudio, FileImage, FileText, FileType, Plus, StickyNote } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import type { ResearchFile } from '@/lib/db';
 import { Button } from '@/ui/button';
@@ -119,11 +119,14 @@ export function ResearchList({
   files,
   openId,
   onOpen,
+  onOpenBeside,
 }: {
   projectId: string;
   files: readonly ResearchFile[];
   openId: string | null;
   onOpen: (fileId: string) => void;
+  /** Opens a file in the pane beside the open item (F39). Only a wide screen has it. */
+  onOpenBeside?: (fileId: string) => void;
 }) {
   const headingId = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -201,18 +204,30 @@ export function ResearchList({
           {files.map((file) => {
             const Icon = ICONS[researchView(file)];
             return (
-              <li key={file.id}>
+              <li key={file.id} className="flex items-center gap-0.5">
                 <button
                   type="button"
                   aria-current={file.id === openId ? 'true' : undefined}
                   onClick={() => {
                     onOpen(file.id);
                   }}
-                  className="flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent aria-[current]:bg-surface aria-[current]:font-medium"
+                  className="flex min-h-11 w-full min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent aria-[current]:bg-surface aria-[current]:font-medium"
                 >
                   <Icon aria-hidden="true" className="size-4 shrink-0 text-muted" />
                   <span className="min-w-0 flex-1 truncate">{file.name}</span>
                 </button>
+                {onOpenBeside && file.id !== openId && (
+                  <Button
+                    variant="ghost"
+                    aria-label={`Open ${file.name} beside`}
+                    className="min-w-11 shrink-0 px-0"
+                    onClick={() => {
+                      onOpenBeside(file.id);
+                    }}
+                  >
+                    <Columns2 aria-hidden="true" className="size-4" />
+                  </Button>
+                )}
               </li>
             );
           })}

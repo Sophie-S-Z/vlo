@@ -795,7 +795,7 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
         .map((l) => l.trim())
         .filter((l) => l !== ''),
     ];
-    const count = roundedWords(manuscript.words);
+    const count = roundedWords(manuscript.words, doc.language);
     rows.push({
       height: textHeight,
       spaceBefore: 0,

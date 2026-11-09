@@ -3,9 +3,12 @@ import * as Y from 'yjs';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { docText, writeItemText } from '@/features/editor/itemText';
-import { createProject } from '@/features/library/projects';
+import { withoutNotes } from '@/features/editor/format/notes';
+import { dayStartKey, localDay, wordsToday } from '@/features/editor/stats/stats';
+import { createProject, updateProjectSettings } from '@/features/library/projects';
 import { dayKey } from '@/features/progress/streaks';
 import { db } from '@/lib/db';
+import { countWords } from '@/lib/wordcount';
 
 beforeEach(async () => {
   await db.open();
@@ -28,6 +31,34 @@ test('writeItemText stores the text, the word count and the project change time'
   expect((await db.items.get(firstItemId))?.wordCount).toBe(7);
   expect((await db.items.get(firstItemId))?.lineCount).toBeUndefined();
   expect((await db.projects.get(project.id))?.updatedAt).toBeGreaterThanOrEqual(project.updatedAt);
+});
+
+// Plan Task H9 (roadmap F38): the stored count holds the unit of the project's language.
+test('a Japanese item stores characters, and a language change counts every item again', async () => {
+  const { project, firstItemId } = await createProject({ title: 'Kyoto', templates: ['novel'] });
+  const item = await db.items.get(firstItemId);
+  if (!item) throw new Error('no item');
+  const body = '東京へ行く。Vlo は便利';
+  await writeItemText(item, `${body}\n\nNotes\n1. 注意`, 'prose', body, 'ja');
+  expect((await db.items.get(firstItemId))?.wordCount).toBe(9);
+
+  // Today's count started at 4 characters, so the writer added 5 today.
+  await db.appMeta.put({ key: dayStartKey(project.id), value: { day: localDay(), start: 4 } });
+  await updateProjectSettings(project.id, { language: 'en' });
+  expect((await db.items.get(firstItemId))?.wordCount).toBe(countWords(body));
+  // The start moves with the count, so today's count stays the same.
+  expect(await wordsToday(project.id, countWords(body))).toBe(5);
+  await updateProjectSettings(project.id, { language: 'ja' });
+  // The notes stay out of the count.
+  expect((await db.items.get(firstItemId))?.wordCount).toBe(9);
+});
+
+test('withoutNotes takes the notes off prose and off a poem', () => {
+  expect(withoutNotes('The tide.\n\nNotes\n1. A note.')).toBe('The tide.');
+  expect(withoutNotes('Salt on the sill.\n  The tide\nNotes\n1. A note.\n')).toBe(
+    'Salt on the sill.\n  The tide',
+  );
+  expect(withoutNotes('No notes here.')).toBe('No notes here.');
 });
 
 test('writeItemText counts lines for poems', async () => {

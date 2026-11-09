@@ -2,6 +2,7 @@ import { clock } from '@/lib/clock';
 import { db, readViewRows, viewTables, type Item, type Project } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
+import { countUnit, recountItems } from '@/lib/wordcount';
 import { READ_AT_ONCE, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
 import { remapNameMarks } from '@/features/people/markAll';
@@ -177,7 +178,13 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
       async () => {
         // The file is a backup of this state, so the project counts as backed up when the file was made.
         await db.projects.add({ ...backup.project, lastBackupAt: backup.createdAt || now });
-        await db.items.bulkAdd(backup.items);
+        // A backup made before Chinese and Japanese counted characters (F38) holds word counts.
+        const { language } = backup.project.settings;
+        await db.items.bulkAdd(
+          countUnit(language) === 'words'
+            ? backup.items
+            : recountItems(backup.items, backup.itemTexts, language),
+        );
         await db.snapshots.bulkAdd(backup.snapshots);
         await db.sessions.bulkAdd(backup.sessions);
         await db.itemTexts.bulkPut(backup.itemTexts);

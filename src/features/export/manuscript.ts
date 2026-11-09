@@ -5,7 +5,7 @@
  * Word and PDF both read these helpers, so both formats say the same thing.
  */
 
-import { countWords } from '@/lib/wordcount';
+import { countUnit, countWords } from '@/lib/wordcount';
 import type { Block, ExportDoc, Run, RunStyle } from './model';
 
 export interface ManuscriptDetails {
@@ -48,10 +48,10 @@ export function shortTitle(title: string): string {
  * The word count for the first page: rounded to the nearest 1,000, or to the nearest 100 under 1,000, so
  * a short piece never reads as 0 words.
  */
-export function roundedWords(words: number): string {
+export function roundedWords(words: number, language: string): string {
   const step = words < 950 ? 100 : 1000;
   const rounded = Math.max(step, Math.round(words / step) * step);
-  return `about ${rounded.toLocaleString('en-US')} words`;
+  return `about ${rounded.toLocaleString('en-US')} ${countUnit(language)}`;
 }
 
 /** The header text of each page after the first, without the page number. */
@@ -65,6 +65,7 @@ export function exportWords(doc: ExportDoc): number {
   const runs = (list: readonly Run[]) => {
     words += countWords(
       list.map((run) => (run.type === 'text' ? run.text : run.type === 'break' ? '\n' : ' ')).join(''),
+      doc.language,
     );
   };
   const visit = (blocks: readonly Block[]) => {

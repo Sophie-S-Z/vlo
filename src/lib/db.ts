@@ -1,4 +1,5 @@
 import { Dexie, type Table } from 'dexie';
+import { countUnit, recountItems } from './wordcount';
 
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
 
@@ -372,6 +373,20 @@ export class VloDb extends Dexie {
       );
     // Version 7 (Phase 8, Tasks H5 and H6): the Codex and the research files. New tables only.
     this.version(7).stores({ codex: 'id, projectId', research: 'id, projectId' });
+    // Version 8 (Phase 8, Task H9): Chinese and Japanese count characters, so their items count again.
+    this.version(8)
+      .stores({})
+      .upgrade(async (tx) => {
+        for (const project of (await tx.table('projects').toArray()) as Project[]) {
+          const { language } = project.settings;
+          if (countUnit(language) === 'words') continue;
+          const [items, texts] = await Promise.all([
+            tx.table('items').where('projectId').equals(project.id).toArray() as Promise<Item[]>,
+            tx.table('itemTexts').where('projectId').equals(project.id).toArray() as Promise<ItemText[]>,
+          ]);
+          await tx.table('items').bulkPut(recountItems(items, texts, language));
+        }
+      });
   }
 }
 

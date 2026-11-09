@@ -50,12 +50,14 @@ describe('Manuscript helpers', () => {
   });
 
   test('rounds the word count to the nearest 1,000, or to the nearest 100 for a short piece', () => {
-    expect(roundedWords(2040)).toBe('about 2,000 words');
-    expect(roundedWords(87_499)).toBe('about 87,000 words');
-    expect(roundedWords(950)).toBe('about 1,000 words');
-    expect(roundedWords(949)).toBe('about 900 words');
-    expect(roundedWords(40)).toBe('about 100 words');
-    expect(roundedWords(0)).toBe('about 100 words');
+    expect(roundedWords(2040, 'en')).toBe('about 2,000 words');
+    expect(roundedWords(87_499, 'en')).toBe('about 87,000 words');
+    expect(roundedWords(950, 'en')).toBe('about 1,000 words');
+    expect(roundedWords(949, 'en')).toBe('about 900 words');
+    expect(roundedWords(40, 'en')).toBe('about 100 words');
+    expect(roundedWords(0, 'en')).toBe('about 100 words');
+    // Chinese and Japanese manuscripts count characters (F38).
+    expect(roundedWords(12_400, 'ja')).toBe('about 12,000 characters');
   });
 
   test('counts the words of the text, without folder titles or equations', () => {

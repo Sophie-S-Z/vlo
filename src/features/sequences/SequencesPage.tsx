@@ -1,4 +1,5 @@
 import { Copy, Download, ListOrdered, Pencil, Plus, Trash2 } from 'lucide-react';
+import { countUnit } from '@/lib/wordcount';
 import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
@@ -368,7 +369,13 @@ export function SequencesPage() {
                 {ordered.length === 0 ? (
                   <p className="text-muted">This collection has no poems yet. Add a poem in the binder.</p>
                 ) : (
-                  <SequenceList name={current.name} poems={ordered} motion={motion} actions={actions} />
+                  <SequenceList
+                    name={current.name}
+                    poems={ordered}
+                    motion={motion}
+                    actions={actions}
+                    unit={countUnit(project.settings.language)}
+                  />
                 )}
               </div>
               <Ring name={current.name} titles={ordered.map((p) => p.title)} motion={motion} />

@@ -73,6 +73,13 @@ export default defineConfig({
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Quick capture (F48): the app icon's shortcut and the share sheet open the quick note screen.
+        shortcuts: [{ name: 'Quick note', url: '/capture' }],
+        share_target: {
+          action: '/capture',
+          method: 'GET',
+          params: { title: 'title', text: 'text', url: 'url' },
+        },
       },
       workbox: {
         navigateFallback: '/index.html',

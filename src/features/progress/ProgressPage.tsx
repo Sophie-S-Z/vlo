@@ -6,6 +6,7 @@ import { flattenTree } from '@/features/binder/tree';
 import { projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
+import { countUnit } from '@/lib/wordcount';
 import { cn } from '@/ui/cn';
 import { CountUp } from './CountUp';
 import { Goals } from './Goals';
@@ -45,6 +46,7 @@ export function ProgressPage() {
   const { project } = state;
   const template = projectDef(project);
   const words = items.reduce((sum, item) => sum + item.wordCount, 0);
+  const unit = countUnit(project.settings.language);
   const byStatus = new Map(STATUSES.map((s) => [s, items.filter((i) => i.status === s).length]));
 
   return (
@@ -60,7 +62,7 @@ export function ProgressPage() {
       <p className="flex flex-wrap items-baseline gap-x-10 gap-y-3" data-testid="progress-totals">
         <span className="grid">
           <CountUp value={words} className="font-display text-5xl font-semibold" />
-          <span className="text-sm text-muted">{words === 1 ? 'word' : 'words'} in all</span>
+          <span className="text-sm text-muted">{words === 1 ? unit.slice(0, -1) : unit} in all</span>
         </span>
         <span className="grid">
           <CountUp value={sessions} className="font-display text-5xl font-semibold" />

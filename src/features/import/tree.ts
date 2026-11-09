@@ -106,16 +106,18 @@ export function placeNodes(nodes: readonly ImportNode[], templates: readonly Tem
   return nodes.flatMap((node) => place(node, 'root'));
 }
 
-const schemas = {
+/** The editor schemas, so a text made outside the editor reads as the editor reads it. */
+export const editorSchemas = {
   prose: getSchema(proseExtensions(new Y.Doc())),
   poem: getSchema(poemExtensions(new Y.Doc(), { tabSpaces: 4 })),
 };
 
 /** The editor document of a text, read with the editor's own rules, as a paste is. */
 function docOf(text: ImportText | undefined, form: 'prose' | 'poem'): ProseMirrorNode {
-  if (form === 'poem') return schemas.poem.nodeFromJSON(poemDataToJSON(parsePoemText(text?.poem ?? '')));
+  if (form === 'poem')
+    return editorSchemas.poem.nodeFromJSON(poemDataToJSON(parsePoemText(text?.poem ?? '')));
   const body = new DOMParser().parseFromString(text?.html ?? '', 'text/html').body;
-  return SchemaParser.fromSchema(schemas.prose).parse(body);
+  return SchemaParser.fromSchema(editorSchemas.prose).parse(body);
 }
 
 /** The project, its items, their text copies and their Yjs updates, as a backup holds them. */
@@ -146,7 +148,7 @@ export function toBackup(source: ImportSource, templates: readonly Template[], n
       const form = def.editorKind(node.kind);
       if (form) {
         const doc = docOf(node.text, form);
-        const ydoc = prosemirrorJSONToYDoc(schemas[form], doc.toJSON(), YFRAGMENT);
+        const ydoc = prosemirrorJSONToYDoc(editorSchemas[form], doc.toJSON(), YFRAGMENT);
         updates.set(item.id, Y.encodeStateAsUpdate(ydoc));
         ydoc.destroy();
         const counted = docBody(doc, form);

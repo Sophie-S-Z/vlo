@@ -609,6 +609,31 @@ Last update: 2026-11-09
 
 ## In progress
 
+- Phase 8 (plan `docs/plans/phase-8.md`, the roadmap's "Match the best" features F39 to F43, F46 to F48
+  and the rest of F38). The product owner approved decisions Q1 to Q9 as recommended on 2026-11-09.
+  Pull request #22 merged with Tasks H1 to H6: the Outline with labels, deadline goals, comments in the
+  text, the style check, the Codex and the research folder (database version 7, backup version 4).
+  - H7: split view. On a screen 1024 px wide or wider, "Open beside" in the binder item menu or on a
+    research file shows it in a right pane. The address keeps `beside=<id>`. Both panes edit and save their
+    own items. The command menu, the Assistant, the details and the Craft switch act on the pane whose text
+    has focus. Only the left pane shows the scene. The binder item menu now scrolls on a short screen.
+  - H8: quick capture. `/capture` takes a title, a text and a link from the share sheet (manifest
+    `share_target`), the app shortcut "Quick note" or the Library. The note goes into an Inbox folder at the
+    top of the project. With no project on the device, Vlo makes an Open writing project. iPhone has no
+    share target, so the Library button is the way in there.
+  - H9: Chinese and Japanese projects count characters: each Han or kana character is one unit, and a word
+    in another script is one. The stored counts, the labels, goals, progress, the session timer, History,
+    the stats bar and the manuscript first page use the unit. A change of language counts every item again
+    from its text copy, and today's count and a running session keep their place. Database version 8
+    and a backup import count the items of older Chinese and Japanese projects again. Insights keeps its
+    word statistics, because its measures read English words.
+  - H10: the private-name leak test now holds a comment with real names, and every export leaves it out.
+    The Codex is in no export request. Initial JavaScript: 216 KB gzip. No new package, so
+    `docs/licenses.md` does not change.
+  - Known small issues for later: a language change builds the editors again, so the focus goes to the
+    left pane. In the right pane, the Craft switch can show the state of the left poem until the right
+    pane gets the focus. The AI share in Insights and the "Import writing" style read count words in every
+    language.
 - Phase 7 (plan `docs/plans/phase-7.md`, the roadmap's safety features F31 to F38, chosen on 2026-11-09).
   The product owner approved decisions P1 to P7 as recommended. Pull request #20 (G-A) merged with Tasks G1
   to G3:
@@ -750,6 +775,7 @@ Last update: 2026-11-09
 | 2026-11-08 | Pen mode blocks the deep AI check. The web originality check stays in Pen mode.  |
 | 2026-11-08 | Production address: https://vlo-eight.vercel.app/                                |
 | 2026-11-09 | Phase 7 plan approved: decisions P1 to P7 as recommended.                        |
+| 2026-11-09 | Phase 8 plan approved: decisions Q1 to Q9 as recommended.                        |
 
 ## Spec changes
 

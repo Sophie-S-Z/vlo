@@ -1,7 +1,8 @@
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, NotebookPen } from 'lucide-react';
 import { ToggleGroup } from 'radix-ui';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { startTransition, useState } from 'react';
+import { Link } from 'react-router';
 import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
@@ -117,6 +118,12 @@ export function LibraryPage() {
           )}
           <ImportBackup />
           <ImportWriting />
+          <Button asChild variant="ghost">
+            <Link to="/capture">
+              <NotebookPen aria-hidden="true" className="size-4" />
+              Quick note
+            </Link>
+          </Button>
           <NewProjectDialog />
         </div>
       </div>

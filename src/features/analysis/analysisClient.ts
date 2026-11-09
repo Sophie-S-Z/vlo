@@ -46,8 +46,8 @@ function ask(body: Body): Promise<AnalysisResult> {
   });
 }
 
-export function statsInWorker(text: string, kind: 'prose' | 'poem'): Promise<FullStats> {
-  return ask({ type: 'stats', text, kind }) as Promise<FullStats>;
+export function statsInWorker(text: string, kind: 'prose' | 'poem', language?: string): Promise<FullStats> {
+  return ask({ type: 'stats', text, kind, language }) as Promise<FullStats>;
 }
 
 export function aiCheckInWorker(text: string): Promise<AiReport> {

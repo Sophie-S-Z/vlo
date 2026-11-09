@@ -247,6 +247,40 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
   expect(opened).toEqual([`vlo-item-${seeded.longSceneId}`]);
 });
 
+test('typing stays under 50 ms at p95 in the 10,000-word scene with a pane open beside it', async ({
+  page,
+  browserName,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The split view (F39) needs a screen 1024 px wide.');
+  test.slow();
+  await skipOnboarding(page);
+  const seeded = await seedLarge(page);
+  await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}&beside=${seeded.projectId}-002`);
+  const editor = page.getByRole('textbox', { name: seeded.longSceneTitle });
+  await expect(editor).toContainText(seeded.longSceneEnd);
+  await expect(
+    page.getByRole('region', { name: 'Beside' }).getByRole('textbox', { name: 'Scene 1.1' }),
+  ).toBeVisible();
+
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.evaluate(() => {
+    window.__keyDelays = [];
+  });
+  const typed = 'The lamp caught on the third match and light swung out over the water. '
+    .repeat(3)
+    .slice(0, 200);
+  await page.keyboard.type(typed, { delay: 30 });
+  await expect(editor).toContainText(typed.trim().slice(-30));
+  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+  const sorted = (await page.evaluate(() => window.__keyDelays)).sort((a, b) => a - b);
+  const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+  console.log(`[${browserName}] keystroke to paint with two panes, p95: ${p95.toFixed(1)} ms`);
+  // The same budget and WebKit ceiling as Gate 1.
+  expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
+});
+
 test('typing stays under 50 ms at p95 with 500 shimmering runs on screen, and the shimmer pauses', async ({
   page,
   browserName,

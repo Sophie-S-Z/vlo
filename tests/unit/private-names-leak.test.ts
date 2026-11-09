@@ -15,7 +15,8 @@ import { item, loadPublicFile, MEMOIR_TEXT, project, proseUpdate, updateOf } fro
 /*
  * The private-name leak test (spec US06, plan Task C5, Gate 3). The memoir fixture goes out in each
  * format with share-safe export on, and each file is read back as text: "Rosa" and "Teo" appear 0 times.
- * One memory has its names marked, one has none, and a third holds a name in a footnote and its title.
+ * One memory has its names marked, one has none, and a third holds a name in a footnote, in a comment and
+ * in its title (Review Focus 4 of Phase 8: exports leave comments out). The Codex is in no export request.
  */
 
 const hasPoppler = spawnSync('pdftotext', ['-v'], { encoding: 'utf8' }).status === 0;
@@ -61,7 +62,12 @@ const withNote = updateOf(
       {
         type: 'paragraph',
         content: [
-          { type: 'text', text: 'The letter from Teo' },
+          {
+            type: 'text',
+            text: 'The letter',
+            marks: [{ type: 'comment', attrs: { id: 'c1', text: 'Ask Rosa about Uncle Teo.', at: 1 } }],
+          },
+          { type: 'text', text: ' from Teo' },
           { type: 'footnote', attrs: { content: [{ type: 'text', text: 'Aunt Rosa kept it.' }] } },
         ],
       },

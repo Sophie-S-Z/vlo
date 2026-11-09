@@ -73,6 +73,11 @@ export const routes: RouteObject[] = [
         lazy: async () => ({ Component: (await import('@/features/progress/ProgressPage')).ProgressPage }),
       },
       { path: 'settings', element: <SettingsPage /> },
+      // Quick capture (F48): the share sheet and the app shortcut open it.
+      {
+        path: 'capture',
+        lazy: async () => ({ Component: (await import('@/features/capture/CapturePage')).CapturePage }),
+      },
       {
         path: 'network',
         lazy: async () => ({ Component: (await import('@/features/network/NetworkPage')).NetworkPage }),

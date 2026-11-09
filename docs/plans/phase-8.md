@@ -135,38 +135,40 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 
 ### Task H7: Split view (F39)
 
-**Files:** Create `src/features/project/SplitPane.tsx`, `tests/e2e/split-view.spec.ts`. Modify `src/features/project/ProjectPage.tsx` (`beside` in the address), `ProjectLayout.tsx`, `src/features/binder/BinderItem.tsx` (Open beside), `src/features/research/ResearchList.tsx`, `src/features/editor/commands/editorBus.ts` (the active editor follows focus).
+**Files:** Create `src/features/project/SplitPane.tsx`, `tests/e2e/split-view.spec.ts`. Modify `src/features/project/ProjectPage.tsx` (`beside` in the address), `src/features/binder/Binder.tsx` and `BinderItem.tsx` (Open beside; the item menu scrolls on a short screen), `src/features/research/ResearchList.tsx`, `src/features/editor/Editor.tsx`, `EditorPane.tsx` and `commands/editorBus.ts` (the active editor and the Craft switch follow focus), `src/features/help/help.ts`, `tests/e2e/performance.spec.ts`, `tests/e2e/research.spec.ts`.
 
-- [ ] Open beside: a text item or a research file opens in a right pane at 1024 px and wider. The item that is open on the left cannot open beside. Close and Swap are on the pane. The address keeps `beside=<id>`, so a reload keeps the split.
-- [ ] Both panes edit and save to their own items (Review Focus 2). The toolbar, the command menu and the Assistant act on the pane that has focus. Only the left pane shows the scene.
-- [ ] `split-view.spec.ts`: type in both panes, reload, and each item has its own text; the keystroke budget holds with two panes. Commit, then open pull request H-C.
+- [x] Open beside: a text item or a research file opens in a right pane at 1024 px and wider. The item that is open on the left cannot open beside. Swap panes and Close pane are on the pane. The address keeps `beside=<id>`, so a reload keeps the split. Focus mode shows only the left pane.
+- [x] Both panes edit and save to their own items (Review Focus 2). The toolbar, the command menu, the Assistant, the details and the Craft switch act on the pane whose text has focus. A pane that opens beside waits for focus. Only the left pane shows the scene and its sound.
+- [x] `split-view.spec.ts`: type in both panes, a command menu format acts on the focused pane, reload, and each item has its own text; Swap and Close. `performance.spec.ts`: the keystroke budget holds in the 10,000-word scene with a pane open beside it.
 
 ### Task H8: Quick capture (F48)
 
-**Files:** Create `src/features/capture/CapturePage.tsx`, `src/features/capture/capture.ts`, `tests/unit/capture.test.ts`, `tests/e2e/capture.spec.ts`. Modify `vite.config.ts` (manifest `shortcuts` and `share_target`), `src/app/routes.tsx`, `src/features/library/LibraryPage.tsx`, `src/features/help/help.ts`.
+**Files:** Create `src/features/capture/CapturePage.tsx`, `src/features/capture/capture.ts`, `tests/unit/capture.test.ts`, `tests/e2e/capture.spec.ts`. Modify `vite.config.ts` (manifest `shortcuts` and `share_target`), `src/app/routes.tsx`, `src/features/library/LibraryPage.tsx`, `src/features/import/tree.ts` (exports `editorSchemas`), `src/features/help/help.ts`.
 
 **Interfaces:**
 
-- Produces: `captureNote(projectId, { title?: string; text: string; url?: string }): Promise<string>`. It finds or makes the top "Inbox" folder and adds a note item with the text, in one transaction.
+- Produces: `captureNote(projectId | null, { title?: string; text: string }): Promise<{ projectId; itemId }>`. It writes the note's text, then finds or makes the top "Inbox" folder and adds the note item in one transaction. With no project, it makes an Open writing project. `sharedText(text, url)` puts the link on a line of its own.
 
-- [ ] Tests first: the first capture makes the Inbox, the second uses it; the text keeps its line breaks; a link is a line of text; a device with no project gets a new Open writing project.
-- [ ] `/capture?title=&text=&url=` shows the text in a field, a project picker and Save. A failed save keeps the text on the screen with the message.
-- [ ] `capture.spec.ts`: open the share URL, save, and the note is in the Inbox after a reload. Commit.
+- [x] Tests first: the first capture makes the Inbox, the second uses it; the text keeps its line breaks; a link is a line of text; a device with no project gets a new Open writing project.
+- [x] `/capture?title=&text=&url=` shows the text in a field, a project picker and Save note. A failed save keeps the text on the screen with the message. The Library has Quick note.
+- [x] `capture.spec.ts`: open the share URL, save, and the note is in the Inbox after a reload; the manifest names the shortcut and the share target.
 
 ### Task H9: Chinese and Japanese counts (F38)
 
-**Files:** Modify `src/lib/wordcount.ts`, `src/features/editor/itemText.ts`, `src/features/library/format.ts` (`formatWords` takes the unit), each count label that `grep -rn "formatWords\|words" src` finds, `src/features/export/build.ts`, `tests/unit/wordcount.test.ts`, `tests/e2e/rtl.spec.ts` or a new `tests/e2e/cjk.spec.ts`.
+**Files:** Modify `src/lib/wordcount.ts`, `src/features/editor/itemText.ts`, `EditorPane.tsx`, `WordCount.tsx`, `manuscript.ts` (the language in the context), `format/notes.ts` (`withoutNotes` also takes a poem's notes off), `stats/stats.ts`, `stats/WritingStats.tsx`, `src/features/library/format.ts` (`formatWords` takes the unit), `projects.ts` (a language change counts again, and today's count keeps its place), `src/lib/db.ts` (version 8 counts older Chinese and Japanese projects again), `src/features/backup/backup.ts` (so does an import), `stats/dayStart.ts`, `ProjectCard.tsx`, `src/features/project/ProjectPage.tsx`, `src/features/focus/SessionTimer.tsx`, `src/features/progress/ProgressPage.tsx`, `Goals.tsx`, `Tiles.tsx`, `src/features/outline/OutlinePage.tsx`, `src/features/sequences/SequenceList.tsx`, `SequencesPage.tsx`, `src/features/snapshots/HistoryPanel.tsx`, `src/features/analysis/StatsBar.tsx`, `stats.ts`, `analysis.worker.ts`, `analysisClient.ts`, `src/features/export/manuscript.ts`, `docx.ts`, `pdf/pdf.ts`, `src/features/capture/capture.ts`, `tests/unit/wordcount.test.ts`, `item-text.test.ts`, `manuscript.test.ts`, and create `tests/e2e/cjk.spec.ts`.
 
 **Interfaces:**
 
-- Produces: `countUnit(language: string | undefined): 'words' | 'characters'` and `countWords(text, language?)`, which counts each Han and kana character as one unit for `zh` and `ja`.
+- Produces: `countUnit(language: string | undefined): 'words' | 'characters'` and `countWords(text, language?)`, which counts each Han and kana character as one unit for `zh` and `ja`, and each word in another script as one.
 
-- [ ] Tests first: "我爱写作" is 4 characters; "東京へ行く" is 5; mixed "Vlo は便利" is 1 word and 3 characters, so 4 units; English text gives the same count as before.
-- [ ] The stored `wordCount` holds the unit count. A change of language counts the items again. Labels say "characters" for these projects. Commit.
+- [x] Tests first: "我爱写作" is 4 characters; "東京へ行く" is 5; mixed "Vlo は便利" is 1 word and 3 characters, so 4 units; English text gives the same count as before.
+- [x] The stored `wordCount` holds the unit count. A change of language counts the items again from their text copies, without their notes. The count labels, the session, goal and progress counts, History, the stats bar and the manuscript first page say "characters" for these projects. Insights keeps its word statistics, because its measures read English words.
+- [x] Database version 8 and a backup import count the items of older Chinese and Japanese projects again.
+- [x] `cjk.spec.ts`: a scene counts words, then 5 characters after the change to Japanese, after a reload and on the Library card.
 
 ### Task H10: Gate 8 and the release
 
-- [ ] Update STATUS, the help page and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] Add Codex entries and notes to the memoir leak test (Review Focus 4).
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 8 diff against Review Focus 1 to 6. Fix each high finding.
+- [x] Update STATUS, the help page and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS. The phone suite runs in CI.
+- [x] Add Codex entries and notes to the memoir leak test (Review Focus 4).
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 8 diff against Review Focus 1 to 6. Fix each high finding.
 - [ ] Open pull request H-D. Ask you to run "Run workflow" for all 4 browsers.

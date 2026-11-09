@@ -27,7 +27,6 @@ import { CommentList } from './CommentList';
 import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { CraftLabels } from '@/features/craft/CraftLabels';
-import { useCraft } from '@/features/craft/craftStore';
 import { CraftSwitch } from '@/features/craft/craftSwitch';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
@@ -74,6 +73,10 @@ interface EditorProps {
   templates?: readonly Template[] | undefined;
   /** The language of the writing (F38). It sets the spell-check language and the text direction. */
   language?: string | undefined;
+  /** The item of the text, so the Assistant knows which item the active editor holds. */
+  itemId?: string;
+  /** Shows the Craft labels over the poem. */
+  craft?: boolean;
 }
 
 const HELP = {
@@ -135,6 +138,8 @@ export function Editor({
   onPages,
   templates,
   language,
+  itemId,
+  craft = false,
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
@@ -215,13 +220,19 @@ export function Editor({
     return () => onEditor?.(null);
   }, [editor, onEditor]);
 
-  // The command menu runs format commands on the open editor.
+  // The command menu runs format commands on the open editor. In a split view (F39) the editor whose text
+  // has focus is the active one, and a pane that opens beside waits for focus.
   useEffect(() => {
-    setActiveEditor({ editor, form: kind });
+    const take = () => {
+      setActiveEditor({ editor, form: kind, ...(itemId === undefined ? {} : { itemId }) });
+    };
+    if (focusOnOpen || !getActiveEditor()) take();
+    editor.on('focus', take);
     return () => {
+      editor.off('focus', take);
       if (getActiveEditor()?.editor === editor) setActiveEditor(null);
     };
-  }, [editor, kind]);
+  }, [editor, kind, itemId, focusOnOpen]);
 
   // The find bar closes with its editor, and a reading stops.
   const find = useFindRequest();
@@ -234,9 +245,6 @@ export function Editor({
   );
 
   // The project font is the manuscript font for the text, the notes and the panels' samples.
-  const craft = useCraft();
-  const craftOn = kind === 'poem' && (templates?.includes('poetry') ?? false) && craft.on;
-
   // Comfort settings (F37) change the screen only. The page-end lines measure the screen, so they follow.
   const stack = fontStack(writing.comfortFont ? COMFORT_FONT : font, BASE_STACK);
   const rootStyle = {
@@ -259,10 +267,10 @@ export function Editor({
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
         {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
         <div
-          className={cn('relative', craftOn && 'vlo-craft')}
+          className={cn('relative', craft && 'vlo-craft')}
           {...(language ? { lang: language, dir: textDirection(language) } : {})}
         >
-          {craftOn && <CraftLabels editor={editor} />}
+          {craft && <CraftLabels editor={editor} />}
           <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
         </div>
         <FootnoteList editor={editor} />

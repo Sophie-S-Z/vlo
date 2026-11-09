@@ -36,6 +36,8 @@ interface BinderProps {
   items: Item[];
   openItemId: string | null;
   onOpen: (itemId: string) => void;
+  /** Opens an item in the pane beside the open one (F39). Only a wide screen has it. */
+  onOpenBeside?: (itemId: string) => void;
   /** The Research section, at the end of the binder (F41). */
   research?: ReactNode;
 }
@@ -61,7 +63,7 @@ function describeMove(nodes: readonly FlatNode[], item: Item, placement: Placeme
   return `${item.title} moved. It is now ${String(position)} of ${String(siblings.length + 1)} in ${parent}.`;
 }
 
-export function Binder({ project, items, openItemId, onOpen, research }: BinderProps) {
+export function Binder({ project, items, openItemId, onOpen, onOpenBeside, research }: BinderProps) {
   const template = useMemo(() => projectDef(project.templates), [project.templates]);
   const nodes = useMemo(() => flattenTree(items), [items]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -135,9 +137,9 @@ export function Binder({ project, items, openItemId, onOpen, research }: BinderP
   }
 
   // Rows get one stable actions object, so a drag move does not re-render every row. It reads the latest state here.
-  const latest = useRef({ nodes, template, onOpen, place, add });
+  const latest = useRef({ nodes, template, onOpen, onOpenBeside, place, add });
   useEffect(() => {
-    latest.current = { nodes, template, onOpen, place, add };
+    latest.current = { nodes, template, onOpen, onOpenBeside, place, add };
   });
 
   const actions = useMemo<BinderItemActions>(() => {
@@ -149,6 +151,9 @@ export function Binder({ project, items, openItemId, onOpen, research }: BinderP
     return {
       open: (item) => {
         latest.current.onOpen(item.id);
+      },
+      openBeside: (item) => {
+        latest.current.onOpenBeside?.(item.id);
       },
       rename: (item) => {
         setAction({ type: 'rename', item, hasChildren: false });
@@ -237,6 +242,7 @@ export function Binder({ project, items, openItemId, onOpen, research }: BinderP
                   depth={dragging ? (projection?.depth ?? node.depth) : node.depth}
                   template={template}
                   isOpen={node.item.id === openItemId}
+                  canOpenBeside={onOpenBeside !== undefined}
                   refused={dragging && overId !== null && projection === null}
                   label={labelOf(project.settings.labels, node.item)}
                   actions={actions}
