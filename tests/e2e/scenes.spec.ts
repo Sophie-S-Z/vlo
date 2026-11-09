@@ -98,11 +98,18 @@ test('a scene shows around the page, rests while the writer types, and stays aft
     const sheet = document.querySelector('.vlo-scene-page');
     const art = document.querySelector('.vlo-scene');
     if (!sheet || !art) return null;
+    // The point must be on the screen, and Firefox scrolls the window to the caret.
+    sheet.scrollIntoView({ block: 'start' });
     const box = sheet.getBoundingClientRect();
     const top = document.elementFromPoint(box.left + box.width / 2, box.top + 20);
-    return { pageOnTop: sheet.contains(top), background: getComputedStyle(sheet).backgroundColor };
+    return {
+      pageOnTop: sheet.contains(top),
+      top: top ? `${top.tagName} ${top.className}` : 'none',
+      background: getComputedStyle(sheet).backgroundColor,
+    };
   });
-  expect(layers?.pageOnTop).toBe(true);
+  // The whole object prints on a failure, so it names the element on top.
+  expect(layers).toMatchObject({ pageOnTop: true });
   expect(layers?.background).not.toBe('rgba(0, 0, 0, 0)');
 
   await page.reload();

@@ -7,6 +7,10 @@ import { BUNDLE, fakeSupabase, shareOf } from './support/share';
  * control that Tab reaches. One project holds all 3 templates, so it has every project view.
  */
 
+// Playwright routes the fake Supabase requests only in Chromium once the service worker controls the
+// page, so these tests run with no service worker. The PWA tests cover the worker.
+test.use({ serviceWorkers: 'block' });
+
 const THEMES = ['ink', 'paper', 'sepia'] as const;
 const VIEWS = ['Board', 'Plot Grid', 'Timeline', 'People', 'Sequences', 'Submissions', 'Progress'];
 const PAGES = ['/', '/settings', '/network', '/ai-policy', '/privacy', '/help', '/nope'];
@@ -130,7 +134,8 @@ test('every control that Tab reaches shows a focus ring', async ({ page }) => {
         // A toolbar passes its focus on to an item, so each element starts from no focus.
         (document.activeElement as HTMLElement | null)?.blur();
         const shadow = getComputedStyle(el).boxShadow;
-        el.focus();
+        // Firefox shows a focus-visible ring after a script focus only when asked.
+        el.focus({ focusVisible: true });
         await new Promise((resolve) => requestAnimationFrame(resolve));
         if (document.activeElement !== el) continue;
         // Some rings fade in, so the check reads the style after the transition ends.

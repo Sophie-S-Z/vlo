@@ -5,6 +5,10 @@ import { seedProjects } from './support/seed';
 
 /* Plan Task E5 (spec F30, decision S6): opt-in usage counts, with the exact JSON before each send. */
 
+// Playwright routes the fake Supabase requests only in Chromium once the service worker controls the
+// page, so these tests run with no service worker. The PWA tests cover the worker.
+test.use({ serviceWorkers: 'block' });
+
 const RPC = 'https://vlo-test.supabase.co/rest/v1/rpc/';
 const CORS = {
   'access-control-allow-origin': '*',

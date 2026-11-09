@@ -17,6 +17,8 @@ async function novelWithTwoScenes(page: Page) {
   await binder(page).getByRole('button', { name: 'Options for Chapter 1' }).click();
   await page.getByRole('menuitem', { name: 'Add Scene inside' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Scene 2' })).toBeVisible();
+  // The new scene's editor takes the focus once it loads, and that can scroll the page. The tests start after.
+  await expect(page.getByRole('textbox', { name: 'Scene 2' })).toBeFocused();
   expect(await titles(page)).toEqual(['Chapter 1', 'Scene 1', 'Scene 2']);
 }
 
@@ -28,6 +30,8 @@ test.describe('wide screens', () => {
     await novelWithTwoScenes(page);
     const handle = binder(page).getByRole('button', { name: 'Move Scene 2' });
     const target = binder(page).getByRole('button', { name: 'Move Scene 1' });
+    // The hover scrolls the row into view first, so the boxes below stay true while the mouse moves.
+    await handle.hover();
     const from = await handle.boundingBox();
     const to = await target.boundingBox();
     if (!from || !to) throw new Error('rows not laid out');
@@ -50,6 +54,8 @@ test.describe('wide screens', () => {
     const live = binder(page).getByRole('status');
     await page.keyboard.press('Space');
     await expect(live.filter({ hasText: 'Picked up' })).toHaveText('Picked up Scene 2.');
+    // dnd-kit starts to read the arrow keys in a timer after the pick-up. A timer set now runs after it.
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
     await page.keyboard.press('ArrowUp');
     await expect(live.filter({ hasText: 'is over' })).toHaveText('Scene 2 is over Scene 1.');
     await page.keyboard.press('Space');
