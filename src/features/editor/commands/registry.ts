@@ -31,6 +31,7 @@ import {
   RemoveFormatting,
   Sigma,
   Speech,
+  SpellCheck2,
   TextSearch,
   Sparkles,
   SquareSigma,
@@ -54,6 +55,7 @@ import { getWritingPrefs, setWritingPrefs } from '../writingPrefs';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
+import { canStyleCheck } from '../extensions/styleCheck';
 import { swatchVar } from '../format/palette';
 
 /*
@@ -768,6 +770,22 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: () => getWritingPrefs().showAiText,
+  },
+  {
+    kind: 'run',
+    id: 'style-check',
+    label: 'Style check',
+    icon: SpellCheck2,
+    group: 'review',
+    forms: BOTH,
+    keywords: ['repeated words', 'filler', 'cliche', 'long sentences', 'prose check', 'editing'],
+    run: () => {
+      setWritingPrefs({ styleCheck: !getWritingPrefs().styleCheck });
+      return true;
+    },
+    isActive: () => getWritingPrefs().styleCheck,
+    // The word lists are English, so other projects cannot turn it on.
+    isEnabled: (e) => canStyleCheck(e.state),
   },
   {
     kind: 'run',

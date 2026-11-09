@@ -31,14 +31,18 @@ test('a comment goes on the selected words, survives a reload, opens from the li
   expect(await seriousIssues(page)).toEqual([]);
 
   await page.reload();
-  await comments(page).getByRole('button', { name: /Too quick\?/ }).click();
+  await comments(page)
+    .getByRole('button', { name: /Too quick\?/ })
+    .click();
   const text = panel(page).getByRole('textbox', { name: 'Comment' });
   await expect(text).toHaveValue('Too quick?');
   await text.fill('Slow this down.');
   await panel(page).getByRole('button', { name: 'Save' }).click();
   await expect(comments(page)).toContainText('Slow this down.');
 
-  await comments(page).getByRole('button', { name: /^Resolve the comment/ }).click();
+  await comments(page)
+    .getByRole('button', { name: /^Resolve the comment/ })
+    .click();
   await expect(comments(page)).toHaveCount(0);
   await expect(scene(page).locator('.vlo-comment')).toHaveCount(0);
   await expect(scene(page)).toHaveText('Mira finds the ledger');

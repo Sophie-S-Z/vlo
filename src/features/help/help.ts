@@ -37,6 +37,7 @@ export const HELP = {
         'Press Ctrl+K (Cmd+K on a Mac) to find an item by its title or its text, or to run an action.',
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
         'To make a note to yourself, select the words and choose Comment. Comments show under the text, and exports leave them out.',
+        'In an English project, More tools has Style check. It marks repeated words, filler words, cliches and long sentences. Put the cursor in the marked words to see why. The check never changes your text.',
       ],
     },
     {

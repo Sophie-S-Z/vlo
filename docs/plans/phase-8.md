@@ -96,15 +96,15 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 
 ### Task H4: Style check on the device (F47)
 
-**Files:** Create `src/features/editor/extensions/styleCheck.ts`, `src/features/analysis/style.ts` (the cliche list), `tests/unit/style-check.test.ts`, `tests/e2e/style-check.spec.ts`. Modify `src/features/editor/writingPrefs.ts` (`styleCheck: boolean`), `src/features/editor/commands/registry.ts`, `src/features/editor/Editor.tsx`, `src/features/help/help.ts`.
+**Files:** Create `src/features/editor/extensions/styleCheck.ts`, `src/features/editor/StyleReason.tsx`, `src/features/analysis/style.ts` (the filler and cliche lists), `tests/unit/style-check.test.ts`, `tests/e2e/style-check.spec.ts`. Modify `src/features/analysis/ai/tells.ts` (exports the intensifier list and the phrase pattern), `src/features/editor/writingPrefs.ts` (`styleCheck: boolean`), `src/features/editor/commands/registry.ts`, `src/features/editor/toolbar/Toolbar.tsx`, `src/features/editor/Editor.tsx`, `src/styles/editor.css`, `src/features/help/help.ts`, `tests/e2e/performance.spec.ts` (Gate 1 types with the check on).
 
 **Interfaces:**
 
-- Produces: `styleNotes(text: string): StyleNote[]` with `StyleNote = { from: number; to: number; kind: 'repeat' | 'filler' | 'cliche' | 'long' }`. Pure. It reuses `wordsOf`, `sentencesOf`, `STOP_WORDS`, `LONG_SENTENCE` and the intensifier list of `tells.ts`.
+- Produces: `styleNotes(text: string, form: 'prose' | 'poem'): StyleNote[]` with `StyleNote = { from: number; to: number; kind: 'repeat' | 'filler' | 'cliche' | 'long' }`. Pure. It reuses `wordsOf`, `sentencesOf`, `STOP_WORDS`, `LONG_SENTENCE` and the intensifier list of `tells.ts`. A word with a capital letter, such as a name, is never a repeat.
 
-- [ ] Tests first: a word used twice within 50 words is a repeat, a stop word is not; "very" is filler; "at the end of the day" is a cliche; a 26-word sentence is long; the poem kind marks no long sentence.
-- [ ] The decoration runs after the save pause, only on the paragraphs that changed, and only in English projects. A click or a keyboard focus on a mark shows its reason. The text never changes, and the check sends nothing.
-- [ ] `style-check.spec.ts`: the switch is off by default, the marks show and go, and the keystroke budget holds with the check on. Commit, then open pull request H-B.
+- [x] Tests first: a word used twice within 50 words is a repeat, a stop word is not; "very" is filler; "at the end of the day" is a cliche; a 26-word sentence is long; the poem kind marks no long sentence.
+- [x] The decoration runs after the save pause, only on the paragraphs that changed (a cache keyed by the paragraph node), and only in English projects. The cursor in a mark, from a click or the arrow keys, shows its reason in a live line under the toolbar. The text never changes, and the check sends nothing.
+- [x] `style-check.spec.ts`: the switch is off by default, the marks show and go. Gate 1 in `performance.spec.ts` holds the keystroke budget with the check on. Commit.
 
 ### Task H5: Codex for every project (F42, F38 word list)
 

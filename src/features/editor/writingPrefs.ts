@@ -25,6 +25,8 @@ export interface WritingPrefs {
   letterSpacing: number;
   wordSpacing: number;
   lineHeight: number;
+  /** The style check (F47) marks repeats, filler words, cliches and long sentences. Off until the writer asks. */
+  styleCheck: boolean;
 }
 
 export type ToolLevel = 'simple' | 'full';
@@ -51,6 +53,7 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   letterSpacing: 0,
   wordSpacing: 0,
   lineHeight: 1.7,
+  styleCheck: false,
 };
 const listeners = new Set<() => void>();
 
@@ -78,6 +81,7 @@ function load(): WritingPrefs {
     letterSpacing: oneOf(LETTER_SPACINGS, value.letterSpacing),
     wordSpacing: oneOf(WORD_SPACINGS, value.wordSpacing),
     lineHeight: oneOf(LINE_HEIGHTS, value.lineHeight),
+    styleCheck: value.styleCheck === true,
   };
 }
 
@@ -102,7 +106,8 @@ export function setWritingPrefs(change: Partial<WritingPrefs>): void {
   for (const listener of listeners) listener();
 }
 
-function subscribe(listener: () => void) {
+/** Calls the listener after each change to the switches. */
+export function subscribeWritingPrefs(listener: () => void) {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
@@ -110,5 +115,5 @@ function subscribe(listener: () => void) {
 }
 
 export function useWritingPrefs(): WritingPrefs {
-  return useSyncExternalStore(subscribe, getWritingPrefs, getWritingPrefs);
+  return useSyncExternalStore(subscribeWritingPrefs, getWritingPrefs, getWritingPrefs);
 }

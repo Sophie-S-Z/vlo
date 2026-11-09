@@ -37,7 +37,8 @@ export function CommentList({ editor }: { editor: Editor }) {
             <button
               type="button"
               onClick={() => {
-                if (selectComment(editor, comment.id)) openPanel({ editor, panel: 'comment', anchor: 'caret' });
+                if (selectComment(editor, comment.id))
+                  openPanel({ editor, panel: 'comment', anchor: 'caret' });
               }}
               className="min-h-11 flex-1 rounded-md px-2 py-1 text-left text-sm hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent"
             >

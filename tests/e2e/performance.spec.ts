@@ -104,6 +104,10 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
 }) => {
   test.slow();
   await skipOnboarding(page);
+  // Review Focus 3 of Phase 8: the style check is on, so its marks are part of the typing budget.
+  await page.evaluate(() => {
+    localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full', styleCheck: true }));
+  });
   const seeded = await seedLarge(page);
 
   // A cold page load straight to the scene also boots the app. It is logged for STATUS, not held to the budget.
@@ -205,6 +209,9 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
   // The budget is 50 ms. The Linux WebKit build in CI takes 58 to 65 ms on this 10,000-word scene, so it has
   // a 100 ms ceiling that still catches a real slowdown. Real Safari is checked by hand (product owner decision).
   expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
+
+  // The scan ran on the scene, so the budget above holds with the marks on screen.
+  await expect(editor.locator('.vlo-style').first()).toBeAttached();
 
   const opened = await page.evaluate(() => [...new Set(window.__itemOpens)]);
   expect(opened).toEqual([`vlo-item-${seeded.longSceneId}`]);

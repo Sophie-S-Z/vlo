@@ -108,7 +108,9 @@ export function selectComment(editor: Editor, id: string): boolean {
   const first = rangesOf(editor.state.doc, id)[0];
   if (!first) return false;
   editor.view.dispatch(
-    editor.state.tr.setSelection(TextSelection.create(editor.state.doc, first.from, first.to)).scrollIntoView(),
+    editor.state.tr
+      .setSelection(TextSelection.create(editor.state.doc, first.from, first.to))
+      .scrollIntoView(),
   );
   return true;
 }
@@ -152,7 +154,8 @@ export const CommentMark = Mark.create({
           if (ranges.length === 0 || text.trim() === '') return false;
           // A mark of the same type replaces the old one, so each range keeps one comment.
           if (dispatch)
-            for (const r of ranges) tr.addMark(r.from, r.to, this.type.create({ ...r.attrs, text: text.trim() }));
+            for (const r of ranges)
+              tr.addMark(r.from, r.to, this.type.create({ ...r.attrs, text: text.trim() }));
           return true;
         },
       removeComment:

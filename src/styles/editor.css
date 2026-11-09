@@ -626,6 +626,18 @@ html[data-calm='true'] .vlo-fill-shimmer {
   box-decoration-break: clone;
 }
 
+/* The style check (F47): a wavy line under a word or phrase, and a light tint on a long sentence. */
+.vlo-manuscript .vlo-style:not(.vlo-style-long) {
+  text-decoration: underline wavy color-mix(in oklab, var(--accent) 70%, transparent);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0.25em;
+}
+
+.vlo-manuscript .vlo-style-long {
+  background: color-mix(in oklab, var(--muted) 14%, transparent);
+  box-decoration-break: clone;
+}
+
 /* Show aliases: the alias stands in front of the real name, which hides. The text itself does not change. */
 .vlo-manuscript .vlo-alias-real {
   display: none;
