@@ -12,6 +12,7 @@ import {
   DAMAGED,
   fail,
   id,
+  ID,
   isObject,
   list,
   optionalText,
@@ -19,6 +20,7 @@ import {
   type Json,
 } from './check';
 import { checkViews } from './views';
+import { MAX_LABELS } from '@/lib/db';
 import type {
   AudioFile,
   Item,
@@ -197,6 +199,25 @@ function checkProject(value: unknown): Project {
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);
+  const labels = settings.labels;
+  if (
+    labels !== undefined &&
+    !(
+      Array.isArray(labels) &&
+      labels.length <= MAX_LABELS &&
+      labels.every(
+        (l) =>
+          isObject(l) &&
+          typeof l.id === 'string' &&
+          ID.test(l.id) &&
+          typeof l.name === 'string' &&
+          l.name.trim() !== '' &&
+          typeof l.color === 'string',
+      ) &&
+      new Set(labels.map((l: Json) => l.id)).size === labels.length
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
   const followUp = settings.followUpDays;
   if (
     followUp !== undefined &&
@@ -230,6 +251,7 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     if (row.lineCount !== undefined) count(row, 'lineCount', what);
     if (row.craft !== undefined && typeof row.craft !== 'boolean')
       fail(`${DAMAGED} ${what} has a wrong Craft switch.`);
+    optionalText(row, 'labelId', what);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);
     if (row.memory !== undefined && !isObject(row.memory)) fail(`${DAMAGED} ${what} has a wrong memory.`);

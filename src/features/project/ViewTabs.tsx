@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { hasTemplate } from '@/features/library/templates';
 import { Link, useLocation } from 'react-router';
 import { ModeBadge } from '@/features/ai/ModeBadge';
+import { useWritingPrefs } from '@/features/editor/writingPrefs';
 import type { Project } from '@/lib/db';
 import { cn } from '@/ui/cn';
 
@@ -22,12 +23,18 @@ interface Tab {
 /** The search value that shows the Plot Grid on the board screen. */
 export const GRID_VIEW = 'grid';
 
-function tabsFor(project: Project): Tab[] {
+/**
+ * The Outline is for every template. At the Simple tool level its tab shows only on its own screen, and
+ * the command menu opens it (roadmap rule 2).
+ */
+const outline: Tab = { label: 'Outline', to: '/outline', active: (path) => path.endsWith('/outline') };
+
+function tabsFor(project: Project, full: boolean, path: string): Tab[] {
   const write: Tab = {
     label: 'Write',
     to: '',
     active: (path) =>
-      !['/board', '/timeline', '/people', '/sequences', '/submissions', '/progress'].some((end) =>
+      !['/board', '/outline', '/timeline', '/people', '/sequences', '/submissions', '/progress'].some((end) =>
         path.endsWith(end),
       ),
   };
@@ -36,7 +43,8 @@ function tabsFor(project: Project): Tab[] {
     { label: 'Submissions', to: '/submissions', active: (path) => path.endsWith('/submissions') },
     { label: 'Progress', to: '/progress', active: (path) => path.endsWith('/progress') },
   ];
-  return [write, ...viewsOf(project), ...shared];
+  const tools = full || outline.active(path, new URLSearchParams()) ? [outline] : [];
+  return [write, ...viewsOf(project), ...tools, ...shared];
 }
 
 /** The views of the project's templates, between Write and the shared views. Open writing has none. */
@@ -77,7 +85,8 @@ export function ViewTabs({
 }) {
   const location = useLocation();
   const [ownModeOpen, setOwnModeOpen] = useState(false);
-  const tabs = tabsFor(project);
+  const full = useWritingPrefs().toolLevel === 'full';
+  const tabs = tabsFor(project, full, location.pathname);
   const search = new URLSearchParams(location.search);
   const listRef = useRef<HTMLUListElement>(null);
 

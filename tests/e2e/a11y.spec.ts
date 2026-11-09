@@ -51,6 +51,10 @@ async function eachRoute(page: Page, visit: (route: string) => Promise<void>) {
     await expect(page.getByRole('link', { name: view })).toHaveAttribute('aria-current', 'page');
     await visit(`${project} ${view}`);
   }
+  // A new writer has the Simple tool level, so the Outline tab shows only on its own screen (F40).
+  await page.goto(`${project}/outline`);
+  await expect(page.getByRole('heading', { level: 2, name: 'Outline' })).toBeVisible();
+  await visit(`${project} Outline`);
   for (const path of PAGES) {
     await page.goto(path);
     await expect(heading(page)).toBeVisible();

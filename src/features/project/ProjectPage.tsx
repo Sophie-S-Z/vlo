@@ -385,6 +385,14 @@ export function ProjectPage() {
         ]
       : []),
     {
+      id: 'outline',
+      label: 'Open the Outline',
+      keywords: ['outline', 'cards', 'index cards', 'corkboard', 'synopsis', 'labels', 'status', 'table'],
+      run: () => {
+        void navigate(`/p/${project.id}/outline`);
+      },
+    },
+    {
       id: 'submissions',
       label: 'Open Submissions',
       keywords: ['submissions', 'venues', 'journals', 'sent', 'follow up', 'tracker'],

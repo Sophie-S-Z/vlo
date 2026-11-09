@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 2,
+  version: 3,
   date: '2026-11-09',
   guide: [
     {
@@ -73,6 +73,7 @@ export const HELP = {
         'A memoir has the Memory Timeline, by time or by theme, and the People screen.',
         'A poetry collection has Sequences, with as many named orders of the poems as you need.',
         'Every project has Submissions and Progress.',
+        'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels. At the Simple tool level, open it from the command menu.',
       ],
     },
     {

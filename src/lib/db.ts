@@ -43,7 +43,20 @@ export interface Project {
     aiInsertedAt?: number;
     /** The language of the writing, as a BCP 47 tag such as "he" (F38). None means English. */
     language?: string;
+    /** The writer's labels for items, at most `MAX_LABELS` (F40). */
+    labels?: Label[];
   };
+}
+
+/** The most labels that a project can have (F40). */
+export const MAX_LABELS = 8;
+
+/** A named color that the writer gives to items, such as "Needs research" (F40). */
+export interface Label {
+  id: string;
+  name: string;
+  /** A color id of `BOARD_COLORS`. */
+  color: string;
 }
 
 export type PageFormat = 'pageless' | 'letter' | 'a4';
@@ -71,6 +84,8 @@ export interface Item {
   lineCount?: number;
   /** True when the poem shows its Craft labels (spec 8.3). Off when absent. */
   craft?: boolean;
+  /** The id of one of the project's labels (F40). An id that the project no longer has shows no label. */
+  labelId?: string;
   createdAt: number;
   updatedAt: number;
   memory?: {

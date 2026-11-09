@@ -17,6 +17,7 @@ import type { Item, ItemKind, Project, Status } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 import { BinderItem, INDENT_PX, type BinderItemActions, type BinderMove } from './BinderItem';
+import { labelOf } from '@/features/outline/outline';
 import { ItemDialogs, type ItemAction } from './ItemDialogs';
 import { addItem, moveItem, nextTitle, updateItem } from './items';
 import {
@@ -235,6 +236,7 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
                   template={template}
                   isOpen={node.item.id === openItemId}
                   refused={dragging && overId !== null && projection === null}
+                  label={labelOf(project.settings.labels, node.item)}
                   actions={actions}
                 />
               );
