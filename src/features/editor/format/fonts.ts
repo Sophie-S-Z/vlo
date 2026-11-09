@@ -31,6 +31,8 @@ export interface VloFont {
 
 /** The manuscript font when the writer picks none. */
 export const DEFAULT_FONT = 'newsreader';
+/** The font of the comfort switch in Settings (F37, decision P5). */
+export const COMFORT_FONT: FontValue = 'atkinson';
 
 export const VLO_FONTS: readonly VloFont[] = [
   {

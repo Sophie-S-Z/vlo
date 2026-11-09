@@ -19,9 +19,24 @@ export interface WritingPrefs {
   showAiText: boolean;
   /** Simple shows the phone toolbar at every width, and the More menu holds the other tools (F36). */
   toolLevel: ToolLevel;
+  /** Comfort (F37): the screen shows the text in Atkinson Hyperlegible Next. Exports keep the project font. */
+  comfortFont: boolean;
+  /** Comfort spacing on the screen only, in em (letters and words) and in lines. */
+  letterSpacing: number;
+  wordSpacing: number;
+  lineHeight: number;
 }
 
 export type ToolLevel = 'simple' | 'full';
+
+/** The comfort choices: Standard, Wider and Widest. Standard is the editor's own spacing. */
+export const LETTER_SPACINGS = [0, 0.05, 0.1] as const;
+export const WORD_SPACINGS = [0, 0.1, 0.2] as const;
+export const LINE_HEIGHTS = [1.7, 2, 2.3] as const;
+
+function oneOf(list: readonly number[], value: unknown): number {
+  return typeof value === 'number' && list.includes(value) ? value : (list[0] ?? 0);
+}
 
 const KEY = 'vlo:writing';
 export const WRITING_DEFAULTS: WritingPrefs = {
@@ -32,6 +47,10 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   showAiText: true,
   // A writer from before tool levels keeps every tool. A new writer starts at Simple (decision P4).
   toolLevel: 'full',
+  comfortFont: false,
+  letterSpacing: 0,
+  wordSpacing: 0,
+  lineHeight: 1.7,
 };
 const listeners = new Set<() => void>();
 
@@ -55,6 +74,10 @@ function load(): WritingPrefs {
     zoom: cleanZoom(value.zoom),
     showAiText: typeof value.showAiText === 'boolean' ? value.showAiText : WRITING_DEFAULTS.showAiText,
     toolLevel: value.toolLevel === 'simple' ? 'simple' : 'full',
+    comfortFont: value.comfortFont === true,
+    letterSpacing: oneOf(LETTER_SPACINGS, value.letterSpacing),
+    wordSpacing: oneOf(WORD_SPACINGS, value.wordSpacing),
+    lineHeight: oneOf(LINE_HEIGHTS, value.lineHeight),
   };
 }
 

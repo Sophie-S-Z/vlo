@@ -26,7 +26,7 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-describe.each(['ink', 'paper', 'sepia'])('theme %s', (theme) => {
+describe.each(['ink', 'paper', 'sepia', 'contrast'])('theme %s', (theme) => {
   const vars = themeBlock(theme);
   test.each(['text', 'muted', 'accent-text'])('--%s meets WCAG AA on --bg and --surface', (fg) => {
     const color = vars[fg];
@@ -41,6 +41,15 @@ describe.each(['ink', 'paper', 'sepia'])('theme %s', (theme) => {
   test('--accent meets 3:1 for large text and icons on --bg', () => {
     expect(contrast(vars.accent ?? '', vars.bg ?? '')).toBeGreaterThanOrEqual(3);
   });
+});
+
+test('the Contrast theme meets 7:1 for text and 3:1 for borders', () => {
+  const vars = themeBlock('contrast');
+  for (const fg of ['text', 'muted', 'accent-text'])
+    for (const bg of ['bg', 'surface'])
+      expect(contrast(vars[fg] ?? '', vars[bg] ?? '')).toBeGreaterThanOrEqual(7);
+  expect(contrast(vars['on-accent'] ?? '', vars.accent ?? '')).toBeGreaterThanOrEqual(7);
+  expect(contrast(vars.rule ?? '', vars.surface ?? '')).toBeGreaterThanOrEqual(3);
 });
 
 test('spec colors are present unchanged', () => {
@@ -66,7 +75,7 @@ test('spec colors are present unchanged', () => {
 test('an unchecked switch has a --muted border, which meets 3:1 for controls in every theme', () => {
   const switchSource = readFileSync('src/ui/switch.tsx', 'utf8');
   expect(switchSource).toMatch(/rounded-full border border-muted bg-rule/);
-  for (const theme of ['ink', 'paper', 'sepia']) {
+  for (const theme of ['ink', 'paper', 'sepia', 'contrast']) {
     const vars = themeBlock(theme);
     expect(contrast(vars.muted ?? '', vars.surface ?? '')).toBeGreaterThanOrEqual(3);
     expect(contrast(vars.muted ?? '', vars.bg ?? '')).toBeGreaterThanOrEqual(3);

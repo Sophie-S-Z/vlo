@@ -12,7 +12,7 @@ import {
 } from '@/features/editor/format/palette';
 import { AA_TEXT, blend, contrastRatio, parseColor, toHex } from '@/lib/contrast';
 
-const THEMES: ResolvedTheme[] = ['ink', 'paper', 'sepia'];
+const THEMES: ResolvedTheme[] = ['ink', 'paper', 'sepia', 'contrast'];
 const css = readFileSync('src/styles/themes.css', 'utf8');
 
 function rgb(value: string) {

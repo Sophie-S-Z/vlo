@@ -5,7 +5,10 @@
   font-family: var(--font-manuscript);
   /* Page zoom (E7) scales the text. Every size inside is in em, so it follows. */
   font-size: calc(1.25rem * var(--vlo-zoom, 1));
-  line-height: 1.7;
+  /* Comfort settings in Settings (F37). The editor sets each one, on this device only. */
+  line-height: var(--vlo-line-height, 1.7);
+  letter-spacing: var(--vlo-letter-spacing, 0);
+  word-spacing: var(--vlo-word-spacing, 0);
   color: var(--text);
   outline: none;
   caret-color: var(--accent);

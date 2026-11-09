@@ -141,11 +141,11 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G8: Comfort and access (F37)
 
-**Files:** Modify `src/app/preferences.ts`, `src/styles/themes.css`, `src/styles/editor.css`, `src/features/settings/SettingsPage.tsx`, `tests/e2e/a11y.spec.ts`. Create `docs/screen-reader-test.md`.
+**Files:** Modify `src/app/preferences.ts`, `index.html`, `src/styles/themes.css`, `src/styles/editor.css`, `src/features/editor/format/palette.ts`, `src/features/editor/writingPrefs.ts`, `src/features/editor/Editor.tsx`, `src/features/settings/SettingsPage.tsx`, `src/features/project/CommandMenu.tsx`, `tests/e2e/a11y.spec.ts`. Create `src/features/settings/ComfortSettings.tsx`, `docs/screen-reader-test.md`, `tests/unit/comfort.test.ts`, `tests/e2e/comfort.spec.ts`, `tests/e2e/screen-reader.spec.ts`.
 
-- [ ] A fourth theme, Contrast: black text on white, with 7:1 for body text and 4.5:1 for every control. `a11y.spec.ts` runs it on every route.
-- [ ] A Comfort section in Settings: the comfort font switch (decision P5), letter spacing (0, 0.05 and 0.1 em), word spacing (0, 0.1 and 0.2 em) and line height (1.5, 1.8 and 2.1). The values set CSS variables on the editor only, so exports and the page-end lines do not change. The open-scene and keystroke budgets still pass with the widest values.
-- [ ] `docs/screen-reader-test.md`: a script for NVDA with Firefox and VoiceOver with Safari. Create a project, write, rename, reorder in the binder, take a snapshot, export and back up, each with the keyboard only. A browser test runs the same steps by role and name only. Commit.
+- [x] A fifth theme choice, Contrast: black text on white. Text, muted text and links meet 7:1, and borders 3:1 or more (`contrast.test.ts`). The palette colors use their Paper values. `a11y.spec.ts` runs it on every route and dialog.
+- [x] A Reading comfort section in Settings: the comfort font switch (decision P5), and Standard, Wider and Widest steps for letter spacing (0, 0.05 and 0.1 em), word spacing (0, 0.1 and 0.2 em) and line height (1.7, 2 and 2.3). The values are on this device and set CSS variables on the editor only, so the project and its exports do not change. The page-end lines measure the screen, so they follow the comfort values.
+- [x] `docs/screen-reader-test.md`: a script for NVDA with Firefox and VoiceOver with Safari. Create a project, write, take a snapshot, reorder in the binder, export, back up and rename, each with the keyboard only. `screen-reader.spec.ts` runs the same steps by role and name only. It found one bug: on its first open the command menu loaded after the dialog took focus, so typed keys went nowhere. The field now takes focus when the menu loads. Commit.
 
 ### Task G9: Every language, first part (F38)
 

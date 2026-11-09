@@ -11,7 +11,7 @@ import { BUNDLE, fakeSupabase, shareOf } from './support/share';
 // page, so these tests run with no service worker. The PWA tests cover the worker.
 test.use({ serviceWorkers: 'block' });
 
-const THEMES = ['ink', 'paper', 'sepia'] as const;
+const THEMES = ['ink', 'paper', 'sepia', 'contrast'] as const;
 const VIEWS = ['Board', 'Plot Grid', 'Timeline', 'People', 'Sequences', 'Submissions', 'Progress'];
 const PAGES = ['/', '/settings', '/network', '/ai-policy', '/privacy', '/help', '/nope'];
 

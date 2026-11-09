@@ -35,3 +35,16 @@
   --accent-text: #a8432a;
   --on-accent: #ffffff;
 }
+
+/* Black on white for low vision (roadmap F37): text, muted text and links meet 7:1, borders 3:1 or more. */
+[data-theme='contrast'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f4f4f4;
+  --text: #000000;
+  --muted: #3b3b3b;
+  --rule: #595959;
+  --accent: #9b1c0c;
+  --accent-text: #9b1c0c;
+  --on-accent: #ffffff;
+}

@@ -1,6 +1,6 @@
 import { Command } from 'cmdk';
 import type { MatchInfo } from 'minisearch';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Item, ItemText, Project } from '@/lib/db';
 import { db } from '@/lib/db';
 import { cn } from '@/ui/cn';
@@ -52,6 +52,11 @@ const groupClass =
  */
 export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDone }: CommandMenuProps) {
   const [query, setQuery] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+  // The dialog opens before this menu loads, so the dialog's own focus finds no field the first time.
+  useEffect(() => {
+    input.current?.focus();
+  }, []);
   const [texts, setTexts] = useState<ItemText[] | null>(null);
 
   useEffect(() => {
@@ -105,6 +110,7 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
   return (
     <Command label="Command menu" shouldFilter={false} loop className="grid gap-2">
       <Command.Input
+        ref={input}
         value={query}
         onValueChange={setQuery}
         placeholder="Find an item or text, or run an action"
