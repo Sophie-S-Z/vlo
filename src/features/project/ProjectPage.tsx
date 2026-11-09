@@ -4,6 +4,7 @@ import { Download, Search, Share2 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
+import { useMediaQuery } from '@/app/useMediaQuery';
 import { Binder } from '@/features/binder/Binder';
 import { cardTransitionName, FROM_CARD } from '@/features/board/useBoard';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
@@ -31,10 +32,12 @@ import { hasTemplate, projectDef, templateList } from '@/features/library/templa
 import { db, type AiMode, type Item, type Project } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
+import { cn } from '@/ui/cn';
 import { withViewTransition } from '@/ui/motion';
 import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import type { CommandAction } from './CommandMenu';
 import { ProjectLayout } from './ProjectLayout';
+import { SplitPane } from './SplitPane';
 import { useProject } from './useProject';
 import { GRID_VIEW, ViewTabs } from './ViewTabs';
 import { setAiMode } from '@/features/ai/modes';
@@ -71,6 +74,9 @@ function layerOpen(): boolean {
   );
 }
 
+/** The left pane's place in the address: a text item or a research file (F41). */
+type Place = { item: string } | { research: string };
+
 /** The item to open: the one in the address, else the first item that has an editor. */
 function openItem(project: Project, items: readonly Item[], requested: string | null): Item | undefined {
   const def = projectDef(project);
@@ -101,6 +107,9 @@ export function ProjectPage() {
   const motion = useMotionAllowed();
   const navigate = useNavigate();
   const activeEditor = useActiveEditor();
+  // The split view (F39) needs room for two pages.
+  const wide = useMediaQuery('(min-width: 1024px)');
+  const mainPane = useRef<HTMLDivElement>(null);
   const people = usePeople(projectId);
   const memoir = state.status === 'ready' && hasTemplate(state.project, 'memoir');
   const aiMode = state.status === 'ready' ? state.project.aiMode : null;
@@ -251,17 +260,52 @@ export function ProjectPage() {
   const researchFile = research?.find((f) => f.id === params.get('research')) ?? null;
   const item = researchFile ? undefined : openItem(project, items, params.get('item'));
   const kind = item ? template.editorKind(item.kind) : null;
+  const canOpen = (i: Item) => template.editorKind(i.kind) !== null;
+  const mainId = researchFile?.id ?? item?.id ?? null;
+  // Split view (F39): `beside` in the address opens a text item or a research file in a right pane.
+  const besideParam = params.get('beside');
+  const besideFile = besideParam === mainId ? null : (research?.find((f) => f.id === besideParam) ?? null);
+  const besideItem =
+    besideFile || besideParam === mainId ? undefined : items.find((i) => i.id === besideParam && canOpen(i));
+  const besideKind = besideItem ? template.editorKind(besideItem.kind) : null;
+  const besideId = besideFile?.id ?? besideItem?.id ?? null;
+  const split = wide && !focusMode && mainId !== null && besideId !== null;
+  // The Assistant, the details and the dialogs act on the item whose text has focus.
+  const besideFocused = split && besideItem !== undefined && activeEditor?.itemId === besideItem.id;
+  const current = besideFocused ? besideItem : item;
+  const currentKind = besideFocused ? besideKind : kind;
   const totalWords = items.reduce((sum, i) => sum + i.wordCount, 0);
   const fromCard = params.get(FROM_CARD);
-  const open = (itemId: string) => {
-    setParams({ item: itemId });
+  // Where the left pane is in the address. A research file just added is not in `research` yet, so each
+  // opener names its own key.
+  const mainPlace: Place | null = researchFile
+    ? { research: researchFile.id }
+    : item
+      ? { item: item.id }
+      : null;
+  /** Opens an item or a research file on the left, with the item or file to show beside it. */
+  const place = (main: Place, besideOf: string | null) => {
+    const id = 'item' in main ? main.item : main.research;
+    setParams(besideOf !== null && besideOf !== id ? { ...main, beside: besideOf } : main);
     setDrawer(false);
   };
-  const openResearch = (fileId: string) => {
-    setParams({ research: fileId });
-    setDrawer(false);
+  const open = (id: string) => {
+    place({ item: id }, besideId);
   };
-  const canOpen = (i: Item) => template.editorKind(i.kind) !== null;
+  const openResearch = (id: string) => {
+    place({ research: id }, besideId);
+  };
+  const openBeside =
+    wide && mainPlace
+      ? (id: string) => {
+          place(mainPlace, id);
+        }
+      : undefined;
+  const closeBeside = () => {
+    if (mainPlace) place(mainPlace, null);
+    // The pane and its buttons go, so the text on the left takes focus.
+    mainPane.current?.querySelector<HTMLElement>('.vlo-manuscript')?.focus();
+  };
   const actions: CommandAction[] = [
     {
       id: 'focus',
@@ -481,8 +525,8 @@ export function ProjectPage() {
                     <AssistantPanel
                       project={project}
                       items={items}
-                      item={item}
-                      kind={kind}
+                      item={current}
+                      kind={currentKind}
                       onInserted={() => {
                         // On a phone the sheet covers the text, so it closes and the text takes focus.
                         if (window.matchMedia('(max-width: 599px)').matches) {
@@ -557,12 +601,14 @@ export function ProjectPage() {
               items={items}
               openItemId={item?.id ?? null}
               onOpen={open}
+              {...(openBeside ? { onOpenBeside: openBeside } : {})}
               research={
                 <ResearchList
                   projectId={project.id}
                   files={research ?? []}
                   openId={researchFile?.id ?? null}
                   onOpen={openResearch}
+                  {...(openBeside ? { onOpenBeside: openBeside } : {})}
                 />
               }
             />
@@ -574,64 +620,99 @@ export function ProjectPage() {
                   <dt className="text-muted">Project</dt>
                   <dd className="font-mono">{formatWords(totalWords)}</dd>
                 </div>
-                {item && (
+                {current && (
                   <>
                     <div>
-                      <dt className="text-muted">{template.kindLabel[item.kind] ?? item.kind}</dt>
-                      <dd>{STATUS_LABEL[item.status]}</dd>
+                      <dt className="text-muted">{template.kindLabel[current.kind] ?? current.kind}</dt>
+                      <dd>{STATUS_LABEL[current.status]}</dd>
                     </div>
                     <div>
                       <dt className="text-muted">Synopsis</dt>
-                      <dd>{item.synopsis ?? 'None yet. Add one from the binder item menu.'}</dd>
+                      <dd>{current.synopsis ?? 'None yet. Add one from the binder item menu.'}</dd>
                     </div>
                   </>
                 )}
               </dl>
-              {item && kind && <WritingStats projectId={project.id} totalWords={totalWords} />}
+              {current && currentKind && <WritingStats projectId={project.id} totalWords={totalWords} />}
             </>
           }
-          manuscript={(width) =>
-            researchFile ? (
-              <ResearchView
-                key={researchFile.id}
-                file={researchFile}
-                onDeleted={() => {
-                  setParams({});
-                }}
-              />
-            ) : item && kind ? (
-              <>
-                {settingsError && (
-                  <p role="alert" className="mx-auto mb-3 max-w-prose text-sm text-accent-text">
-                    {settingsError}
-                  </p>
-                )}
-                {/* A scene opened from a board card takes the card's name, so the card grows into it (F14).
-                    With no card the boundary stays, with no animation, so the editor never remounts. */}
-                <MotionViewTransition
-                  key={item.id}
-                  {...(fromCard
-                    ? { name: cardTransitionName(fromCard), update: 'none' }
-                    : { default: 'none' })}
-                >
-                  <EditorPane
-                    item={item}
-                    kind={kind}
-                    width={width}
-                    snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
-                    font={project.settings.font}
-                    page={project.settings.page}
-                    scene={project.settings.scene}
-                    language={project.settings.language}
-                    onSettings={changeSettings}
-                    templates={templateList(project.templates)}
+          manuscript={(width) => (
+            // The main pane keeps its place in the tree, so opening a pane beside it never reloads its text.
+            <div className={cn(split && 'grid grid-cols-2 gap-6')}>
+              <div ref={mainPane} className="min-w-0">
+                {researchFile ? (
+                  <ResearchView
+                    key={researchFile.id}
+                    file={researchFile}
+                    onDeleted={() => {
+                      // The first item opens on the left, and the pane beside stays.
+                      setParams(besideId === null ? {} : { beside: besideId });
+                    }}
                   />
-                </MotionViewTransition>
-              </>
-            ) : (
-              <p className="text-muted">Add an item from the binder to start writing.</p>
-            )
-          }
+                ) : item && kind ? (
+                  <>
+                    {settingsError && (
+                      <p role="alert" className="mx-auto mb-3 max-w-prose text-sm text-accent-text">
+                        {settingsError}
+                      </p>
+                    )}
+                    {/* A scene opened from a board card takes the card's name, so the card grows into it (F14).
+                      With no card the boundary stays, with no animation, so the editor never remounts. */}
+                    <MotionViewTransition
+                      key={item.id}
+                      {...(fromCard
+                        ? { name: cardTransitionName(fromCard), update: 'none' }
+                        : { default: 'none' })}
+                    >
+                      <EditorPane
+                        item={item}
+                        kind={kind}
+                        width={width}
+                        snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
+                        font={project.settings.font}
+                        page={project.settings.page}
+                        scene={project.settings.scene}
+                        language={project.settings.language}
+                        onSettings={changeSettings}
+                        templates={templateList(project.templates)}
+                      />
+                    </MotionViewTransition>
+                  </>
+                ) : (
+                  <p className="text-muted">Add an item from the binder to start writing.</p>
+                )}
+              </div>
+              {split && (
+                <SplitPane
+                  onSwap={() => {
+                    place(besideFile ? { research: besideFile.id } : { item: besideId }, mainId);
+                  }}
+                  onClose={closeBeside}
+                >
+                  {besideFile ? (
+                    <ResearchView key={besideFile.id} file={besideFile} onDeleted={closeBeside} />
+                  ) : (
+                    besideItem &&
+                    besideKind && (
+                      <EditorPane
+                        key={besideItem.id}
+                        beside
+                        item={besideItem}
+                        kind={besideKind}
+                        width={width}
+                        snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
+                        font={project.settings.font}
+                        page={project.settings.page}
+                        language={project.settings.language}
+                        onSettings={changeSettings}
+                        templates={templateList(project.templates)}
+                      />
+                    )
+                  )}
+                </SplitPane>
+              )}
+            </div>
+          )}
         />
         <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
           <DialogContent
@@ -678,7 +759,7 @@ export function ProjectPage() {
               onOpenChange={setExportOpen}
               project={project}
               items={items}
-              currentItemId={item?.id ?? null}
+              currentItemId={current?.id ?? null}
               people={people ?? []}
             />
           </Suspense>
@@ -690,7 +771,7 @@ export function ProjectPage() {
               onOpenChange={setShareOpen}
               project={project}
               items={items}
-              currentItemId={item?.id ?? null}
+              currentItemId={current?.id ?? null}
             />
           </Suspense>
         )}

@@ -3,14 +3,16 @@ import { useSyncExternalStore } from 'react';
 import type { EditorForm, EditorCommand, PanelId } from './registry';
 
 /*
- * Two small stores the editor shares with the rest of the project screen: the editor that is open now,
- * so the command menu can run format commands, and the panel that is open, so any surface (toolbar,
- * selection menu, / menu, command menu) can open the same panel.
+ * Two small stores the editor shares with the rest of the project screen: the editor that is open now (in a
+ * split view, the one whose text has focus), so the command menu can run format commands, and the panel that
+ * is open, so any surface (toolbar, selection menu, / menu, command menu) can open the same panel.
  */
 
 export interface ActiveEditor {
   editor: Editor;
   form: EditorForm;
+  /** The item of the text. */
+  itemId?: string;
 }
 
 /** Where a panel sits: under a toolbar button, or at the caret. */

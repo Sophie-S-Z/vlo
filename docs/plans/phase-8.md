@@ -135,11 +135,11 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 
 ### Task H7: Split view (F39)
 
-**Files:** Create `src/features/project/SplitPane.tsx`, `tests/e2e/split-view.spec.ts`. Modify `src/features/project/ProjectPage.tsx` (`beside` in the address), `ProjectLayout.tsx`, `src/features/binder/BinderItem.tsx` (Open beside), `src/features/research/ResearchList.tsx`, `src/features/editor/commands/editorBus.ts` (the active editor follows focus).
+**Files:** Create `src/features/project/SplitPane.tsx`, `tests/e2e/split-view.spec.ts`. Modify `src/features/project/ProjectPage.tsx` (`beside` in the address), `src/features/binder/Binder.tsx` and `BinderItem.tsx` (Open beside; the item menu scrolls on a short screen), `src/features/research/ResearchList.tsx`, `src/features/editor/Editor.tsx`, `EditorPane.tsx` and `commands/editorBus.ts` (the active editor and the Craft switch follow focus), `src/features/help/help.ts`, `tests/e2e/performance.spec.ts`, `tests/e2e/research.spec.ts`.
 
-- [ ] Open beside: a text item or a research file opens in a right pane at 1024 px and wider. The item that is open on the left cannot open beside. Close and Swap are on the pane. The address keeps `beside=<id>`, so a reload keeps the split.
-- [ ] Both panes edit and save to their own items (Review Focus 2). The toolbar, the command menu and the Assistant act on the pane that has focus. Only the left pane shows the scene.
-- [ ] `split-view.spec.ts`: type in both panes, reload, and each item has its own text; the keystroke budget holds with two panes. Commit, then open pull request H-C.
+- [x] Open beside: a text item or a research file opens in a right pane at 1024 px and wider. The item that is open on the left cannot open beside. Swap panes and Close pane are on the pane. The address keeps `beside=<id>`, so a reload keeps the split. Focus mode shows only the left pane.
+- [x] Both panes edit and save to their own items (Review Focus 2). The toolbar, the command menu, the Assistant, the details and the Craft switch act on the pane whose text has focus. A pane that opens beside waits for focus. Only the left pane shows the scene and its sound.
+- [x] `split-view.spec.ts`: type in both panes, a command menu format acts on the focused pane, reload, and each item has its own text; Swap and Close. `performance.spec.ts`: the keystroke budget holds in the 10,000-word scene with a pane open beside it.
 
 ### Task H8: Quick capture (F48)
 

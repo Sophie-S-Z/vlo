@@ -84,6 +84,7 @@ export const HELP = {
         'A clipping is text that you paste, with its link. Vlo keeps the link as text and never opens it.',
         'Research stays on this device. Backups and "Download all my writing" include it, and exports leave it out.',
         'Vlo takes files up to 50 MB, and warns when the research of a project is over 100 MB.',
+        'On a wide screen, choose Open beside in the item menu, or the Open beside button of a research file. The item or file shows next to the open item, and both texts save. Swap panes and Close pane are above it.',
       ],
     },
     {

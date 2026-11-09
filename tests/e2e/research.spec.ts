@@ -76,6 +76,6 @@ test('a writer adds an image and a clipping, opens, renames and deletes them, an
     .click();
   await expect(page.getByRole('heading', { level: 2, name: 'Scene 1' })).toBeVisible();
   if (isMobile) await page.getByRole('button', { name: 'Binder' }).click();
-  await expect(files(page).getByRole('button')).toHaveText(['harbour.png', 'chart.pdf']);
+  await expect(files(page).getByRole('listitem')).toHaveText(['harbour.png', 'chart.pdf']);
   expect(requests).toEqual([]);
 });

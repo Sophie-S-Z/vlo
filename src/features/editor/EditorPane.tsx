@@ -3,7 +3,7 @@ import type { Editor as TiptapEditor } from '@tiptap/react';
 import { ChartNoAxesColumn, History, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StatsBar } from '@/features/analysis/StatsBar';
-import { setCraftItem } from '@/features/craft/craftStore';
+import { getCraft, setCraftItem, useCraft } from '@/features/craft/craftStore';
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
@@ -70,6 +70,8 @@ interface EditorPaneProps {
   }) => void;
   /** The project's templates, for the tools that only some templates offer. */
   templates?: readonly Template[] | undefined;
+  /** The right pane of the split view (F39): no scene or sound, and the text waits for the writer to click it. */
+  beside?: boolean;
 }
 
 /** The open item: its editor, save status and counts. Only this item's Yjs document loads. Key it by item id. */
@@ -84,6 +86,7 @@ export function EditorPane({
   language: storedLanguage,
   onSettings,
   templates,
+  beside = false,
 }: EditorPaneProps) {
   const state = useItemDoc(item.id);
   const [save, setSave] = useState<SaveState>('saved');
@@ -112,17 +115,30 @@ export function EditorPane({
     };
   }, [editor]);
 
-  // The Craft switch of the open poem (spec 8.3). Only a poem of a poetry collection has one.
+  // The Craft switch of the open poem (spec 8.3). Only a poem of a poetry collection has one. In a split
+  // view the switch acts on the pane whose text has focus, and each poem shows its own labels.
   const craftable = kind === 'poem' && (templates?.includes('poetry') ?? false);
   const craft = item.craft === true;
+  const craftState = useCraft();
+  const labels = craftable && (craftState.itemId === id ? craftState.on : craft);
   useEffect(() => {
-    setCraftItem(craftable ? id : null, craft);
-  }, [craftable, id, craft]);
+    if (!beside || getCraft().itemId === id) setCraftItem(craftable ? id : null, craft);
+  }, [beside, craftable, id, craft]);
+  useEffect(() => {
+    if (!editor) return;
+    const take = () => {
+      setCraftItem(craftable ? id : null, craft);
+    };
+    editor.on('focus', take);
+    return () => {
+      editor.off('focus', take);
+    };
+  }, [editor, craftable, id, craft]);
   useEffect(
     () => () => {
-      setCraftItem(null, false);
+      if (getCraft().itemId === id) setCraftItem(null, false);
     },
-    [],
+    [id],
   );
 
   const open = state.open;
@@ -163,7 +179,8 @@ export function EditorPane({
   const font = cleanFontValue(storedFont) ?? DEFAULT_FONT;
   const language = cleanLanguage(storedLanguage);
   const page = cleanPageFormat(storedPage);
-  const scene = cleanScene(storedScene);
+  // Only the main pane shows the scene.
+  const scene = beside ? NO_SCENE : cleanScene(storedScene);
   const { zoom } = useWritingPrefs();
   const [pages, setPages] = useState<number | null>(null);
   const manuscript = useMemo<ManuscriptSettings>(
@@ -210,8 +227,12 @@ export function EditorPane({
                 language={language}
                 onLanguage={(next) => onSettings?.({ language: next })}
               />
-              <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />
-              <SoundControl scene={scene} />
+              {!beside && (
+                <>
+                  <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />
+                  <SoundControl scene={scene} />
+                </>
+              )}
               <Dialog open={insightsOpen} onOpenChange={setInsightsOpen}>
                 <DialogTrigger asChild>
                   <Button variant="ghost" disabled={!editor}>
@@ -341,7 +362,9 @@ export function EditorPane({
               doc={state.open.doc}
               kind={kind}
               label={item.title}
-              focusOnOpen
+              itemId={item.id}
+              focusOnOpen={!beside}
+              craft={labels}
               onEditor={onEditor}
               font={font}
               page={page}
