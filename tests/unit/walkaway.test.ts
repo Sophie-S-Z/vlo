@@ -7,7 +7,7 @@ import { item, poemUpdate, project, proseUpdate } from './export-fixtures';
 
 /* The walkaway export (roadmap F33, plan Task G3). */
 
-const NBSP = ' ';
+const NBSP = '\u00a0';
 
 function backup(template: Template, title: string, items: Item[], updates: [string, Uint8Array][]): Backup {
   return {
