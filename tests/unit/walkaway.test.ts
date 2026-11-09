@@ -19,6 +19,7 @@ function backup(template: Template, title: string, items: Item[], updates: [stri
     itemTexts: [],
     updates: new Map(updates),
     music: [],
+    research: [],
     views: {} as Backup['views'],
   };
 }

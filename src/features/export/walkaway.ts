@@ -14,7 +14,8 @@ import { itemBlocks, noteCounter, updateToJson } from './read';
  * The walkaway export (roadmap F33): all the writing in one zip that needs no Vlo to read. Each project
  * has a folder, each item a Markdown file in binder order, and each folder of the binder a folder in the
  * zip. Notes come too, because the zip is the writer's own copy. Each project's index.html shows the
- * whole project in any browser, with no script and no other file.
+ * whole project in any browser, with no script and no other file. The research files go in a Research
+ * folder, and each clipping is a text file with its link.
  */
 
 const STYLE =
@@ -69,6 +70,24 @@ function rows(backup: Backup): { path: string; depth: number; title: string; bod
   });
 }
 
+/** The research files of a project, each with a name that no other file in the folder has. */
+function researchFiles(zip: JSZip, backup: Backup): void {
+  const used = new Set<string>();
+  for (const { info, data } of backup.research) {
+    const name = exportFileName(info.name);
+    const dot = name.lastIndexOf('.');
+    const [stem, ext] =
+      info.clip || dot <= 0 ? [name, info.clip ? '.txt' : ''] : [name.slice(0, dot), name.slice(dot)];
+    let file = `${stem}${ext}`;
+    for (let n = 2; used.has(file.toLowerCase()); n += 1) file = `${stem} (${String(n)})${ext}`;
+    used.add(file.toLowerCase());
+    if (info.clip) {
+      const link = info.clip.url ? `\n\nLink: ${info.clip.url}\n` : '\n';
+      zip.file(`Research/${file}`, `${info.clip.text}${link}`);
+    } else if (data) zip.file(`Research/${file}`, data, { compression: 'STORE' });
+  }
+}
+
 function projectFiles(zip: JSZip, backup: Backup): void {
   const base = {
     font: backup.project.settings.font ?? DEFAULT_FONT,
@@ -91,6 +110,7 @@ function projectFiles(zip: JSZip, backup: Backup): void {
   }
   const whole: ExportDoc = { ...base, title: backup.project.title, sections };
   zip.file('index.html', page(backup.project.title, markdown.render(toMarkdown(whole)), base.language));
+  researchFiles(zip, backup);
 }
 
 /** The zip of every project given, with a top index.html that links each project's page. */

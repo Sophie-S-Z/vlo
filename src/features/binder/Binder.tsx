@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { projectDef } from '@/features/library/templates';
 import type { Item, ItemKind, Project, Status } from '@/lib/db';
 import { Button } from '@/ui/button';
@@ -36,6 +36,8 @@ interface BinderProps {
   items: Item[];
   openItemId: string | null;
   onOpen: (itemId: string) => void;
+  /** The Research section, at the end of the binder (F41). */
+  research?: ReactNode;
 }
 
 /*
@@ -59,7 +61,7 @@ function describeMove(nodes: readonly FlatNode[], item: Item, placement: Placeme
   return `${item.title} moved. It is now ${String(position)} of ${String(siblings.length + 1)} in ${parent}.`;
 }
 
-export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
+export function Binder({ project, items, openItemId, onOpen, research }: BinderProps) {
   const template = useMemo(() => projectDef(project.templates), [project.templates]);
   const nodes = useMemo(() => flattenTree(items), [items]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -244,6 +246,8 @@ export function Binder({ project, items, openItemId, onOpen }: BinderProps) {
           </ul>
         </SortableContext>
       </DndContext>
+
+      {research}
 
       <p role="status" aria-live="polite" className="sr-only">
         {message}

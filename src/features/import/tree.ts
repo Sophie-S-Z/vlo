@@ -170,6 +170,7 @@ export function toBackup(source: ImportSource, templates: readonly Template[], n
     itemTexts,
     updates,
     music: [],
+    research: [],
     views: emptyViewRows(),
   };
 }

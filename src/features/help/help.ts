@@ -78,6 +78,15 @@ export const HELP = {
       ],
     },
     {
+      title: 'Keep research with the project',
+      steps: [
+        'At the end of the binder, Research takes images, PDFs, audio files and clippings. Add, then Files or Clipping.',
+        'A clipping is text that you paste, with its link. Vlo keeps the link as text and never opens it.',
+        'Research stays on this device. Backups and "Download all my writing" include it, and exports leave it out.',
+        'Vlo takes files up to 50 MB, and warns when the research of a project is over 100 MB.',
+      ],
+    },
+    {
       title: 'Plan with the Outline and the Codex',
       steps: [
         'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels.',

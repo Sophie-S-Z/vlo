@@ -23,6 +23,7 @@ import { checkViews } from './views';
 import { MAX_LABELS } from '@/lib/db';
 import type {
   AudioFile,
+  ResearchFile,
   Item,
   ItemKind,
   ItemText,
@@ -40,10 +41,11 @@ import type {
  * - `items/<id>.yjs`: each item's Yjs update, which is the text itself;
  * - `items/<id>.md`: a readable copy of each item, for a writer who has no Vlo at hand;
  * - `snapshots/<id>.yjs`: the Yjs update of each snapshot;
- * - `music/<id>`: each of the writer's music files, only when the writer asks for them.
+ * - `music/<id>`: each of the writer's music files, only when the writer asks for them;
+ * - `research/<id>`: each research file of the project. A clipping has no file: its text is in the row.
  * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Version 3 gives the project a
- * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows, so
- * an older build refuses the file and never drops them. Vlo still reads versions 1 to 3.
+ * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows and
+ * the research files, so an older build refuses the file and never drops them. Vlo still reads versions 1 to 3.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
@@ -59,6 +61,14 @@ export interface BackupMusic {
   data: ArrayBuffer;
 }
 
+export type ResearchInfo = Omit<ResearchFile, 'data'>;
+
+export interface BackupResearch {
+  info: ResearchInfo;
+  /** The file. A clipping has none. */
+  data?: ArrayBuffer;
+}
+
 /** A project, all its rows and all its text, as the backup file holds them. */
 export interface Backup {
   createdAt: number;
@@ -70,6 +80,7 @@ export interface Backup {
   /** The Yjs update of each item that holds text, by item id. */
   updates: Map<string, Uint8Array>;
   music: BackupMusic[];
+  research: BackupResearch[];
   /** Board cards, threads, life stages, poem orders, people and submissions (Phase 3), and the Codex. */
   views: ViewRows;
 }
@@ -117,6 +128,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     sessions: backup.sessions,
     itemTexts: backup.itemTexts,
     music: backup.music.map((m) => m.info),
+    research: backup.research.map((r) => r.info),
     ...backup.views,
   };
   zip.file('project.json', JSON.stringify(manifest, null, 2));
@@ -135,6 +147,9 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
   for (const snapshot of backup.snapshots) zip.file(`snapshots/${snapshot.id}.yjs`, snapshot.state);
   // Music is already compressed, so it goes in as it is.
   for (const { info, data } of backup.music) zip.file(`music/${info.id}`, data, { compression: 'STORE' });
+  // Most research files are images, PDFs and audio, which are compressed already.
+  for (const { info, data } of backup.research)
+    if (data) zip.file(`research/${info.id}`, data, { compression: 'STORE' });
   return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
 
@@ -371,6 +386,26 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     for (const key of ['size', 'duration', 'addedAt']) count(row, key, 'A music file');
   }
 
+  const researchRows = checkRows<ResearchInfo>(
+    manifest.research === undefined ? [] : list(manifest, 'research'),
+    project.id,
+    'A research file',
+    (row) => {
+      id(row, 'id', 'A research file');
+      text(row, 'name', 'A research file');
+      text(row, 'type', 'A research file');
+      for (const key of ['size', 'addedAt']) count(row, key, 'A research file');
+      const clip = row.clip;
+      if (
+        clip !== undefined &&
+        (!isObject(clip) ||
+          typeof clip.text !== 'string' ||
+          (clip.url !== undefined && typeof clip.url !== 'string'))
+      )
+        fail(`${DAMAGED} A research clipping is wrong.`);
+    },
+  );
+
   const updates = new Map<string, Uint8Array>();
   for (const item of items) {
     const update = await readEntry(zip, `items/${item.id}.yjs`);
@@ -396,6 +431,20 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     music.push({ info: row as unknown as MusicInfo, data: data.slice().buffer });
   }
 
+  const research: BackupResearch[] = [];
+  const researchIds = new Set<string>();
+  for (const info of researchRows) {
+    if (researchIds.has(info.id)) fail(`${DAMAGED} Two research files share one id.`);
+    researchIds.add(info.id);
+    if (info.clip) {
+      research.push({ info });
+      continue;
+    }
+    const data = await readEntry(zip, `research/${info.id}`);
+    if (data === null) fail(`${DAMAGED} The research file “${info.name}” is missing.`);
+    research.push({ info, data: data.slice().buffer });
+  }
+
   return {
     createdAt: typeof manifest.createdAt === 'number' ? manifest.createdAt : 0,
     project,
@@ -405,6 +454,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     itemTexts,
     updates,
     music,
+    research,
     views,
   };
 }

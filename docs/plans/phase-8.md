@@ -123,15 +123,15 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 
 ### Task H6: Research folder (F41)
 
-**Files:** Create `src/features/research/research.ts`, `ResearchList.tsx`, `ResearchView.tsx`, `tests/unit/research.test.ts`, `tests/e2e/research.spec.ts`. Modify `src/lib/db.ts` (`research` table in version 7), `src/features/backup/file.ts` (`research/<id>` files), `src/features/export/walkaway.ts`, `src/features/binder/Binder.tsx`, `vercel.json` (`frame-src 'self' blob:` for the PDF view), `src/features/help/help.ts`.
+**Files:** Create `src/features/research/research.ts`, `ResearchList.tsx`, `ResearchView.tsx`, `tests/unit/research.test.ts`, `tests/e2e/research.spec.ts`. Modify `src/lib/db.ts` (`research` table in version 7), `src/features/backup/file.ts` (`research/<id>` files) and `backup.ts`, `src/features/library/projects.ts` (a project delete removes its research), `src/features/export/walkaway.ts`, `src/features/binder/Binder.tsx` (a slot for the Research section), `src/features/project/ProjectPage.tsx` (`research=<id>` in the address opens the view), `vercel.json` (`frame-src 'self' blob:` for the PDF view), `src/features/help/help.ts`, `tests/unit/setup.ts` (Node's Blob, which fake-indexeddb keeps).
 
 **Interfaces:**
 
-- Produces: `ResearchFile = { id; projectId; name: string; type: string; size: number; addedAt: number; data?: ArrayBuffer; clip?: { url?: string; text: string } }`. `MAX_RESEARCH_FILE = 50 MB`, `RESEARCH_WARN = 100 MB`.
+- Produces: `ResearchFile = { id; projectId; name: string; type: string; size: number; addedAt: number; data?: Blob; clip?: { url?: string; text: string } }`. A Blob, so a list of the files reads no bytes. `MAX_RESEARCH_FILE = 50 MB`, `RESEARCH_WARN = 100 MB`.
 
-- [ ] Tests first: a file over 50 MB is refused; the project total over 100 MB gives the warning; a backup round trip keeps each file byte for byte; a clipping link stays text and is never fetched.
-- [ ] A Research section at the end of the binder: Add files, Add clipping, rename, delete with confirm. An image, a PDF, an audio file or a clipping opens in the research view.
-- [ ] "Download all my writing" puts the files in a Research folder of each project. Commit.
+- [x] Tests first: a file over 50 MB is refused; the project total over 100 MB gives the warning; a backup round trip keeps each file byte for byte; a clipping link stays text and is never fetched.
+- [x] A Research section at the end of the binder: Add files, Add clipping. An image, a PDF, an audio file or a clipping opens in the research view, which renames, deletes with confirm, and offers the download of each file.
+- [x] "Download all my writing" puts the files in a Research folder of each project. Commit.
 
 ### Task H7: Split view (F39)
 

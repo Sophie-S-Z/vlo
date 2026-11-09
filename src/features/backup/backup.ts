@@ -6,7 +6,15 @@ import { READ_AT_ONCE, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
 import { remapNameMarks } from '@/features/people/markAll';
 import { copyViews } from './views';
-import { backupFileName, holdsText, readBackup, writeBackup, type Backup, type BackupMusic } from './file';
+import {
+  backupFileName,
+  holdsText,
+  readBackup,
+  writeBackup,
+  type Backup,
+  type BackupMusic,
+  type BackupResearch,
+} from './file';
 
 /*
  * Backup and import on this device (spec section 9, plan Task B8). The backup reads every row and every
@@ -21,11 +29,20 @@ async function inBatches<T, R>(values: readonly T[], run: (value: T) => Promise<
   return out;
 }
 
-/** Reads a project, its rows, its text and, if asked, the writer's music. */
+/** Reads a project, its rows, its text, its research files and, if asked, the writer's music. */
 export async function collectBackup(projectId: string, options: { music: boolean }): Promise<Backup> {
   const rows = await db.transaction(
     'r',
-    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.audioFiles, ...viewTables()],
+    [
+      db.projects,
+      db.items,
+      db.snapshots,
+      db.sessions,
+      db.itemTexts,
+      db.audioFiles,
+      db.research,
+      ...viewTables(),
+    ],
     async () => ({
       project: await db.projects.get(projectId),
       items: await db.items.where('projectId').equals(projectId).toArray(),
@@ -33,6 +50,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       sessions: await db.sessions.where('projectId').equals(projectId).toArray(),
       itemTexts: await db.itemTexts.where('projectId').equals(projectId).toArray(),
       music: options.music ? await db.audioFiles.orderBy('addedAt').toArray() : [],
+      research: await db.research.where('projectId').equals(projectId).sortBy('addedAt'),
       views: await readViewRows(projectId),
     }),
   );
@@ -46,6 +64,11 @@ export async function collectBackup(projectId: string, options: { music: boolean
       data: data instanceof Blob ? await data.arrayBuffer() : data,
     })),
   );
+  const research = await Promise.all(
+    rows.research.map(async ({ data, ...info }): Promise<BackupResearch> =>
+      data ? { info, data: await data.arrayBuffer() } : { info },
+    ),
+  );
   return {
     createdAt: clock.now(),
     project,
@@ -55,6 +78,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     itemTexts: rows.itemTexts,
     updates: new Map(updates),
     music,
+    research,
     views: rows.views,
   };
 }
@@ -118,6 +142,7 @@ function asCopy(backup: Backup): Backup {
       state: marks(s.state),
     })),
     sessions: backup.sessions.map((s) => ({ ...s, id: newId(), projectId })),
+    research: backup.research.map((r) => ({ ...r, info: { ...r.info, id: newId(), projectId } })),
     itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
     updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), marks(update)])),
     views: copied.views,
@@ -139,7 +164,16 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
     });
     await db.transaction(
       'rw',
-      [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.audioFiles, ...viewTables()],
+      [
+        db.projects,
+        db.items,
+        db.snapshots,
+        db.sessions,
+        db.itemTexts,
+        db.audioFiles,
+        db.research,
+        ...viewTables(),
+      ],
       async () => {
         // The file is a backup of this state, so the project counts as backed up when the file was made.
         await db.projects.add({ ...backup.project, lastBackupAt: backup.createdAt || now });
@@ -155,6 +189,11 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
         await db.people.bulkAdd(backup.views.people);
         await db.submissions.bulkAdd(backup.views.submissions);
         await db.codex.bulkAdd(backup.views.codex);
+        await db.research.bulkAdd(
+          backup.research.map(({ info, data }) =>
+            data ? { ...info, data: new Blob([data], { type: info.type }) } : info,
+          ),
+        );
         // Music belongs to the device, not the project. A file that is already here stays as it is.
         const known = new Set(await db.audioFiles.toCollection().primaryKeys());
         await db.audioFiles.bulkAdd(

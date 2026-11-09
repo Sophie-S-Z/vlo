@@ -212,6 +212,24 @@ export interface CodexEntry {
   order: string;
 }
 
+/**
+ * A research file of a project (F41): an image, a PDF, an audio file, or a clipping of text that the
+ * writer pastes with its link. It stays on this device. Vlo never fetches a clipping's link.
+ */
+export interface ResearchFile {
+  id: string;
+  projectId: string;
+  name: string;
+  /** The media type, such as "image/png". A clipping has "text/plain". */
+  type: string;
+  /** Bytes. */
+  size: number;
+  addedAt: number;
+  /** The file itself. A clipping has no file. */
+  data?: Blob;
+  clip?: { text: string; url?: string };
+}
+
 /** A plain-text copy of each item, for search and readable backups (ADR 0003). */
 export interface ItemText {
   itemId: string;
@@ -312,6 +330,7 @@ export class VloDb extends Dexie {
   networkLog!: Table<NetworkLogEntry, string>;
   shares!: Table<ShareRecord, string>;
   codex!: Table<CodexEntry, string>;
+  research!: Table<ResearchFile, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -351,8 +370,8 @@ export class VloDb extends Dexie {
             delete project.template;
           }),
       );
-    // Version 7 (Phase 8, Task H5): the Codex. A new table only, so no rows change.
-    this.version(7).stores({ codex: 'id, projectId' });
+    // Version 7 (Phase 8, Tasks H5 and H6): the Codex and the research files. New tables only.
+    this.version(7).stores({ codex: 'id, projectId', research: 'id, projectId' });
   }
 }
 

@@ -44,7 +44,7 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 7 has the Phase 1 tables, the music, the template views, the network log, the shares and the Codex', () => {
+  test('version 7 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex and research', () => {
     expect(db.name).toBe('vlo');
     expect(db.verno).toBe(7);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
@@ -59,6 +59,7 @@ describe('Vlo database', () => {
       'networkLog',
       'people',
       'projects',
+      'research',
       'sequences',
       'sessions',
       'shares',
