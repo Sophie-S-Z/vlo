@@ -5,6 +5,7 @@ import { db, type Item } from '@/lib/db';
 import { countLines, countWords } from '@/lib/wordcount';
 import { FOOTNOTE } from './extensions/footnote';
 import { notesBlock, parseNote, type NoteContent } from './format/notes';
+import { acceptedDoc } from './format/suggestion';
 import { leafText } from './leafText';
 import { poemDataFromDoc, poemDataToText } from './poemText';
 
@@ -12,7 +13,9 @@ import { poemDataFromDoc, poemDataToText } from './poemText';
  * Plain text of the writing itself. Prose blocks are separated by a blank line; a scene break is "#", and
  * an equation is its LaTeX between $ signs.
  */
-export function docBody(doc: ProseMirrorNode, kind: 'prose' | 'poem'): string {
+export function docBody(source: ProseMirrorNode, kind: 'prose' | 'poem'): string {
+  // Waiting suggestions count as accepted (decision R2), so a deleted word is not in the text.
+  const doc = acceptedDoc(source);
   if (kind === 'poem') return poemDataToText(poemDataFromDoc(doc));
   return doc.textBetween(0, doc.content.size, '\n\n', leafText);
 }

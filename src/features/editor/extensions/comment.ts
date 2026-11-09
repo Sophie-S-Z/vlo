@@ -30,6 +30,8 @@ export const COMMENT = 'comment';
 export interface CommentEntry {
   id: string;
   text: string;
+  /** Who wrote it, such as an editor or a beta reader. Empty for the writer. */
+  by: string;
   /** When the writer made the comment, in milliseconds. */
   at: number;
   /** The start of its first words and the end of its last words. */
@@ -57,6 +59,7 @@ function collect(doc: ProseMirrorNode): CommentEntry[] {
       byId.set(id, {
         id,
         text: String(mark.attrs.text),
+        by: String(mark.attrs.by ?? ''),
         at: Number.isFinite(at) ? at : 0,
         from: pos,
         to: end,
@@ -125,6 +128,7 @@ export const CommentMark = Mark.create({
       id: { default: '', renderHTML: (attrs: { id: string }) => ({ 'data-comment-id': attrs.id }) },
       text: { default: '', rendered: false },
       at: { default: 0, rendered: false },
+      by: { default: '', rendered: false },
     };
   },
 

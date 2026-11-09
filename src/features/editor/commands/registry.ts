@@ -9,6 +9,7 @@ import {
   Bot,
   BookUser,
   Asterisk,
+  FilePenLine,
   Baseline,
   Bold,
   Heading2,
@@ -58,6 +59,7 @@ import { MAX_HANGING_EM } from '../extensions/poem';
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
 import { canStyleCheck } from '../extensions/styleCheck';
+import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
 
 /*
@@ -633,6 +635,21 @@ export const COMMANDS: readonly EditorCommand[] = [
     panel: 'comment',
     selection: true,
     isActive: (e) => e.isActive('comment'),
+  },
+  {
+    kind: 'run',
+    id: 'track-changes',
+    label: 'Track changes',
+    icon: FilePenLine,
+    group: 'review',
+    forms: BOTH,
+    keywords: ['revision', 'suggest', 'suggestions', 'redline', 'edit mode', 'pass', 'accept', 'reject'],
+    run: () => {
+      void saveTracking({ on: !getTracking().on }).catch(() => undefined);
+      return true;
+    },
+    isActive: () => getTracking().on,
+    isEnabled: () => getTracking().projectId !== null,
   },
   {
     kind: 'run',

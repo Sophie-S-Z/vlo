@@ -12,9 +12,11 @@ export async function useTool(page: Page, name: string): Promise<void> {
     return;
   }
   await toolbar.getByRole('button', { name: 'More tools' }).click();
-  await page
-    .getByRole('menu')
-    // A tool that opens a panel ends its menu name with an ellipsis.
-    .getByRole('menuitem', { name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}…?$`) })
+  const menu = page.getByRole('menu');
+  // A tool that opens a panel ends its menu name with an ellipsis. A switch is a checkbox item.
+  const label = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}…?$`);
+  await menu
+    .getByRole('menuitem', { name: label })
+    .or(menu.getByRole('menuitemcheckbox', { name: label }))
     .click();
 }

@@ -22,6 +22,7 @@ import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
 import { useCodex } from '@/features/codex/codex';
 import { resetCodex, setCodexEntries } from '@/features/codex/codexStore';
+import { resetTracking, setProjectTracking } from '@/features/editor/trackingStore';
 import { usePeople } from '@/features/people/people';
 import { useResearch } from '@/features/research/research';
 import { ResearchList } from '@/features/research/ResearchList';
@@ -141,10 +142,16 @@ export function ProjectPage() {
   useEffect(() => {
     if (codex) setCodexEntries(projectId, codex);
   }, [codex, projectId]);
+  // Track changes (F44) follows the open project's setting.
+  const tracking = state.status === 'ready' ? state.project.settings.tracking : undefined;
+  useEffect(() => {
+    setProjectTracking(projectId, tracking);
+  }, [projectId, tracking]);
   useEffect(
     () => () => {
       resetNames();
       resetCodex();
+      resetTracking();
     },
     [projectId],
   );

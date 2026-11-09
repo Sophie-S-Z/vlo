@@ -7,6 +7,7 @@ import { parseNote } from '@/features/editor/format/notes';
 import { resolveColor } from '@/features/editor/format/palette';
 import { personIdOf, PRIVATE_NAME } from '@/features/people/markName';
 import { AI_ORIGIN, aiLabelOf } from '@/features/editor/format/aiOrigin';
+import { SUGGESTION } from '@/features/editor/format/suggestion';
 import { YFRAGMENT } from '@/lib/ydocs';
 import type { Align, Block, ExportForm, PoemLine, Run, RunStyle } from './model';
 
@@ -184,9 +185,15 @@ function aiOf(marks: JSONContent['marks']): string | null {
   return mark ? aiLabelOf(mark.attrs ?? {}) : null;
 }
 
+/** True for words that a waiting suggestion deletes. Exports take the text as accepted (decision R2). */
+function deleted(marks: JSONContent['marks']): boolean {
+  return marks?.some((m) => m.type === SUGGESTION && m.attrs?.kind === 'delete') ?? false;
+}
+
 function inlineRuns(content: JSONContent[] | undefined, notes: NoteCounter): Run[] {
   const runs: Run[] = [];
   for (const node of content ?? []) {
+    if (deleted(node.marks)) continue;
     if (node.type === 'text' && typeof node.text === 'string' && node.text !== '') {
       const person = personOf(node.marks);
       const ai = aiOf(node.marks);

@@ -10,6 +10,7 @@ import { blockFormatting, ClearFormatting, inlineFormatting } from './formatting
 import { PrivateName } from '@/features/people/personMark';
 import { AiOriginMark } from './aiOrigin';
 import { CommentMark } from './comment';
+import { SuggestionMark } from './suggestion';
 import { SceneBreak } from './sceneBreak';
 
 /** The prose schema for scenes, memories and notes. Collaboration keeps undo history, so UndoRedo is off. */
@@ -30,6 +31,7 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     PrivateName,
     AiOriginMark,
     CommentMark,
+    SuggestionMark,
     Footnote,
     MathInline,
     MathBlock,
