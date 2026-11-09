@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { ageProjects } from './support/seed';
 
 /* Plan Task B8 and US04: back up a project, import it in a fresh profile, the reminder and the Safari steps. */
 
@@ -143,32 +144,7 @@ test('after 7 days without a backup, the Library reminds the writer, and a backu
 }) => {
   await novelWithText(page);
   // The project was made 8 days ago.
-  await page.evaluate(async (age) => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('vlo');
-      request.onsuccess = () => {
-        resolve(request.result);
-      };
-      request.onerror = () => {
-        reject(request.error ?? new Error('open failed'));
-      };
-    });
-    await new Promise<void>((resolve, reject) => {
-      const store = db.transaction('projects', 'readwrite').objectStore('projects');
-      const all = store.getAll();
-      all.onsuccess = () => {
-        for (const project of all.result as { createdAt: number }[])
-          store.put({ ...project, createdAt: Date.now() - age });
-        store.transaction.oncomplete = () => {
-          resolve();
-        };
-      };
-      all.onerror = () => {
-        reject(all.error ?? new Error('read failed'));
-      };
-    });
-    db.close();
-  }, 8 * DAY);
+  await ageProjects(page, 8 * DAY);
   await page.reload();
 
   const reminder = page.getByRole('region', { name: 'Time for a backup' });
