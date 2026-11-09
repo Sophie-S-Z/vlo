@@ -3,7 +3,7 @@
  * A share bundle is JSON, gzipped with the browser's CompressionStream, then sealed with AES-GCM 256 and
  * a new 12-byte IV. The key is 32 random bytes that stay on the writer's device and in the link fragment.
  * Any failure to open a sealed value is one error, `CryptoError('damaged')`, and never a partial text.
- * Each seal binds its purpose (a bundle or a comment) as AES-GCM additional data.
+ * Each seal binds its purpose (a bundle, a comment or a sync blob) as AES-GCM additional data.
  */
 
 export class CryptoError extends Error {
@@ -62,8 +62,8 @@ export async function newShareKey(): Promise<{ key: CryptoKey; text: string }> {
   return { key: await importShareKey(text), text };
 }
 
-/** The key from the text of a link fragment. */
-export async function importShareKey(text: string): Promise<CryptoKey> {
+/** The 32 bytes of a key's text. Other text throws `CryptoError('bad-key')`. */
+function keyBytes(text: string): Uint8Array<ArrayBuffer> {
   let raw: Uint8Array<ArrayBuffer>;
   try {
     raw = fromBase64Url(text);
@@ -71,7 +71,12 @@ export async function importShareKey(text: string): Promise<CryptoKey> {
     throw new CryptoError('bad-key');
   }
   if (!/^[A-Za-z0-9_-]+$/.test(text) || raw.length !== KEY_BYTES) throw new CryptoError('bad-key');
-  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  return raw;
+}
+
+/** The key from the text of a link fragment. */
+export async function importShareKey(text: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', keyBytes(text), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 
 /** A new owner token: the writer's proof for revoke_share. The server keeps only its SHA-256. */
@@ -80,10 +85,24 @@ export function newOwnerToken(): string {
 }
 
 /** What a sealed value is, bound into its seal, so a comment can never open as a bundle. */
-export type SealPurpose = 'bundle' | 'comment';
+export type SealPurpose = 'bundle' | 'comment' | 'sync';
 
 /** The most bytes that a sealed value may unpack to, so a crafted gzip bomb cannot crash the tab. */
-export const MAX_OPEN_BYTES: Record<SealPurpose, number> = { bundle: 64 * 1024 * 1024, comment: 64 * 1024 };
+export const MAX_OPEN_BYTES: Record<SealPurpose, number> = {
+  bundle: 64 * 1024 * 1024,
+  comment: 64 * 1024,
+  sync: 64 * 1024 * 1024,
+};
+
+/** The HMAC-SHA256 key that names sync blobs, from the text of the sync key (ADR 0008). */
+export async function importNameKey(text: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', keyBytes(text), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+}
+
+/** HMAC-SHA256 of `text` in base64url: 43 characters that only a holder of the key can make. */
+export async function hmacName(key: CryptoKey, text: string): Promise<string> {
+  return toBase64Url(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(text))));
+}
 
 const context = (purpose: SealPurpose) => new TextEncoder().encode(`vlo:${purpose}:v1`);
 

@@ -632,6 +632,15 @@ Last update: 2026-11-09
     by reaction, shows a reply's words in the text, and makes a reply a comment with the reader's name.
     The server and the migrations do not change.
 
+  Pull request I-C holds Tasks I5 to I8:
+  - I5: migration 0005 adds the sync relay: spaces, sealed blobs and the functions that check the space
+    token on each call, with the limits of decision R8 and a daily cleanup. ADR 0008 holds the design.
+  - I6: sync on the device. Database version 9 adds `syncClock`, which a Dexie middleware fills with the
+    time of each change to a synced table. A round pushes a sealed blob for each changed project, text
+    and research file up to 2 MB, then pulls the other devices' blobs from 30 seconds before its cursor.
+    Rows merge by time in one transaction, texts merge by Yjs after a "Before sync" snapshot, and a blob
+    of a newer Vlo stops the round. The engine loads only on a device with a sync record.
+
 - Phase 8 (plan `docs/plans/phase-8.md`, the roadmap's "Match the best" features F39 to F43, F46 to F48
   and the rest of F38). The product owner approved decisions Q1 to Q9 as recommended on 2026-11-09.
   Pull request #22 merged with Tasks H1 to H6: the Outline with labels, deadline goals, comments in the
