@@ -95,6 +95,11 @@ test('the badge shows Pen on every project screen, and a change away from Pen ex
   await page.reload();
   await expect(badge(page)).toHaveAccessibleName('AI mode: Reader');
   await views(page).getByRole('link', { name: 'Progress', exact: true }).click();
+  // The Write screen stays up while Progress loads. The badge click must reach the Progress screen.
+  await expect(views(page).getByRole('link', { name: 'Progress', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
   await expect(badge(page)).toHaveAccessibleName('AI mode: Reader');
 
   await switchTo(page, 'Co-writer');

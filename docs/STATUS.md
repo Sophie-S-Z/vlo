@@ -4,7 +4,7 @@ Last update: 2026-11-08
 
 ## Done
 
-- Phase 6 (plan `docs/plans/phase-6.md`), on the branch `claude/project-thread-lclnsv`:
+- Phase 6 (plan `docs/plans/phase-6.md`): pull request #18 merged on 2026-11-08.
   - F1: the architecture review (`docs/architecture-review-phase-6.md`). Fixed: the web originality check
     left real names in its search phrases; export and Share fell back to the people list in their props on a
     failed read, which can be a step behind or empty (now `privatePeople` throws); the AI request was built inside the Assistant panel (now
@@ -29,6 +29,13 @@ Last update: 2026-11-08
     work on painful material, linked from the footer.
   - F5: `README.md` for contributors and `docs/safari-storage-test.md` with the 14-day Safari plan and the
     real Safari budget checks. The 100,000-word backup for those checks is in the project files.
+  - Production smoke test on https://vlo-eight.vercel.app/ on 2026-11-08: the response headers match
+    `vercel.json` with 0 differences, 60 s of work in a Pen project sent 0 requests outside, the deep AI
+    check stays off in Pen mode, and the app opens again after a reload with the network off.
+  - Gate 6: "Run workflow" run 42535250409 on 2026-11-08 passed in Chromium, Firefox, WebKit and the
+    phone profile, with every check, the export files job and every budget. The first try of 7 tests
+    failed and the retry passed. Six were the Firefox first `page.goto` stall below. One was a click on the
+    AI mode badge while the Progress screen loaded, and that test now waits for the screen.
 
 - Writing insights (ADR 0006): a stats bar under the text, an Insights panel with full statistics,
   readability and keyword density, an AI writing check trained and tested with `scripts/train-ai-detector.mjs`,
@@ -603,10 +610,9 @@ Last update: 2026-11-08
 ## In progress
 
 - Phase 2: every pull request merged.
-- CI: the free Actions minutes ran out in November. A pull request now runs the checks, the export files job
-  and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
-  run it before each phase gate. Until the minutes reset, run every check in the build container before each
-  push.
+- CI: the repository is public, so Actions minutes are free. A pull request runs the checks, the export files
+  job and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
+  run it before each phase gate. The browser jobs run one worker, so the timing tests have the CPU alone.
 - Phase 4: pull request #12 merged on 2026-11-06. The checks by hand for OpenRouter and Groq with a key,
   the in-browser model on WebGPU, and input method typing inside AI text are still open.
 - Phase 5: the plan is `docs/plans/phase-5.md`, approved on 2026-11-07. E0 to E6 are built on the branch
