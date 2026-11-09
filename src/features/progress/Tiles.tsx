@@ -4,6 +4,7 @@ import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { openTargets } from '@/features/binder/tree';
 import { formatWords } from '@/features/library/format';
+import { countUnit } from '@/lib/wordcount';
 import { projectDef } from '@/features/library/templates';
 import type { Item, Project, Status } from '@/lib/db';
 import { cn } from '@/ui/cn';
@@ -74,7 +75,7 @@ export function Tiles({ project, items }: { project: Project; items: readonly It
       {items.map((item) => {
         const kind = template.kindLabel[item.kind] ?? item.kind;
         const target = targets.get(item.id);
-        const name = `${item.title}, ${kind.toLowerCase()}, ${STATUS_LABEL[item.status].toLowerCase()}, ${formatWords(item.wordCount)}`;
+        const name = `${item.title}, ${kind.toLowerCase()}, ${STATUS_LABEL[item.status].toLowerCase()}, ${formatWords(item.wordCount, countUnit(project.settings.language))}`;
         const body = (
           <>
             <span className="line-clamp-2 text-sm leading-snug font-medium [overflow-wrap:anywhere]">

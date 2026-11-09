@@ -1,9 +1,10 @@
 import { clock } from '@/lib/clock';
-import { dayStartKey } from '@/features/editor/stats/dayStart';
+import { cleanDayStart, dayStartKey } from '@/features/editor/stats/dayStart';
 import { db, viewTables, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
 import { requestPersistence } from '@/lib/storage';
+import { recountItems } from '@/lib/wordcount';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { cleanTemplates, misfits, projectDef, type StarterItem } from './templates';
 
@@ -96,15 +97,33 @@ async function recordPersistence(): Promise<void> {
   }
 }
 
-/** Changes some of a project's settings, such as its font or page format, and keeps the rest. */
+/**
+ * Changes some of a project's settings, such as its font or page format, and keeps the rest. A new
+ * language counts every item again, because Chinese and Japanese count characters (F38).
+ */
 export async function updateProjectSettings(id: string, change: Partial<Project['settings']>): Promise<void> {
-  await db.projects
-    .where('id')
-    .equals(id)
-    .modify((project) => {
-      project.settings = { ...project.settings, ...change };
-      project.updatedAt = clock.now();
-    });
+  await db.transaction('rw', [db.projects, db.items, db.itemTexts, db.appMeta], async () => {
+    await db.projects
+      .where('id')
+      .equals(id)
+      .modify((project) => {
+        project.settings = { ...project.settings, ...change };
+        project.updatedAt = clock.now();
+      });
+    if (!('language' in change)) return;
+    const [items, texts] = await Promise.all([
+      db.items.where('projectId').equals(id).toArray(),
+      db.itemTexts.where('projectId').equals(id).toArray(),
+    ]);
+    const counted = recountItems(items, texts, change.language);
+    await db.items.bulkPut(counted);
+    // Today's count keeps what the writer added before the change.
+    const total = (list: readonly Item[]) => list.reduce((sum, item) => sum + item.wordCount, 0);
+    const key = dayStartKey(id);
+    const today = cleanDayStart((await db.appMeta.get(key))?.value);
+    if (today)
+      await db.appMeta.put({ key, value: { ...today, start: today.start + total(counted) - total(items) } });
+  });
 }
 
 export async function renameProject(id: string, title: string): Promise<void> {

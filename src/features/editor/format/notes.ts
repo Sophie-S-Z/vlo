@@ -86,6 +86,7 @@ export function notesBlock(notes: readonly NoteContent[]): string {
  */
 export function withoutNotes(text: string): string {
   if (text.startsWith('Notes\n1. ')) return '';
-  const at = text.lastIndexOf('\n\nNotes\n1. ');
-  return at < 0 ? text : text.slice(0, at);
+  // A poem's notes follow one line break, and prose notes follow a blank line.
+  const at = text.lastIndexOf('\nNotes\n1. ');
+  return at < 0 ? text : text.slice(0, at).replace(/\n$/, '');
 }

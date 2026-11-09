@@ -1,19 +1,37 @@
-const segmenters = new Map<string, Intl.Segmenter>();
+import { withoutNotes } from '@/features/editor/format/notes';
+import type { Item, ItemText } from './db';
 
-function segmenter(locale: string | undefined): Intl.Segmenter {
-  const key = locale ?? '';
-  let found = segmenters.get(key);
-  if (!found) {
-    found = new Intl.Segmenter(locale, { granularity: 'word' });
-    segmenters.set(key, found);
-  }
-  return found;
+// One segmenter for every language: the count rule, not the dictionary, differs between languages.
+let segmenter: Intl.Segmenter | undefined;
+
+export type CountUnit = 'words' | 'characters';
+
+/** Chinese and Japanese writing counts characters (roadmap F38). Every other language counts words. */
+export function countUnit(language: string | undefined): CountUnit {
+  const base = language?.split('-')[0];
+  return base === 'zh' || base === 'ja' ? 'characters' : 'words';
 }
 
-/** Counts word-like segments (VLO_SPEC section 5). Works for languages with and without spaces. */
-export function countWords(text: string, locale?: string): number {
+// Han, hiragana and katakana, with the marks that go with them, such as ー and 々.
+const CJK = /[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}]/gu;
+
+/**
+ * Counts word-like segments (VLO_SPEC section 5). In Chinese and Japanese writing, each Han or kana
+ * character counts as one unit, and a word in another script counts as one.
+ */
+export function countWords(text: string, language?: string): number {
+  const characters = countUnit(language) === 'characters';
+  segmenter ??= new Intl.Segmenter(undefined, { granularity: 'word' });
   let count = 0;
-  for (const part of segmenter(locale).segment(text)) if (part.isWordLike) count += 1;
+  for (const { segment, isWordLike } of segmenter.segment(text)) {
+    if (!isWordLike) continue;
+    if (!characters) {
+      count += 1;
+      continue;
+    }
+    const cjk = segment.match(CJK)?.length ?? 0;
+    count += cjk + (segment.replace(CJK, '') === '' ? 0 : 1);
+  }
   return count;
 }
 
@@ -22,4 +40,17 @@ export function countLines(text: string): number {
   let count = 0;
   for (const line of text.split('\n')) if (line.trim() !== '') count += 1;
   return count;
+}
+
+/** The items with each count made again from its stored text, in the unit of the language (F38). */
+export function recountItems(
+  items: readonly Item[],
+  texts: readonly ItemText[],
+  language: string | undefined,
+): Item[] {
+  const byItem = new Map(texts.map((t) => [t.itemId, t.text]));
+  return items.map((item) => {
+    const text = byItem.get(item.id);
+    return text === undefined ? item : { ...item, wordCount: countWords(withoutNotes(text), language) };
+  });
 }

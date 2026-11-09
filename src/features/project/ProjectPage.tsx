@@ -30,6 +30,7 @@ import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { hasTemplate, projectDef, templateList } from '@/features/library/templates';
 import { db, type AiMode, type Item, type Project } from '@/lib/db';
+import { countUnit } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { cn } from '@/ui/cn';
@@ -516,7 +517,7 @@ export function ProjectPage() {
           onLeaveFocus={() => {
             changeFocusMode(false);
           }}
-          timer={<SessionTimer projectId={project.id} />}
+          timer={<SessionTimer projectId={project.id} unit={countUnit(project.settings.language)} />}
           {...(project.aiMode === 'pen'
             ? {}
             : {
@@ -618,7 +619,9 @@ export function ProjectPage() {
               <dl className="grid gap-3 text-sm">
                 <div>
                   <dt className="text-muted">Project</dt>
-                  <dd className="font-mono">{formatWords(totalWords)}</dd>
+                  <dd className="font-mono">
+                    {formatWords(totalWords, countUnit(project.settings.language))}
+                  </dd>
                 </div>
                 {current && (
                   <>
@@ -633,7 +636,13 @@ export function ProjectPage() {
                   </>
                 )}
               </dl>
-              {current && currentKind && <WritingStats projectId={project.id} totalWords={totalWords} />}
+              {current && currentKind && (
+                <WritingStats
+                  projectId={project.id}
+                  totalWords={totalWords}
+                  language={project.settings.language}
+                />
+              )}
             </>
           }
           manuscript={(width) => (

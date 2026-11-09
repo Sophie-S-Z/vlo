@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import { useEffect, useId, useState } from 'react';
 import { formatWords } from '@/features/library/format';
+import { countUnit } from '@/lib/wordcount';
 import { useActiveEditor } from '../commands/editorBus';
 import { docStats, minutesLabel, rangeWords, wordsToday, type TextStats } from './stats';
 
@@ -22,8 +23,18 @@ function Row({ term, value }: { term: string; value: string }) {
   );
 }
 
-export function WritingStats({ projectId, totalWords }: { projectId: string; totalWords: number }) {
+export function WritingStats({
+  projectId,
+  totalWords,
+  language,
+}: {
+  projectId: string;
+  totalWords: number;
+  /** The language of the writing (F38). Chinese and Japanese count characters. */
+  language: string | undefined;
+}) {
   const titleId = useId();
+  const unit = countUnit(language);
   const active = useActiveEditor();
   // The counts belong to one editor, so another item never shows the last item's counts.
   const [counted, setCounted] = useState<{ editor: Editor; stats: TextStats } | null>(null);
@@ -37,7 +48,7 @@ export function WritingStats({ projectId, totalWords }: { projectId: string; tot
     const count = () => {
       timer = null;
       if (editor.isDestroyed) return;
-      setCounted({ editor, stats: docStats(editor.state.doc, form) });
+      setCounted({ editor, stats: docStats(editor.state.doc, form, language) });
     };
     const later = (delay = STATS_DELAY_MS) => {
       if (timer) clearTimeout(timer);
@@ -45,7 +56,7 @@ export function WritingStats({ projectId, totalWords }: { projectId: string; tot
     };
     const select = () => {
       const { from, to, empty } = editor.state.selection;
-      setSelection({ editor, words: empty ? 0 : rangeWords(editor.state.doc, from, to) });
+      setSelection({ editor, words: empty ? 0 : rangeWords(editor.state.doc, from, to, language) });
     };
     later(0);
     const onUpdate = () => {
@@ -58,7 +69,7 @@ export function WritingStats({ projectId, totalWords }: { projectId: string; tot
       editor.off('update', onUpdate);
       editor.off('selectionUpdate', select);
     };
-  }, [active]);
+  }, [active, language]);
 
   useEffect(() => {
     let current = true;
@@ -79,12 +90,15 @@ export function WritingStats({ projectId, totalWords }: { projectId: string; tot
         Writing stats
       </h2>
       <dl className="grid gap-1.5">
-        {today !== null && <Row term="Written today" value={formatWords(today)} />}
+        {today !== null && <Row term="Written today" value={formatWords(today, unit)} />}
         {stats && (
           <>
-            <Row term="Words" value={numbers.format(stats.words)} />
-            {selected > 0 && <Row term="Selected" value={formatWords(selected)} />}
-            <Row term="Characters" value={numbers.format(stats.characters)} />
+            <Row term={unit === 'words' ? 'Words' : 'Characters'} value={numbers.format(stats.words)} />
+            {selected > 0 && <Row term="Selected" value={formatWords(selected, unit)} />}
+            <Row
+              term={unit === 'words' ? 'Characters' : 'All characters'}
+              value={numbers.format(stats.characters)}
+            />
             <Row term="Without spaces" value={numbers.format(stats.charactersNoSpaces)} />
             <Row term={poem ? 'Lines' : 'Paragraphs'} value={numbers.format(stats.blocks)} />
             <Row term="Sentences" value={numbers.format(stats.sentences)} />
@@ -98,8 +112,8 @@ export function WritingStats({ projectId, totalWords }: { projectId: string; tot
       </dl>
       {stats && (
         <p className="text-xs text-muted">
-          For this {poem ? 'poem' : 'item'}, without its notes. Written today counts the whole project: words
-          added less words removed.
+          For this {poem ? 'poem' : 'item'}, without its notes. Written today counts the whole project: {unit}{' '}
+          added less {unit} removed.
         </p>
       )}
     </section>

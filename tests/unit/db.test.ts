@@ -44,9 +44,9 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 7 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex and research', () => {
+  test('version 8 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex and research', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(7);
+    expect(db.verno).toBe(8);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
@@ -98,7 +98,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(7);
+    expect(upgraded.verno).toBe(8);
     expect((await upgraded.networkLog.get('n1'))?.host).toBe('api.groq.com');
     await upgraded.shares.add({
       id: 'sh1',
@@ -135,7 +135,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(7);
+    expect(upgraded.verno).toBe(8);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect((await upgraded.projects.get('kept'))?.templates).toEqual(['poetry']);
     expect(await upgraded.items.count()).toBe(1);
@@ -180,7 +180,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(7);
+    expect(upgraded.verno).toBe(8);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);
@@ -241,7 +241,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(7);
+    expect(upgraded.verno).toBe(8);
     const rows = await upgraded.projects.toArray();
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(byId.get('poems')?.templates).toEqual(['poetry']);
@@ -249,6 +249,53 @@ describe('Vlo database', () => {
     expect(byId.get('odd')?.templates).toEqual(['novel']);
     for (const row of rows) expect(row).not.toHaveProperty('template');
     expect(await upgraded.items.count()).toBe(1);
+    await upgraded.delete();
+  });
+
+  test('opening a version 7 database counts the characters of Chinese and Japanese projects', async () => {
+    const name = 'vlo-upgrade-test-7';
+    const old = new Dexie(name);
+    old.version(7).stores({
+      projects: 'id, updatedAt',
+      items: 'id, projectId, [projectId+parentId]',
+      snapshots: 'id, itemId, [itemId+createdAt], projectId',
+      sessions: 'id, projectId',
+      itemTexts: 'itemId, projectId',
+      appMeta: 'key',
+      audioFiles: 'id, addedAt',
+      cards: 'id, projectId, itemId',
+      threads: 'id, projectId',
+      cardLinks: 'id, projectId, fromCardId, toCardId',
+      lifeStages: 'id, projectId',
+      sequences: 'id, projectId',
+      people: 'id, projectId',
+      submissions: 'id, projectId',
+      networkLog: 'id, at',
+      shares: 'id, projectId, createdAt',
+      codex: 'id, projectId',
+      research: 'id, projectId',
+    });
+    await old.open();
+    const ja = project('ja');
+    await old
+      .table('projects')
+      .bulkAdd([{ ...ja, settings: { ...ja.settings, language: 'ja' } }, project('en')]);
+    // Version 7 counted words in every language: 東京へ行く。 was 2 words.
+    await old.table('items').bulkAdd([
+      { ...item('a', 'ja', null, 'a0'), wordCount: 2 },
+      { ...item('b', 'en', null, 'a0'), wordCount: 2 },
+    ]);
+    await old.table('itemTexts').bulkAdd([
+      { itemId: 'a', projectId: 'ja', text: '東京へ行く。\n\nNotes\n1. 注意', updatedAt: 1 },
+      { itemId: 'b', projectId: 'en', text: '東京へ行く。', updatedAt: 1 },
+    ]);
+    old.close();
+
+    const upgraded = new VloDb(name);
+    await upgraded.open();
+    expect(upgraded.verno).toBe(8);
+    expect((await upgraded.items.get('a'))?.wordCount).toBe(5);
+    expect((await upgraded.items.get('b'))?.wordCount).toBe(2);
     await upgraded.delete();
   });
 

@@ -7,6 +7,7 @@ import { INDENT_PX, STATUS_LABEL } from '@/features/binder/BinderItem';
 import { moveItem, updateItem } from '@/features/binder/items';
 import { threadStroke } from '@/features/board/board';
 import { formatWords } from '@/features/library/format';
+import { countUnit } from '@/lib/wordcount';
 import { projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
@@ -263,7 +264,10 @@ export function OutlinePage() {
                     </p>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
                       {template.kindLabel[item.kind] ?? item.kind}, {STATUS_LABEL[item.status].toLowerCase()},{' '}
-                      {formatWords(rows.find((r) => r.item.id === item.id)?.words ?? 0)}
+                      {formatWords(
+                        rows.find((r) => r.item.id === item.id)?.words ?? 0,
+                        countUnit(project.settings.language),
+                      )}
                       {label && (
                         <>
                           , <LabelDot label={label} />
@@ -283,7 +287,14 @@ export function OutlinePage() {
             <caption className="sr-only">Outline of {project.title}</caption>
             <thead>
               <tr className="border-b border-rule text-left text-muted">
-                {['Title', 'Kind', 'Synopsis', 'Status', 'Label', 'Words'].map((name) => (
+                {[
+                  'Title',
+                  'Kind',
+                  'Synopsis',
+                  'Status',
+                  'Label',
+                  countUnit(project.settings.language) === 'words' ? 'Words' : 'Characters',
+                ].map((name) => (
                   <th key={name} scope="col" className="px-2 pb-2 font-medium">
                     {name}
                   </th>

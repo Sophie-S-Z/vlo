@@ -3,9 +3,9 @@ import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { countLines, countWords } from '@/lib/wordcount';
 import { docBody } from '../itemText';
-import { dayStartKey } from './dayStart';
+import { cleanDayStart, dayStartKey, type DayStart } from './dayStart';
 
-export { dayStartKey };
+export { cleanDayStart, dayStartKey };
 
 /*
  * Writing stats (plan E4): words, characters, reading time and words written today, for the details
@@ -52,8 +52,8 @@ function countSentences(text: string): number {
 }
 
 /** The stats of a plain text. Blocks are separated by line breaks. */
-export function textStats(text: string, kind: 'prose' | 'poem'): TextStats {
-  const words = countWords(text);
+export function textStats(text: string, kind: 'prose' | 'poem', language?: string): TextStats {
+  const words = countWords(text, language);
   const blocks =
     kind === 'poem' ? countLines(text) : text.split(/\n{2,}/).filter((b) => b.trim() !== '').length;
   return {
@@ -67,13 +67,13 @@ export function textStats(text: string, kind: 'prose' | 'poem'): TextStats {
   };
 }
 
-export function docStats(doc: ProseMirrorNode, kind: 'prose' | 'poem'): TextStats {
-  return textStats(docBody(doc, kind), kind);
+export function docStats(doc: ProseMirrorNode, kind: 'prose' | 'poem', language?: string): TextStats {
+  return textStats(docBody(doc, kind), kind, language);
 }
 
 /** Words in a range of the document, for the selection. */
-export function rangeWords(doc: ProseMirrorNode, from: number, to: number): number {
-  return countWords(doc.textBetween(from, to, '\n\n', ' '));
+export function rangeWords(doc: ProseMirrorNode, from: number, to: number, language?: string): number {
+  return countWords(doc.textBetween(from, to, '\n\n', ' '), language);
 }
 
 /** "about 3 min", or "under 1 min" for a short text. */
@@ -87,25 +87,10 @@ export function minutesLabel(minutes: number): string {
 
 /* Words written today: the project total now, less the total at the first look today. */
 
-export interface DayStart {
-  /** The local date, as YYYY-MM-DD. */
-  day: string;
-  /** The project's word total at the first look that day. */
-  start: number;
-}
-
 export function localDay(time = clock.now()): string {
   const date = new Date(time);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-export function cleanDayStart(value: unknown): DayStart | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const raw = value as Partial<Record<string, unknown>>;
-  if (typeof raw.day !== 'string' || typeof raw.start !== 'number' || !Number.isFinite(raw.start))
-    return null;
-  return { day: raw.day, start: Math.max(0, raw.start) };
 }
 
 /**

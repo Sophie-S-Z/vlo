@@ -1,3 +1,4 @@
+import { countUnit, countWords } from '@/lib/wordcount';
 import { deviation, mean, sentencesOf, wordsOf, type Sentence } from './text';
 
 /*
@@ -224,7 +225,12 @@ function topKeywords(counts: Map<string, number>, total: number, size: number, l
 }
 
 /** All the statistics of a plain text. `kind` decides what a paragraph is: a poem counts lines. */
-export function fullStats(text: string, kind: 'prose' | 'poem', syllables: CountSyllables): FullStats {
+export function fullStats(
+  text: string,
+  kind: 'prose' | 'poem',
+  syllables: CountSyllables,
+  language?: string,
+): FullStats {
   const sentences = sentencesOf(text);
   const words = sentences.flatMap((sentence) => sentence.words);
   // A word that Intl finds outside a sentence, such as a lone number, still counts.
@@ -298,7 +304,8 @@ export function fullStats(text: string, kind: 'prose' | 'poem', syllables: Count
   }
   const minutes = (wpm: number) => (n === 0 ? 0 : n / wpm);
   return {
-    words: n,
+    // Chinese and Japanese writing counts characters (F38). The other statistics read words.
+    words: countUnit(language) === 'characters' ? countWords(text, language) : n,
     characters,
     charactersNoSpaces,
     letters,

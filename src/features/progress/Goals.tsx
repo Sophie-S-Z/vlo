@@ -1,6 +1,8 @@
 import { useId, useState } from 'react';
+import { formatWords } from '@/features/library/format';
 import { clock } from '@/lib/clock';
 import type { Project } from '@/lib/db';
+import { countUnit } from '@/lib/wordcount';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { Switch } from '@/ui/switch';
@@ -35,13 +37,11 @@ function days(n: number): string {
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'long', timeZone: 'UTC' });
 
-function words(n: number): string {
-  return `${n.toLocaleString()} ${n === 1 ? 'word' : 'words'}`;
-}
-
 /** "Finish by": a date and a word target that set the daily goal (F46). */
 function Deadline({ project, total, save }: { project: Project; total: number; save: Save }) {
   const id = useId();
+  const unit = countUnit(project.settings.language);
+  const words = (n: number) => formatWords(n, unit);
   const deadline = project.settings.deadline;
   const [date, setDate] = useState('');
   const [target, setTarget] = useState('');
@@ -98,7 +98,7 @@ function Deadline({ project, total, save }: { project: Project; total: number; s
         />
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor={`${id}-words`}>Words in all by then</Label>
+        <Label htmlFor={`${id}-words`}>{unit === 'words' ? 'Words' : 'Characters'} in all by then</Label>
         <Input
           id={`${id}-words`}
           type="number"
@@ -123,6 +123,7 @@ function Deadline({ project, total, save }: { project: Project; total: number; s
 type Save = (change: Parameters<typeof setGoals>[1]) => void;
 
 export function Goals({ project, total }: { project: Project; total: number }) {
+  const unit = countUnit(project.settings.language);
   const id = useId();
   const goals = goalsOf(project.settings);
   const [goalText, setGoalText] = useState(String(goals.goalWordsPerDay));
@@ -195,7 +196,7 @@ export function Goals({ project, total }: { project: Project; total: number }) {
 
       {!goals.streaksEnabled ? (
         <p className="max-w-prose text-sm text-muted">
-          Off until you want it. A goal counts the words you add each day, and a rest day never breaks a
+          Off until you want it. A goal counts the {unit} you add each day, and a rest day never breaks a
           streak.
         </p>
       ) : (
@@ -206,7 +207,7 @@ export function Goals({ project, total }: { project: Project; total: number }) {
                 <span className="font-display text-3xl font-semibold">
                   <CountUp value={streak.today} />
                 </span>{' '}
-                of {goal.toLocaleString()} words today
+                of {goal.toLocaleString()} {unit} today
                 {streak.todayMet && <span className="text-accent-text">. Goal met.</span>}
               </p>
               <div aria-hidden="true" className="h-2 max-w-md overflow-hidden rounded-full bg-rule">
@@ -222,7 +223,7 @@ export function Goals({ project, total }: { project: Project; total: number }) {
             </p>
 
             <div className={cn('grid gap-1.5', deadline && 'hidden')}>
-              <Label htmlFor={`${id}-goal`}>Words a day</Label>
+              <Label htmlFor={`${id}-goal`}>{unit === 'words' ? 'Words' : 'Characters'} a day</Label>
               <Input
                 id={`${id}-goal`}
                 type="number"
@@ -293,7 +294,7 @@ export function Goals({ project, total }: { project: Project; total: number }) {
               {recent.map((entry) => (
                 <span
                   key={entry.day}
-                  title={`${entry.day}: ${entry.words.toLocaleString()} words`}
+                  title={`${entry.day}: ${formatWords(entry.words, unit)}`}
                   data-state={entry.state}
                   className={cn('size-7 rounded-sm', CELL[entry.state])}
                 />

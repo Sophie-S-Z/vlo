@@ -42,16 +42,17 @@ export function docText(doc: ProseMirrorNode, kind: 'prose' | 'poem'): string {
 /**
  * Stores the plain-text copy of an item (for search and readable backups, ADR 0003), its word count,
  * its line count for poems, the project's last change time, and the change in words for today. `counted`
- * is the part that the counts cover: the writing without its notes.
+ * is the part that the counts cover: the writing without its notes. `language` sets the count unit (F38).
  */
 export async function writeItemText(
   item: Pick<Item, 'id' | 'projectId'>,
   text: string,
   kind: 'prose' | 'poem',
   counted: string = text,
+  language?: string,
 ): Promise<void> {
   const now = clock.now();
-  const wordCount = countWords(counted);
+  const wordCount = countWords(counted, language);
   const lineCount = kind === 'poem' ? countLines(counted) : undefined;
   await db.transaction('rw', [db.itemTexts, db.items, db.projects], async () => {
     // The item may have been deleted while the writer paused.

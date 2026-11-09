@@ -2,6 +2,8 @@ import { Timer } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { clock } from '@/lib/clock';
 import type { Session } from '@/lib/db';
+import { formatWords } from '@/features/library/format';
+import type { CountUnit } from '@/lib/wordcount';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,10 +38,6 @@ function clockText(ms: number): string {
   return `${String(minutes)}:${String(seconds).padStart(2, '0')}`;
 }
 
-function wordsText(words: number): string {
-  return `${words.toLocaleString()} ${words === 1 ? 'word' : 'words'}`;
-}
-
 /** Closes a session with what the project gained since it started. Returns the words added. */
 async function finishSession(projectId: string, running: Running): Promise<number> {
   const totals = await projectTotals(projectId);
@@ -52,7 +50,7 @@ async function finishSession(projectId: string, running: Running): Promise<numbe
  * A writing session timer. At the end a gentle prompt asks to close the session. Nothing is lost or
  * counted against the writer if they keep going. The ring updates once a second, outside the editor.
  */
-export function SessionTimer({ projectId }: { projectId: string }) {
+export function SessionTimer({ projectId, unit }: { projectId: string; unit: CountUnit }) {
   const [running, setRunning] = useState<Running | null>(null);
   const [now, setNow] = useState(() => clock.now());
   const [asking, setAsking] = useState(false);
@@ -78,6 +76,18 @@ export function SessionTimer({ projectId }: { projectId: string }) {
       leave();
     };
   }, [projectId]);
+
+  // A new language counts the project again, so a running session counts words from the change.
+  useEffect(() => {
+    if (!runningRef.current) return;
+    let current = true;
+    void projectTotals(projectId).then(({ words }) => {
+      if (current) setRunning((open) => open && { ...open, start: { ...open.start, words } });
+    });
+    return () => {
+      current = false;
+    };
+  }, [projectId, unit]);
 
   useEffect(() => {
     if (!running || running.overtime) return;
@@ -106,7 +116,7 @@ export function SessionTimer({ projectId }: { projectId: string }) {
     const words = await finishSession(projectId, running);
     setRunning(null);
     setAsking(false);
-    setMessage(`Session closed. You wrote ${wordsText(words)}.`);
+    setMessage(`Session closed. You wrote ${formatWords(words, unit)}.`);
   }
 
   const left = running ? running.endsAt - now : 0;

@@ -9,6 +9,7 @@ import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots
 import { clock } from '@/lib/clock';
 import type { Item, PageFormat, Template } from '@/lib/db';
 import { cleanLanguage } from '@/lib/language';
+import { countUnit } from '@/lib/wordcount';
 import { SceneBackdrop } from '@/features/scenes/SceneBackdrop';
 import { ScenePicker } from '@/features/scenes/ScenePicker';
 import { SoundControl } from '@/features/sound/SoundPanel';
@@ -89,6 +90,7 @@ export function EditorPane({
   beside = false,
 }: EditorPaneProps) {
   const state = useItemDoc(item.id);
+  const language = cleanLanguage(storedLanguage);
   const [save, setSave] = useState<SaveState>('saved');
   const [editor, setEditor] = useState<TiptapEditor | null>(null);
   // The latest editor document. Keeping a reference costs nothing per keystroke; text is read after the pause.
@@ -141,6 +143,12 @@ export function EditorPane({
     [id],
   );
 
+  // A save reads the language when it runs, so a change of language does not end the save tracker.
+  const languageNow = useRef(language);
+  useEffect(() => {
+    languageNow.current = language;
+  }, [language]);
+
   const open = state.open;
   useEffect(() => {
     if (!open) return;
@@ -150,7 +158,8 @@ export function EditorPane({
       confirm: () => open.confirmSaved(clock.now()),
       onPause: async () => {
         const doc = latest.current;
-        if (doc) await writeItemText(target, docText(doc, kind), kind, docBody(doc, kind));
+        if (doc)
+          await writeItemText(target, docText(doc, kind), kind, docBody(doc, kind), languageNow.current);
       },
       onState: setSave,
     });
@@ -177,7 +186,6 @@ export function EditorPane({
   }, []);
 
   const font = cleanFontValue(storedFont) ?? DEFAULT_FONT;
-  const language = cleanLanguage(storedLanguage);
   const page = cleanPageFormat(storedPage);
   // Only the main pane shows the scene.
   const scene = beside ? NO_SCENE : cleanScene(storedScene);
@@ -188,9 +196,10 @@ export function EditorPane({
       projectId: item.projectId,
       font,
       page,
+      language,
       setFont: (next) => onSettings?.({ font: next }),
     }),
-    [item.projectId, font, page, onSettings],
+    [item.projectId, font, page, language, onSettings],
   );
   // The column widens with the zoom, so a line keeps about the same number of words.
   const column =
@@ -214,7 +223,11 @@ export function EditorPane({
           <header className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{item.title}</h2>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-4">
-              <WordCount words={item.wordCount} lines={kind === 'poem' ? (item.lineCount ?? 0) : undefined} />
+              <WordCount
+                words={item.wordCount}
+                unit={countUnit(language)}
+                lines={kind === 'poem' ? (item.lineCount ?? 0) : undefined}
+              />
               <SaveStatus state={save} />
               <PageControl
                 page={page}

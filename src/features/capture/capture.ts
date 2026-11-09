@@ -2,7 +2,7 @@ import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 import { docBody, docText } from '@/features/editor/itemText';
 import { editorSchemas } from '@/features/import/tree';
-import { createProject } from '@/features/library/projects';
+import { createProject, deleteProject } from '@/features/library/projects';
 import { TEMPLATES } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { db, type Item } from '@/lib/db';
@@ -25,6 +25,14 @@ export function sharedText(text: string, url: string): string {
   const body = text.trim();
   const link = url.trim();
   return link === '' || body.includes(link) ? body : [body, link].filter(Boolean).join('\n');
+}
+
+/** The start of the first line, with no half of a character pair at the cut. */
+function firstLine(text: string): string {
+  return (text.split('\n')[0] ?? '')
+    .trim()
+    .slice(0, TITLE_LENGTH)
+    .replace(/[\uD800-\uDBFF]$/, '');
 }
 
 /** A prose document of the text: a blank line starts a paragraph, and a line break stays a line break. */
@@ -62,11 +70,13 @@ export async function captureNote(
   const itemId = newId();
   // The text goes into its own database first. If the binder change fails, the text goes too.
   const ydoc = prosemirrorJSONToYDoc(editorSchemas.prose, doc.toJSON(), YFRAGMENT);
-  await writeItemUpdate(itemId, Y.encodeStateAsUpdate(ydoc), now);
+  const update = Y.encodeStateAsUpdate(ydoc);
   ydoc.destroy();
   try {
+    await writeItemUpdate(itemId, update, now);
     await db.transaction('rw', [db.items, db.itemTexts, db.projects], async () => {
       const rows = await db.items.where('projectId').equals(target).toArray();
+      const language = (await db.projects.get(target))?.settings.language;
       const top = rows.filter((i) => i.parentId === null);
       let inbox = top.find((i) => i.kind === 'part' && i.title === INBOX);
       if (!inbox) {
@@ -91,10 +101,10 @@ export async function captureNote(
         projectId: target,
         parentId: inboxId,
         kind: 'note',
-        title: named === '' ? (text.split('\n')[0] ?? '').trim().slice(0, TITLE_LENGTH) : named,
+        title: named === '' ? firstLine(text) : named,
         status: 'idea',
         order: orderAfterLast(rows.filter((i) => i.parentId === inboxId).map((i) => i.order)),
-        wordCount: countWords(docBody(doc, 'prose')),
+        wordCount: countWords(docBody(doc, 'prose'), language),
         createdAt: now,
         updatedAt: now,
       };
@@ -104,6 +114,8 @@ export async function captureNote(
     });
   } catch (problem) {
     await deleteItemDoc(itemId).catch(() => undefined);
+    // A project made for this note goes too.
+    if (projectId === null) await deleteProject(target).catch(() => undefined);
     throw problem;
   }
   return { projectId: target, itemId };

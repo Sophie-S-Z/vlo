@@ -4,7 +4,9 @@ import { useId, useMemo, useState } from 'react';
 import type * as Y from 'yjs';
 import type { Item, Snapshot } from '@/lib/db';
 import { withoutNotes } from '@/features/editor/format/notes';
-import { countWords } from '@/lib/wordcount';
+import { countUnit, countWords } from '@/lib/wordcount';
+import { useManuscript } from '@/features/editor/manuscript';
+import { formatWords } from '@/features/library/format';
 import { Button } from '@/ui/button';
 import { restoreSnapshot, snapshotsOf, takeSnapshot } from './snapshots';
 import { useWordDiff } from './useWordDiff';
@@ -58,19 +60,20 @@ function DiffView({ parts }: { parts: DiffPart[] }) {
   );
 }
 
-function changeSummary(parts: DiffPart[]): string {
+function changeSummary(parts: DiffPart[], language: string | undefined): string {
   const words = (kind: DiffPart['kind']) =>
     countWords(
       parts
         .filter((p) => p.kind === kind)
         .map((p) => p.text)
         .join(' '),
+      language,
     );
   const added = words('added');
   const removed = words('removed');
   if (parts.every((p) => p.kind === 'same')) return 'No changes.';
   if (added === 0 && removed === 0) return 'Only spaces or line breaks changed.';
-  return `${String(added)} ${added === 1 ? 'word' : 'words'} added, ${String(removed)} removed.`;
+  return `${formatWords(added, countUnit(language))} added, ${String(removed)} removed.`;
 }
 
 /** The item's snapshots. Pick one to see what changed, then restore it. Loaded only when History opens. */
@@ -83,9 +86,11 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
   const compareLabelId = useId();
   // The text when the panel opened. The dialog is modal, so only another tab can change it meanwhile.
   const [nowText, setNowText] = useState(currentText);
+  // The counts use the unit of the project's language (F38).
+  const language = useManuscript()?.language;
   const wordCounts = useMemo(
-    () => new Map((snapshots ?? []).map((s) => [s.id, countWords(withoutNotes(s.text))])),
-    [snapshots],
+    () => new Map((snapshots ?? []).map((s) => [s.id, countWords(withoutNotes(s.text), language)])),
+    [snapshots, language],
   );
 
   const picked = snapshots?.find((s) => s.id === pickedId) ?? null;
@@ -160,7 +165,7 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
               <span className="grid">
                 {snapshotName(snapshot)}
                 <span className="text-xs text-muted">
-                  {(wordCounts.get(snapshot.id) ?? 0).toLocaleString()} words
+                  {formatWords(wordCounts.get(snapshot.id) ?? 0, countUnit(language))}
                 </span>
               </span>
             </label>
@@ -197,7 +202,7 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
           <p id={diffLabelId} className="text-sm text-muted">
             From {snapshotName(picked)} to {other ? snapshotName(other) : 'the current text'}:{' '}
             {diff.status === 'done'
-              ? changeSummary(diff.parts)
+              ? changeSummary(diff.parts, language)
               : diff.status === 'working'
                 ? 'Finding the changes.'
                 : diff.status === 'too-many'

@@ -495,7 +495,10 @@ function manuscriptOpening(
     new Paragraph({
       spacing: single,
       tabStops: [{ type: TabStopType.RIGHT, position: textWidth }],
-      children: [new TextRun(setup.name), new TextRun({ children: [new Tab(), roundedWords(setup.words)] })],
+      children: [
+        new TextRun(setup.name),
+        new TextRun({ children: [new Tab(), roundedWords(setup.words, doc.language)] }),
+      ],
     }),
     ...contact.map((line) => new Paragraph({ spacing: single, children: [new TextRun(line)] })),
   ];

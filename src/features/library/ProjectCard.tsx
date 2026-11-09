@@ -7,6 +7,7 @@ import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 import { backupDue, backupLabel } from '@/features/backup/reminder';
 import { formatWords } from './format';
+import { countUnit } from '@/lib/wordcount';
 import { projectDef } from './templates';
 
 export type LibraryLayout = 'grid' | 'list';
@@ -67,7 +68,7 @@ export function ProjectCard({
           </Link>
         </h2>
         <p className={cn('font-mono text-sm text-muted', list ? 'order-3' : 'mt-auto pt-6')}>
-          {formatWords(wordCount)}
+          {formatWords(wordCount, countUnit(project.settings.language))}
         </p>
         <p
           className={cn(

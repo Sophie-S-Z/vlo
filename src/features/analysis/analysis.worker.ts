@@ -14,7 +14,7 @@ import { fullStats, type FullStats } from './stats';
  */
 
 export type AnalysisRequest =
-  | { id: number; type: 'stats'; text: string; kind: 'prose' | 'poem' }
+  | { id: number; type: 'stats'; text: string; kind: 'prose' | 'poem'; language?: string | undefined }
   | { id: number; type: 'ai'; text: string }
   | { id: number; type: 'originality'; text: string; sources: Source[]; options: MatchOptions };
 
@@ -29,7 +29,7 @@ let syllables: Promise<(word: string) => number> | null = null;
 async function run(request: AnalysisRequest): Promise<AnalysisResult> {
   if (request.type === 'stats') {
     syllables ??= import('syllable').then((module) => module.syllable);
-    return fullStats(request.text, request.kind, await syllables);
+    return fullStats(request.text, request.kind, await syllables, request.language);
   }
   if (request.type === 'ai') return checkAi(request.text);
   return checkOriginality(request.text, request.sources, request.options);

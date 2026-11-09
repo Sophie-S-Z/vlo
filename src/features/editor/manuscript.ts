@@ -12,6 +12,8 @@ export interface ManuscriptSettings {
   /** The project font: a Vlo font id or an installed font. */
   font: FontValue;
   page: PageFormat;
+  /** The language of the writing (F38), so the counts inside the editor use its unit. */
+  language: string | undefined;
   setFont: (font: FontValue) => void;
 }
 

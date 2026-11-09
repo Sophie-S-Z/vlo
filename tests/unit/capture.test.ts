@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { captureNote, INBOX, sharedText } from '@/features/capture/capture';
 import { createProject } from '@/features/library/projects';
 import { db } from '@/lib/db';
@@ -82,4 +82,18 @@ test('a device with no project gets a new Open writing project, and an empty not
   const note = await db.items.get(itemId);
   const inbox = note?.parentId ? await db.items.get(note.parentId) : undefined;
   expect([inbox?.kind, inbox?.title, note?.title]).toEqual(['part', INBOX, 'A first line.']);
+});
+
+test('a failed capture with no project leaves no project and no text behind', async () => {
+  const add = vi.spyOn(db.items, 'add').mockRejectedValueOnce(new Error('The disk is full.'));
+  await expect(captureNote(null, { text: 'A first line.' })).rejects.toThrow('The disk is full.');
+  add.mockRestore();
+  expect(await db.projects.count()).toBe(0);
+  const names = (await indexedDB.databases()).map((d) => d.name);
+  expect(names.filter((n) => n?.startsWith('vlo-item-'))).toEqual([]);
+});
+
+test('a long first line is cut for the title, never in the middle of a character pair', async () => {
+  const { itemId } = await captureNote(null, { text: `${'a'.repeat(59)}😀 more` });
+  expect((await db.items.get(itemId))?.title).toBe('a'.repeat(59));
 });

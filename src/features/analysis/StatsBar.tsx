@@ -1,7 +1,9 @@
 import type { Editor as TiptapEditor } from '@tiptap/react';
 import { Settings2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
+import { useManuscript } from '@/features/editor/manuscript';
 import { rangeWords } from '@/features/editor/stats/stats';
+import { countUnit, type CountUnit } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { Switch } from '@/ui/switch';
@@ -20,13 +22,30 @@ export const BAR_DELAY_MS = 700;
 
 const numbers = new Intl.NumberFormat();
 
-export function metricText(metric: Metric, stats: FullStats, kind: 'prose' | 'poem'): string {
+/** The name of a count in the settings. Chinese and Japanese writing counts characters (F38). */
+function metricLabel(metric: Metric, unit: CountUnit): string {
+  if (unit === 'words') return METRIC_LABEL[metric];
+  return metric === 'words'
+    ? 'Characters'
+    : metric === 'characters'
+      ? 'All characters'
+      : METRIC_LABEL[metric];
+}
+
+export function metricText(
+  metric: Metric,
+  stats: FullStats,
+  kind: 'prose' | 'poem',
+  unit: CountUnit = 'words',
+): string {
   const plural = (n: number, one: string, many: string) => `${numbers.format(n)} ${n === 1 ? one : many}`;
   switch (metric) {
     case 'words':
-      return plural(stats.words, 'word', 'words');
+      return plural(stats.words, unit.slice(0, -1), unit);
     case 'characters':
-      return plural(stats.characters, 'character', 'characters');
+      return unit === 'words'
+        ? plural(stats.characters, 'character', 'characters')
+        : `${numbers.format(stats.characters)} in all`;
     case 'charactersNoSpaces':
       return `${numbers.format(stats.charactersNoSpaces)} without spaces`;
     case 'sentences':
@@ -57,6 +76,8 @@ interface StatsBarProps {
 
 export function StatsBar({ editor, kind }: StatsBarProps) {
   const prefs = useAnalysisPrefs();
+  const language = useManuscript()?.language;
+  const unit = countUnit(language);
   const [stats, setStats] = useState<FullStats | null>(null);
   const [selected, setSelected] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -69,7 +90,7 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
     const count = () => {
       timer = null;
       if (editor.isDestroyed) return;
-      statsInWorker(mappedText(editor.state.doc).text, kind).then(
+      statsInWorker(mappedText(editor.state.doc).text, kind, language).then(
         (next) => {
           if (current) {
             setStats(next);
@@ -87,7 +108,7 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
     };
     const select = () => {
       const { from, to, empty } = editor.state.selection;
-      setSelected(empty ? 0 : rangeWords(editor.state.doc, from, to));
+      setSelected(empty ? 0 : rangeWords(editor.state.doc, from, to, language));
     };
     later(0);
     const onUpdate = () => {
@@ -101,10 +122,10 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
       editor.off('update', onUpdate);
       editor.off('selectionUpdate', select);
     };
-  }, [editor, kind, prefs.bar]);
+  }, [editor, kind, prefs.bar, language]);
 
   if (!prefs.bar) return null;
-  const parts = stats ? prefs.metrics.map((metric) => metricText(metric, stats, kind)) : [];
+  const parts = stats ? prefs.metrics.map((metric) => metricText(metric, stats, kind, unit)) : [];
   if (selected > 0) parts.push(`${numbers.format(selected)} selected`);
 
   return (
@@ -141,7 +162,7 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
                     });
                   }}
                 />
-                {METRIC_LABEL[metric]}
+                {metricLabel(metric, unit)}
               </label>
             ))}
           </fieldset>
