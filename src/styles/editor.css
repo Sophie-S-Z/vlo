@@ -53,15 +53,15 @@
 
 .vlo-prose blockquote {
   margin: 0 0 0.9em;
-  padding-left: 1em;
-  border-left: 2px solid var(--rule);
+  padding-inline-start: 1em;
+  border-inline-start: 2px solid var(--rule);
   color: var(--muted);
 }
 
 .vlo-prose ul,
 .vlo-prose ol {
   margin: 0 0 0.9em;
-  padding-left: 1.5em;
+  padding-inline-start: 1.5em;
 }
 
 .vlo-prose ul {

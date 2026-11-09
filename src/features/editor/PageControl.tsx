@@ -4,6 +4,7 @@ import type { PageFormat } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { DEFAULT_LANGUAGE, LANGUAGES, languageLabel } from '@/lib/language';
 import { cleanZoom, PAGE_FORMATS, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from './format/page';
 
 interface PageControlProps {
@@ -14,12 +15,21 @@ interface PageControlProps {
   onZoom: (zoom: number) => void;
   /** The page count in Letter or A4, or null in pageless or a narrow window. */
   pages: number | null;
+  /** The project's language, as stored (F38). */
+  language: string | undefined;
+  onLanguage: (language: string) => void;
 }
 
 /** The page format and page zoom (plan Task A7, E7), in the header above the manuscript. */
-export function PageControl({ page, onPage, zoom, onZoom, pages }: PageControlProps) {
+export function PageControl({ page, onPage, zoom, onZoom, pages, language, onLanguage }: PageControlProps) {
   const groupId = useId();
   const zoomId = useId();
+  const languageId = useId();
+  const shownLanguage = language ?? DEFAULT_LANGUAGE;
+  // A language from an import or a backup that the list does not name still shows.
+  const languages = (LANGUAGES as readonly string[]).includes(shownLanguage)
+    ? LANGUAGES
+    : [shownLanguage, ...LANGUAGES];
   const current = PAGE_FORMATS.find((f) => f.value === page) ?? PAGE_FORMATS[0];
   const label = current?.label ?? 'Pageless';
   const step = (delta: number) => {
@@ -73,6 +83,32 @@ export function PageControl({ page, onPage, zoom, onZoom, pages }: PageControlPr
               : ''}
             Page ends come close to the PDF export, which has the exact layout. The page format is the same
             for every item in the project.
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          <label htmlFor={languageId} className="text-sm font-medium">
+            Language of the writing
+          </label>
+          <select
+            id={languageId}
+            value={shownLanguage}
+            aria-describedby={`${languageId}-hint`}
+            onChange={(event) => {
+              onLanguage(event.target.value);
+            }}
+            className="min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9"
+          >
+            {languages.map((code) => (
+              <option key={code} value={code}>
+                {languageLabel(code)}
+              </option>
+            ))}
+          </select>
+          <p id={`${languageId}-hint`} className="text-xs text-muted">
+            The browser checks the spelling in this language, and the exports name it. Hebrew, Arabic,
+            Persian, Urdu and Yiddish read from right to left. The language is the same for every item in the
+            project.
           </p>
         </div>
 

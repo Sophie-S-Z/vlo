@@ -2,6 +2,7 @@ import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/r
 import { useEffect, useId, useRef, type CSSProperties } from 'react';
 import { AliasPreview } from '@/features/people/aliasPreview';
 import type { PageFormat, Template } from '@/lib/db';
+import { textDirection } from '@/lib/language';
 import type * as Y from 'yjs';
 import { FocusTools } from '@/features/focus/focusExtension';
 import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
@@ -67,6 +68,8 @@ interface EditorProps {
   onPages?: (pages: number | null) => void;
   /** The project's templates, for the tools that only some templates offer. */
   templates?: readonly Template[] | undefined;
+  /** The language of the writing (F38). It sets the spell-check language and the text direction. */
+  language?: string | undefined;
 }
 
 const HELP = {
@@ -127,6 +130,7 @@ export function Editor({
   zoom = 100,
   onPages,
   templates,
+  language,
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
@@ -245,7 +249,10 @@ export function Editor({
       </div>
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
         {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
-        <div className={cn('relative', craftOn && 'vlo-craft')}>
+        <div
+          className={cn('relative', craftOn && 'vlo-craft')}
+          {...(language ? { lang: language, dir: textDirection(language) } : {})}
+        >
           {craftOn && <CraftLabels editor={editor} />}
           <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
         </div>

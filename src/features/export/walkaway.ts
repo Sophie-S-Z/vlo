@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { cleanLanguage, DEFAULT_LANGUAGE, textDirection } from '@/lib/language';
 import MarkdownIt from 'markdown-it';
 import { flattenTree } from '@/features/binder/tree';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
@@ -24,9 +25,9 @@ const STYLE =
 const markdown = new MarkdownIt({ html: true });
 const escape = markdown.utils.escapeHtml;
 
-function page(title: string, body: string): string {
+function page(title: string, body: string, language = DEFAULT_LANGUAGE): string {
   return `<!doctype html>
-<html lang="en">
+<html lang="${escape(language)}" dir="${textDirection(language)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -72,6 +73,7 @@ function projectFiles(zip: JSZip, backup: Backup): void {
   const base = {
     font: backup.project.settings.font ?? DEFAULT_FONT,
     paper: 'letter' as const,
+    language: cleanLanguage(backup.project.settings.language) ?? DEFAULT_LANGUAGE,
     ...(backup.project.authorName ? { author: backup.project.authorName } : {}),
   };
   const sections: ExportSection[] = [];
@@ -88,7 +90,7 @@ function projectFiles(zip: JSZip, backup: Backup): void {
     zip.file(row.path, toMarkdown(doc));
   }
   const whole: ExportDoc = { ...base, title: backup.project.title, sections };
-  zip.file('index.html', page(backup.project.title, markdown.render(toMarkdown(whole))));
+  zip.file('index.html', page(backup.project.title, markdown.render(toMarkdown(whole)), base.language));
 }
 
 /** The zip of every project given, with a top index.html that links each project's page. */

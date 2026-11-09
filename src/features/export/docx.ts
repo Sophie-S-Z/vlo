@@ -28,6 +28,7 @@ import JSZip from 'jszip';
 import type { TextFill } from '@/features/editor/format/fill';
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
+import { textDirection } from '@/lib/language';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manuscript';
 import { parseMathml } from './mathml';
@@ -390,9 +391,23 @@ async function applyFills(bytes: Uint8Array, fills: readonly TextFill[]): Promis
   });
 }
 
+/** The language of every run and, for right-to-left writing, the direction of every paragraph (F38). */
+function languageStyle(language: string) {
+  const rtl = textDirection(language) === 'rtl';
+  const cjk = ['zh', 'ja', 'ko'].includes(language.split('-')[0] ?? '');
+  return {
+    run: {
+      language: rtl ? { bidirectional: language } : cjk ? { eastAsia: language } : { value: language },
+      ...(rtl ? { rightToLeft: true } : {}),
+    },
+    paragraph: rtl ? { bidirectional: true } : {},
+  };
+}
+
 /** The heading, run and paragraph styles: Vlo's look, or plain 12 pt text for standard manuscript format. */
-function styles(font: string, manuscript: boolean) {
+function styles(font: string, manuscript: boolean, language: string) {
   const ink = '1F1D1B';
+  const lang = languageStyle(language);
   if (manuscript) {
     const plain = { font, size: TEXT_SIZE, color: '000000' };
     const heading = {
@@ -401,7 +416,10 @@ function styles(font: string, manuscript: boolean) {
     };
     return {
       default: {
-        document: { run: plain, paragraph: { spacing: { before: 0, after: 0, line: DOUBLE } } },
+        document: {
+          run: { ...plain, ...lang.run },
+          paragraph: { spacing: { before: 0, after: 0, line: DOUBLE }, ...lang.paragraph },
+        },
         title: { run: plain, paragraph: { alignment: AlignmentType.CENTER } },
         heading1: heading,
         heading2: heading,
@@ -421,7 +439,10 @@ function styles(font: string, manuscript: boolean) {
   }
   return {
     default: {
-      document: { run: { font, size: TEXT_SIZE }, paragraph: { spacing: { after: 160, line: 276 } } },
+      document: {
+        run: { font, size: TEXT_SIZE, ...lang.run },
+        paragraph: { spacing: { after: 160, line: 276 }, ...lang.paragraph },
+      },
       title: {
         run: { font, size: 56, color: ink },
         paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 2 * EM, after: EM } },
@@ -545,7 +566,7 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
   const document = new Document({
     title: doc.title,
     ...(setup ? { creator: setup.name } : doc.author ? { creator: doc.author } : {}),
-    styles: styles(font, setup !== undefined),
+    styles: styles(font, setup !== undefined, doc.language),
     numbering: { config: numberingConfig(doc) },
     sections: [
       {

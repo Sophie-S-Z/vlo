@@ -149,16 +149,17 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G9: Every language, first part (F38)
 
-**Files:** Modify `src/lib/db.ts` (`Project.settings.language?: string`), `src/lib/wordcount.ts`, `src/features/editor/Editor.tsx`, `src/features/export/epub.ts`, `src/features/export/docx.ts`, `src/features/export/pdf/pdf.ts` (document language only), the project settings panel. Create `tests/unit/language.test.ts`, `tests/e2e/rtl.spec.ts`.
+**Files:** Create `src/lib/language.ts`, `tests/unit/language.test.ts`, `tests/e2e/rtl.spec.ts`. Modify `src/lib/db.ts` (`Project.settings.language?: string`), `src/features/backup/file.ts`, `src/features/editor/Editor.tsx`, `EditorPane.tsx`, `PageControl.tsx` (the picker), `extensions/poem.ts` and `src/styles/editor.css` (indents on the side where a line starts), `src/features/export/model.ts`, `build.ts`, `epub.ts`, `docx.ts`, `pdf/pdf.ts` (document language only) and `walkaway.ts`.
 
 **Interfaces:**
 
-- Produces: `textDirection(language: string | undefined): 'ltr' | 'rtl'` and `countsCharacters(language: string | undefined): boolean` (true for `zh` and `ja`).
+- Produces: `textDirection(language: string | undefined): 'ltr' | 'rtl'`, `cleanLanguage(value: unknown): string | undefined` and `languageLabel(language)`. `ExportDoc.language` is the project language or `en`.
 
-- [ ] Tests first: Hebrew, Arabic, Persian and Urdu give `rtl`; English and no language give `ltr`; a Chinese text of 12 characters counts 12; English counts stay as they are.
-- [ ] The editor gets `lang` and `dir` from the project. The browser picks its spell-check dictionary from `lang` where it can. Stats, goals and the Library say "characters" in place of "words" for Chinese and Japanese.
-- [ ] EPUB `xml:lang`, the DOCX language and the PDF language come from the project.
-- [ ] `rtl.spec.ts`: a Hebrew poem keeps its indents on the right after a reload, and a Hebrew export opens with the right direction (Review Focus 6). Commit.
+- [x] Tests first: Hebrew, Arabic, Persian, Urdu and Yiddish give `rtl`; English, Chinese and no language give `ltr`; a tag that is not valid gives none.
+- [x] The Page popover has "Language of the writing". The editor text gets `lang` and `dir` from the project, so the browser picks its spell-check dictionary where it can. Poem hanging indents, quotes and lists use the side where a line starts.
+- [x] EPUB `xml:lang`, `dc:language`, `dir` and a right-to-left page order; the DOCX run language and right-to-left paragraphs; the PDF language; the walkaway pages' `lang` and `dir`.
+- [x] `rtl.spec.ts`: a Hebrew poem reads from the right and keeps its hanging indent on the right after a reload (Review Focus 6). Commit.
+- [ ] Not in this phase (product owner decision, 2026-11-09, pending): character counts for Chinese and Japanese, the PDF layout of right-to-left text, and the language in a shared reading link. The PDF draws each line from the left, and the reading link shows the text from the left.
 
 ### Task G10: Gate 7 and the release
 

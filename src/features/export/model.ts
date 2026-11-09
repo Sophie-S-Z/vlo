@@ -111,6 +111,8 @@ export interface ExportDoc {
   font: string;
   /** The sheet size for formats with pages. A pageless project uses Letter. */
   paper: Paper;
+  /** The language of the writing, as a BCP 47 tag (F38). */
+  language: string;
   sections: ExportSection[];
 }
 
