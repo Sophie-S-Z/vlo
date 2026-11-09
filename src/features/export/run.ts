@@ -72,7 +72,11 @@ export interface PreparedExport {
 
 /** Builds the export tree and lists the own fonts that the file needs. */
 export function prepareExport(request: ExportRequest): PreparedExport {
-  const { doc, words, names } = safeExportTree(request);
+  // Only a Word file keeps tracked changes and comments (F45).
+  const { review, ...rest } = request;
+  const { doc, words, names } = safeExportTree(
+    request.format === 'docx' && review ? { ...rest, review } : rest,
+  );
   // The word count of standard manuscript format counts the writer's text, not the report page.
   const manuscript =
     usesManuscript(request) && request.manuscript ? { ...request.manuscript, words } : undefined;

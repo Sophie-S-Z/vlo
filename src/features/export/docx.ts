@@ -1,5 +1,10 @@
 import {
   AlignmentType,
+  Bookmark,
+  CommentRangeEnd,
+  CommentRangeStart,
+  CommentReference,
+  DeletedTextRun,
   Document,
   DropCapType,
   ExternalHyperlink,
@@ -8,6 +13,7 @@ import {
   FrameWrap,
   Header,
   HeadingLevel,
+  InsertedTextRun,
   LevelFormat,
   LineRuleType,
   Math as MathBlock,
@@ -20,6 +26,7 @@ import {
   Tab,
   TabStopType,
   TextRun,
+  type ICommentOptions,
   type IRunOptions,
   type NumberingDefinition,
   type ParagraphChild,
@@ -32,7 +39,15 @@ import { textDirection } from '@/lib/language';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manuscript';
 import { parseMathml } from './mathml';
-import { repeatsTitle, type Align, type Block, type ExportDoc, type Run, type RunStyle } from './model';
+import {
+  repeatsTitle,
+  runsOf,
+  type Align,
+  type Block,
+  type ExportDoc,
+  type Run,
+  type RunStyle,
+} from './model';
 import { ommlOf } from './omml';
 
 export type { LatexToMathml } from './latex';
@@ -43,6 +58,8 @@ export type { LatexToMathml } from './latex';
  * centered "#". Footnotes are Word footnotes. Each equation is a Word equation, built from MathLive's
  * MathML. A gradient becomes a Word gradient text fill (w14:textFill, Word 2010 and later), and its first
  * color is the plain color for readers that have no text fills, such as Google Docs and LibreOffice.
+ * Each section starts with the bookmark `vlo_<item id>`, so "Import an editor's changes" finds its item.
+ * A run with a change is a Word tracked change, and a run with a comment is in a Word comment's range (F45).
  */
 
 /** Word sizes are in half-points. The text size is 12 pt. */
@@ -117,6 +134,77 @@ interface Context {
   manuscript: boolean;
   /** In standard manuscript format, the space above a chapter title, so it starts a third down the page. */
   chapterDrop: number;
+  /** The name of a change or a comment with no author: the writer. */
+  writer: string;
+  /** The last Word id of a tracked change. */
+  revision: number;
+  /** The Word comments, in the order their ranges start. */
+  comments: ICommentOptions[];
+  /** The characters of each comment that this section has yet to write. The range ends with the last. */
+  commentLeft: Map<string, number>;
+  /** The Word id of each comment whose range started in this section. */
+  commentWord: Map<string, number>;
+}
+
+/** The Word name of a section's bookmark. Word allows 40 characters, and a UUID gives 36. */
+export function bookmarkName(itemId: string): string {
+  return `vlo_${itemId.replace(/-/g, '')}`;
+}
+
+type TextRunModel = Extract<Run, { type: 'text' }>;
+
+/** The characters of each comment in some blocks. */
+function commentLengths(blocks: readonly Block[]): Map<string, number> {
+  const lengths = new Map<string, number>();
+  for (const run of runsOf(blocks)) {
+    if (run.type === 'text' && run.comment)
+      lengths.set(run.comment.id, (lengths.get(run.comment.id) ?? 0) + run.text.length);
+  }
+  return lengths;
+}
+
+/**
+ * A text run as Word parts: a tracked change if it has one, in a link if it has one, and in its comment's
+ * range if it has one. A comment's range starts with its first run and ends after its last run in the
+ * section, so it can hold more than one paragraph.
+ */
+function textParts(run: TextRunModel, ctx: Context, extra: IRunOptions = {}): ParagraphChild[] {
+  const options = { text: run.text, ...runOptions(run.style, ctx), ...extra };
+  const change = run.change;
+  let part: ParagraphChild = new TextRun(options);
+  if (change) {
+    ctx.revision += 1;
+    const tracked = {
+      ...options,
+      id: ctx.revision,
+      author: change.by || ctx.writer,
+      date: new Date(change.at).toISOString(),
+    };
+    part = change.kind === 'insert' ? new InsertedTextRun(tracked) : new DeletedTextRun(tracked);
+  }
+  if (run.style.link) part = new ExternalHyperlink({ link: run.style.link, children: [part] });
+  const comment = run.comment;
+  if (!comment) return [part];
+  const out: ParagraphChild[] = [];
+  let word = ctx.commentWord.get(comment.id);
+  if (word === undefined) {
+    word = ctx.comments.length;
+    ctx.commentWord.set(comment.id, word);
+    ctx.comments.push({
+      id: word,
+      author: comment.by || ctx.writer,
+      date: new Date(comment.at),
+      children: comment.text.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] })),
+    });
+    out.push(new CommentRangeStart(word));
+  }
+  out.push(part);
+  const left = (ctx.commentLeft.get(comment.id) ?? 0) - run.text.length;
+  ctx.commentLeft.set(comment.id, left);
+  if (left <= 0) {
+    out.push(new CommentRangeEnd(word), new TextRun({ children: [new CommentReference(word)] }));
+  }
+  return out;
 }
 
 function runOptions(style: RunStyle, ctx: Context): IRunOptions {
@@ -170,8 +258,7 @@ function inline(runs: readonly Run[], ctx: Context): ParagraphChild[] {
   const out: ParagraphChild[] = [];
   for (const run of runs) {
     if (run.type === 'text') {
-      const text = new TextRun({ text: run.text, ...runOptions(run.style, ctx) });
-      out.push(run.style.link ? new ExternalHyperlink({ link: run.style.link, children: [text] }) : text);
+      out.push(...textParts(run, ctx));
     } else if (run.type === 'break') {
       out.push(new TextRun({ break: 1 }));
     } else if (run.type === 'math') {
@@ -193,7 +280,7 @@ interface Place {
 }
 
 /** The first letter of a paragraph that opens with a drop cap, and the runs after it. */
-function splitDropCap(runs: readonly Run[]): { letter: Extract<Run, { type: 'text' }>; rest: Run[] } | null {
+function splitDropCap(runs: readonly Run[]): { letter: TextRunModel; rest: Run[] } | null {
   const [first, ...others] = runs;
   if (first?.type !== 'text' || /^\s/.test(first.text)) return null;
   const letter = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(first.text)][0]
@@ -245,13 +332,7 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
             wrap: FrameWrap.AROUND,
           },
           spacing: { after: 0, line: Math.round(letterPoints * 20), lineRule: LineRuleType.EXACT },
-          children: [
-            new TextRun({
-              text: drop.letter.text,
-              ...runOptions(drop.letter.style, ctx),
-              size: Math.round(letterPoints * 2),
-            }),
-          ],
+          children: textParts(drop.letter, ctx, { size: Math.round(letterPoints * 2) }),
         });
         return [cap, new Paragraph({ ...options, ...paragraphIndent, children: inline(drop.rest, ctx) })];
       }
@@ -533,6 +614,11 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     nextList: () => (list += 1),
     manuscript: setup !== undefined,
     chapterDrop: Math.round(textHeight / 3),
+    writer: setup?.name ?? doc.author ?? 'Writer',
+    revision: 0,
+    comments: [],
+    commentLeft: new Map(),
+    commentWord: new Map(),
   };
   const font = wordFontName(doc.font) ?? 'Newsreader';
 
@@ -554,6 +640,8 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
   }
   for (const [index, section] of doc.sections.entries()) {
     const blocks = section.blocks.filter((block) => !repeatsTitle(doc, section, block));
+    ctx.commentLeft = commentLengths(blocks);
+    ctx.commentWord = new Map();
     const paragraphs = blocksParagraphs(
       blocks,
       { left: 0, ...(section.form === null ? { folder: true } : {}) },
@@ -563,6 +651,9 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     if (setup && index === 0 && section.form !== null) {
       children.push(new Paragraph({ children: [new PageBreak()] }));
     }
+    const mark = new Bookmark({ id: bookmarkName(section.id), children: [] });
+    // docx types addRunToFront for runs, but it puts any part of a paragraph before the first run.
+    paragraphs[0]?.addRunToFront(mark.end as never).addRunToFront(mark.start as never);
     children.push(...paragraphs);
   }
 
@@ -571,6 +662,7 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     ...(setup ? { creator: setup.name } : doc.author ? { creator: doc.author } : {}),
     styles: styles(font, setup !== undefined, doc.language),
     numbering: { config: numberingConfig(doc) },
+    ...(ctx.comments.length > 0 ? { comments: { children: ctx.comments } } : {}),
     sections: [
       {
         properties: {

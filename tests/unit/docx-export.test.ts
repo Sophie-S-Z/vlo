@@ -1,8 +1,9 @@
 import JSZip from 'jszip';
 import { describe, expect, test } from 'vitest';
 import { buildExportDoc } from '@/features/export/build';
-import { textFillXml, toDocx, wordFontName } from '@/features/export/docx';
+import { bookmarkName, textFillXml, toDocx, wordFontName } from '@/features/export/docx';
 import { linearMath, parseMathml } from '@/features/export/mathml';
+import type { ExportReview } from '@/features/export/model';
 import { item, poemUpdate, project, RICH_PROSE, singleDoc, updateOf } from './export-fixtures';
 
 /* Word export (spec section 9). Each check unzips the file and reads its XML, as Word would. */
@@ -10,7 +11,13 @@ import { item, poemUpdate, project, RICH_PROSE, singleDoc, updateOf } from './ex
 async function parts(bytes: Uint8Array): Promise<Record<string, string>> {
   const zip = await JSZip.loadAsync(bytes);
   const out: Record<string, string> = {};
-  for (const name of ['word/document.xml', 'word/footnotes.xml', 'word/numbering.xml', 'word/styles.xml']) {
+  for (const name of [
+    'word/document.xml',
+    'word/footnotes.xml',
+    'word/numbering.xml',
+    'word/styles.xml',
+    'word/comments.xml',
+  ]) {
     out[name] = (await zip.file(name)?.async('string')) ?? '';
   }
   return out;
@@ -167,6 +174,104 @@ describe('Word export', () => {
     expect(wordFontName('eb-garamond')).toBe('EB Garamond');
     expect(wordFontName('local:Garamond Premier Pro')).toBe('Garamond Premier Pro');
     expect(wordFontName('nonsense')).toBeUndefined();
+  });
+});
+
+/* Plan Task I2 (roadmap F45): the Word file keeps tracked changes and comments for an editor. */
+describe('Word export for an editor', () => {
+  const AT = Date.UTC(2026, 10, 9, 12, 0, 0);
+  const suggestion = (kind: 'insert' | 'delete', by = '') => ({
+    type: 'suggestion',
+    attrs: { id: `s-${kind}`, kind, pass: 2, at: AT, by },
+  });
+  const comment = { type: 'comment', attrs: { id: 'c1', text: 'Too quiet?\nSay more.', at: AT, by: '' } };
+  // "Mira finds the ledger." with "Mira " struck, " at last" new, and a comment from "ledger" to the end of the next line.
+  const SCENE = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Mira ', marks: [suggestion('delete')] },
+          { type: 'text', text: 'finds the ' },
+          { type: 'text', text: 'ledger', marks: [comment] },
+          { type: 'text', text: ' at last', marks: [comment, suggestion('insert', 'Ana')] },
+          { type: 'text', text: '.', marks: [comment] },
+        ],
+      },
+      { type: 'paragraph', content: [{ type: 'text', text: 'It is cold.', marks: [comment] }] },
+    ],
+  };
+  const sceneDoc = (review?: ExportReview) =>
+    buildExportDoc({
+      project: project('novel', { authorName: 'Rae Moss' }),
+      items: [item('a1b2-c3d4', 'scene', 'One'), item('e5f6-a7b8', 'scene', 'Two')],
+      scope: { kind: 'project' },
+      updates: new Map([
+        ['a1b2-c3d4', updateOf(SCENE, 'prose')],
+        [
+          'e5f6-a7b8',
+          updateOf(
+            { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Dawn.' }] }] },
+            'prose',
+          ),
+        ],
+      ]),
+      ...(review ? { review } : {}),
+    });
+
+  test('a default Word file has the accepted text and no changes or comments', async () => {
+    const files = await parts(await toDocx(sceneDoc()));
+    const xml = files['word/document.xml'] ?? '';
+    expect(paragraphs(xml)).toContain('finds the ledger at last.');
+    expect(xml).not.toMatch(/<w:ins |<w:del |<w:commentRangeStart/);
+    expect(files['word/comments.xml']).toBe('');
+  });
+
+  test('tracked changes keep their kind, author and date', async () => {
+    const xml =
+      (await parts(await toDocx(sceneDoc({ changes: true, comments: false }))))['word/document.xml'] ?? '';
+    const date = new Date(AT).toISOString();
+    expect(xml).toMatch(
+      new RegExp(
+        `<w:del w:id="\\d+" w:author="Rae Moss" w:date="${date}"><w:r><w:delText xml:space="preserve">Mira </w:delText>`,
+      ),
+    );
+    expect(xml).toMatch(
+      new RegExp(
+        `<w:ins w:id="\\d+" w:author="Ana" w:date="${date}"><w:r><w:t xml:space="preserve"> at last</w:t>`,
+      ),
+    );
+    expect(xml).not.toContain('<w:commentRangeStart');
+  });
+
+  test('a comment holds its words in one range, across two paragraphs', async () => {
+    const files = await parts(await toDocx(sceneDoc({ changes: false, comments: true })));
+    const xml = files['word/document.xml'] ?? '';
+    expect(xml.match(/<w:commentRangeStart w:id="0"\/>/g)).toHaveLength(1);
+    expect(xml.match(/<w:commentRangeEnd w:id="0"\/>/g)).toHaveLength(1);
+    expect(xml.match(/<w:commentReference w:id="0"\/>/g)).toHaveLength(1);
+    const range = xml.slice(xml.indexOf('<w:commentRangeStart'), xml.indexOf('<w:commentRangeEnd'));
+    expect(range).toContain('>ledger<');
+    expect(range).toContain('>It is cold.<');
+    // The range ends with its last words, before the next item.
+    expect(xml.indexOf('<w:commentRangeEnd')).toBeLessThan(xml.indexOf('<w:t xml:space="preserve">#<'));
+    const comments = files['word/comments.xml'] ?? '';
+    expect(comments).toContain('w:author="Rae Moss"');
+    expect(comments).toContain('>Too quiet?<');
+    expect(comments).toContain('>Say more.<');
+  });
+
+  test('each section starts with the bookmark of its item', async () => {
+    const xml = (await parts(await toDocx(sceneDoc())))['word/document.xml'] ?? '';
+    expect(bookmarkName('a1b2-c3d4')).toBe('vlo_a1b2c3d4');
+    expect(bookmarkName('0f0e0d0c-0b0a-4908-8706-050403020100')).toHaveLength(36);
+    const one = xml.indexOf('w:name="vlo_a1b2c3d4"');
+    const two = xml.indexOf('w:name="vlo_e5f6a7b8"');
+    expect(one).toBeGreaterThan(-1);
+    expect(xml.indexOf('finds the')).toBeGreaterThan(one);
+    expect(two).toBeGreaterThan(xml.indexOf('It is cold.'));
+    expect(xml.indexOf('Dawn.')).toBeGreaterThan(two);
   });
 });
 

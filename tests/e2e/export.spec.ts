@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { PDFDict, PDFDocument, PDFName } from 'pdf-lib';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { useTool } from './support/tools';
 
 /* Plan Tasks B1 to B3: the export dialog makes Word, PDF, EPUB and Markdown files from the stored text. */
 
@@ -60,6 +61,29 @@ test('a Word export holds the text, and the dialog shows the two steps to Google
   expect(await seriousIssues(page)).toEqual([]);
   await done.getByRole('button', { name: 'Done' }).click();
   await expect(done).toBeHidden();
+});
+
+test('a Word export keeps tracked changes only when the writer asks', async ({ page }) => {
+  await newProject(page, 'novel');
+  await page.keyboard.type('Mira finds the ledger.');
+  await useTool(page, 'Track changes');
+  await page.getByRole('textbox', { name: 'Scene 1' }).click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.type(' at last');
+  await saved(page);
+
+  await page.getByRole('button', { name: 'Export' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Export' });
+  const keep = dialog.getByRole('switch', { name: 'Keep my tracked changes' });
+  await expect(keep).not.toBeChecked();
+  await expect(dialog.getByRole('switch', { name: 'Include my comments' })).not.toBeChecked();
+  await expect(dialog).toContainText('Import an editor’s changes');
+  await keep.click();
+  expect(await seriousIssues(page)).toEqual([]);
+  const zip = await JSZip.loadAsync((await exportFile(page)).bytes);
+  const xml = (await zip.file('word/document.xml')?.async('string')) ?? '';
+  expect(xml).toMatch(/<w:ins [^>]*><w:r><w:t xml:space="preserve"> at last<\/w:t>/);
 });
 
 test('a Markdown export of a poem keeps every leading space as a no-break space', async ({ page }) => {

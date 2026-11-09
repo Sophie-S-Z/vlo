@@ -134,6 +134,9 @@ export function ExportDialog({
   const offersProvenance = project.aiMode === 'cowriter' || project.settings.aiInsertedAt !== undefined;
   const [provenance, setProvenance] = useState(project.settings.aiInsertedAt !== undefined);
   const [manuscript, setManuscript] = useState<ManuscriptSettings>(() => startingManuscript(project));
+  // A Word file can keep tracked changes and comments for an editor (F45). Both start off.
+  const [keepChanges, setKeepChanges] = useState(false);
+  const [keepComments, setKeepComments] = useState(false);
   const [nameError, setNameError] = useState(false);
   const [status, setStatus] = useState<Status>({ step: 'choose' });
   const [marking, setMarking] = useState(false);
@@ -218,6 +221,9 @@ export function ExportDialog({
         people: await privatePeople(project.id),
         shareSafe: safe,
         ...(usesManuscript ? { manuscript: details } : {}),
+        ...(format === 'docx' && (keepChanges || keepComments)
+          ? { review: { changes: keepChanges, comments: keepComments } }
+          : {}),
         ...(offersProvenance && provenance ? { provenance: { at: clock.now() } } : {}),
       };
       const { job, ownFonts, names } = await ExportJob.start(request);
@@ -577,6 +583,37 @@ export function ExportDialog({
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {format === 'docx' && (
+                <div className="grid gap-1">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id={`${ids}-changes`}
+                      checked={keepChanges}
+                      onCheckedChange={setKeepChanges}
+                      aria-describedby={`${ids}-review-hint`}
+                    />
+                    <label htmlFor={`${ids}-changes`} className="text-sm font-medium">
+                      Keep my tracked changes
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id={`${ids}-comments`}
+                      checked={keepComments}
+                      onCheckedChange={setKeepComments}
+                      aria-describedby={`${ids}-review-hint`}
+                    />
+                    <label htmlFor={`${ids}-comments`} className="text-sm font-medium">
+                      Include my comments
+                    </label>
+                  </div>
+                  <p id={`${ids}-review-hint`} className="pl-14 text-sm text-muted">
+                    An editor can change the file in Word and send it back. Then choose Import an
+                    editor&rsquo;s changes in the project menu.
+                  </p>
                 </div>
               )}
 

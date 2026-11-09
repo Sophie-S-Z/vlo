@@ -84,7 +84,7 @@ Pull request I-A: Tasks I1 to I3 (no server). I-B: Task I4. I-C: Tasks I5 to I8.
 
 - Consumes: the `suggestion` and `comment` marks (Task I1).
 - Produces: `DocxOptions.comments?: boolean` and `DocxOptions.changes?: 'accept' | 'track'` (default `'accept'`, no comments).
-- Produces: a Word bookmark `vlo_<item id with no hyphens>` at the start of each section. The name is 37 characters, under Word's 40.
+- Produces: a Word bookmark `vlo_<item id with no hyphens>` at the start of each section. The name is 36 characters, under Word's 40.
 
 - [ ] Tests first: a default DOCX has no `w:ins`, `w:del` or `w:comment`, and its text is the accepted text; with `changes: 'track'` the file has `w:ins` and `w:del` with the pass author and date; with `comments: true` `word/comments.xml` holds each comment and its range wraps its words; each section starts with its bookmark; a memoir export with tracked changes refuses an unmarked real name in deleted text or in a comment, as the name check does for the text.
 - [ ] Two switches in the Word part of the export dialog: "Keep my tracked changes" and "Include my comments". Both are off by default, and the dialog says that an editor can return the file with "Import an editor's changes". Commit.

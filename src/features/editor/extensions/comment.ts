@@ -4,6 +4,7 @@ import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } 
 import { clock } from '@/lib/clock';
 import { newId } from '@/lib/ids';
 import { openPanel } from '../commands/editorBus';
+import { COMMENT } from '../format/comment';
 
 /*
  * Comments in the text (roadmap F43, plan Task H3). A comment is a mark on the words that holds the
@@ -25,7 +26,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export const COMMENT = 'comment';
+export { COMMENT };
 
 export interface CommentEntry {
   id: string;
