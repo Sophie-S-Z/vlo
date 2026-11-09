@@ -40,6 +40,7 @@ import { mathmlFor, type LatexToMathml } from './latex';
 import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manuscript';
 import { parseMathml } from './mathml';
 import {
+  bookmarkName,
   repeatsTitle,
   runsOf,
   type Align,
@@ -144,11 +145,6 @@ interface Context {
   commentLeft: Map<string, number>;
   /** The Word id of each comment whose range started in this section. */
   commentWord: Map<string, number>;
-}
-
-/** The Word name of a section's bookmark. Word allows 40 characters, and a UUID gives 36. */
-export function bookmarkName(itemId: string): string {
-  return `vlo_${itemId.replace(/-/g, '')}`;
 }
 
 type TextRunModel = Extract<Run, { type: 'text' }>;

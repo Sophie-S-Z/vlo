@@ -609,6 +609,20 @@ Last update: 2026-11-09
 
 ## In progress
 
+- Phase 9 (plan `docs/plans/phase-9.md`, the roadmap's "Devices and feedback" features F44, F45, F49 and
+  F50). The product owner approved decisions R1 to R9 as recommended on 2026-11-09. Pull request I-A holds
+  Tasks I1 to I3:
+  - I1: Track changes with revision passes 1 to 5, one switch for each project. Waiting changes show under
+    the text with Accept and Reject. Counts, search, the AI and every export read the accepted text.
+    `DOC_SCHEMA` is 7, so an older build does not open a document with suggestion marks. Typing with
+    Track changes on: 19 ms p95 on the large scene.
+  - I2: a Word export can keep the waiting changes as Word tracked changes and the comments as Word
+    comments. Each section starts with the bookmark `vlo_<item id>`. The name check reads the deleted
+    words and the comments of such a file.
+  - I3: "Import an editor's changes" in the command menu reads the Word file back. Each change and comment
+    goes on the paragraph with the same text, as a waiting change with the editor's name. A snapshot
+    "Before Word changes" comes first. The summary lists each change on a paragraph that the writer
+    changed after the export.
 - Phase 8 (plan `docs/plans/phase-8.md`, the roadmap's "Match the best" features F39 to F43, F46 to F48
   and the rest of F38). The product owner approved decisions Q1 to Q9 as recommended on 2026-11-09.
   Pull request #22 merged with Tasks H1 to H6: the Outline with labels, deadline goals, comments in the
@@ -776,6 +790,7 @@ Last update: 2026-11-09
 | 2026-11-08 | Production address: https://vlo-eight.vercel.app/                                |
 | 2026-11-09 | Phase 7 plan approved: decisions P1 to P7 as recommended.                        |
 | 2026-11-09 | Phase 8 plan approved: decisions Q1 to Q9 as recommended.                        |
+| 2026-11-09 | Phase 9 plan approved: decisions R1 to R9 as recommended.                        |
 
 ## Spec changes
 

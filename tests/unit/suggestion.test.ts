@@ -131,6 +131,18 @@ describe('track changes', () => {
     expect(changes(editor)).toEqual([]);
   });
 
+  test('a paste gets an insert mark and keeps its own marks', () => {
+    // jsdom has no ClipboardEvent. A paste reads only its type here.
+    if (typeof ClipboardEvent === 'undefined')
+      Object.assign(globalThis, { ClipboardEvent: class extends Event {} });
+    const editor = withText('Mira ran.');
+    caret(editor, 8);
+    editor.view.pasteHTML('<p>, <strong>very</strong> fast</p>');
+    expect(editor.getText()).toBe('Mira ran, very fast.');
+    expect(changes(editor)).toEqual([{ kind: 'insert', text: ', very fast', pass: 1 }]);
+    expect(editor.getHTML()).toContain('<strong>');
+  });
+
   test('Enter splits the paragraph at once, with no mark', () => {
     const editor = withText('Mira ran.');
     caret(editor, 4);

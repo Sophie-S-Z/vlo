@@ -611,8 +611,8 @@ export function ExportDialog({
                     </label>
                   </div>
                   <p id={`${ids}-review-hint`} className="pl-14 text-sm text-muted">
-                    An editor can change the file in Word and send it back. Then choose Import an
-                    editor&rsquo;s changes in the project menu.
+                    An editor can change the file in Word and send it back. Then choose Search, then Import an
+                    editor&rsquo;s changes.
                   </p>
                 </div>
               )}

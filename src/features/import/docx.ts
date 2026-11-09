@@ -8,17 +8,17 @@ import { ImportError, type ImportNode } from './tree';
  * line breaks and footnotes. Tables and pictures are left out, and the summary says so.
  */
 
-const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+export const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
 function children(element: Element, name: string): Element[] {
   return Array.from(element.children).filter((c) => c.namespaceURI === W && c.localName === name);
 }
 
-function child(element: Element | undefined, name: string): Element | undefined {
+export function child(element: Element | undefined, name: string): Element | undefined {
   return element ? children(element, name)[0] : undefined;
 }
 
-function attr(element: Element | undefined, name: string): string | null {
+export function attr(element: Element | undefined, name: string): string | null {
   return element?.getAttributeNS(W, name) ?? null;
 }
 
@@ -29,7 +29,7 @@ function on(element: Element | undefined): boolean {
   return value === null || !['0', 'false', 'off', 'none'].includes(value);
 }
 
-async function xml(zip: JSZip, path: string): Promise<Document | null> {
+export async function xml(zip: JSZip, path: string): Promise<Document | null> {
   const text = await zip.file(path)?.async('string');
   if (text === undefined) return null;
   const doc = new DOMParser().parseFromString(text, 'application/xml');
@@ -99,7 +99,7 @@ function container(part: Element): boolean {
 }
 
 /** An equation is in the math namespace. Vlo cannot read it yet, so the summary names it. */
-function isEquation(part: Element): boolean {
+export function isEquation(part: Element): boolean {
   return part.localName === 'oMath' || part.localName === 'oMathPara';
 }
 

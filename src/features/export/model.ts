@@ -170,6 +170,14 @@ export function runsText(runs: readonly Run[]): string {
     .join('');
 }
 
+/**
+ * The name of the bookmark at the start of an item's section in a Word export (F45). Word allows 40
+ * characters, and a UUID gives 36.
+ */
+export function bookmarkName(itemId: string): string {
+  return `vlo_${itemId.replace(/-/g, '')}`;
+}
+
 /** Every run of some blocks, in reading order. */
 export function runsOf(blocks: readonly Block[]): Run[] {
   return blocks.flatMap((block): Run[] => {

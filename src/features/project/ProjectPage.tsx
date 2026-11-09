@@ -56,6 +56,10 @@ const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu'))
 const ExportDialog = lazy(async () => ({
   default: (await import('@/features/export/ExportDialog')).ExportDialog,
 }));
+// The Word reader for an editor's changes loads the first time the writer opens its dialog (F45).
+const ReviewImport = lazy(async () => ({
+  default: (await import('@/features/import/ReviewImport')).ReviewImport,
+}));
 // The Share panel and the export tree that it builds load the first time the writer opens it.
 const SharePanel = lazy(async () => ({
   default: (await import('@/features/share/SharePanel')).SharePanel,
@@ -103,6 +107,7 @@ export function ProjectPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
   const [modeOpen, setModeOpen] = useState(false);
@@ -344,6 +349,16 @@ export function ProjectPage() {
         // The export dialog opens after the menu closes, so the two dialogs never hold focus at once.
         afterMenu.current = () => {
           setExportOpen(true);
+        };
+      },
+    },
+    {
+      id: 'import-review',
+      label: 'Import an editor’s changes…',
+      keywords: ['word', 'docx', 'editor', 'tracked changes', 'comments', 'review', 'round trip'],
+      run: () => {
+        afterMenu.current = () => {
+          setReviewOpen(true);
         };
       },
     },
@@ -778,6 +793,11 @@ export function ProjectPage() {
               currentItemId={current?.id ?? null}
               people={people ?? []}
             />
+          </Suspense>
+        )}
+        {reviewOpen && (
+          <Suspense fallback={null}>
+            <ReviewImport open onOpenChange={setReviewOpen} project={project} items={items} />
           </Suspense>
         )}
         {shareOpen && (

@@ -1,9 +1,9 @@
 import JSZip from 'jszip';
 import { describe, expect, test } from 'vitest';
 import { buildExportDoc } from '@/features/export/build';
-import { bookmarkName, textFillXml, toDocx, wordFontName } from '@/features/export/docx';
+import { textFillXml, toDocx, wordFontName } from '@/features/export/docx';
 import { linearMath, parseMathml } from '@/features/export/mathml';
-import type { ExportReview } from '@/features/export/model';
+import { bookmarkName, type ExportReview } from '@/features/export/model';
 import { item, poemUpdate, project, RICH_PROSE, singleDoc, updateOf } from './export-fixtures';
 
 /* Word export (spec section 9). Each check unzips the file and reads its XML, as Word would. */

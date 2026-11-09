@@ -57,6 +57,8 @@ export const HELP = {
         'Pick a pass under the text. Each pass has its own color, so you can see each round of revision.',
         'Accept or reject each change under the text, or all the changes of a pass at once.',
         'Exports, shares and word counts use the text as if you accepted every change.',
+        'For an editor, export as Word with Keep my tracked changes and Include my comments on.',
+        'When the editor sends the file back, choose Search, then Import an editor’s changes. Their changes wait under the text.',
       ],
     },
     {

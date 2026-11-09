@@ -78,30 +78,30 @@ Pull request I-A: Tasks I1 to I3 (no server). I-B: Task I4. I-C: Tasks I5 to I8.
 
 ### Task I2: Word export with comments and tracked changes (F45, part 1)
 
-**Files:** Modify `src/features/export/model.ts` (`Run` gains `comment?` and `change?`, `ExportSection.id` stays the item id), `src/features/export/read.ts`, `src/features/export/docx.ts`, `src/features/export/ExportDialog.tsx`, `src/lib/privacy.ts` (`nameCheck` reads deleted text and comments), `tests/unit/docx-export.test.ts`, `tests/unit/share-bundle.test.ts`, `tests/e2e/export.spec.ts`.
+**Files:** Modify `src/features/export/model.ts` (`Run` gains `comment?` and `change?`, `ExportSection.id` stays the item id), `src/features/export/read.ts`, `src/features/export/docx.ts`, `src/features/export/ExportDialog.tsx`, `src/lib/privacy.ts` (`nameCheck` reads deleted text and comments), `tests/unit/docx-export.test.ts`, `tests/unit/privacy.test.ts`, `tests/e2e/export.spec.ts`.
 
 **Interfaces:**
 
 - Consumes: the `suggestion` and `comment` marks (Task I1).
-- Produces: `DocxOptions.comments?: boolean` and `DocxOptions.changes?: 'accept' | 'track'` (default `'accept'`, no comments).
-- Produces: a Word bookmark `vlo_<item id with no hyphens>` at the start of each section. The name is 36 characters, under Word's 40.
+- Produces: `ExportRequest.review?: { changes: boolean; comments: boolean }`. Only a Word export reads it. The text runs carry `change` and `comment`, so `toDocx` needs no new option.
+- Produces: `bookmarkName(itemId)` in `model.ts`, the Word bookmark `vlo_<item id with no hyphens>` at the start of each section. The name is 36 characters, under Word's 40.
 
-- [ ] Tests first: a default DOCX has no `w:ins`, `w:del` or `w:comment`, and its text is the accepted text; with `changes: 'track'` the file has `w:ins` and `w:del` with the pass author and date; with `comments: true` `word/comments.xml` holds each comment and its range wraps its words; each section starts with its bookmark; a memoir export with tracked changes refuses an unmarked real name in deleted text or in a comment, as the name check does for the text.
-- [ ] Two switches in the Word part of the export dialog: "Keep my tracked changes" and "Include my comments". Both are off by default, and the dialog says that an editor can return the file with "Import an editor's changes". Commit.
+- [x] Tests first: a default DOCX has no `w:ins`, `w:del` or `w:comment`, and its text is the accepted text; with `changes: 'track'` the file has `w:ins` and `w:del` with the pass author and date; with `comments: true` `word/comments.xml` holds each comment and its range wraps its words; each section starts with its bookmark; a memoir export with tracked changes refuses an unmarked real name in deleted text or in a comment, as the name check does for the text.
+- [x] Two switches in the Word part of the export dialog: "Keep my tracked changes" and "Include my comments". Both are off by default, and the dialog says that an editor can return the file with "Import an editor's changes". Commit.
 
 ### Task I3: Import an editor's changes (F45, part 2)
 
-**Files:** Create `src/features/import/review.ts`, `src/features/import/placeReview.ts`, `src/features/import/ReviewImport.tsx`, `tests/unit/review.test.ts`, `tests/unit/place-review.test.ts`, `tests/e2e/word-round-trip.spec.ts`, `tests/fixtures/reviewed.docx`. Modify `src/features/project/ProjectPage.tsx` (command and menu entry), `src/features/help/help.ts`.
+**Files:** Create `src/features/import/review.ts`, `src/features/import/placeReview.ts`, `src/features/import/ReviewImport.tsx`, `tests/unit/review.test.ts`, `tests/unit/place-review.test.ts`, `tests/e2e/word-round-trip.spec.ts`, `tests/fixtures/review.ts` (the changed Word file, made from its own XML as `tests/fixtures/import.ts` makes its files). Modify `src/features/project/ProjectPage.tsx` (command entry), `src/features/editor/CommentList.tsx` (the comment's author), `src/features/help/help.ts`.
 
 **Interfaces:**
 
 - Consumes: the bookmarks of Task I2; `openItemDoc`, `sendToTabs`, `takeSnapshot`; the marks of Task I1.
-- Produces: `readReview(bytes: Uint8Array): Promise<Review>` with `Review = { items: Map<string, ReviewParagraph[]>; foreign: boolean }`, `ReviewParagraph = { original: string; changes: ReviewChange[] }`, and `ReviewChange = { kind: 'insert'; at: number; text: string; by: string; date: number } | { kind: 'delete' | 'comment'; from: number; to: number; by: string; date: number; text?: string }`. Offsets count in `original`: the paragraph text with deleted runs in and inserted runs out, one `NODE_MARK` for each footnote, equation or break.
-- Produces: `placeReview(itemId: string, paragraphs: ReviewParagraph[], pass: number): Promise<{ placed: number; unplaced: { quote: string; reason: 'changed' | 'missing' }[] }>`.
+- Produces: `readReview(bytes: Uint8Array): Promise<Review>` with `Review = { sections: Map<string, ReviewParagraph[]>; foreign: boolean }` keyed by bookmark name, `ReviewParagraph = { original: string; changes: ReviewChange[] }`, and `ReviewChange = { kind: 'insert'; at; text; by; date } | { kind: 'delete'; from; to; by; date } | { kind: 'comment'; from; to; id; text; by; date }`. Offsets count in `original`: the paragraph text with deleted runs in and inserted runs out, one `NODE_MARK` for each footnote, equation or break. A reply on the same words joins its comment's text.
+- Produces: `placeChanges(doc, paragraphs, pass, now): { tr: Transform; placement: Placement }` and `placeReview(target: { item; form; pass; language? }, paragraphs): Promise<Placement>` with `Placement = { changes: number; comments: number; unplaced: { quote: string; reason: 'changed' | 'missing' }[] }`.
 
-- [ ] Tests first: `readReview` gives the right offsets for an insert, a delete, a comment and a reply in the fixture; a file with no `vlo_` bookmark gives `foreign: true`; `placeReview` puts each change on a paragraph whose text equals `original` after whitespace folding, matched in order with `diffArrays` from `diff`; a paragraph that the writer changed after the export lists its changes as `changed` and leaves the paragraph as it was; a whole inserted paragraph goes in as a new paragraph with an insert mark; an editor's comment becomes a comment mark with `by`.
-- [ ] "Import an editor's changes" in the project menu and the command menu. It takes a snapshot named "Before Word changes" of each item that it changes, then shows a summary: the changes placed, the comments placed and each change it could not place, with its words. A file that Vlo did not export gets "This file has no Vlo marks. Use Import writing to make a new project from it."
-- [ ] `word-round-trip.spec.ts`: export with comments and tracked changes, import the fixture that an editor changed, accept one change, reload, and the text and the comments are right. Commit, then open pull request I-A.
+- [x] Tests first: `readReview` gives the right offsets for an insert, a delete, a comment and a reply in the fixture; a file with no `vlo_` bookmark gives `foreign: true`; `placeReview` puts each change on a paragraph whose text equals `original` exactly (the export keeps every space, and an exact match keeps the offsets right), matched in order with `diffArrays` from `diff`; a paragraph that the writer changed after the export lists its changes as `changed` and leaves the paragraph as it was; a whole inserted paragraph goes in as a new paragraph with an insert mark; an editor's comment becomes a comment mark with `by`.
+- [x] "Import an editor's changes" in the command menu. It takes a snapshot named "Before Word changes" of each item that it changes, then shows a summary: the changes placed, the comments placed and each change it could not place, with its words. A file that Vlo did not export gets "This file has no Vlo marks. Use Import writing to make a new project from it."
+- [x] `word-round-trip.spec.ts`: export with comments and tracked changes, import the fixture that an editor changed, accept one change, reload, and the text and the comments are right. Commit, then open pull request I-A.
 
 ### Task I4: Beta reader loop (F50)
 

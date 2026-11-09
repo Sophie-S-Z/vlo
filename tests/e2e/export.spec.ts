@@ -78,7 +78,7 @@ test('a Word export keeps tracked changes only when the writer asks', async ({ p
   const keep = dialog.getByRole('switch', { name: 'Keep my tracked changes' });
   await expect(keep).not.toBeChecked();
   await expect(dialog.getByRole('switch', { name: 'Include my comments' })).not.toBeChecked();
-  await expect(dialog).toContainText('Import an editor’s changes');
+  await expect(dialog).toContainText('Then choose Search, then Import an editor’s changes.');
   await keep.click();
   expect(await seriousIssues(page)).toEqual([]);
   const zip = await JSZip.loadAsync((await exportFile(page)).bytes);
