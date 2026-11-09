@@ -53,6 +53,7 @@ export const HELP = {
         'In the Library, open the menu of a project card and choose Back up, then Download backup.',
         'Keep the file somewhere safe. The safety badge at the top of each screen shows when a project needs a backup.',
         'On the new computer, open Vlo and choose Import backup in the Library.',
+        'For a copy that opens without Vlo, choose Download all my writing in Settings.',
       ],
     },
     {

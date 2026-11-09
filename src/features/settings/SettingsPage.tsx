@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
 import { StorageHealth } from './StorageHealth';
 import { FolderSave } from '@/features/backup/FolderSave';
+import { WalkawayExport } from '@/features/backup/WalkawayExport';
 import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
@@ -185,6 +186,7 @@ export function SettingsPage() {
             choose Import backup in the Library there.
           </p>
           <FolderSave />
+          <WalkawayExport />
           <SafariSteps closable={false} className="mt-4" />
         </Section>
 

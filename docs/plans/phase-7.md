@@ -82,14 +82,14 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G3: Walkaway export (F33)
 
-**Files:** Create `src/features/export/walkaway.ts`, `tests/unit/walkaway.test.ts`. Modify `src/features/export/epub.ts` (export its block-to-HTML function), `src/features/settings/SettingsPage.tsx`.
+**Files:** Create `src/features/export/walkaway.ts`, `src/features/backup/WalkawayExport.tsx`, `tests/unit/walkaway.test.ts`. Modify `src/features/settings/SettingsPage.tsx`, `src/features/help/help.ts`, `tests/e2e/backup.spec.ts`, `package.json` (`markdown-it` moves to app packages, decision P2).
 
 **Interfaces:**
 
-- Produces: `walkawayZip(projects: Backup[]): Promise<Uint8Array>`. It reads each project through `buildExportDoc` and writes `<project>/index.html`, `<project>/<nn> <folder>/<nn> <item>.md`, and a top `index.html` that links each project.
+- Produces: `walkawayZip(projects: Backup[]): Promise<Uint8Array>`. It reads each item with the export reader (`itemBlocks`), writes `<project>/<nn> <folder>/<nn> <item>.md` with `toMarkdown`, renders the whole project's Markdown to `<project>/index.html` with `markdown-it`, and writes a top `index.html` that links each project. Notes come too, because the zip is the writer's own copy.
 
-- [ ] Tests first with the novel, memoir and poetry fixtures: the file order follows the binder; each Markdown file matches `toMarkdown` for that item; `index.html` holds every item title in order and no `<script>`; each poem line keeps its leading spaces (`white-space: pre-wrap`); two items with the same title get two files.
-- [ ] `index.html` uses one inline style sheet and the system fonts, so it opens offline with no other file. Math shows as MathML, as in EPUB.
+- [ ] Tests first with the novel, memoir and poetry fixtures: the file order follows the binder; each Markdown file matches `toMarkdown` for that item; `index.html` holds every item title in order and no `<script>`; each poem line keeps its leading spaces as no-break spaces and ends with a hard break; two items with the same title get two files.
+- [ ] `index.html` uses one inline style sheet and the system fonts, so it opens offline with no other file. Equations keep their LaTeX, as in the Markdown export.
 - [ ] Settings, under Backup: "Download all my writing", with one sentence on what the zip holds. Commit, then open pull request G-A.
 
 ### Task G4: Import from other tools (F34)

@@ -203,3 +203,23 @@ test('Safari shows the steps to install Vlo, and the writer can close them', asy
     await safari.close();
   }
 });
+
+test('Settings downloads all the writing as Markdown files and a page that needs no Vlo', async ({
+  page,
+}) => {
+  await novelWithText(page);
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Settings' }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download all my writing' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^My writing \d{4}-\d{2}-\d{2}\.zip$/);
+  const zip = await JSZip.loadAsync(await readFile(await file.path()));
+  expect(
+    Object.keys(zip.files)
+      .filter((name) => !name.endsWith('/'))
+      .sort(),
+  ).toEqual(['Salt Year/01 Chapter 1/01 Scene 1.md', 'Salt Year/index.html', 'index.html']);
+  expect(await zip.file('Salt Year/01 Chapter 1/01 Scene 1.md')?.async('string')).toMatch(SHOWN);
+  await expect(page.getByRole('status').filter({ hasText: 'My writing' })).toContainText('to your downloads');
+  expect(await seriousIssues(page)).toEqual([]);
+});
