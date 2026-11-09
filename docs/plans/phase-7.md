@@ -163,6 +163,6 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G10: Gate 7 and the release
 
-- [ ] Update STATUS, the roadmap doc's feature table, and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 7 diff against Review Focus 1 to 6. Fix each high finding.
+- [x] Update STATUS, the roadmap doc's feature table, and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS. The roadmap table has no status column, and `docs/licenses.md` already lists `markdown-it` as a runtime package, so neither changed.
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 7 diff against Review Focus 1 to 6. Fix each high finding. The review found 1 high and 3 medium findings, all in the import readers, and each is fixed with a test. STATUS lists the low findings.
 - [ ] Open pull request G-D. Ask you to run "Run workflow" for all 4 browsers.

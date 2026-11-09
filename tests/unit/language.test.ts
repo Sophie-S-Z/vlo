@@ -19,6 +19,9 @@ describe('language', () => {
   test('a stored tag is cleaned, and a tag that is not valid gives none', () => {
     expect(cleanLanguage('PT-br')).toBe('pt-BR');
     expect(cleanLanguage('not a language')).toBeUndefined();
+    // A calendar or private part names no other language, and the language list cannot name it.
+    expect(cleanLanguage('en-u-ca-gregory')).toBe('en');
+    expect(cleanLanguage('de-x-foo')).toBe('de');
     expect(cleanLanguage(7)).toBeUndefined();
   });
 

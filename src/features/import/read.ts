@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { readDocx } from './docx';
 import { readMarkdown, readPlainText } from './markdown';
-import { titleOfFile } from './outline';
+import { titleOfFile, titleOfName } from './outline';
 import { readScrivener, type FileMap } from './scrivener';
 import { ImportError, type ImportNode, type ImportSource } from './tree';
 
@@ -17,7 +17,19 @@ export interface PickedFile {
   read: () => Promise<Uint8Array>;
 }
 
-const utf8 = new TextDecoder();
+/**
+ * The text of a Markdown or text file: UTF-16 when it starts with a byte order mark, else UTF-8. A file
+ * that is not UTF-8 is most often from an older Windows editor, so it is read as Windows-1252.
+ */
+function decodeText(bytes: Uint8Array): string {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+}
 const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 function hidden(path: string): boolean {
@@ -47,8 +59,8 @@ async function fileNodes(file: PickedFile, skipped: string[]): Promise<ImportNod
     skipped.push(...docx.skipped);
     return docx.nodes;
   }
-  if (/\.(md|markdown)$/i.test(name)) return readMarkdown(name, utf8.decode(await file.read()));
-  if (/\.txt$/i.test(name)) return [readPlainText(name, utf8.decode(await file.read()))];
+  if (/\.(md|markdown)$/i.test(name)) return readMarkdown(name, decodeText(await file.read()));
+  if (/\.txt$/i.test(name)) return [readPlainText(name, decodeText(await file.read()))];
   return null;
 }
 
@@ -74,7 +86,7 @@ export async function readPicked(picked: readonly PickedFile[]): Promise<ImportS
     const key = path.join('/');
     let folder = folders.get(key);
     if (!folder) {
-      folder = { title: titleOfFile(path.at(-1) ?? ''), children: [] };
+      folder = { title: titleOfName(path.at(-1) ?? ''), children: [] };
       folderOf(path.slice(0, -1)).children?.push(folder);
       folders.set(key, folder);
     }
@@ -102,6 +114,6 @@ export async function readPicked(picked: readonly PickedFile[]): Promise<ImportS
   const nodes = root.children ?? [];
   if (nodes.length === 0) throw new ImportError('Vlo found no Word, Markdown or text file to import.');
   const title =
-    top !== '' ? titleOfFile(top) : picked.length === 1 ? titleOfFile(first.path) : 'Imported writing';
+    top !== '' ? titleOfName(top) : picked.length === 1 ? titleOfFile(first.path) : 'Imported writing';
   return { title, nodes, skipped };
 }

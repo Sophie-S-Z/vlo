@@ -33,6 +33,7 @@ const SKIPPED = new Set([
   'stylesheet',
   'info',
   'pict',
+  'nonshppict',
   'header',
   'headerl',
   'headerr',
@@ -60,8 +61,6 @@ export interface RtfText {
   skipped: string[];
 }
 
-const cp1252 = new TextDecoder('windows-1252');
-
 export function readRtf(source: string): RtfText {
   const stack: Group[] = [];
   let group: Group = { style: { ...PLAIN }, skip: false, note: false, uc: 1 };
@@ -73,6 +72,8 @@ export function readRtf(source: string): RtfText {
   let note = '';
   let pictures = 0;
   let tables = 0;
+  // \'hh bytes are in the code page that \ansicpg names. Windows-1252 is the RTF default.
+  let codePage = new TextDecoder('windows-1252');
 
   // Characters with one style wait in `run`, so a bold word becomes one <strong>, not one for each letter.
   let run = '';
@@ -145,7 +146,7 @@ export function readRtf(source: string): RtfText {
     if (next === "'") {
       const byte = parseInt(source.slice(i + 2, i + 4), 16);
       if (pendingSkip > 0) pendingSkip -= 1;
-      else if (!Number.isNaN(byte)) put(cp1252.decode(new Uint8Array([byte])));
+      else if (!Number.isNaN(byte)) put(codePage.decode(new Uint8Array([byte])));
       i += 4;
       continue;
     }
@@ -165,8 +166,9 @@ export function readRtf(source: string): RtfText {
     const param = word?.[2] === undefined ? null : Number(word[2]);
     i += 1 + (word?.[0].length ?? 1);
 
-    if (star || SKIPPED.has(name)) {
-      if (name === 'pict') pictures += 1;
+    // \*\shppict holds the picture that \nonshppict repeats for older readers, so Vlo counts it once.
+    if ((star && name !== 'shppict') || SKIPPED.has(name)) {
+      if (name === 'pict' && !group.skip) pictures += 1;
       // An unknown \* destination is skipped as the RTF spec says, but a footnote keeps its text.
       group.skip = name !== 'footnote';
       star = false;
@@ -179,6 +181,8 @@ export function readRtf(source: string): RtfText {
         group.skip = false;
         break;
       case 'par':
+      case 'page':
+      case 'sect':
       case 'row':
         if (group.note) note += ' ';
         else if (!group.skip) endParagraph();
@@ -216,6 +220,13 @@ export function readRtf(source: string): RtfText {
       case 'u':
         if (param !== null) put(String.fromCharCode(param < 0 ? param + 65536 : param));
         pendingSkip = group.uc;
+        break;
+      case 'ansicpg':
+        try {
+          codePage = new TextDecoder(param === 10000 ? 'macintosh' : `windows-${String(param)}`);
+        } catch {
+          // A code page that the browser cannot read, such as a double-byte one, stays Windows-1252.
+        }
         break;
       case 'uc':
         group.uc = param ?? 1;

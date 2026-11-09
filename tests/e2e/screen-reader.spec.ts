@@ -22,7 +22,8 @@ async function command(page: Page, text: string, option: string) {
   await page.keyboard.press('Enter');
 }
 
-test('the screen reader script runs with the keyboard only', async ({ page }) => {
+test('the screen reader script runs with the keyboard only', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'The script is for a desktop screen reader. Under 600 px the binder is a drawer.');
   await skipOnboarding(page);
 
   // 2. Create a project.

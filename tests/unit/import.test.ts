@@ -95,6 +95,11 @@ describe('placeNodes', () => {
     const nodes = [{ title: 'Chapter', text: text('own'), children: [{ title: 'Scene', text: text('x') }] }];
     expect(shape(nodes, ['novel'])).toEqual(['chapter Chapter', '  scene Chapter', '  scene Scene']);
   });
+
+  test('keeps the synopsis of a folder', () => {
+    const [chapter] = placeNodes([{ title: 'Chapter', synopsis: 'The debt.', children: [] }], ['novel']);
+    expect(chapter?.synopsis).toBe('The debt.');
+  });
 });
 
 describe('toBackup', () => {
@@ -201,6 +206,27 @@ describe('readers', () => {
     expect(part?.children?.[1]?.text?.html).toBe('<p><u>Rosa</u><s> left</s><br>at dawn.</p>');
   });
 
+  test('Word: text inside fields, content controls and direction marks stays, and deleted text stays out', async () => {
+    const t = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`;
+    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+    const M = 'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"';
+    const document = `<w:document ${W} ${M}><w:body>
+<w:p>${t('A ')}<w:fldSimple w:instr="PAGE">${t('field ')}</w:fldSimple><w:sdt><w:sdtPr><w:alias w:val="x"/></w:sdtPr><w:sdtContent>${t('control ')}</w:sdtContent></w:sdt><w:dir w:val="rtl">${t('שלום ')}</w:dir><w:customXml>${t('custom')}</w:customXml><w:del><w:r><w:delText>gone</w:delText></w:r></w:del><m:oMath/></w:p>
+<w:sdt><w:sdtContent><w:p>${t('In a block control.')}</w:p></w:sdtContent></w:sdt>
+</w:body></w:document>`;
+    const { nodes, skipped } = await readDocx('Fields.docx', await docxBytes(document));
+    expect(nodes[0]?.text?.html).toBe('<p>A field control שלום custom</p><p>In a block control.</p>');
+    expect(skipped).toEqual(['1 equation']);
+  });
+
+  test('Word: paragraphs with line breaks are stanzas, so a poem keeps its stanza breaks', async () => {
+    const run = (text: string) => `<w:r><w:t>${text}</w:t></w:r>`;
+    const line = (a: string, b: string) => `<w:p>${run(a)}<w:r><w:br/></w:r>${run(b)}</w:p>`;
+    const document = `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${line('a', 'b')}${line('c', 'd')}</w:body></w:document>`;
+    const { nodes } = await readDocx('Poem.docx', await docxBytes(document));
+    expect(nodes[0]?.text?.poem).toBe('a\nb\n\nc\nd\n');
+  });
+
   test('Word: a file that is not a Word file gives a message for the writer', async () => {
     await expect(readDocx('broken.docx', encoder.encode('not a zip'))).rejects.toThrow(ImportError);
   });
@@ -211,6 +237,14 @@ describe('readers', () => {
     expect(out.html).toBe(
       '<p><strong>Mira</strong> paid the caf\u00e9 in \u201ccoins\u201d.<sup data-footnote="" data-note="&quot;Forty short.&quot;"></sup></p><p>The tide\tturned.</p>',
     );
+    expect(out.skipped).toEqual(['1 picture']);
+  });
+
+  test('RTF: a page break ends a paragraph, the code page reads the bytes, and a picture counts once', () => {
+    const out = readRtf(
+      String.raw`{\rtf1\ansi\ansicpg1251 Hi\page There \'cf\'f0\'e8{\*\shppict{\pict 00}}{\nonshppict{\pict 00}}}`,
+    );
+    expect(out.text).toBe('Hi\nThere \u041f\u0440\u0438\n');
     expect(out.skipped).toEqual(['1 picture']);
   });
 
@@ -253,6 +287,23 @@ describe('readPicked', () => {
       ['Part B', ['One']],
     ]);
     expect(source.skipped).toEqual(['1 other file']);
+  });
+
+  test('a folder name keeps its dots, and a text file in Windows-1252 or UTF-16 reads right', async () => {
+    const utf16 = new Uint8Array([
+      0xff,
+      0xfe,
+      ...Array.from('caf\u00e9', (c) => [c.charCodeAt(0), 0]).flat(),
+    ]);
+    const source = await readPicked(
+      picked({
+        'Book/Part 2. The Sea/one.txt': new Uint8Array([0x63, 0x61, 0x66, 0xe9]),
+        'Book/Part 2. The Sea/two.txt': utf16,
+      }),
+    );
+    const [folder] = source.nodes;
+    expect(folder?.title).toBe('Part 2. The Sea');
+    expect(folder?.children?.map((c) => c.text?.poem)).toEqual(['caf\u00e9\n', 'caf\u00e9\n']);
   });
 
   test('a zip of a Scrivener project goes to the Scrivener reader', async () => {

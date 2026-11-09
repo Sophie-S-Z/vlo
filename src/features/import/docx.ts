@@ -90,16 +90,44 @@ function runHtml(run: Element, ctx: Context): string {
   return text;
 }
 
-/** The runs of a paragraph, with the runs inside links and tracked insertions. */
+/**
+ * Word wraps text in many elements: links, tracked insertions, fields, content controls and direction
+ * marks. Vlo reads into each one, except deleted text and the property elements, whose names end in "Pr".
+ */
+function container(part: Element): boolean {
+  return part.localName !== 'del' && part.localName !== 'moveFrom' && !part.localName.endsWith('Pr');
+}
+
+/** An equation is in the math namespace. Vlo cannot read it yet, so the summary names it. */
+function isEquation(part: Element): boolean {
+  return part.localName === 'oMath' || part.localName === 'oMathPara';
+}
+
+/** The runs of a paragraph, with the runs inside each wrapper element. */
 function paragraphHtml(paragraph: Element, ctx: Context): string {
   let out = '';
   for (const part of Array.from(paragraph.children)) {
-    if (part.namespaceURI !== W) continue;
-    if (part.localName === 'r') out += runHtml(part, ctx);
-    else if (part.localName === 'hyperlink' || part.localName === 'ins' || part.localName === 'smartTag')
-      out += paragraphHtml(part, ctx);
+    if (part.namespaceURI !== W) {
+      if (isEquation(part)) skip(ctx, 'equation');
+    } else if (part.localName === 'r') out += runHtml(part, ctx);
+    else if (container(part)) out += paragraphHtml(part, ctx);
   }
   return out;
+}
+
+/** The paragraphs of the body, with those inside content controls and other wrappers. */
+function bodyHtml(parent: Element, styles: ReadonlyMap<string, 1 | 2 | 3>, ctx: Context): string {
+  let html = '';
+  for (const part of Array.from(parent.children)) {
+    if (part.namespaceURI !== W) continue;
+    if (part.localName === 'tbl') skip(ctx, 'table');
+    else if (part.localName === 'p') {
+      const level = styles.get(attr(child(child(part, 'pPr'), 'pStyle'), 'val') ?? '');
+      const tag = level === 1 ? 'h1' : level === 2 ? 'h2' : level === 3 ? 'h3' : 'p';
+      html += `<${tag}>${paragraphHtml(part, ctx)}</${tag}>`;
+    } else if (container(part)) html += bodyHtml(part, styles, ctx);
+  }
+  return html;
 }
 
 /** The plain text of each footnote, by its id. */
@@ -132,15 +160,7 @@ export async function readDocx(
   const styles = headingStyles(await xml(zip, 'word/styles.xml'));
   const ctx: Context = { notes: footnotes(await xml(zip, 'word/footnotes.xml')), skipped: new Map() };
 
-  let html = '';
-  for (const part of Array.from(body.children)) {
-    if (part.namespaceURI !== W) continue;
-    if (part.localName === 'tbl') skip(ctx, 'table');
-    if (part.localName !== 'p') continue;
-    const level = styles.get(attr(child(child(part, 'pPr'), 'pStyle'), 'val') ?? '');
-    const tag = level === 1 ? 'h1' : level === 2 ? 'h2' : level === 3 ? 'h3' : 'p';
-    html += `<${tag}>${paragraphHtml(part, ctx)}</${tag}>`;
-  }
+  const html = bodyHtml(body, styles, ctx);
   const skipped = [...ctx.skipped].map(([what, n]) => (n === 1 ? `1 ${what}` : `${String(n)} ${what}s`));
   return { nodes: outline(titleOfFile(name), html, '\n'), skipped };
 }

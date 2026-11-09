@@ -3,7 +3,10 @@ import { seriousIssues } from './support/axe';
 
 /* Plan Task G6 (roadmap F36, decision P4): a new writer starts with the Simple toolbar. */
 
-test('a new writer starts at Simple, and the More menu and Settings switch the level', async ({ page }) => {
+test('a new writer starts at Simple, and the More menu and Settings switch the level', async ({
+  page,
+  isMobile,
+}) => {
   // No skipOnboarding here: it starts the other tests at Full.
   await page.goto('/welcome');
   await page.getByRole('button', { name: 'Skip' }).click();
@@ -29,7 +32,8 @@ test('a new writer starts at Simple, and the More menu and Settings switch the l
 
   await toolbar.getByRole('button', { name: 'More tools' }).click();
   await page.getByRole('menuitem', { name: 'Show all tools' }).click();
-  await expect(toolbar.getByRole('button', { name: 'Underline' })).toBeVisible();
+  // A phone shows its narrow toolbar at both levels, so only a wider screen shows the extra tools.
+  if (!isMobile) await expect(toolbar.getByRole('button', { name: 'Underline' })).toBeVisible();
 
   await page.goto('/settings');
   const all = page.getByRole('switch', { name: 'Show all tools in the toolbar' });

@@ -167,6 +167,12 @@ export function projectDef(source: readonly Template[] | { templates: readonly T
   return def;
 }
 
+/** The kind that each imported text becomes: the first kind with its own text, other than a note. */
+export function importTextKind(templates: readonly Template[]): ItemKind {
+  const def = projectDef(templates);
+  return def.kinds.find((k) => k !== 'note' && def.editorKind(k) !== null) ?? 'note';
+}
+
 const lists = new Map<string, readonly Template[]>();
 
 /** The templates in a clean order, as one shared array for each list, so React can compare it. */

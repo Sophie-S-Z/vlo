@@ -132,12 +132,13 @@
 
 /* A drop cap spans about three lines and keeps the paragraph's own font. */
 .vlo-prose p[data-drop-cap='true']::first-letter {
-  float: left;
+  float: inline-start;
   font-family: var(--font-display);
   font-size: 3.4em;
   font-weight: 600;
   line-height: 0.85;
-  padding: 0.08em 0.1em 0 0;
+  padding-block-start: 0.08em;
+  padding-inline-end: 0.1em;
   color: var(--accent-text);
 }
 
@@ -640,9 +641,9 @@ html[data-calm='true'] .vlo-fill-shimmer {
 }
 
 /* Craft labels (spec 8.3, plan Task C7). The poem makes room above each line for the stress marks and at
-   the right for the syllable count and the rhyme letter. The labels sit in a layer outside the text. */
+   the end of the line for the syllable count and the rhyme letter. The labels sit in a layer outside the text. */
 .vlo-craft .vlo-poem {
-  padding-right: 4.25rem;
+  padding-inline-end: 4.25rem;
 }
 
 .vlo-craft .vlo-poem [data-poem-line] {
@@ -676,7 +677,7 @@ html[data-calm='true'] .vlo-fill-shimmer {
 
 .vlo-craft-end {
   position: absolute;
-  right: 0;
+  inset-inline-end: 0;
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;

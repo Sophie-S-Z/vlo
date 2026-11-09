@@ -16,6 +16,12 @@ async function binderTitles(page: Page): Promise<string[]> {
   return labels.map((label) => label.replace(/^Move /, ''));
 }
 
+/** Under 600 px the binder is a drawer, so its button opens it. */
+async function showBinder(page: Page, isMobile: boolean) {
+  if (isMobile) await page.getByRole('button', { name: 'Binder' }).click();
+  await expect(binder(page)).toBeVisible();
+}
+
 async function openImport(page: Page) {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'Import writing' }).click();
@@ -29,6 +35,7 @@ const pickFiles = (page: Page, name: string, bytes: Uint8Array) =>
 
 test('a Word file imports as a chapter with two scenes, with its marks, and the binder stays after a reload', async ({
   page,
+  isMobile,
 }) => {
   await openImport(page);
   await pickFiles(page, 'Salt Year.docx', await docxBytes());
@@ -38,10 +45,11 @@ test('a Word file imports as a chapter with two scenes, with its marks, and the 
   expect(await seriousIssues(page)).toEqual([]);
   await dialog(page).getByRole('button', { name: 'Import', exact: true }).click();
 
-  await expect(binder(page)).toBeVisible();
+  await showBinder(page, isMobile);
   const order = ['Chapter One', 'The ledger', 'The key'];
   await expect.poll(() => binderTitles(page)).toEqual(order);
   await page.reload();
+  await showBinder(page, isMobile);
   await expect.poll(() => binderTitles(page)).toEqual(order);
 
   await binder(page).getByRole('button', { name: 'The ledger', exact: true }).click();
@@ -51,11 +59,12 @@ test('a Word file imports as a chapter with two scenes, with its marks, and the 
   await expect(editor.locator('sup[data-footnote]')).toHaveCount(1);
 });
 
-test('a zipped Scrivener project imports its Draft in binder order', async ({ page }) => {
+test('a zipped Scrivener project imports its Draft in binder order', async ({ page, isMobile }) => {
   await openImport(page);
   await pickFiles(page, 'Salt Year.scriv.zip', await zipOf(SCRIVENER_FILES));
   await expect(dialog(page).getByRole('status')).toContainText('Vlo found 3 texts');
   await dialog(page).getByRole('button', { name: 'Import', exact: true }).click();
+  await showBinder(page, isMobile);
   await expect(binder(page).getByRole('button', { name: 'Move The key' })).toBeVisible();
   const titles = await binderTitles(page);
   expect(titles.slice(0, 3)).toEqual(['Chapter One', 'The ledger', 'The key']);
@@ -64,6 +73,7 @@ test('a zipped Scrivener project imports its Draft in binder order', async ({ pa
 
 test('a Markdown folder imports as pages in name order, and other files are in the summary', async ({
   page,
+  isMobile,
 }) => {
   await openImport(page);
   await dialog(page).locator('input[webkitdirectory]').setInputFiles('tests/fixtures/novel');
@@ -74,8 +84,9 @@ test('a Markdown folder imports as pages in name order, and other files are in t
     .getByRole('checkbox', { name: /^Open writing/ })
     .click();
   await dialog(page).getByRole('button', { name: 'Import', exact: true }).click();
-  await expect.poll(() => binderTitles(page)).toEqual(['1-1', '1-2', '2-1', '2-2', '3-1', '3-2']);
   await expect(page.getByRole('heading', { level: 1, name: "The Keeper's Debt" })).toBeVisible();
+  await showBinder(page, isMobile);
+  await expect.poll(() => binderTitles(page)).toEqual(['1-1', '1-2', '2-1', '2-2', '3-1', '3-2']);
 });
 
 test('a damaged file shows a message and adds no project', async ({ page }) => {

@@ -42,11 +42,14 @@ export const DEFAULT_LANGUAGE = 'en';
 
 const RIGHT_TO_LEFT = new Set(['ar', 'dv', 'fa', 'he', 'ps', 'sd', 'ug', 'ur', 'yi']);
 
-/** A stored tag in its standard form, or undefined for a tag that is not valid. */
+/**
+ * A stored tag in its standard form, or undefined for a tag that is not valid. Only the language, script
+ * and region stay: a calendar or private part, such as "-u-ca-gregory", names no other language.
+ */
 export function cleanLanguage(value: unknown): string | undefined {
   if (typeof value !== 'string' || value === '') return undefined;
   try {
-    return Intl.getCanonicalLocales(value)[0];
+    return new Intl.Locale(value).baseName;
   } catch {
     return undefined;
   }

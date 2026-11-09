@@ -8,7 +8,7 @@ import { proseExtensions } from '@/features/editor/extensions/prose';
 import { docBody, docText } from '@/features/editor/itemText';
 import { parsePoemText, poemDataToJSON } from '@/features/editor/poemText';
 import { newProject } from '@/features/library/projects';
-import { projectDef } from '@/features/library/templates';
+import { importTextKind, projectDef } from '@/features/library/templates';
 import { emptyViewRows, type Item, type ItemKind, type ItemText, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
@@ -61,7 +61,7 @@ interface Placed {
 export function placeNodes(nodes: readonly ImportNode[], templates: readonly Template[]): Placed[] {
   const def = projectDef(templates);
   const folders = def.kinds.filter((k) => k !== 'note' && def.editorKind(k) === null);
-  const textKind = def.kinds.find((k) => k !== 'note' && def.editorKind(k) !== null) ?? 'note';
+  const textKind = importTextKind(templates);
   const allowed = (parent: ItemKind | 'root', kind: ItemKind) =>
     def.childKinds[parent]?.includes(kind) ?? false;
   const leaf = (kind: ItemKind, node: ImportNode): Placed => ({
@@ -93,7 +93,9 @@ export function placeNodes(nodes: readonly ImportNode[], templates: readonly Tem
       if (!pick)
         return [...(own ? place(own, parent) : []), ...node.children.flatMap((c) => place(c, parent))];
       const children = [...(own ? place(own, pick) : []), ...node.children.flatMap((c) => place(c, pick))];
-      return [{ kind: pick, title: node.title, children }];
+      return [
+        { kind: pick, title: node.title, ...(node.synopsis ? { synopsis: node.synopsis } : {}), children },
+      ];
     }
     if (allowed(parent, textKind)) return [leaf(textKind, node)];
     // A scene needs a chapter: the text gets a folder of its own name.

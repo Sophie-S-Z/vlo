@@ -5,10 +5,14 @@ import type { ImportNode, ImportText } from './tree';
  * as the Vlo exports write them. A file with no such headings is one item.
  */
 
-/** The file name without its extension and without a number in front of a word, such as "01 " from a Vlo export. */
+/** A folder name without a number in front of a word, such as "01 " from a Vlo export. */
+export function titleOfName(name: string): string {
+  return name.replace(/^\d+[\s._-]+(?=[^\d\s._-])/, '').trim() || 'Untitled';
+}
+
+/** A file name without its extension, as `titleOfName` gives it. */
 export function titleOfFile(name: string): string {
-  const base = name.replace(/\.[^.]+$/, '').replace(/^\d+[\s._-]+(?=[^\d\s._-])/, '');
-  return base.trim() || 'Untitled';
+  return titleOfName(name.replace(/\.[^.]+$/, ''));
 }
 
 export function escapeHtml(text: string): string {
@@ -35,7 +39,8 @@ interface Section {
 
 /**
  * Splits HTML at its `h1` and `h2` elements. `stanzaGap` joins the blocks of a poem: "\n" when each
- * paragraph is a line (Word), "\n\n" when each paragraph is a stanza (Markdown).
+ * paragraph is a line (Word), "\n\n" when each paragraph is a stanza (Markdown). Word paragraphs that hold
+ * line breaks are stanzas too, so a poem typed with Shift+Enter keeps its stanza breaks.
  */
 export function outline(title: string, html: string, stanzaGap: '\n' | '\n\n'): ImportNode[] {
   const body = new DOMParser().parseFromString(html, 'text/html').body;
@@ -50,7 +55,7 @@ export function outline(title: string, html: string, stanzaGap: '\n' | '\n\n'): 
       ? undefined
       : {
           html: blocks.map((b) => b.outerHTML).join(''),
-          poem: `${blocks.map(linesOf).join(stanzaGap)}\n`,
+          poem: `${blocks.map(linesOf).join(blocks.some((b) => b.querySelector('br')) ? '\n\n' : stanzaGap)}\n`,
         };
 
   const nodes: ImportNode[] = [];

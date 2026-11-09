@@ -2,6 +2,7 @@ import { FileInput } from 'lucide-react';
 import { useId, useRef, useState, type RefObject } from 'react';
 import { useNavigate } from 'react-router';
 import { TemplatePicker, useTemplatePick } from '@/features/library/TemplatePicker';
+import { importTextKind, projectDef } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { countWords } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
@@ -28,20 +29,22 @@ const MAX_BYTES = 1024 * 1024 * 1024;
 
 const READ_FAILED = 'Vlo could not read these files. Pick them again.';
 
-function summary(nodes: readonly ImportNode[]): { texts: number; words: number } {
+function summary(nodes: readonly ImportNode[]): { texts: number; words: number; indented: boolean } {
   let texts = 0;
   let words = 0;
+  let indented = false;
   const walk = (list: readonly ImportNode[]) => {
     for (const node of list) {
       if (node.text) {
         texts += 1;
         words += countWords(node.text.poem);
+        indented ||= /^[ \t]+\S/m.test(node.text.poem);
       }
       walk(node.children ?? []);
     }
   };
   walk(nodes);
-  return { texts, words };
+  return { texts, words, indented };
 }
 
 export function ImportWriting() {
@@ -107,10 +110,15 @@ export function ImportWriting() {
         import('./tree'),
         import('@/features/backup/backup'),
       ]);
-      const id = await importBackup(
-        toBackup({ ...from, title: shownTitle }, pick.value, clock.now()),
-        'same',
-      );
+      let backup;
+      try {
+        backup = toBackup({ ...from, title: shownTitle }, pick.value, clock.now());
+      } catch {
+        setError(READ_FAILED);
+        setBusy(false);
+        return;
+      }
+      const id = await importBackup(backup, 'same');
       void navigate(`/p/${id}`);
     } catch {
       setError('Vlo could not save the project on this device. Check that the browser allows site data.');
@@ -141,6 +149,9 @@ export function ImportWriting() {
   );
 
   const counts = source ? summary(source.nodes) : null;
+  // Only the poem editor keeps the spaces and tabs at the start of a line.
+  const def = projectDef(pick.value);
+  const losesIndents = counts?.indented === true && def.editorKind(importTextKind(pick.value)) !== 'poem';
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
@@ -188,6 +199,11 @@ export function ImportWriting() {
               </p>
               {source.skipped.length > 0 && (
                 <p className="text-muted">Vlo leaves out: {source.skipped.join(', ')}.</p>
+              )}
+              {losesIndents && (
+                <p className="text-muted">
+                  Some lines start with spaces or tabs. To keep these indents, pick Poetry collection.
+                </p>
               )}
             </div>
             <div className="grid gap-2">

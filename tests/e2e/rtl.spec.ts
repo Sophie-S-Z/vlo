@@ -45,4 +45,15 @@ test('a Hebrew poem reads from right to left and keeps its hanging indent on the
     expect(line.right).toBeGreaterThan(0);
     expect(line.left).toBe(0);
   }
+
+  // The arrow keys move in the visual order: in right-to-left text, Right Arrow moves back one letter.
+  await poem.click();
+  await page.keyboard.press('End');
+  const caret = () => page.evaluate(() => getSelection()?.focusOffset ?? -1);
+  const end = await caret();
+  expect(end).toBe('מלח על האדן'.length);
+  await page.keyboard.press('ArrowRight');
+  expect(await caret()).toBe(end - 1);
+  await page.keyboard.press('ArrowLeft');
+  expect(await caret()).toBe(end);
 });
