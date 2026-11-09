@@ -155,18 +155,20 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 
 ### Task H9: Chinese and Japanese counts (F38)
 
-**Files:** Modify `src/lib/wordcount.ts`, `src/features/editor/itemText.ts`, `src/features/library/format.ts` (`formatWords` takes the unit), each count label that `grep -rn "formatWords\|words" src` finds, `src/features/export/build.ts`, `tests/unit/wordcount.test.ts`, `tests/e2e/rtl.spec.ts` or a new `tests/e2e/cjk.spec.ts`.
+**Files:** Modify `src/lib/wordcount.ts`, `src/features/editor/itemText.ts`, `EditorPane.tsx`, `WordCount.tsx`, `manuscript.ts` (the language in the context), `format/notes.ts` (`withoutNotes` also takes a poem's notes off), `stats/stats.ts`, `stats/WritingStats.tsx`, `src/features/library/format.ts` (`formatWords` takes the unit), `projects.ts` (a language change counts again, and today's count keeps its place), `src/lib/db.ts` (version 8 counts older Chinese and Japanese projects again), `src/features/backup/backup.ts` (so does an import), `stats/dayStart.ts`, `ProjectCard.tsx`, `src/features/project/ProjectPage.tsx`, `src/features/focus/SessionTimer.tsx`, `src/features/progress/ProgressPage.tsx`, `Goals.tsx`, `Tiles.tsx`, `src/features/outline/OutlinePage.tsx`, `src/features/sequences/SequenceList.tsx`, `SequencesPage.tsx`, `src/features/snapshots/HistoryPanel.tsx`, `src/features/analysis/StatsBar.tsx`, `stats.ts`, `analysis.worker.ts`, `analysisClient.ts`, `src/features/export/manuscript.ts`, `docx.ts`, `pdf/pdf.ts`, `src/features/capture/capture.ts`, `tests/unit/wordcount.test.ts`, `item-text.test.ts`, `manuscript.test.ts`, and create `tests/e2e/cjk.spec.ts`.
 
 **Interfaces:**
 
-- Produces: `countUnit(language: string | undefined): 'words' | 'characters'` and `countWords(text, language?)`, which counts each Han and kana character as one unit for `zh` and `ja`.
+- Produces: `countUnit(language: string | undefined): 'words' | 'characters'` and `countWords(text, language?)`, which counts each Han and kana character as one unit for `zh` and `ja`, and each word in another script as one.
 
-- [ ] Tests first: "我爱写作" is 4 characters; "東京へ行く" is 5; mixed "Vlo は便利" is 1 word and 3 characters, so 4 units; English text gives the same count as before.
-- [ ] The stored `wordCount` holds the unit count. A change of language counts the items again. Labels say "characters" for these projects. Commit.
+- [x] Tests first: "我爱写作" is 4 characters; "東京へ行く" is 5; mixed "Vlo は便利" is 1 word and 3 characters, so 4 units; English text gives the same count as before.
+- [x] The stored `wordCount` holds the unit count. A change of language counts the items again from their text copies, without their notes. The count labels, the session, goal and progress counts, History, the stats bar and the manuscript first page say "characters" for these projects. Insights keeps its word statistics, because its measures read English words.
+- [x] Database version 8 and a backup import count the items of older Chinese and Japanese projects again.
+- [x] `cjk.spec.ts`: a scene counts words, then 5 characters after the change to Japanese, after a reload and on the Library card.
 
 ### Task H10: Gate 8 and the release
 
-- [ ] Update STATUS, the help page and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] Add Codex entries and notes to the memoir leak test (Review Focus 4).
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 8 diff against Review Focus 1 to 6. Fix each high finding.
+- [x] Update STATUS, the help page and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS. The phone suite runs in CI.
+- [x] Add Codex entries and notes to the memoir leak test (Review Focus 4).
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 8 diff against Review Focus 1 to 6. Fix each high finding.
 - [ ] Open pull request H-D. Ask you to run "Run workflow" for all 4 browsers.
