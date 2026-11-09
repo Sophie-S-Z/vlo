@@ -20,6 +20,7 @@ import {
   Keyboard,
   LetterText,
   Link,
+  MessageSquareText,
   Omega,
   List,
   ListOrdered,
@@ -76,6 +77,7 @@ export type PanelId =
   | 'math'
   | 'read-aloud'
   | 'person'
+  | 'comment'
   | 'shortcuts';
 
 export type CommandGroup =
@@ -614,6 +616,19 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isEnabled: (e) => e.can().insertFootnote(),
+  },
+  {
+    kind: 'panel',
+    id: 'comment',
+    label: 'Comment',
+    icon: MessageSquareText,
+    group: 'insert',
+    forms: BOTH,
+    keys: 'Mod-Alt-m',
+    keywords: ['note', 'annotation', 'remark', 'margin', 'review'],
+    panel: 'comment',
+    selection: true,
+    isActive: (e) => e.isActive('comment'),
   },
   {
     kind: 'run',

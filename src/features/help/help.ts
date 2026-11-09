@@ -36,6 +36,7 @@ export const HELP = {
         'Add, rename and drag items in the binder on the left. The keyboard and the item menu move them too.',
         'Press Ctrl+K (Cmd+K on a Mac) to find an item by its title or its text, or to run an action.',
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
+        'To make a note to yourself, select the words and choose Comment. Comments show under the text, and exports leave them out.',
       ],
     },
     {

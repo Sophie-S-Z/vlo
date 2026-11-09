@@ -620,6 +620,12 @@ html[data-calm='true'] .vlo-fill-shimmer {
   box-decoration-break: clone;
 }
 
+/* Comments (F43). Words with a comment have a soft accent tint, so they differ from AI text and names. */
+.vlo-manuscript .vlo-comment {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  box-decoration-break: clone;
+}
+
 /* Show aliases: the alias stands in front of the real name, which hides. The text itself does not change. */
 .vlo-manuscript .vlo-alias-real {
   display: none;

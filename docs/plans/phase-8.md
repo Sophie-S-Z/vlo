@@ -4,7 +4,7 @@
 
 **Goal:** Vlo has the standard tools that Scrivener, Novelcrafter and Google Docs users expect, and each tool stays hidden until the writer asks for it. This phase builds the roadmap's "Match the best" features (F39 to F43 and F46 to F48 in the roadmap doc) and the rest of F38. Repository Phase 7 built the roadmap's "Safe launch", so this repository phase is roadmap Phase 7.
 
-**Architecture:** Each feature reuses a path that exists and has tests. Notes in the text are a mark in the item's Yjs document, so the save, tab sync, snapshots, backups and imports carry them with no new table. The Codex and the research files are new tables (database version 7, backup version 4). The Outline view reads the binder rows and changes them through `src/features/binder/items.ts`. Split view shows a second `EditorPane`. The style check and the Codex names are ProseMirror decorations, so they never change the text. Quick capture adds a note item through the binder functions.
+**Architecture:** Each feature reuses a path that exists and has tests. Comments in the text are a mark in the item's Yjs document, so the save, tab sync, snapshots, backups and imports carry them with no new table. The Codex and the research files are new tables (database version 7, backup version 4). The Outline view reads the binder rows and changes them through `src/features/binder/items.ts`. Split view shows a second `EditorPane`. The style check and the Codex names are ProseMirror decorations, so they never change the text. Quick capture adds a note item through the binder functions.
 
 **Tech Stack:** TipTap marks and decorations, Dexie, the PWA manifest of `vite-plugin-pwa` (`shortcuts`, `share_target`), JSZip, Vitest, Playwright. No new package.
 
@@ -19,7 +19,7 @@
 | # | Topic | Recommendation | Other choice |
 | --- | --- | --- | --- |
 | Q1 | Labels in the Outline (F40) | A project has up to 8 labels, each a name and a color that the writer makes. An item can have one label. The Outline has a Label column, and the binder shows a small dot. | No labels in this phase. The Outline shows synopsis, status and words. |
-| Q2 | Notes in the text (F43) | A note is a mark on the words that holds the note text. The save, snapshots, backups and imports carry it with no new table. A note goes away with its words, and Undo brings both back. Word export can add the notes as Word comments; the other formats leave them out. | A notes table with links to the words. A note stays when its words go, but each backup, import and restore needs new code. |
+| Q2 | Comments in the text (F43) | A comment is a mark on the words that holds the comment text. The save, snapshots, backups and imports carry it with no new table. A comment goes away with its words, and Undo brings both back. Every export leaves comments out. Word comments come with the Word round trip (F45), so this phase writes no Word comment. The name "Comment" keeps it apart from footnotes and from note items in the binder. | A notes table with links to the words. A note stays when its words go, but each backup, import and restore needs new code. |
 | Q3 | Codex and People (F42) | A new Codex for every project: characters, places, things and lore, each with other names and a note. People stays the memoir's private-names tool. Codex text goes in no export, share or AI request. | People becomes the memoir part of the Codex, in one list. This changes the private-name checks that Phase 3 tested. |
 | Q4 | Research folder (F41) | Images, PDFs, audio and clippings (text and a link that the writer pastes) live in the project on this device. Vlo never fetches a link. Backups and "Download all my writing" include them. Vlo warns at 100 MB for each project and refuses a file over 50 MB. | Research holds only links to files on the writer's disk, so backups stay small but a file can go missing. |
 | Q5 | Split view (F39) | On screens 1024 px and wider. "Open beside" on a binder item or a research file opens it in a second pane. Both texts edit, and the toolbar and the command menu act on the pane that has focus. A phone has no split view. | Split view on tablets in portrait too (768 px and wider), with narrower panes. |
@@ -40,14 +40,14 @@
 - New tables need database version 7 and backup version 4. An older build refuses a version 4 backup with its "newer version" message, so it never drops Codex or research rows in silence. Vlo still reads backup versions 1 to 3.
 - The keystroke budget (50 ms p95, 18 ms now) holds with the style check, the Codex names and a split view on. Each decoration runs only on the paragraphs that a change touched.
 - Initial JavaScript stays under 250 KB gzip (215 KB now). The Outline, the Codex, the research viewer and the capture screen load on use.
-- No Codex text, note text or research file goes in an AI request, a share or an export, except notes as Word comments when the writer asks.
+- No Codex text, comment text or research file goes in an AI request, a share or an export.
 
 ## Review Focus
 
-1. **A note or a label that a backup drops.** Expected: a backup and import of a project with notes, labels, Codex entries and research files gives the same rows and text. Pinned in Tasks H1, H3, H5 and H6.
+1. **A comment or a label that a backup drops.** Expected: a backup and import of a project with comments, labels, Codex entries and research files gives the same rows and text. Pinned in Tasks H1, H3, H5 and H6.
 2. **A split view that writes one item's text into the other.** Expected: two panes on two items save each text to its own item, and a reload shows both. Pinned in Task H7.
 3. **A decoration that slows typing.** Expected: the keystroke test passes with the style check and the Codex names on. Pinned in Tasks H4 and H5.
-4. **A memoir real name that leaves through a new path.** Expected: the private-name leak test still passes for every export and share, with Codex entries and notes in the memoir fixture. Pinned in Task H10.
+4. **A memoir real name that leaves through a new path.** Expected: the private-name leak test still passes for every export and share, with Codex entries and comments in the memoir fixture. Pinned in Task H10.
 5. **A capture that lands nowhere.** Expected: a shared text with no project on the device makes a project, and a capture is never lost on a failed save. Pinned in Task H8.
 6. **A count change that breaks stored counts.** Expected: a Chinese project counts characters after a reload and a backup import, and an English project keeps the same counts as before. Pinned in Task H9.
 
@@ -82,17 +82,17 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 - [x] Tests first: 10,000 words left over 10 writing days gives 1,000; a rest day is not a writing day; a missed day raises the next days evenly; the words written today count for today; the deadline day is the last writing day, also on a rest day.
 - [x] "Finish by" in Progress sets the date and the target. With a deadline, the daily goal and the streak use `perDay`, and "Words a day" hides. With no deadline, the fixed goal stays as before. The 4-week calendar stays (decision Q6). Commit, then open pull request H-A.
 
-### Task H3: Notes in the text (F43)
+### Task H3: Comments in the text (F43)
 
-**Files:** Create `src/features/editor/extensions/textNote.ts`, `src/features/editor/NoteList.tsx`, `tests/unit/text-note.test.ts`, `tests/e2e/text-note.spec.ts`. Modify `src/features/editor/Editor.tsx`, `src/features/editor/docSchema.ts` (`DOC_SCHEMA` 6), `src/features/editor/commands/registry.ts` (Add note, Mod-Alt-M), `src/features/export/read.ts` and `docx.ts` (Word comments), `src/features/export/ExportDialog.tsx`, `src/features/help/help.ts`.
+**Files:** Create `src/features/editor/extensions/comment.ts`, `src/features/editor/CommentList.tsx`, `src/features/editor/toolbar/panels/CommentPanel.tsx`, `tests/unit/comment.test.ts`, `tests/e2e/comment.spec.ts`. Modify `src/features/editor/Editor.tsx`, `src/features/editor/extensions/prose.ts` and `poem.ts`, `src/features/editor/docSchema.ts` (`DOC_SCHEMA` 6), `src/features/editor/commands/registry.ts` (Comment, Mod-Alt-M), `src/features/editor/toolbar/Toolbar.tsx` and `PanelHost.tsx`, `src/styles/editor.css`, `src/features/help/help.ts`.
 
 **Interfaces:**
 
-- Produces: the `textNote` mark with `{ id: string; text: string; at: number }`. It does not grow when the writer types at its end, and two notes do not overlap.
+- Produces: the `comment` mark with `{ id: string; text: string; at: number }`. It does not grow when the writer types at its end, and two comments do not overlap. The mark has no HTML parse rule, so a copy and paste never carries a comment.
 
-- [ ] Tests first: a note survives save, reload, snapshot restore, backup and import; plain text, Markdown, EPUB, PDF and the share bundle hold no note text; DOCX with "Include notes" has one Word comment for each note on the same words.
-- [ ] "Add note" on selected words opens a small field. The words get a quiet underline. The item's note list (beside the footnote list) shows each note in text order, and a click goes to its words. Edit and Resolve are on each note; Resolve removes the mark.
-- [ ] An older build refuses the item through `DOC_SCHEMA`, as it does for AI marks. Commit.
+- [x] Tests first: a comment survives a reload of its Yjs state; the export reader and the plain text hold no comment text; a copy of the words takes no comment.
+- [x] "Comment" on selected words opens a small field. The words get a quiet tint. The comment list under the text shows each comment in text order, and a click selects its words and opens it. Resolve removes the mark.
+- [x] An older build refuses the item through `DOC_SCHEMA`, as it does for AI marks. Commit.
 
 ### Task H4: Style check on the device (F47)
 

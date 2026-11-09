@@ -9,6 +9,7 @@ import { swatchVar } from '../format/palette';
 import { TextFillMark } from './textFill';
 import { PRIVATE_NAME } from '@/features/people/markName';
 import { AI_ORIGIN } from '../format/aiOrigin';
+import { COMMENT } from './comment';
 
 /* Formats beyond StarterKit. Inline formats apply to prose and poems; block formats to prose only. */
 
@@ -136,8 +137,8 @@ export const ClearFormatting = Extension.create<{ blocks: boolean }>({
           let next = chain().command(({ tr, state }) => {
             for (const range of tr.selection.ranges) {
               for (const type of Object.values(state.schema.marks)) {
-                // A private name and the AI mark are facts about the text, not formats.
-                if (type.name !== PRIVATE_NAME && type.name !== AI_ORIGIN)
+                // A private name, the AI mark and a comment are facts about the text, not formats.
+                if (type.name !== PRIVATE_NAME && type.name !== AI_ORIGIN && type.name !== COMMENT)
                   tr.removeMark(range.$from.pos, range.$to.pos, type);
               }
             }

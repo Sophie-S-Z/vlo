@@ -10,6 +10,7 @@ import { parsePoemText, poemDataToText, type PoemData } from '../poemText';
 import { EscapeTab } from './escapeTab';
 import { PrivateName } from '@/features/people/personMark';
 import { AiOriginMark } from './aiOrigin';
+import { CommentMark } from './comment';
 import { Footnote } from './footnote';
 import { MathInline } from './math';
 import { ClearFormatting, inlineFormatting } from './formatting';
@@ -318,6 +319,7 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     ClearFormatting.configure({ blocks: false }),
     PrivateName,
     AiOriginMark,
+    CommentMark,
     Footnote,
     MathInline,
     EscapeTab,
