@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { readBackup } from '@/features/backup/backup';
-import { saveToFolder, saveToFolderIfChanged, folderFileNames } from '@/features/backup/folder';
+import {
+  KEEP_BACKUPS,
+  oldBackups,
+  saveToFolder,
+  saveToFolderIfChanged,
+  folderFileNames,
+} from '@/features/backup/folder';
 import type { FolderPermission, FolderStatus, SavedFolder } from '@/features/backup/folderAccess';
 import { FOLDER_STATUS_KEY } from '@/features/backup/folderKeys';
 import { createProject } from '@/features/library/projects';
@@ -63,6 +69,15 @@ class MemoryFolder {
     });
   }
 
+  async *keys(): AsyncGenerator<string> {
+    for (const name of [...this.folders.keys(), ...this.files.keys()]) yield await Promise.resolve(name);
+  }
+
+  removeEntry(name: string): Promise<void> {
+    if (!this.files.delete(name)) return Promise.reject(new DOMException('No file', 'NotFoundError'));
+    return Promise.resolve();
+  }
+
   queryPermission(): Promise<FolderPermission> {
     return Promise.resolve(this.permission);
   }
@@ -113,10 +128,14 @@ describe('Folder save', () => {
     const project = await novel();
     vi.spyOn(clock, 'now').mockReturnValue(project.updatedAt + 1000);
     expect(await saveToFolder(project.id)).toBe(true);
-    const names = folderFileNames(project.title);
-    expect(names).toEqual({ folder: 'Salt Year', backup: 'Salt Year.vlo.zip', markdown: 'Salt Year.md' });
+    const names = folderFileNames(project.title, new Date(project.updatedAt + 1000));
+    expect(names).toEqual({
+      folder: 'Salt Year',
+      backup: expect.stringMatching(/^Salt Year backup \d{4}-\d{2}-\d{2}\.vlo\.zip$/) as string,
+      markdown: 'Salt Year.md',
+    });
     const target = folder?.folders.get('Salt Year');
-    const zip = target?.files.get('Salt Year.vlo.zip');
+    const zip = target?.files.get(names.backup);
     expect(zip).toBeDefined();
     const backup = await readBackup(zip ?? new Uint8Array());
     expect(backup.project.id).toBe(project.id);
@@ -155,5 +174,53 @@ describe('Folder save', () => {
     expect((await lastStatus())?.ok).toBe(false);
     // The reminder still counts the project as not backed up.
     expect((await db.projects.get(project.id))?.lastBackupAt).toBeUndefined();
+  });
+
+  test('keeps one dated backup for each day and deletes only its own copies past the newest 10', async () => {
+    const project = await novel();
+    const target = await folder?.getDirectoryHandle('Salt Year', { create: true });
+    const day = (n: number) => `Salt Year backup 2026-10-${String(n).padStart(2, '0')}.vlo.zip`;
+    for (let n = 1; n <= 12; n += 1) target?.files.set(day(n), new Uint8Array());
+    target?.files.set('Salt Year.vlo.zip', new Uint8Array());
+    target?.files.set('notes.txt', new Uint8Array());
+
+    const now = Date.UTC(2026, 10, 9, 12);
+    vi.spyOn(clock, 'now').mockReturnValue(now);
+    expect(await saveToFolder(project.id)).toBe(true);
+    expect(await saveToFolder(project.id)).toBe(true);
+    const today = folderFileNames(project.title, new Date(now)).backup;
+    const kept = [...(target?.files.keys() ?? [])].sort();
+    // Today's copy and the 9 newest days stay. The writer's own files stay too.
+    expect(kept).toEqual(
+      [
+        today,
+        ...[4, 5, 6, 7, 8, 9, 10, 11, 12].map(day),
+        'Salt Year.md',
+        'Salt Year.vlo.zip',
+        'notes.txt',
+      ].sort(),
+    );
+  });
+});
+
+describe('oldBackups', () => {
+  const name = (date: string) => `Salt Year backup ${date}.vlo.zip`;
+
+  test('gives the dated backups of the title past the newest 10, oldest last', () => {
+    const names = Array.from({ length: 12 }, (_, i) => name(`2026-01-${String(i + 1).padStart(2, '0')}`));
+    expect(oldBackups(names, 'Salt: Year')).toEqual([name('2026-01-02'), name('2026-01-01')]);
+    expect(oldBackups(names.slice(0, KEEP_BACKUPS), 'Salt: Year')).toEqual([]);
+  });
+
+  test('never gives another title, another extension, a name with no date or a writer file', () => {
+    const names = [
+      ...Array.from({ length: 11 }, (_, i) => name(`2026-02-${String(i + 1).padStart(2, '0')}`)),
+      'Salt Year Two backup 2025-01-01.vlo.zip',
+      'Salt Year backup 2025-01-01.zip',
+      'Salt Year backup old.vlo.zip',
+      'Salt Year backup 2025-01-01 (1).vlo.zip',
+      'notes.vlo.zip',
+    ];
+    expect(oldBackups(names, 'Salt Year')).toEqual([name('2026-02-01')]);
   });
 });

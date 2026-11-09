@@ -139,30 +139,38 @@ test('a file that is not a backup gets a clear message', async ({ page }, testIn
   await expect(page.getByRole('button', { name: 'Import backup' })).toBeEnabled();
 });
 
-test('after 7 days without a backup, the Library reminds the writer, and a backup ends the reminder', async ({
+test('after a change with no folder save, the Library asks for a backup, and one press makes it', async ({
   page,
 }) => {
   await novelWithText(page);
-  // The project was made 8 days ago.
-  await ageProjects(page, 8 * DAY);
-  await page.reload();
-
   const reminder = page.getByRole('region', { name: 'Time for a backup' });
-  await expect(reminder).toContainText('This project has no backup from the last 7 days.');
+  await expect(reminder).toContainText('This project has work that is not in a backup file.');
   await expect(card(page)).toContainText('No backup yet');
   expect(await seriousIssues(page)).toEqual([]);
-  await reminder.getByRole('button', { name: 'Back up Salt Year' }).click();
   const download = page.waitForEvent('download');
-  await page
-    .getByRole('dialog', { name: 'Back up Salt Year' })
-    .getByRole('button', { name: 'Download backup' })
-    .click();
-  await download;
-  await page
-    .getByRole('dialog', { name: 'Your backup is ready' })
-    .getByRole('button', { name: 'Done' })
-    .click();
+  await reminder.getByRole('button', { name: 'Back up Salt Year' }).click();
+  expect((await download).suggestedFilename()).toMatch(/^Salt Year backup \d{4}-\d{2}-\d{2}\.vlo\.zip$/);
   await expect(reminder).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: 'to your downloads' })).toContainText(
+    'Vlo saved Salt Year backup',
+  );
+  await expect(card(page)).toContainText('Backed up today');
+});
+
+test('a project with no change and no backup after 7 days gets the reminder too', async ({ page }) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New project' });
+  await dialog.getByLabel('Title').fill('Salt Year');
+  await dialog.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('textbox', { name: 'Scene 1' })).toBeFocused();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
+  const reminder = page.getByRole('region', { name: 'Time for a backup' });
+  await expect(card(page)).toBeVisible();
+  await expect(reminder).toHaveCount(0);
+  await ageProjects(page, 8 * DAY);
+  await page.reload();
+  await expect(reminder).toContainText('This project has work that is not in a backup file.');
 });
 
 const SAFARI_MAC =

@@ -12,6 +12,8 @@ import { skipOnboarding } from './support/onboarding';
  */
 
 const TEXT = 'The harbour  lights came on one by one.';
+/** Folder save names each backup with its day (plan Task G2). */
+const DATED_BACKUP = expect.stringMatching(/^Salt Year backup \d{4}-\d{2}-\d{2}\.vlo\.zip$/);
 
 /** Gives the picker a folder named Writing in the private file system of the page. */
 async function fakePicker(page: Page) {
@@ -99,7 +101,7 @@ async function saveFlow(page: Page) {
 
   // Leaving the project saves it.
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
-  await expect.poll(() => filesIn(page, 'Salt Year')).toEqual(['Salt Year.md', 'Salt Year.vlo.zip']);
+  await expect.poll(() => filesIn(page, 'Salt Year')).toEqual([DATED_BACKUP, 'Salt Year.md']);
   expect(await readText(page, 'Salt Year', 'Salt Year.md')).toContain(TEXT);
   // The save counts as a backup.
   const card = page
@@ -115,7 +117,7 @@ async function saveFlow(page: Page) {
   await page.getByRole('button', { name: 'Stop saving to a folder' }).click();
   await expect(page.getByRole('button', { name: 'Choose a folder' })).toBeVisible();
   // Vlo keeps the files in the folder.
-  expect(await filesIn(page, 'Salt Year')).toEqual(['Salt Year.md', 'Salt Year.vlo.zip']);
+  expect(await filesIn(page, 'Salt Year')).toEqual([DATED_BACKUP, 'Salt Year.md']);
 }
 
 test('browsers without the folder picker show no folder controls', async ({ page, browserName }) => {

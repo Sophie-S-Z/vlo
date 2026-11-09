@@ -76,11 +76,16 @@ const STATUSES: readonly Status[] = ['idea', 'draft', 'revised', 'done'];
 const TEMPLATE_IDS: readonly string[] = TEMPLATE_ORDER;
 const AI_MODES = ['pen', 'reader', 'cowriter'];
 
+/** The start of every backup file name of a project, before the date. */
+export function backupNamePrefix(title: string): string {
+  return `${exportFileName(title)} backup `;
+}
+
 /** The file name for a backup made on `date`, such as "Salt Year backup 2026-11-04.vlo.zip". */
 export function backupFileName(title: string, date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   const day = `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  return `${exportFileName(title)} backup ${day}${BACKUP_EXTENSION}`;
+  return `${backupNamePrefix(title)}${day}${BACKUP_EXTENSION}`;
 }
 
 /** True when the item kind holds text in this template. Folders hold only their children. */

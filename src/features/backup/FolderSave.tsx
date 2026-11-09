@@ -70,7 +70,8 @@ export function FolderSave() {
         <>
           <p className="text-sm text-muted">
             Vlo can write each project&apos;s backup and a Markdown copy to a folder on this computer when you
-            leave the project. A folder that a cloud drive syncs keeps a copy off this computer too.
+            leave the project, and every 10 minutes while you write. A folder that a cloud drive syncs keeps a
+            copy off this computer too.
           </p>
           <div>
             <Button type="button" variant="outline" onClick={() => void choose()}>
@@ -85,8 +86,9 @@ export function FolderSave() {
           </p>
           {permission === 'granted' && (
             <p className="text-sm text-muted">
-              When you leave a project that changed, Vlo saves its backup and a Markdown copy to a folder
-              named after the project, inside {folder.name}.
+              When you leave a project that changed, and every 10 minutes while you write, Vlo saves its
+              backup and a Markdown copy to a folder named after the project, inside {folder.name}. The folder
+              keeps a backup for each of the last 10 days.
             </p>
           )}
           {permission === 'prompt' && (

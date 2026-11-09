@@ -68,7 +68,7 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G2: Automatic backups (F32)
 
-**Files:** Modify `src/features/backup/folder.ts`, `src/features/backup/FolderSave.tsx`, `src/features/library/LibraryPage.tsx`. Create `tests/unit/folder-history.test.ts`. Modify `tests/unit/folder-save.test.ts`, `tests/e2e/folder-save.spec.ts`.
+**Files:** Modify `src/features/backup/folder.ts`, `src/features/backup/file.ts`, `src/features/backup/reminder.ts`, `src/features/backup/FolderSave.tsx`, `src/features/backup/BackupDialog.tsx`, `src/features/library/LibraryPage.tsx`, `src/features/project/ProjectPage.tsx`, `src/features/help/help.ts`. Create `src/features/backup/downloadBackup.ts`. Modify `tests/unit/folder-save.test.ts`, `tests/e2e/folder-save.spec.ts`, `tests/e2e/backup.spec.ts`.
 
 **Interfaces:**
 
@@ -76,8 +76,8 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 - [ ] Tests first for `oldBackups`: 12 dated names give the 2 oldest; a name with another title, another extension or no date is never in the result; a writer's own file named "notes.vlo.zip" is never in the result.
 - [ ] `saveToFolder` writes `backupFileName(title, today)` in place of the fixed name. A second save on the same day replaces that day's file. The Markdown copy keeps its fixed name. After the write, Vlo deletes the names from `oldBackups`. A failed delete does not fail the save.
-- [ ] A save on leaving the project or the tab stays. Add a save after each 10 active minutes, with the same active-minute count that snapshots use.
-- [ ] Other browsers (no folder save): after a session that changed the writing, the Library shows one "Back up now" bar for that project. One press downloads the backup. The bar does not show again until the next change.
+- [ ] A save on leaving the project or the tab stays. Add a save every 10 minutes while the project is open. It writes only when the writing changed since the last backup.
+- [ ] With no folder save (every browser but Chromium, or Chromium with no folder): after a change, the Library's "Time for a backup" list shows the project. One press downloads the backup, with no dialog. The project leaves the list until the next change. The safety badge keeps the 7-day rule.
 - [ ] Settings explains the 10-day history in one sentence. Run the folder save tests. Commit.
 
 ### Task G3: Walkaway export (F33)

@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 1,
-  date: '2026-11-08',
+  version: 2,
+  date: '2026-11-09',
   guide: [
     {
       title: 'Start a project',
@@ -51,7 +51,7 @@ export const HELP = {
       title: 'Back up and move to a new computer',
       steps: [
         'In the Library, open the menu of a project card and choose Back up, then Download backup.',
-        'Keep the file somewhere safe. Vlo reminds you after 7 days with no backup.',
+        'Keep the file somewhere safe. The safety badge at the top of each screen shows when a project needs a backup.',
         'On the new computer, open Vlo and choose Import backup in the Library.',
       ],
     },
