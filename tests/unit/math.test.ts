@@ -272,7 +272,7 @@ describe('equations in poems', () => {
     expect(docBody(e.state.doc, 'poem')).toBe('Count   the stars:  $\\infty$\n');
     const line = e.view.dom.querySelector<HTMLElement>('[data-poem-line]');
     expect(line?.dataset.hanging).toBe('3');
-    expect(line?.style.paddingLeft).toBe('3em');
+    expect(line?.style.paddingInlineStart).toBe('3em');
     expect(line?.style.textIndent).toBe('-3em');
     expect(line?.querySelector('[data-math-inline]')).not.toBeNull();
   });

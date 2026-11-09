@@ -565,6 +565,7 @@ export function ProjectPage() {
                     font={project.settings.font}
                     page={project.settings.page}
                     scene={project.settings.scene}
+                    language={project.settings.language}
                     onSettings={changeSettings}
                     templates={templateList(project.templates)}
                   />

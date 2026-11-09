@@ -17,7 +17,7 @@
         var c = false;
         try {
           var p = JSON.parse(localStorage.getItem('vlo:preferences') || '{}');
-          if (p.theme === 'ink' || p.theme === 'paper' || p.theme === 'sepia') t = p.theme;
+          if (['ink', 'paper', 'sepia', 'contrast'].indexOf(p.theme) >= 0) t = p.theme;
           c = p.calm === true;
         } catch (e) {}
         if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'ink' : 'paper';

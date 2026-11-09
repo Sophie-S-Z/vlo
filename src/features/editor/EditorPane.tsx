@@ -8,6 +8,7 @@ import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSn
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
 import type { Item, PageFormat, Template } from '@/lib/db';
+import { cleanLanguage } from '@/lib/language';
 import { SceneBackdrop } from '@/features/scenes/SceneBackdrop';
 import { ScenePicker } from '@/features/scenes/ScenePicker';
 import { SoundControl } from '@/features/sound/SoundPanel';
@@ -58,8 +59,15 @@ interface EditorPaneProps {
   page?: PageFormat | undefined;
   /** The project scene, as stored. */
   scene?: string | undefined;
+  /** The project language, as stored (F38). */
+  language?: string | undefined;
   /** Changes the project's font, page format or scene. */
-  onSettings?: (change: { font?: FontValue; page?: PageFormat; scene?: SceneChoice }) => void;
+  onSettings?: (change: {
+    font?: FontValue;
+    page?: PageFormat;
+    scene?: SceneChoice;
+    language?: string;
+  }) => void;
   /** The project's templates, for the tools that only some templates offer. */
   templates?: readonly Template[] | undefined;
 }
@@ -73,6 +81,7 @@ export function EditorPane({
   font: storedFont,
   page: storedPage,
   scene: storedScene,
+  language: storedLanguage,
   onSettings,
   templates,
 }: EditorPaneProps) {
@@ -152,6 +161,7 @@ export function EditorPane({
   }, []);
 
   const font = cleanFontValue(storedFont) ?? DEFAULT_FONT;
+  const language = cleanLanguage(storedLanguage);
   const page = cleanPageFormat(storedPage);
   const scene = cleanScene(storedScene);
   const { zoom } = useWritingPrefs();
@@ -197,6 +207,8 @@ export function EditorPane({
                   setWritingPrefs({ zoom: next });
                 }}
                 pages={pages}
+                language={language}
+                onLanguage={(next) => onSettings?.({ language: next })}
               />
               <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />
               <SoundControl scene={scene} />
@@ -336,6 +348,7 @@ export function EditorPane({
               zoom={zoom}
               onPages={setPages}
               templates={templates}
+              language={language}
             />
           )}
           {state.status === 'ready' && editor && <StatsBar editor={editor} kind={kind} />}

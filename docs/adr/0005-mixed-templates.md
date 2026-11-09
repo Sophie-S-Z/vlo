@@ -23,5 +23,5 @@ Vlo had three templates: novel, memoir and poetry collection. Each project had e
 
 - Existing projects keep their template, their items and their views.
 - A backup from this build does not open in an older build. The older build says that a newer Vlo made it.
-- A project cannot yet add or remove a template after it is made. Adding one is safe, because it only adds kinds. Removing one needs a plan for the items of the kinds that go away.
+- Phase 7 (roadmap F35, decision P3) adds Change templates to the project card menu in the Library. Adding a template is always safe, because it only adds kinds. A template can go only when every item fits the binder rules of the templates that stay (`misfits` in `templates.ts`). The dialog lists the other items, so the writer moves or deletes them first. View data stays in the database, so it shows again when the template comes back.
 - The weekly usage counts can now name `open` in `templates_used`. The server function checks keys only, so it needs no change.

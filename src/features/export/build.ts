@@ -1,4 +1,5 @@
 import { flattenTree } from '@/features/binder/tree';
+import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
 import type { Item, Project } from '@/lib/db';
@@ -124,6 +125,7 @@ export function buildExportDoc({ project, items, scope, updates }: BuildInput): 
     ...(project.authorName ? { author: project.authorName } : {}),
     font: project.settings.font ?? DEFAULT_FONT,
     paper: project.settings.page === 'a4' ? 'a4' : 'letter',
+    language: cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE,
     sections,
   };
 }

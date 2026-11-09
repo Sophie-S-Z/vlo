@@ -610,7 +610,8 @@ Last update: 2026-11-09
 ## In progress
 
 - Phase 7 (plan `docs/plans/phase-7.md`, the roadmap's safety features F31 to F38, chosen on 2026-11-09).
-  Decisions P1 to P7 wait for the product owner's approval. Pull request G-A holds Tasks G1 to G3:
+  The product owner approved decisions P1 to P7 as recommended. Pull request #20 (G-A) merged with Tasks G1
+  to G3:
   - G1: a safety badge in the site header (Safe, Check, At risk) with the reasons and a Back up button.
   - G2: folder save keeps a dated backup for each of the last 10 days and runs every 10 minutes in a
     project. With no folder save, the Library asks for a backup after each change, and one press makes it.
@@ -618,6 +619,37 @@ Last update: 2026-11-09
   - Checks in the build container on 2026-11-09: the Chromium suite passed (212 tests). Initial
     JavaScript: 211 KB gzip. The LibreOffice equation test fails here because the container has no
     LibreOffice Math module; it fails the same way on `main`.
+  - The next pull request holds Tasks G4 to G10. The plan split them into G-B, G-C and G-D, but they are
+    on one branch, so they go in one pull request.
+  - G4: "Import writing" in the Library reads Word, Markdown, plain text and Scrivener projects (a folder,
+    files or a zip). It stores the import as a backup import, so an import is all or nothing. Text in a
+    Windows code page or UTF-16 reads right. Equations and tables in a Word file are in the summary of
+    what Vlo leaves out. When lines start with spaces and the templates hold no poems, the summary says to
+    pick Poetry collection, because only the poem editor keeps those indents.
+  - G5: "Change templates" on a project card. Vlo refuses a change while an item has a kind or a place
+    that the new templates do not allow, and it lists those items with links.
+  - G6: Simple and Full tool levels. A writer with no projects on the device starts at Simple. The Simple
+    toolbar is the phone toolbar, and More ends with "Show all tools". Every tool stays in the command menu.
+  - G8: the Contrast theme, reading comfort on this device (Atkinson Hyperlegible Next and three spacing
+    choices), and the screen reader script `docs/screen-reader-test.md`. Its browser test found that the
+    command menu did not focus its field on its first open. That is fixed.
+  - G9: each project has a language of the writing, in the Page popover. The editor sets `lang` and `dir`,
+    so the spell checker uses the language and Hebrew, Arabic, Persian, Urdu and Yiddish read from the right.
+    Every export names the language. EPUB and Word also set right-to-left text.
+  - Not in this phase: character counts for Chinese and Japanese (a separate question for the product
+    owner), the PDF layout of right-to-left text (the PDF draws each line from the left), the language in a
+    shared reading link (the reader view shows the text from the left), and stress marks for languages
+    other than English.
+  - G10, a fresh review found 1 high and 3 medium issues, all in the import readers. Each one is fixed with
+    a test: Word text in fields and content controls, Word stanza breaks, poem indents in a prose template,
+    and text encodings. Of the 7 low findings, 5 are fixed. Two stay as they are: a number in front of a
+    file name is still taken off ("2001 A Space Odyssey.md" gives "A Space Odyssey"), and the language
+    list builds its names each time the Page popover opens.
+  - Checks in the build container on 2026-11-09: the Chromium suite passed (224 tests, 4 skipped). On the
+    phone profile, 205 passed. Five new tests failed there because the binder is a drawer on a phone and
+    the phone toolbar is the same at both levels. They now open the drawer or check the level in another
+    way, and they pass with the review fixes on both profiles. The board pinch timing test failed again, as
+    noted below for this container. Initial JavaScript: 215 KB gzip.
 - Phase 2: every pull request merged.
 - CI: the repository is public, so Actions minutes are free. A pull request runs the checks, the export files
   job and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
@@ -717,6 +749,7 @@ Last update: 2026-11-09
 | 2026-11-08 | Launch with sharing and usage counts off; the Supabase project comes later (T3). |
 | 2026-11-08 | Pen mode blocks the deep AI check. The web originality check stays in Pen mode.  |
 | 2026-11-08 | Production address: https://vlo-eight.vercel.app/                                |
+| 2026-11-09 | Phase 7 plan approved: decisions P1 to P7 as recommended.                        |
 
 ## Spec changes
 

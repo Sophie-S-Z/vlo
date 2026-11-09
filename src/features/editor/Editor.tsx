@@ -2,6 +2,7 @@ import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/r
 import { useEffect, useId, useRef, type CSSProperties } from 'react';
 import { AliasPreview } from '@/features/people/aliasPreview';
 import type { PageFormat, Template } from '@/lib/db';
+import { textDirection } from '@/lib/language';
 import type * as Y from 'yjs';
 import { FocusTools } from '@/features/focus/focusExtension';
 import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
@@ -31,7 +32,7 @@ import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
 import { TypingState } from './extensions/textFill';
-import { BASE_STACK, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
+import { BASE_STACK, COMFORT_FONT, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
 import { PageFrame } from './PageFrame';
 import { ReadAloudMark, stopReadingFor } from './readAloud/reader';
@@ -67,6 +68,8 @@ interface EditorProps {
   onPages?: (pages: number | null) => void;
   /** The project's templates, for the tools that only some templates offer. */
   templates?: readonly Template[] | undefined;
+  /** The language of the writing (F38). It sets the spell-check language and the text direction. */
+  language?: string | undefined;
 }
 
 const HELP = {
@@ -127,6 +130,7 @@ export function Editor({
   zoom = 100,
   onPages,
   templates,
+  language,
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
@@ -225,8 +229,15 @@ export function Editor({
   const craft = useCraft();
   const craftOn = kind === 'poem' && (templates?.includes('poetry') ?? false) && craft.on;
 
-  const stack = fontStack(font, BASE_STACK);
-  const rootStyle = { '--font-manuscript': stack } as CSSProperties;
+  // Comfort settings (F37) change the screen only. The page-end lines measure the screen, so they follow.
+  const stack = fontStack(writing.comfortFont ? COMFORT_FONT : font, BASE_STACK);
+  const rootStyle = {
+    '--font-manuscript': stack,
+    '--vlo-letter-spacing': `${String(writing.letterSpacing)}em`,
+    '--vlo-word-spacing': `${String(writing.wordSpacing)}em`,
+    '--vlo-line-height': String(writing.lineHeight),
+  } as CSSProperties;
+  const layoutKey = [stack, writing.letterSpacing, writing.wordSpacing, writing.lineHeight].join('|');
 
   return (
     <div className="grid gap-3" data-vlo-editor="" style={rootStyle}>
@@ -236,9 +247,12 @@ export function Editor({
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
       </div>
-      <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={stack} onPages={onPages}>
+      <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
         {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
-        <div className={cn('relative', craftOn && 'vlo-craft')}>
+        <div
+          className={cn('relative', craftOn && 'vlo-craft')}
+          {...(language ? { lang: language, dir: textDirection(language) } : {})}
+        >
           {craftOn && <CraftLabels editor={editor} />}
           <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
         </div>

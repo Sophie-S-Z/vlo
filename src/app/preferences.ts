@@ -1,5 +1,5 @@
-export type ThemeChoice = 'system' | 'ink' | 'paper' | 'sepia';
-export type ResolvedTheme = 'ink' | 'paper' | 'sepia';
+export type ThemeChoice = 'system' | 'ink' | 'paper' | 'sepia' | 'contrast';
+export type ResolvedTheme = 'ink' | 'paper' | 'sepia' | 'contrast';
 
 export interface Preferences {
   theme: ThemeChoice;
@@ -7,7 +7,8 @@ export interface Preferences {
 }
 
 export const PREFERENCES_KEY = 'vlo:preferences';
-export const THEME_CHOICES: readonly ThemeChoice[] = ['system', 'ink', 'paper', 'sepia'];
+export const THEME_CHOICES: readonly ThemeChoice[] = ['system', 'ink', 'paper', 'sepia', 'contrast'];
+export const RESOLVED_THEMES: readonly ResolvedTheme[] = ['ink', 'paper', 'sepia', 'contrast'];
 export const DEFAULT_PREFERENCES: Preferences = { theme: 'system', calm: false };
 
 function isThemeChoice(value: unknown): value is ThemeChoice {

@@ -951,6 +951,7 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
   }
 
   pdf.setTitle(doc.title);
+  pdf.setLanguage(doc.language);
   if (manuscript?.name || doc.author) pdf.setAuthor(manuscript?.name ?? doc.author ?? '');
   pdf.setCreator('Vlo');
   pdf.setProducer('Vlo');

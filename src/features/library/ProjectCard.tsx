@@ -21,6 +21,7 @@ interface ProjectCardProps {
   now: number;
   onBackUp: () => void;
   onRename: () => void;
+  onTemplates: () => void;
   onDelete: () => void;
 }
 
@@ -36,6 +37,7 @@ export function ProjectCard({
   now,
   onBackUp,
   onRename,
+  onTemplates,
   onDelete,
 }: ProjectCardProps) {
   const list = layout === 'list';
@@ -91,6 +93,7 @@ export function ProjectCard({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={onBackUp}>Back up</DropdownMenuItem>
             <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
+            <DropdownMenuItem onSelect={onTemplates}>Change templates</DropdownMenuItem>
             <DropdownMenuItem onSelect={onDelete} className="text-accent-text">
               Delete
             </DropdownMenuItem>

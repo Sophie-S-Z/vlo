@@ -94,44 +94,46 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G4: Import from other tools (F34)
 
-**Files:** Create `src/features/import/` with `model.ts`, `toBackup.ts`, `plain.ts`, `markdown.ts`, `docx.ts`, `rtf.ts`, `scrivener.ts`, `ImportDialog.tsx`. Create `tests/fixtures/import/` (a small DOCX, a Scrivener 3 project and a Markdown folder, made by a script in `scripts/`) and `tests/unit/import-*.test.ts`, `tests/e2e/import.spec.ts`. Modify `src/features/library/LibraryPage.tsx`, `package.json`.
+**Files:** Create `src/features/import/` with `tree.ts`, `outline.ts`, `markdown.ts`, `docx.ts`, `rtf.ts`, `scrivener.ts`, `read.ts` and `ImportWriting.tsx`. Create `tests/fixtures/import.ts` (a Word file and a Scrivener 3 project, made from their XML and RTF in the test), `tests/unit/import.test.ts` and `tests/e2e/import.spec.ts`. The e2e test also imports the Markdown folder `tests/fixtures/novel`. Modify `src/features/library/projects.ts` (`newProject`) and `src/features/library/LibraryPage.tsx`.
 
 **Interfaces:**
 
-- Produces: `ImportTree = { title: string; templates: Template[]; nodes: ImportNode[] }` with `ImportNode = { kind: ItemKind; title: string; synopsis?: string; blocks?: ImportBlock[]; poem?: string; children?: ImportNode[] }`. `ImportBlock` holds paragraphs and headings with bold, italic, underline and strike runs.
-- Produces: `toBackup(tree: ImportTree, now: number): Backup`. It makes the ids, the order keys, the Yjs updates (`prosemirrorJSONToYDoc` with the prose or poem schema), the `itemTexts` and the word counts. Every reader returns an `ImportTree`, so only `toBackup` knows about storage.
+- Produces: `ImportSource = { title: string; nodes: ImportNode[]; skipped: string[] }` with `ImportNode = { title: string; synopsis?: string; text?: { html: string; poem: string }; children?: ImportNode[]; note?: true }`. Each reader gives HTML for prose and plain lines for poems, so the prose editor's own parse rules read the text, as for a paste.
+- Produces: `placeNodes(nodes, templates)` fits the tree to the templates' kinds and nesting rules, and drops no text. `toBackup(source, templates, now): Backup` makes the ids, the order keys, the Yjs updates (`prosemirrorJSONToYDoc` with the prose or poem schema), the `itemTexts` and the counts. The dialog stores it with `importBackup(backup, 'same')`, so an import is all or nothing.
+- Produces: `readPicked(files: PickedFile[]): Promise<ImportSource>` reads loose files, a folder or a zip, and sends a Scrivener project to `readScrivener`.
 
-- [ ] Tests first for `toBackup`: the tree's order and nesting come back from `importBackup` and a reload; a poem keeps every space; word counts equal `countWords` of the text.
-- [ ] Plain text: one file is one item. A blank line splits paragraphs. In a poetry project each file is a poem with its text as written.
-- [ ] Markdown file or folder (Obsidian too): a folder is a part, a file is an item, `#` headings split a file into items when the writer picks "Split at headings". Front matter `title` and `synopsis` fill the item fields. Wiki links keep their text.
-- [ ] Word (DOCX): Heading 1 makes a part, Heading 2 a chapter, and the text under it a scene. With no headings, the file is one item. Bold, italic, underline, strike, tabs and line breaks stay. Footnotes become Vlo footnotes. Other features (tables, images) leave a note in the import summary.
-- [ ] Scrivener (`.scriv` folder or its zip): read `project.scrivx` for the Draft order, the titles and the types, `content.rtf` for text and `synopsis.txt` for synopses (Scrivener 3, and the `Files/Docs` layout of Scrivener 2). The Draft becomes the binder. The Research folder becomes notes with their text. The RTF reader keeps paragraphs, tabs, bold, italic, `\uN` and `\'hh` characters, and skips pictures and tables with a note in the summary.
-- [ ] The Library "Import" menu offers Backup, Word, Markdown, Scrivener and Plain text. The dialog asks for the templates, shows a summary (items, words, skipped parts), and imports on one press. A file picker with `webkitdirectory` reads a folder in every browser.
-- [ ] `import.spec.ts`: each fixture imports, reloads and opens its first item; a damaged file shows the message and adds nothing (Review Focus 2). Commit, then open pull request G-B.
+- [x] Tests for `toBackup`: the backup passes `readBackup`; order, nesting, synopsis, word counts and marks stay; a poem keeps every space after `importBackup`.
+- [x] Plain text: one file is one item. A blank line splits paragraphs. A poem keeps its lines as written.
+- [x] Markdown file or folder (Obsidian too): a folder is a folder, a file is an item, and `#` and `##` headings split a file into a folder and items. Front matter `title` and `synopsis` fill the item fields. Wiki links keep their text, and `[^1]` footnotes become Vlo footnotes. A poem from Vlo's Markdown export comes back with its spaces. Hidden folders such as `.obsidian` stay out.
+- [x] Word (DOCX): Heading 1 (or Title) starts a folder and Heading 2 an item. With no headings, the file is one item. Bold, italic, underline, strike, superscript, subscript and line breaks stay. Footnotes become Vlo footnotes. Tables and pictures go in the import summary.
+- [x] Scrivener (`.scriv` folder or its zip): read the `.scrivx` binder for order, titles and types, `content.rtf` for text and `synopsis.txt` for synopses (Scrivener 3, and the `Files/Docs` layout of Scrivener 2). The Draft becomes the binder, other top folders such as Research become notes, and the Trash stays out. The RTF reader keeps paragraphs, tabs, bold, italic, underline, strike, footnotes, `\uN` and `\'hh` characters, and puts pictures and tables in the summary.
+- [x] The Library "Import writing" dialog takes files, a zip or a folder (`webkitdirectory`), shows a summary (texts, words, skipped parts), asks for the title and the templates, and imports on one press. A Vlo backup in the picker gives a message that names "Import backup".
+- [x] `import.spec.ts`: a Word file, a Scrivener zip and a Markdown folder import, and the binder order stays after a reload; a damaged file shows the message and adds no project (Review Focus 2). Commit, then open pull request G-B.
 
 ### Task G5: Change templates later (F35)
 
-**Files:** Create `src/features/library/changeTemplates.ts`, `src/features/project/TemplatesDialog.tsx`, `tests/unit/change-templates.test.ts`. Modify `src/features/project/ProjectPage.tsx` (one menu entry), `docs/adr/0005-mixed-templates.md` (close the open point).
+**Files:** Create `src/features/library/TemplatesDialog.tsx`, `tests/unit/change-templates.test.ts`, `tests/e2e/change-templates.spec.ts`. Modify `src/features/library/templates.ts` (`misfits`), `src/features/library/projects.ts` (`changeTemplates`), `ProjectCard.tsx` and `LibraryPage.tsx` (one menu entry, next to Rename), `docs/adr/0005-mixed-templates.md` (close the open point).
 
 **Interfaces:**
 
-- Produces: `templateChange(project: Project, items: Item[], next: Template[]): { ok: true } | { ok: false; blocking: Item[] }`.
+- Produces: `misfits(items: readonly Item[], templates: readonly Template[]): Item[]`, the items in binder order whose kind or place the templates do not allow.
+- Produces: `changeTemplates(projectId, templates): Promise<Item[]>`. It checks `misfits` again and saves in one transaction, and it returns the blocking items with no change.
 
-- [ ] Tests first: adding any template is always `ok`; removing poetry from a poetry and open project with a poem gives that poem in `blocking`; removing a template whose kinds the others share is `ok`; the last template cannot go.
-- [ ] The dialog reuses the template checkbox cards from `TemplatePicker.tsx`. A blocked removal lists each item as a link to it. The change saves in one transaction and updates the binder and the view tabs at once.
-- [ ] A browser test: add Memoir to a novel, open the Timeline, remove Memoir, add it back, and the Timeline data is still there. Commit.
+- [x] Tests first: adding any template never blocks; removing poetry from a poetry and open project blocks on each poem only; removing a template whose kinds the others share is fine; a folder inside a folder blocks when Open writing goes.
+- [x] The dialog reuses the template checkbox cards from `TemplatePicker.tsx` (the last template stays). A blocked removal lists each item as a link to it, and Save stays off. The binder and the view tabs read the project live, so they change at once.
+- [x] A browser test: add Memoir to a novel, add a life stage in the Timeline, remove Memoir, add it back, and the life stage is still there. Commit.
 
 ### Task G6: Simple and Full tool levels (F36)
 
-**Files:** Modify `src/features/editor/writingPrefs.ts` (`toolLevel`), `src/features/editor/toolbar/Toolbar.tsx`, `src/features/settings/SettingsPage.tsx`, `src/features/onboarding/firstVisit.ts`. Create `tests/unit/tool-level.test.ts`, `tests/e2e/tool-level.spec.ts`.
+**Files:** Modify `src/features/editor/writingPrefs.ts` (`toolLevel`, `startWithSimpleTools`), `src/features/editor/toolbar/Toolbar.tsx`, `src/features/settings/SettingsPage.tsx`, `src/features/onboarding/firstVisit.ts`, `tests/e2e/support/onboarding.ts`. Create `tests/unit/tool-level.test.tsx`, `tests/e2e/tool-level.spec.ts`.
 
 **Interfaces:**
 
-- Produces: `SIMPLE_TOOLS: Record<EditorForm, readonly string[]>`, 8 registry ids or fewer for each form. Prose: `undo`, `redo`, `bold`, `italic`, `heading-2`, `quote`, `footnote`, then More. Poem: `undo`, `redo`, `bold`, `italic`, `hang-less`, `hang-more`, then More.
+- Produces: `WritingPrefs.toolLevel: 'simple' | 'full'`. The Simple level is the phone toolbar at every width: prose shows Undo, Redo, Text style, Bold, Italic and More; a poem shows Undo, Redo, the hanging indent controls and More. The More menu holds every other tool, so the toolbar needs no second list of tools.
 
-- [ ] Tests first: each id in `SIMPLE_TOOLS` is in the registry; at the Simple level the toolbar renders 8 controls or fewer; every registry tool is in the More menu or the toolbar at each level.
-- [ ] The default follows decision P4. The toolbar's More menu ends with "Show all tools" or "Show fewer tools", and Settings has the same choice.
-- [ ] `tool-level.spec.ts`: at the Simple level, each registry tool runs from the command menu in 2 actions or fewer (open the menu, pick the tool), and axe passes. Commit.
+- [x] Tests first: at the Simple level each toolbar shows 8 controls or fewer; every tool of the Full toolbar is in the toolbar or the More menu at the Simple level; a new writer starts at Simple and a stored level stays.
+- [x] The default follows decision P4: the welcome (only a writer with no projects sees it) sets Simple. With no stored level (an existing writer), the toolbar shows every tool. The toolbar's More menu ends with "Show all tools" or "Show fewer tools", and Settings > Writing has the same choice. The e2e helper `skipOnboarding` starts the other tests at Full.
+- [x] `tool-level.spec.ts`: a new writer gets the Simple toolbar, a hidden tool runs from the More menu in 2 actions (open the menu, pick the tool), both switches work, and axe passes. Commit.
 
 ### Task G7: Gate for pull request G-C
 
@@ -139,27 +141,28 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G8: Comfort and access (F37)
 
-**Files:** Modify `src/app/preferences.ts`, `src/styles/themes.css`, `src/styles/editor.css`, `src/features/settings/SettingsPage.tsx`, `tests/e2e/a11y.spec.ts`. Create `docs/screen-reader-test.md`.
+**Files:** Modify `src/app/preferences.ts`, `index.html`, `src/styles/themes.css`, `src/styles/editor.css`, `src/features/editor/format/palette.ts`, `src/features/editor/writingPrefs.ts`, `src/features/editor/Editor.tsx`, `src/features/settings/SettingsPage.tsx`, `src/features/project/CommandMenu.tsx`, `tests/e2e/a11y.spec.ts`. Create `src/features/settings/ComfortSettings.tsx`, `docs/screen-reader-test.md`, `tests/unit/comfort.test.ts`, `tests/e2e/comfort.spec.ts`, `tests/e2e/screen-reader.spec.ts`.
 
-- [ ] A fourth theme, Contrast: black text on white, with 7:1 for body text and 4.5:1 for every control. `a11y.spec.ts` runs it on every route.
-- [ ] A Comfort section in Settings: the comfort font switch (decision P5), letter spacing (0, 0.05 and 0.1 em), word spacing (0, 0.1 and 0.2 em) and line height (1.5, 1.8 and 2.1). The values set CSS variables on the editor only, so exports and the page-end lines do not change. The open-scene and keystroke budgets still pass with the widest values.
-- [ ] `docs/screen-reader-test.md`: a script for NVDA with Firefox and VoiceOver with Safari. Create a project, write, rename, reorder in the binder, take a snapshot, export and back up, each with the keyboard only. A browser test runs the same steps by role and name only. Commit.
+- [x] A fifth theme choice, Contrast: black text on white. Text, muted text and links meet 7:1, and borders 3:1 or more (`contrast.test.ts`). The palette colors use their Paper values. `a11y.spec.ts` runs it on every route and dialog.
+- [x] A Reading comfort section in Settings: the comfort font switch (decision P5), and Standard, Wider and Widest steps for letter spacing (0, 0.05 and 0.1 em), word spacing (0, 0.1 and 0.2 em) and line height (1.7, 2 and 2.3). The values are on this device and set CSS variables on the editor only, so the project and its exports do not change. The page-end lines measure the screen, so they follow the comfort values.
+- [x] `docs/screen-reader-test.md`: a script for NVDA with Firefox and VoiceOver with Safari. Create a project, write, take a snapshot, reorder in the binder, export, back up and rename, each with the keyboard only. `screen-reader.spec.ts` runs the same steps by role and name only. It found one bug: on its first open the command menu loaded after the dialog took focus, so typed keys went nowhere. The field now takes focus when the menu loads. Commit.
 
 ### Task G9: Every language, first part (F38)
 
-**Files:** Modify `src/lib/db.ts` (`Project.settings.language?: string`), `src/lib/wordcount.ts`, `src/features/editor/Editor.tsx`, `src/features/export/epub.ts`, `src/features/export/docx.ts`, `src/features/export/pdf/pdf.ts` (document language only), the project settings panel. Create `tests/unit/language.test.ts`, `tests/e2e/rtl.spec.ts`.
+**Files:** Create `src/lib/language.ts`, `tests/unit/language.test.ts`, `tests/e2e/rtl.spec.ts`. Modify `src/lib/db.ts` (`Project.settings.language?: string`), `src/features/backup/file.ts`, `src/features/editor/Editor.tsx`, `EditorPane.tsx`, `PageControl.tsx` (the picker), `extensions/poem.ts` and `src/styles/editor.css` (indents on the side where a line starts), `src/features/export/model.ts`, `build.ts`, `epub.ts`, `docx.ts`, `pdf/pdf.ts` (document language only) and `walkaway.ts`.
 
 **Interfaces:**
 
-- Produces: `textDirection(language: string | undefined): 'ltr' | 'rtl'` and `countsCharacters(language: string | undefined): boolean` (true for `zh` and `ja`).
+- Produces: `textDirection(language: string | undefined): 'ltr' | 'rtl'`, `cleanLanguage(value: unknown): string | undefined` and `languageLabel(language)`. `ExportDoc.language` is the project language or `en`.
 
-- [ ] Tests first: Hebrew, Arabic, Persian and Urdu give `rtl`; English and no language give `ltr`; a Chinese text of 12 characters counts 12; English counts stay as they are.
-- [ ] The editor gets `lang` and `dir` from the project. The browser picks its spell-check dictionary from `lang` where it can. Stats, goals and the Library say "characters" in place of "words" for Chinese and Japanese.
-- [ ] EPUB `xml:lang`, the DOCX language and the PDF language come from the project.
-- [ ] `rtl.spec.ts`: a Hebrew poem keeps its indents on the right after a reload, and a Hebrew export opens with the right direction (Review Focus 6). Commit.
+- [x] Tests first: Hebrew, Arabic, Persian, Urdu and Yiddish give `rtl`; English, Chinese and no language give `ltr`; a tag that is not valid gives none.
+- [x] The Page popover has "Language of the writing". The editor text gets `lang` and `dir` from the project, so the browser picks its spell-check dictionary where it can. Poem hanging indents, quotes and lists use the side where a line starts.
+- [x] EPUB `xml:lang`, `dc:language`, `dir` and a right-to-left page order; the DOCX run language and right-to-left paragraphs; the PDF language; the walkaway pages' `lang` and `dir`.
+- [x] `rtl.spec.ts`: a Hebrew poem reads from the right and keeps its hanging indent on the right after a reload (Review Focus 6). Commit.
+- [ ] Not in this phase (product owner decision, 2026-11-09, pending): character counts for Chinese and Japanese, the PDF layout of right-to-left text, and the language in a shared reading link. The PDF draws each line from the left, and the reading link shows the text from the left.
 
 ### Task G10: Gate 7 and the release
 
-- [ ] Update STATUS, the roadmap doc's feature table, and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 7 diff against Review Focus 1 to 6. Fix each high finding.
+- [x] Update STATUS, the roadmap doc's feature table, and `docs/licenses.md`. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS. The roadmap table has no status column, and `docs/licenses.md` already lists `markdown-it` as a runtime package, so neither changed.
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 7 diff against Review Focus 1 to 6. Fix each high finding. The review found 1 high and 3 medium findings, all in the import readers, and each is fixed with a test. STATUS lists the low findings.
 - [ ] Open pull request G-D. Ask you to run "Run workflow" for all 4 browsers.

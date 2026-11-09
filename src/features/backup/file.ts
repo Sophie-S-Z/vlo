@@ -180,7 +180,8 @@ function checkProject(value: unknown): Project {
     fail(`${DAMAGED} The project settings are wrong.`);
   if (!Array.isArray(settings.restDays) || !settings.restDays.every((d) => typeof d === 'number'))
     fail(`${DAMAGED} The project settings are wrong.`);
-  for (const key of ['font', 'page', 'scene']) optionalText(settings, key, 'The project settings');
+  for (const key of ['font', 'page', 'scene', 'language'])
+    optionalText(settings, key, 'The project settings');
   const byDay = settings.wordsByDay;
   if (
     byDay !== undefined &&

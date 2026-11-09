@@ -167,7 +167,7 @@ const PoemLine = Node.create<PoemOptions>({
           if (em === 0) return {};
           return {
             'data-hanging': String(em),
-            style: `padding-left: ${String(em)}em; text-indent: -${String(em)}em`,
+            style: `padding-inline-start: ${String(em)}em; text-indent: -${String(em)}em`,
           };
         },
       },

@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { textDirection } from '@/lib/language';
 import { gradientCss, type TextFill } from '@/features/editor/format/fill';
 import { fontLabel, localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
@@ -262,10 +263,12 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
       return `<${tag}${start}>${items}</${tag}>`;
     }
     case 'stanza': {
+      // The hanging indent is on the side where a line starts, so right-to-left poems keep it too.
+      const side = textDirection(book.doc.language) === 'rtl' ? 'right' : 'left';
       const lines = block.lines.map((line) => {
         const hanging =
           line.hanging > 0
-            ? ` style="padding-left: ${String(line.hanging)}em; text-indent: -${String(line.hanging)}em"`
+            ? ` style="padding-${side}: ${String(line.hanging)}em; text-indent: -${String(line.hanging)}em"`
             : '';
         const body = inline(book, line.runs, { ...ctx, poem: true });
         return `<p class="line"${hanging}>${body === '' ? NBSP : body}</p>`;
@@ -279,10 +282,16 @@ function blocksHtml(book: Book, blocks: readonly Block[], ctx: Context): string 
   return blocks.map((block) => blockHtml(book, block, ctx)).join('\n');
 }
 
-function page(title: string, body: string, math: boolean): string {
+/** The language attributes of each page's html element. */
+function htmlLanguage(language: string): string {
+  const lang = xmlText(language);
+  return `xml:lang="${lang}" lang="${lang}" dir="${textDirection(language)}"`;
+}
+
+function page(title: string, body: string, math: boolean, language: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
-<html xmlns="${XHTML_NS}" xmlns:epub="${EPUB_NS}" xml:lang="en" lang="en">
+<html xmlns="${XHTML_NS}" xmlns:epub="${EPUB_NS}" ${htmlLanguage(language)}>
 <head>
 <meta charset="UTF-8"/>
 <title>${xmlText(title)}</title>
@@ -385,6 +394,8 @@ a.noteref { vertical-align: super; font-size: 0.7em; line-height: 0; text-decora
 section.notes { margin-top: 2em; border-top: 1px solid #999; font-size: 0.85em; }
 section.notes p { margin: 0.4em 0; white-space: normal; }
 mark { color: inherit; }
+[dir="rtl"] .drop-cap { float: right; padding: 0.06em 0 0 0.1em; }
+[dir="rtl"] blockquote { margin: 0 1.5em 0.8em 0; }
 `;
 
 /** The book's style sheet: the base rules, one @font-face for each embedded file, and each fill. */
@@ -510,11 +521,15 @@ export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<Epub
         doc.title,
         `<section class="title-page" epub:type="titlepage"><h1>${xmlText(doc.title)}</h1>${author}</section>`,
         false,
+        doc.language,
       ),
     );
   }
   for (const chapter of files)
-    zip.file(`OEBPS/${chapter.file}`, page(chapter.title || doc.title, chapter.body, chapter.math));
+    zip.file(
+      `OEBPS/${chapter.file}`,
+      page(chapter.title || doc.title, chapter.body, chapter.math, doc.language),
+    );
 
   // The table of contents: the title page, then each titled section.
   const tocEntries = files.flatMap((chapter) =>
@@ -535,7 +550,7 @@ export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<Epub
     'OEBPS/nav.xhtml',
     `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
-<html xmlns="${XHTML_NS}" xmlns:epub="${EPUB_NS}" xml:lang="en" lang="en">
+<html xmlns="${XHTML_NS}" xmlns:epub="${EPUB_NS}" ${htmlLanguage(doc.language)}>
 <head>
 <meta charset="UTF-8"/>
 <title>${xmlText(doc.title)}</title>
@@ -573,17 +588,17 @@ ${links.map((l) => `<li><a href="${xmlText(l.href)}">${xmlText(l.title)}</a></li
   zip.file(
     'OEBPS/content.opf',
     `<?xml version="1.0" encoding="UTF-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id" xml:lang="en">
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id" xml:lang="${xmlText(doc.language)}">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="book-id">${xmlText(id)}</dc:identifier>
     <dc:title>${xmlText(doc.title)}</dc:title>
-${doc.author ? `    <dc:creator>${xmlText(doc.author)}</dc:creator>\n` : ''}    <dc:language>en</dc:language>
+${doc.author ? `    <dc:creator>${xmlText(doc.author)}</dc:creator>\n` : ''}    <dc:language>${xmlText(doc.language)}</dc:language>
     <meta property="dcterms:modified">${epubDate(options.modified ?? new Date())}</meta>
   </metadata>
   <manifest>
     ${manifest.join('\n    ')}
   </manifest>
-  <spine>
+  <spine${textDirection(doc.language) === 'rtl' ? ' page-progression-direction="rtl"' : ''}>
     ${spine.join('\n    ')}
   </spine>
 </package>

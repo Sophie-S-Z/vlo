@@ -4,6 +4,7 @@ import type { ThemeChoice } from '@/app/preferences';
 import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
+import { ComfortSettings } from './ComfortSettings';
 import { StorageHealth } from './StorageHealth';
 import { FolderSave } from '@/features/backup/FolderSave';
 import { WalkawayExport } from '@/features/backup/WalkawayExport';
@@ -17,6 +18,7 @@ const THEME_LABELS: Record<ThemeChoice, string> = {
   ink: 'Ink',
   paper: 'Paper',
   sepia: 'Sepia',
+  contrast: 'Contrast',
 };
 
 const THEME_HINTS: Record<ThemeChoice, string> = {
@@ -24,6 +26,7 @@ const THEME_HINTS: Record<ThemeChoice, string> = {
   ink: 'Light text on a dark page.',
   paper: 'Dark text on a light page.',
   sepia: 'Brown text on a warm page.',
+  contrast: 'Black text on a white page, with the strongest contrast.',
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -150,6 +153,10 @@ export function SettingsPage() {
           </div>
         </Section>
 
+        <Section title="Reading comfort">
+          <ComfortSettings onAnnounce={setAnnouncement} />
+        </Section>
+
         <Section title="Writing">
           <div className="grid gap-5">
             <SettingSwitch
@@ -170,6 +177,15 @@ export function SettingsPage() {
               onChange={(on) => {
                 setWritingPrefs({ smartPoems: on });
                 setAnnouncement(on ? 'Smart punctuation in poems on.' : 'Smart punctuation in poems off.');
+              }}
+            />
+            <SettingSwitch
+              label="Show all tools in the toolbar"
+              hint="When this is off, the toolbar shows the main tools only, and the More menu holds the others."
+              checked={writing.toolLevel === 'full'}
+              onChange={(on) => {
+                setWritingPrefs({ toolLevel: on ? 'full' : 'simple' });
+                setAnnouncement(on ? 'All tools in the toolbar.' : 'Main tools in the toolbar.');
               }}
             />
           </div>

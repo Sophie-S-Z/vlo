@@ -114,7 +114,7 @@ describe('poem editor', () => {
     expect(poemDataFromDoc(editor.state.doc)[0]?.[1]?.hanging).toBe(4);
     const dom = editor.view.dom.querySelectorAll('[data-poem-line]')[1] as HTMLElement;
     expect(dom.dataset.hanging).toBe('4');
-    expect(dom.style.paddingLeft).toBe('4em');
+    expect(dom.style.paddingInlineStart).toBe('4em');
     expect(dom.style.textIndent).toBe('-4em');
   });
 

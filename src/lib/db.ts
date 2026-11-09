@@ -41,6 +41,8 @@ export interface Project {
     wordsByDay?: Record<string, number>;
     /** The time of the first Co-writer insert, so each export offers the AI provenance page (F26). */
     aiInsertedAt?: number;
+    /** The language of the writing, as a BCP 47 tag such as "he" (F38). None means English. */
+    language?: string;
   };
 }
 

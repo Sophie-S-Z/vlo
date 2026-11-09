@@ -8,6 +8,7 @@ import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FolderAllow } from '@/features/backup/FolderAllow';
 import { ImportBackup } from '@/features/backup/ImportBackup';
+import { ImportWriting } from '@/features/import/ImportWriting';
 import { downloadBackup } from '@/features/backup/downloadBackup';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
 import { backupDue, changedSinceBackup } from '@/features/backup/reminder';
@@ -20,6 +21,7 @@ import { DeleteDialog } from './DeleteDialog';
 import { NewProjectDialog } from './NewProjectDialog';
 import { ProjectCard, type LibraryLayout } from './ProjectCard';
 import { RenameDialog } from './RenameDialog';
+import { TemplatesDialog } from './TemplatesDialog';
 import { useLibrary } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { WeeklyReport } from '@/features/usage/WeeklyReport';
@@ -60,6 +62,7 @@ export function LibraryPage() {
   };
   const [renaming, setRenaming] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
+  const [changing, setChanging] = useState<Project | null>(null);
   const [backingUp, setBackingUp] = useState<Project | null>(null);
   // The time the Library opened, for the backup dates on the cards.
   const [now] = useState(() => clock.now());
@@ -113,6 +116,7 @@ export function LibraryPage() {
             </ToggleGroup.Root>
           )}
           <ImportBackup />
+          <ImportWriting />
           <NewProjectDialog />
         </div>
       </div>
@@ -205,6 +209,9 @@ export function LibraryPage() {
               onRename={() => {
                 setRenaming(project);
               }}
+              onTemplates={() => {
+                setChanging(project);
+              }}
               onDelete={() => {
                 setDeleting(project);
               }}
@@ -217,6 +224,12 @@ export function LibraryPage() {
         project={renaming}
         onClose={() => {
           setRenaming(null);
+        }}
+      />
+      <TemplatesDialog
+        project={changing}
+        onClose={() => {
+          setChanging(null);
         }}
       />
       <DeleteDialog
