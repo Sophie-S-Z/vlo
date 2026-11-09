@@ -5,7 +5,7 @@ import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
 import { requestPersistence } from '@/lib/storage';
 import { deleteItemDoc } from '@/lib/itemDocName';
-import { cleanTemplates, projectDef, type StarterItem } from './templates';
+import { cleanTemplates, misfits, projectDef, type StarterItem } from './templates';
 
 export interface NewProjectInput {
   title: string;
@@ -109,6 +109,19 @@ export async function updateProjectSettings(id: string, change: Partial<Project[
 
 export async function renameProject(id: string, title: string): Promise<void> {
   await db.projects.update(id, { title: cleanTitle(title), updatedAt: clock.now() });
+}
+
+/**
+ * Gives the project new templates and returns []. While items do not fit the new templates, it changes
+ * nothing and returns those items. View data such as cards stays, so it shows again when a template comes back.
+ */
+export async function changeTemplates(id: string, templates: readonly Template[]): Promise<Item[]> {
+  const next = cleanTemplates(templates);
+  return db.transaction('rw', db.projects, db.items, async () => {
+    const blocking = misfits(await db.items.where('projectId').equals(id).toArray(), next);
+    if (blocking.length === 0) await db.projects.update(id, { templates: next, updatedAt: clock.now() });
+    return blocking;
+  });
 }
 
 /**

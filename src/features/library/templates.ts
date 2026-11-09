@@ -1,4 +1,5 @@
-import type { ItemKind, Template } from '@/lib/db';
+import { flattenTree } from '@/features/binder/tree';
+import type { Item, ItemKind, Template } from '@/lib/db';
 
 export interface StarterItem {
   kind: ItemKind;
@@ -178,4 +179,20 @@ export function templateList(templates: readonly Template[]): readonly Template[
     lists.set(key, list);
   }
   return list;
+}
+
+/**
+ * The items that break the binder rules of `templates`: a kind that the templates do not have, or a place
+ * that they do not allow. A template change waits until there are none, so no text is lost (decision P3).
+ */
+export function misfits(items: readonly Item[], templates: readonly Template[]): Item[] {
+  const def = projectDef(templates);
+  const kindOf = new Map(items.map((i) => [i.id, i.kind]));
+  // In binder order. An item whose parent is gone shows at the top, as in the binder.
+  return flattenTree(items)
+    .map((node) => node.item)
+    .filter((item) => {
+      const parent = (item.parentId === null ? undefined : kindOf.get(item.parentId)) ?? 'root';
+      return !(def.childKinds[parent]?.includes(item.kind) ?? false);
+    });
 }

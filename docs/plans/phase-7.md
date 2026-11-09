@@ -112,15 +112,16 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G5: Change templates later (F35)
 
-**Files:** Create `src/features/library/changeTemplates.ts`, `src/features/project/TemplatesDialog.tsx`, `tests/unit/change-templates.test.ts`. Modify `src/features/project/ProjectPage.tsx` (one menu entry), `docs/adr/0005-mixed-templates.md` (close the open point).
+**Files:** Create `src/features/library/TemplatesDialog.tsx`, `tests/unit/change-templates.test.ts`, `tests/e2e/change-templates.spec.ts`. Modify `src/features/library/templates.ts` (`misfits`), `src/features/library/projects.ts` (`changeTemplates`), `ProjectCard.tsx` and `LibraryPage.tsx` (one menu entry, next to Rename), `docs/adr/0005-mixed-templates.md` (close the open point).
 
 **Interfaces:**
 
-- Produces: `templateChange(project: Project, items: Item[], next: Template[]): { ok: true } | { ok: false; blocking: Item[] }`.
+- Produces: `misfits(items: readonly Item[], templates: readonly Template[]): Item[]`, the items in binder order whose kind or place the templates do not allow.
+- Produces: `changeTemplates(projectId, templates): Promise<Item[]>`. It checks `misfits` again and saves in one transaction, and it returns the blocking items with no change.
 
-- [ ] Tests first: adding any template is always `ok`; removing poetry from a poetry and open project with a poem gives that poem in `blocking`; removing a template whose kinds the others share is `ok`; the last template cannot go.
-- [ ] The dialog reuses the template checkbox cards from `TemplatePicker.tsx`. A blocked removal lists each item as a link to it. The change saves in one transaction and updates the binder and the view tabs at once.
-- [ ] A browser test: add Memoir to a novel, open the Timeline, remove Memoir, add it back, and the Timeline data is still there. Commit.
+- [x] Tests first: adding any template never blocks; removing poetry from a poetry and open project blocks on each poem only; removing a template whose kinds the others share is fine; a folder inside a folder blocks when Open writing goes.
+- [x] The dialog reuses the template checkbox cards from `TemplatePicker.tsx` (the last template stays). A blocked removal lists each item as a link to it, and Save stays off. The binder and the view tabs read the project live, so they change at once.
+- [x] A browser test: add Memoir to a novel, add a life stage in the Timeline, remove Memoir, add it back, and the life stage is still there. Commit.
 
 ### Task G6: Simple and Full tool levels (F36)
 
