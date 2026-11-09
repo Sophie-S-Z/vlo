@@ -8,6 +8,7 @@ import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FolderAllow } from '@/features/backup/FolderAllow';
 import { ImportBackup } from '@/features/backup/ImportBackup';
+import { ImportWriting } from '@/features/import/ImportWriting';
 import { downloadBackup } from '@/features/backup/downloadBackup';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
 import { backupDue, changedSinceBackup } from '@/features/backup/reminder';
@@ -113,6 +114,7 @@ export function LibraryPage() {
             </ToggleGroup.Root>
           )}
           <ImportBackup />
+          <ImportWriting />
           <NewProjectDialog />
         </div>
       </div>

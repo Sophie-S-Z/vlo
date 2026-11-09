@@ -618,6 +618,9 @@ Last update: 2026-11-09
   - Checks in the build container on 2026-11-09: the Chromium suite passed (212 tests). Initial
     JavaScript: 211 KB gzip. The LibreOffice equation test fails here because the container has no
     LibreOffice Math module; it fails the same way on `main`.
+  - Pull request G-B holds Task G4: "Import writing" in the Library reads Word, Markdown, plain text and
+    Scrivener projects (a folder, files or a zip). It stores the import as a backup import, so an import
+    is all or nothing. Initial JavaScript after G4: 213 KB gzip.
 - Phase 2: every pull request merged.
 - CI: the repository is public, so Actions minutes are free. A pull request runs the checks, the export files
   job and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;

@@ -94,20 +94,21 @@ Pull request G-A: Tasks G1 to G3. G-B: Task G4. G-C: Tasks G5 to G7. G-D: Tasks 
 
 ### Task G4: Import from other tools (F34)
 
-**Files:** Create `src/features/import/` with `model.ts`, `toBackup.ts`, `plain.ts`, `markdown.ts`, `docx.ts`, `rtf.ts`, `scrivener.ts`, `ImportDialog.tsx`. Create `tests/fixtures/import/` (a small DOCX, a Scrivener 3 project and a Markdown folder, made by a script in `scripts/`) and `tests/unit/import-*.test.ts`, `tests/e2e/import.spec.ts`. Modify `src/features/library/LibraryPage.tsx`, `package.json`.
+**Files:** Create `src/features/import/` with `tree.ts`, `outline.ts`, `markdown.ts`, `docx.ts`, `rtf.ts`, `scrivener.ts`, `read.ts` and `ImportWriting.tsx`. Create `tests/fixtures/import.ts` (a Word file and a Scrivener 3 project, made from their XML and RTF in the test), `tests/unit/import.test.ts` and `tests/e2e/import.spec.ts`. The e2e test also imports the Markdown folder `tests/fixtures/novel`. Modify `src/features/library/projects.ts` (`newProject`) and `src/features/library/LibraryPage.tsx`.
 
 **Interfaces:**
 
-- Produces: `ImportTree = { title: string; templates: Template[]; nodes: ImportNode[] }` with `ImportNode = { kind: ItemKind; title: string; synopsis?: string; blocks?: ImportBlock[]; poem?: string; children?: ImportNode[] }`. `ImportBlock` holds paragraphs and headings with bold, italic, underline and strike runs.
-- Produces: `toBackup(tree: ImportTree, now: number): Backup`. It makes the ids, the order keys, the Yjs updates (`prosemirrorJSONToYDoc` with the prose or poem schema), the `itemTexts` and the word counts. Every reader returns an `ImportTree`, so only `toBackup` knows about storage.
+- Produces: `ImportSource = { title: string; nodes: ImportNode[]; skipped: string[] }` with `ImportNode = { title: string; synopsis?: string; text?: { html: string; poem: string }; children?: ImportNode[]; note?: true }`. Each reader gives HTML for prose and plain lines for poems, so the prose editor's own parse rules read the text, as for a paste.
+- Produces: `placeNodes(nodes, templates)` fits the tree to the templates' kinds and nesting rules, and drops no text. `toBackup(source, templates, now): Backup` makes the ids, the order keys, the Yjs updates (`prosemirrorJSONToYDoc` with the prose or poem schema), the `itemTexts` and the counts. The dialog stores it with `importBackup(backup, 'same')`, so an import is all or nothing.
+- Produces: `readPicked(files: PickedFile[]): Promise<ImportSource>` reads loose files, a folder or a zip, and sends a Scrivener project to `readScrivener`.
 
-- [ ] Tests first for `toBackup`: the tree's order and nesting come back from `importBackup` and a reload; a poem keeps every space; word counts equal `countWords` of the text.
-- [ ] Plain text: one file is one item. A blank line splits paragraphs. In a poetry project each file is a poem with its text as written.
-- [ ] Markdown file or folder (Obsidian too): a folder is a part, a file is an item, `#` headings split a file into items when the writer picks "Split at headings". Front matter `title` and `synopsis` fill the item fields. Wiki links keep their text.
-- [ ] Word (DOCX): Heading 1 makes a part, Heading 2 a chapter, and the text under it a scene. With no headings, the file is one item. Bold, italic, underline, strike, tabs and line breaks stay. Footnotes become Vlo footnotes. Other features (tables, images) leave a note in the import summary.
-- [ ] Scrivener (`.scriv` folder or its zip): read `project.scrivx` for the Draft order, the titles and the types, `content.rtf` for text and `synopsis.txt` for synopses (Scrivener 3, and the `Files/Docs` layout of Scrivener 2). The Draft becomes the binder. The Research folder becomes notes with their text. The RTF reader keeps paragraphs, tabs, bold, italic, `\uN` and `\'hh` characters, and skips pictures and tables with a note in the summary.
-- [ ] The Library "Import" menu offers Backup, Word, Markdown, Scrivener and Plain text. The dialog asks for the templates, shows a summary (items, words, skipped parts), and imports on one press. A file picker with `webkitdirectory` reads a folder in every browser.
-- [ ] `import.spec.ts`: each fixture imports, reloads and opens its first item; a damaged file shows the message and adds nothing (Review Focus 2). Commit, then open pull request G-B.
+- [x] Tests for `toBackup`: the backup passes `readBackup`; order, nesting, synopsis, word counts and marks stay; a poem keeps every space after `importBackup`.
+- [x] Plain text: one file is one item. A blank line splits paragraphs. A poem keeps its lines as written.
+- [x] Markdown file or folder (Obsidian too): a folder is a folder, a file is an item, and `#` and `##` headings split a file into a folder and items. Front matter `title` and `synopsis` fill the item fields. Wiki links keep their text, and `[^1]` footnotes become Vlo footnotes. A poem from Vlo's Markdown export comes back with its spaces. Hidden folders such as `.obsidian` stay out.
+- [x] Word (DOCX): Heading 1 (or Title) starts a folder and Heading 2 an item. With no headings, the file is one item. Bold, italic, underline, strike, superscript, subscript and line breaks stay. Footnotes become Vlo footnotes. Tables and pictures go in the import summary.
+- [x] Scrivener (`.scriv` folder or its zip): read the `.scrivx` binder for order, titles and types, `content.rtf` for text and `synopsis.txt` for synopses (Scrivener 3, and the `Files/Docs` layout of Scrivener 2). The Draft becomes the binder, other top folders such as Research become notes, and the Trash stays out. The RTF reader keeps paragraphs, tabs, bold, italic, underline, strike, footnotes, `\uN` and `\'hh` characters, and puts pictures and tables in the summary.
+- [x] The Library "Import writing" dialog takes files, a zip or a folder (`webkitdirectory`), shows a summary (texts, words, skipped parts), asks for the title and the templates, and imports on one press. A Vlo backup in the picker gives a message that names "Import backup".
+- [x] `import.spec.ts`: a Word file, a Scrivener zip and a Markdown folder import, and the binder order stays after a reload; a damaged file shows the message and adds no project (Review Focus 2). Commit, then open pull request G-B.
 
 ### Task G5: Change templates later (F35)
 

@@ -20,14 +20,10 @@ function cleanTitle(title: string): string {
   return trimmed;
 }
 
-/** Creates a project with its starter items. Returns the first item the writer can type in. */
-export async function createProject(
-  input: NewProjectInput,
-): Promise<{ project: Project; firstItemId: string }> {
-  const now = clock.now();
+/** A new project row with the default settings, for a new project or an import. */
+export function newProject(input: NewProjectInput, now: number): Project {
   const templates = cleanTemplates(input.templates);
-  const def = projectDef(templates);
-  const project: Project = {
+  return {
     id: newId(),
     title: cleanTitle(input.title),
     templates,
@@ -42,6 +38,15 @@ export async function createProject(
       restDays: [],
     },
   };
+}
+
+/** Creates a project with its starter items. Returns the first item the writer can type in. */
+export async function createProject(
+  input: NewProjectInput,
+): Promise<{ project: Project; firstItemId: string }> {
+  const now = clock.now();
+  const project = newProject(input, now);
+  const def = projectDef(project.templates);
 
   const items: Item[] = [];
   const add = (starters: StarterItem[], parentId: string | null) => {
@@ -68,7 +73,7 @@ export async function createProject(
   add(def.starter, null);
 
   const first = items.find((i) => def.editorKind(i.kind) !== null);
-  if (!first) throw new Error(`Template ${templates.join('+')} has no writable starter item.`);
+  if (!first) throw new Error(`Template ${project.templates.join('+')} has no writable starter item.`);
 
   const isFirstProject = (await db.projects.count()) === 0;
   await db.transaction('rw', db.projects, db.items, async () => {
