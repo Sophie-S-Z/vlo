@@ -23,7 +23,7 @@
 | Q3 | Codex and People (F42) | A new Codex for every project: characters, places, things and lore, each with other names and a note. People stays the memoir's private-names tool. Codex text goes in no export, share or AI request. | People becomes the memoir part of the Codex, in one list. This changes the private-name checks that Phase 3 tested. |
 | Q4 | Research folder (F41) | Images, PDFs, audio and clippings (text and a link that the writer pastes) live in the project on this device. Vlo never fetches a link. Backups and "Download all my writing" include them. Vlo warns at 100 MB for each project and refuses a file over 50 MB. | Research holds only links to files on the writer's disk, so backups stay small but a file can go missing. |
 | Q5 | Split view (F39) | On screens 1024 px and wider. "Open beside" on a binder item or a research file opens it in a second pane. Both texts edit, and the toolbar and the command menu act on the pane that has focus. A phone has no split view. | Split view on tablets in portrait too (768 px and wider), with narrower panes. |
-| Q6 | Deadline goals (F46) | Progress gets "Finish by": a date and a word target. Vlo divides the words left by the writing days left (rest days out) each day, so a missed day spreads over the days left with no penalty. The 4-week calendar becomes a month calendar with the deadline on it. | Keep only the fixed daily goal, and add the month calendar. |
+| Q6 | Deadline goals (F46) | Progress gets "Finish by": a date and a word target. Vlo divides the words left by the writing days left (rest days out) each day, so a missed day spreads over the days left with no penalty. The 4-week calendar stays, and it shows the days written. | Keep only the fixed daily goal. |
 | Q7 | Style check (F47) | Off by default, a switch on this device in More tools and the command menu. It underlines repeated words, filler words, cliches and sentences over 25 words. A click shows why. It never changes the text. English projects only, because the word lists are English. | The same check as a list in Insights, with no marks in the text. |
 | Q8 | Quick capture (F48) | The installed app gets a "New note" home-screen action and a share target. A capture screen asks for the project (it remembers the last one) and puts a note in an "Inbox" folder at the top of the binder. Android and desktop Chrome and Edge support this. iPhone does not, so the capture screen also opens from the Library. | A separate "Inbox" project for every capture. |
 | Q9 | Chinese and Japanese counts (F38, the open Phase 7 card) | When the project language is Chinese or Japanese, Vlo counts characters, and the count labels, goals and exports say "characters". Latin words in the same text count as words. | Keep word counts for every language. |
@@ -66,22 +66,21 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 - Produces: `outlineRows(items: Item[], def: TemplateDef): OutlineRow[]` with `OutlineRow = { item: Item; depth: number; words: number }`, in binder order. A folder's words are the sum of its items.
 - Produces: `Label = { id: string; name: string; color: string }` and `MAX_LABELS = 8`.
 
-- [ ] Tests first: rows follow the binder order and depth; a folder sums its items; an unknown `labelId` shows no label; a backup with labels passes `readBackup`, and one with a wrong label fails.
-- [ ] An Outline tab (Full level) with two layouts on a switch: Table (title, kind, synopsis, status, label, words) and Cards (one index card for each item of a folder, with the synopsis). Synopsis, status and label edit in place. A card drags to reorder, and the keyboard moves it too, through the binder's order functions.
-- [ ] Labels: "Labels…" in the Outline makes, renames, recolors and deletes labels. A deleted label leaves its items with none.
-- [ ] `outline.spec.ts`: edit a synopsis in the table, reorder two cards, reload, and the binder shows the same order; axe passes in each theme. Commit.
+- [x] Tests first: rows follow the binder order and depth; a folder sums its items; an unknown `labelId` shows no label; a backup with labels passes `readBackup`, and one with a wrong label fails.
+- [x] An Outline tab (Full level) with two layouts on a switch: Table (title, kind, synopsis, status, label, words) and Cards (one index card for each item of a folder, with the synopsis). Synopsis, status and label edit in place. A card drags to reorder, and the keyboard moves it too, through the binder's order functions.
+- [x] Labels: "Labels…" in the Outline makes, renames, recolors and deletes labels. A deleted label leaves its items with none.
+- [x] `outline.spec.ts`: edit a synopsis in the table, reorder two cards, reload, and the binder shows the same order; axe passes in each theme. Commit.
 
-### Task H2: Deadline goals and a month calendar (F46)
+### Task H2: Deadline goals (F46)
 
-**Files:** Modify `src/features/progress/progress.ts`, `src/features/progress/streaks.ts`, `src/features/progress/Goals.tsx`, `src/lib/db.ts` (`Project.settings.deadline?: { date: string; words: number }`), `src/features/backup/file.ts`, `src/features/editor/stats/WritingStats.tsx`. Modify `tests/unit/progress.test.ts` (or create it), `tests/e2e/progress.spec.ts`.
+**Files:** Modify `src/features/progress/progress.ts`, `src/features/progress/streaks.ts`, `src/features/progress/Goals.tsx`, `src/features/progress/ProgressPage.tsx`, `src/lib/db.ts` (`Project.settings.deadline?: Deadline`), `src/features/backup/file.ts`, `tests/unit/streaks.test.ts`, `tests/unit/progress.test.ts`, `tests/e2e/progress.spec.ts`.
 
 **Interfaces:**
 
-- Produces: `deadlineGoal(input: { deadline; total: number; today: string; restDays: number[]; wordsByDay }): { perDay: number; daysLeft: number } | null`. Pure. It returns null after the date or when the target is met.
+- Produces: `deadlineGoal(deadline, total, wordsByDay, restDays, today): { perDay: number; daysLeft: number } | null`. Pure. It returns null after the date or when the target is met.
 
-- [ ] Tests first: 10,000 words left over 10 writing days gives 1,000; a rest day is not a writing day; a missed day raises the next days evenly; the words written today count for today; the deadline day is the last writing day.
-- [ ] "Finish by" in Progress sets the date and the target. With a deadline, the daily goal and the stats line use `perDay`. With no deadline, the fixed goal stays as now.
-- [ ] The calendar shows the current month, Monday first, with the deadline day marked and arrows for other months. Each day keeps its met, rest and missed state for screen readers. Commit, then open pull request H-A.
+- [x] Tests first: 10,000 words left over 10 writing days gives 1,000; a rest day is not a writing day; a missed day raises the next days evenly; the words written today count for today; the deadline day is the last writing day, also on a rest day.
+- [x] "Finish by" in Progress sets the date and the target. With a deadline, the daily goal and the streak use `perDay`, and "Words a day" hides. With no deadline, the fixed goal stays as before. The 4-week calendar stays (decision Q6). Commit, then open pull request H-A.
 
 ### Task H3: Notes in the text (F43)
 

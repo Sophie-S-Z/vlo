@@ -218,6 +218,19 @@ function checkProject(value: unknown): Project {
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);
+  const deadline = settings.deadline;
+  if (
+    deadline !== undefined &&
+    !(
+      isObject(deadline) &&
+      typeof deadline.date === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(deadline.date) &&
+      typeof deadline.words === 'number' &&
+      Number.isInteger(deadline.words) &&
+      deadline.words >= 1
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
   const followUp = settings.followUpDays;
   if (
     followUp !== undefined &&

@@ -1,11 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
-import { db, type Project } from '@/lib/db';
+import { db, type Deadline, type Project } from '@/lib/db';
 
 /* The Progress data (spec 8.4, plan Task C9, F21): the session count and the goal settings. */
 
 export const DEFAULT_GOAL = 500;
 export const MAX_GOAL = 100_000;
+/** The largest word target of a deadline (F46). */
+export const MAX_TARGET = 10_000_000;
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The project's writing sessions from the session timer. Undefined while loading. */
 export function useSessionCount(projectId: string): number | undefined {
@@ -34,11 +37,15 @@ export function goalsOf(settings: Project['settings']): GoalSettings {
  */
 export async function setGoals(
   projectId: string,
-  change: Partial<GoalSettings> & { toggleRestDay?: number },
+  change: Partial<GoalSettings> & { toggleRestDay?: number; deadline?: Deadline | null },
 ): Promise<void> {
   const goal = change.goalWordsPerDay;
   if (goal !== undefined && (!Number.isInteger(goal) || goal < 1 || goal > MAX_GOAL))
     throw new RangeError(`Type a goal from 1 to ${MAX_GOAL.toLocaleString()} words.`);
+  const deadline = change.deadline;
+  if (deadline && !ISO_DAY.test(deadline.date)) throw new RangeError('Pick a date to finish by.');
+  if (deadline && (!Number.isInteger(deadline.words) || deadline.words < 1 || deadline.words > MAX_TARGET))
+    throw new RangeError(`Type a target from 1 to ${MAX_TARGET.toLocaleString()} words.`);
   const restDays =
     change.restDays === undefined
       ? undefined
@@ -59,7 +66,9 @@ export async function setGoals(
             ? { goalWordsPerDay: DEFAULT_GOAL }
             : {}),
         ...(restDays === undefined ? {} : { restDays }),
+        ...(deadline ? { deadline: { date: deadline.date, words: deadline.words } } : {}),
       };
+      if (deadline === null) delete project.settings.deadline;
       const day = change.toggleRestDay;
       if (day !== undefined && Number.isInteger(day) && day >= 0 && day <= 6) {
         const now = project.settings.restDays;

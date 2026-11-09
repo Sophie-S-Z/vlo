@@ -142,6 +142,29 @@ test('F21: goals are off by default, and a rest day keeps the streak', async ({ 
   await expect(page.getByTestId('goal-streak')).toHaveCount(0);
 });
 
+test('F46: a deadline sets the daily goal from the words and the writing days left', async ({ page }) => {
+  await novelWithWords(page);
+  await page.getByRole('switch', { name: 'Track a daily goal and streak' }).click();
+  const end = new Date();
+  end.setDate(end.getDate() + 9);
+  const date = `${String(end.getFullYear())}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+  await page.getByLabel('Finish by').fill(date);
+  await page.getByLabel('Words in all by then').fill('1000');
+  await page.getByRole('button', { name: 'Set a deadline' }).click();
+  // 1,000 words over today and the 9 days after it. The 5 words of today count for today.
+  await expect(page.getByTestId('deadline')).toContainText(
+    '995 words left: 100 words a day over 10 writing days.',
+  );
+  await expect(page.getByTestId('goal-today')).toContainText('5 of 100 words today');
+  await expect(page.getByLabel('Words a day')).toBeHidden();
+  expect(await seriousIssues(page)).toEqual([]);
+
+  await page.reload();
+  await expect(page.getByTestId('goal-today')).toContainText('5 of 100 words today');
+  await page.getByRole('button', { name: 'Remove the deadline' }).click();
+  await expect(page.getByTestId('goal-today')).toContainText('5 of 500 words today');
+});
+
 test('the tiles enter as a mosaic, and Calm mode shows them at once', async ({ page }) => {
   await novelWithWords(page);
   await page.reload();

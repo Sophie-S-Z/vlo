@@ -91,7 +91,7 @@ export function ProgressPage() {
         )}
       </section>
 
-      <Goals project={project} />
+      <Goals project={project} total={words} />
     </section>
   );
 }

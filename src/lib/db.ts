@@ -37,6 +37,8 @@ export interface Project {
     manuscript?: ManuscriptSettings;
     /** Follow-up days of each venue in the Submissions tracker, by the venue in lower case (E4). */
     followUpDays?: Record<string, number>;
+    /** A date to finish by and the project's word target then, which sets the daily goal (F46). */
+    deadline?: Deadline;
     /** Net words added on each local day, by the date as YYYY-MM-DD, for goals and streaks (F21). */
     wordsByDay?: Record<string, number>;
     /** The time of the first Co-writer insert, so each export offers the AI provenance page (F26). */
@@ -46,6 +48,12 @@ export interface Project {
     /** The writer's labels for items, at most `MAX_LABELS` (F40). */
     labels?: Label[];
   };
+}
+
+/** A date as YYYY-MM-DD and the project's total words to reach by the end of that day (F46). */
+export interface Deadline {
+  date: string;
+  words: number;
 }
 
 /** The most labels that a project can have (F40). */
