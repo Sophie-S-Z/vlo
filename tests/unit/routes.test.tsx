@@ -83,7 +83,7 @@ test('/p/:projectId loads the project screen, which reports a missing project', 
   ).toBeTruthy();
 });
 
-test.each(['board', 'timeline', 'people', 'sequences', 'submissions', 'progress'])(
+test.each(['board', 'timeline', 'people', 'sequences', 'outline', 'codex', 'submissions', 'progress'])(
   'the %s view reports a missing project with a link to the Library',
   async (view) => {
     renderAt(`/p/missing/${view}`);

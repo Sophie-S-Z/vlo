@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { collectBackup } from '@/features/backup/backup';
+import { readBackup, writeBackup } from '@/features/backup/file';
 import { openTargets } from '@/features/binder/tree';
 import { createProject } from '@/features/library/projects';
 import { TEMPLATES } from '@/features/library/templates';
@@ -59,6 +61,35 @@ describe('setGoals', () => {
       await expect(setGoals(project.id, { goalWordsPerDay: goal })).rejects.toThrow(
         'Type a goal from 1 to 100,000 words.',
       );
+  });
+});
+
+describe('deadline (plan Task H2, F46)', () => {
+  it('stores a deadline, removes it, and refuses a wrong date or target', async () => {
+    const { project } = await createProject({ title: 'Debt', templates: ['novel'] });
+    await setGoals(project.id, { deadline: { date: '2026-12-31', words: 80_000 } });
+    expect((await db.projects.get(project.id))?.settings.deadline).toEqual({
+      date: '2026-12-31',
+      words: 80_000,
+    });
+    await expect(setGoals(project.id, { deadline: { date: '', words: 80_000 } })).rejects.toThrow(RangeError);
+    await expect(setGoals(project.id, { deadline: { date: '2026-12-31', words: 0 } })).rejects.toThrow(
+      'Type a target from 1 to 10,000,000 words.',
+    );
+    await setGoals(project.id, { deadline: null });
+    expect((await db.projects.get(project.id))?.settings).not.toHaveProperty('deadline');
+  });
+
+  it('goes in a backup, and a damaged deadline fails the check', async () => {
+    const { project } = await createProject({ title: 'Debt', templates: ['novel'] });
+    await setGoals(project.id, { deadline: { date: '2026-12-31', words: 80_000 } });
+    const backup = await collectBackup(project.id, { music: false });
+    expect((await readBackup(await writeBackup(backup))).project.settings.deadline).toEqual({
+      date: '2026-12-31',
+      words: 80_000,
+    });
+    backup.project.settings.deadline = { date: '31/12/2026', words: 80_000 };
+    await expect(readBackup(await writeBackup(backup))).rejects.toThrow('damaged');
   });
 });
 

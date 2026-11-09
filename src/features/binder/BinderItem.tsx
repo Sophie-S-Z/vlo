@@ -3,7 +3,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Ellipsis, GripVertical } from 'lucide-react';
 import { memo, useRef } from 'react';
 import type { TemplateDef } from '@/features/library/templates';
-import type { Item, ItemKind, Status } from '@/lib/db';
+import { threadStroke } from '@/features/board/board';
+import type { Item, ItemKind, Label, Status } from '@/lib/db';
 import { cn } from '@/ui/cn';
 import {
   DropdownMenu,
@@ -70,6 +71,8 @@ interface BinderItemProps {
   isOpen: boolean;
   /** True while this row is dragged to a place the template does not allow. */
   refused: boolean;
+  /** The item's label (F40), or null. */
+  label: Label | null;
   actions: BinderItemActions;
 }
 
@@ -79,6 +82,7 @@ export const BinderItem = memo(function BinderItem({
   template,
   isOpen,
   refused,
+  label,
   actions,
 }: BinderItemProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
@@ -135,6 +139,19 @@ export const BinderItem = memo(function BinderItem({
             <span>{kindLabel}</span>
             <span aria-hidden="true">·</span>
             <span>{STATUS_LABEL[item.status]}</span>
+            {label && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="inline-flex items-center gap-1">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block size-2 rounded-full"
+                    style={{ background: threadStroke(label.color) }}
+                  />
+                  {label.name}
+                </span>
+              </>
+            )}
           </p>
           {item.synopsis && <p className="mt-1 line-clamp-2 text-sm text-muted">{item.synopsis}</p>}
         </div>

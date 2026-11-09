@@ -125,14 +125,24 @@ export async function changeTemplates(id: string, templates: readonly Template[]
 }
 
 /**
- * Deletes a project, its rows and every item's stored text. A Replace import keeps the project's share
+ * Deletes a project, its rows, its research files and every item's stored text. A Replace import keeps the project's share
  * links (`keepShares`): it brings back the same project id, and the links' keys and owner tokens exist
  * only on this device.
  */
 export async function deleteProject(id: string, options: { keepShares?: boolean } = {}): Promise<void> {
   const itemIds = await db.transaction(
     'rw',
-    [db.projects, db.items, db.snapshots, db.sessions, db.itemTexts, db.appMeta, db.shares, ...viewTables()],
+    [
+      db.projects,
+      db.items,
+      db.snapshots,
+      db.sessions,
+      db.itemTexts,
+      db.appMeta,
+      db.shares,
+      db.research,
+      ...viewTables(),
+    ],
     async () => {
       // Read the ids in the same transaction, so an item added from another tab cannot be left behind.
       const ids = await db.items.where('projectId').equals(id).primaryKeys();
@@ -141,6 +151,7 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       await db.snapshots.where('projectId').equals(id).delete();
       await db.sessions.where('projectId').equals(id).delete();
       await db.itemTexts.where('projectId').equals(id).delete();
+      await db.research.where('projectId').equals(id).delete();
       // The keys and owner tokens of the project's links go with it. The delete dialog warns first.
       if (!options.keepShares) await db.shares.where('projectId').equals(id).delete();
       // The start of today's word count (writing stats).

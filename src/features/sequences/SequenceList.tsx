@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, MoreHorizontal } from 'lucide-react';
-import { memo, useRef, useState } from 'react';
+import { memo, useRef, useState, type ReactNode } from 'react';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { formatWords } from '@/features/library/format';
 import type { Item } from '@/lib/db';
@@ -25,8 +25,9 @@ import { cn } from '@/ui/cn';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 
 /*
- * The poems of one order as cards (spec 8.3, plan Task C6). A drag, the keyboard (Space, the arrow keys,
- * Space) or a card's menu moves a poem. A drop settles with a small spring, and Calm mode drops at once.
+ * The poems of one order as cards (spec 8.3, plan Task C6), and the index cards of the Outline (F40). A drag,
+ * the keyboard (Space, the arrow keys, Space) or a card's menu moves a card. A drop settles with a small
+ * spring, and Calm mode drops at once.
  */
 
 const MOUSE_OPTIONS = { activationConstraint: { distance: 4 } };
@@ -37,7 +38,7 @@ const KEYBOARD_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
 const SPRING = { duration: 360, easing: 'cubic-bezier(0.2, 1.25, 0.35, 1)' };
 
 const INSTRUCTIONS =
-  'To pick up a poem, press Space or Enter. Use the arrow keys to move it. Press Space or Enter again to drop it, or Escape to cancel. The poem menu also has Move earlier and Move later.';
+  'To pick up a card, press Space or Enter. Use the arrow keys to move it. Press Space or Enter again to drop it, or Escape to cancel. The card menu also has Move earlier and Move later.';
 
 export interface SequenceActions {
   /** Moves the poem at `from` to `to`. */
@@ -51,9 +52,11 @@ interface CardProps {
   count: number;
   motion: boolean;
   actions: SequenceActions;
+  noun: string;
+  details: ((item: Item) => ReactNode) | undefined;
 }
 
-const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions }: CardProps) {
+const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions, noun, details }: CardProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: poem.id, transition: motion ? SPRING : null });
   const [open, setOpen] = useState(false);
@@ -100,9 +103,13 @@ const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions }:
           >
             {poem.title}
           </button>
-          <p className="mt-0.5 text-xs text-muted">
-            {formatWords(poem.wordCount)}, {STATUS_LABEL[poem.status].toLowerCase()}
-          </p>
+          {details ? (
+            details(poem)
+          ) : (
+            <p className="mt-0.5 text-xs text-muted">
+              {formatWords(poem.wordCount)}, {STATUS_LABEL[poem.status].toLowerCase()}
+            </p>
+          )}
         </div>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger
@@ -127,7 +134,7 @@ const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions }:
                 actions.open(poem);
               }}
             >
-              Open poem
+              Open {noun}
             </DropdownMenuItem>
             {items.map(([label, to]) => (
               <DropdownMenuItem
@@ -152,11 +159,17 @@ export function SequenceList({
   poems,
   motion,
   actions,
+  noun = 'poem',
+  details,
 }: {
   name: string;
   poems: readonly Item[];
   motion: boolean;
   actions: SequenceActions;
+  /** What a card holds, such as "poem", for the menu and the list name. */
+  noun?: string;
+  /** The line under a card's title. A poem shows its words and status. */
+  details?: (item: Item) => ReactNode;
 }) {
   const sensors = useSensors(
     useSensor(MouseSensor, MOUSE_OPTIONS),
@@ -164,7 +177,8 @@ export function SequenceList({
     useSensor(KeyboardSensor, KEYBOARD_OPTIONS),
   );
   const ids = poems.map((p) => p.id);
-  const titleOf = (id: string | number) => poems.find((p) => p.id === id)?.title ?? 'Poem';
+  const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
+  const titleOf = (id: string | number) => poems.find((p) => p.id === id)?.title ?? Noun;
   const placeOf = (id: string | number) => ids.indexOf(String(id)) + 1;
 
   const announcements: Announcements = {
@@ -193,7 +207,7 @@ export function SequenceList({
       accessibility={{ announcements, screenReaderInstructions: { draggable: INSTRUCTIONS } }}
     >
       <SortableContext items={ids} strategy={rectSortingStrategy}>
-        <ol aria-label={`Poems in ${name}`} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ol aria-label={`${Noun}s in ${name}`} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {poems.map((poem, index) => (
             <PoemCard
               key={poem.id}
@@ -202,6 +216,8 @@ export function SequenceList({
               count={poems.length}
               motion={motion}
               actions={actions}
+              noun={noun}
+              details={details}
             />
           ))}
         </ol>

@@ -156,3 +156,28 @@ export function lastDays(
     return { day, words, state };
   });
 }
+
+/**
+ * The daily goal that reaches a deadline (F46): the words left at the start of today over the writing days
+ * left, today and the deadline day included, rest days out. So a missed day spreads its words over the days
+ * left, and the goal stays the same all day. Null after the deadline or when the target is met.
+ */
+export function deadlineGoal(
+  deadline: { date: string; words: number },
+  total: number,
+  record: Readonly<Record<string, number>>,
+  restDays: readonly number[],
+  today: string,
+): { perDay: number; daysLeft: number } | null {
+  const start = dayNumber(today);
+  const end = dayNumber(deadline.date);
+  if (!(end >= start)) return null;
+  const left = deadline.words - (total - (Object.hasOwn(record, today) ? (record[today] ?? 0) : 0));
+  if (left <= 0) return null;
+  const rest = new Set(restDays);
+  let daysLeft = 0;
+  for (let n = start; n <= end; n++) if (!rest.has(weekdayOf(fromNumber(n)))) daysLeft++;
+  // A deadline on a rest day still has its own day to write.
+  daysLeft = Math.max(daysLeft, 1);
+  return { perDay: Math.ceil(left / daysLeft), daysLeft };
+}

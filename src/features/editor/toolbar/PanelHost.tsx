@@ -18,6 +18,7 @@ import { dropEmptyMath, leaveMath, selectedMath } from '../extensions/math';
 import { useMathKeyboard } from '../math/keyboard';
 import { saveOpenField } from '../math/openField';
 import { CharactersPanel } from './panels/CharactersPanel';
+import { CommentPanel } from './panels/CommentPanel';
 import { ColorPanel } from './panels/ColorPanel';
 import { FontPanel } from './panels/FontPanel';
 import { FootnotePanel } from './panels/FootnotePanel';
@@ -76,6 +77,8 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
       return <LinkPanel editor={editor} onDone={closePanel} />;
     case 'person':
       return <PersonPanel editor={editor} onDone={closePanel} />;
+    case 'comment':
+      return <CommentPanel editor={editor} onDone={closePanel} />;
     case 'characters':
       return <CharactersPanel editor={editor} />;
     case 'footnote':
@@ -111,6 +114,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   math: 'Equation',
   'read-aloud': 'Read aloud',
   person: 'Mark as person',
+  comment: 'Comment',
 };
 
 /** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */

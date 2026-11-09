@@ -75,6 +75,8 @@ describe('vercel.json', () => {
       "img-src 'self' data: blob:",
       "font-src 'self'",
       "media-src 'self' blob:",
+      // The research view shows a PDF from a blob: URL in a frame (F41).
+      "frame-src 'self' blob:",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",

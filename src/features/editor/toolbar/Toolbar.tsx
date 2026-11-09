@@ -57,6 +57,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     ],
     more: [
       'link',
+      'comment',
       'superscript',
       'subscript',
       'size',
@@ -70,6 +71,8 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'replace',
       'read-aloud',
       'show-ai-text',
+      'show-codex-names',
+      'style-check',
       'clear',
       'shortcuts',
     ],
@@ -85,6 +88,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       { tools: ['characters', 'footnote', 'math'], wide: true },
     ],
     more: [
+      'comment',
       'superscript',
       'subscript',
       'size',
@@ -92,6 +96,8 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'replace',
       'read-aloud',
       'show-ai-text',
+      'show-codex-names',
+      'style-check',
       'clear',
       'shortcuts',
     ],

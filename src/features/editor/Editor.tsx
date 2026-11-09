@@ -23,6 +23,7 @@ import { CaretBlock } from './extensions/caretBlock';
 import { ClickBelow } from './extensions/clickBelow';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
+import { CommentList } from './CommentList';
 import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { CraftLabels } from '@/features/craft/CraftLabels';
@@ -31,6 +32,8 @@ import { CraftSwitch } from '@/features/craft/craftSwitch';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
+import { StyleCheck } from './extensions/styleCheck';
+import { CodexNames } from './extensions/codexNames';
 import { TypingState } from './extensions/textFill';
 import { BASE_STACK, COMFORT_FONT, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
@@ -41,6 +44,7 @@ import { PanelHost } from './toolbar/PanelHost';
 import { ReadAloudBar } from './toolbar/ReadAloudBar';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
+import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
 import { useWritingPrefs } from './writingPrefs';
 import '@/styles/editor.css';
@@ -136,6 +140,8 @@ export function Editor({
   const listId = `${useId()}-tools`;
   const writing = useWritingPrefs();
   const smart = kind === 'poem' ? writing.smartPoems : writing.smartProse;
+  // The style check's word lists are English. A project with no language is English.
+  const english = (language ?? 'en').split('-')[0] === 'en';
   const editor = useEditor(
     {
       extensions: [
@@ -149,6 +155,8 @@ export function Editor({
         ReadAloudMark,
         AliasPreview,
         CraftSwitch,
+        StyleCheck.configure({ form: kind, english }),
+        CodexNames,
         SlashMenu.configure({
           items: slashItems(kind, templates),
           listId,
@@ -176,7 +184,7 @@ export function Editor({
       shouldRerenderOnTransaction: false,
       editorProps: { attributes: editorAttributes(label, kind, helpId, writing.showAiText) },
     },
-    [doc, kind, smart],
+    [doc, kind, smart, english],
   );
 
   // A rename changes the editor's accessible name at once, without reopening the item.
@@ -246,6 +254,7 @@ export function Editor({
         <Toolbar editor={editor} kind={kind} templates={templates} />
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
+        <CursorNote editor={editor} />
       </div>
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
         {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
@@ -258,6 +267,7 @@ export function Editor({
         </div>
         <FootnoteList editor={editor} />
       </PageFrame>
+      <CommentList editor={editor} />
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />
       <PanelHost editor={editor} form={kind} />

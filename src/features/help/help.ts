@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 2,
+  version: 3,
   date: '2026-11-09',
   guide: [
     {
@@ -36,6 +36,8 @@ export const HELP = {
         'Add, rename and drag items in the binder on the left. The keyboard and the item menu move them too.',
         'Press Ctrl+K (Cmd+K on a Mac) to find an item by its title or its text, or to run an action.',
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
+        'To make a note to yourself, select the words and choose Comment. Comments show under the text, and exports leave them out.',
+        'In an English project, More tools has Style check. It marks repeated words, filler words, cliches and long sentences. Put the cursor in the marked words to see why. The check never changes your text.',
       ],
     },
     {
@@ -73,6 +75,25 @@ export const HELP = {
         'A memoir has the Memory Timeline, by time or by theme, and the People screen.',
         'A poetry collection has Sequences, with as many named orders of the poems as you need.',
         'Every project has Submissions and Progress.',
+      ],
+    },
+    {
+      title: 'Keep research with the project',
+      steps: [
+        'At the end of the binder, Research takes images, PDFs, audio files and clippings. Add, then Files or Clipping.',
+        'A clipping is text that you paste, with its link. Vlo keeps the link as text and never opens it.',
+        'Research stays on this device. Backups and "Download all my writing" include it, and exports leave it out.',
+        'Vlo takes files up to 50 MB, and warns when the research of a project is over 100 MB.',
+      ],
+    },
+    {
+      title: 'Plan with the Outline and the Codex',
+      steps: [
+        'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels.',
+        'Every project has the Codex: its characters, places, things and lore, with other names and a note.',
+        'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
+        'Exports, shares and AI requests leave the Codex out.',
+        'At the Simple tool level, open the Outline and the Codex from the command menu.',
       ],
     },
     {

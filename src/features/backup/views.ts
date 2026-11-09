@@ -1,4 +1,4 @@
-import type { SubmissionStatus, ViewRows } from '@/lib/db';
+import type { CodexKind, SubmissionStatus, ViewRows } from '@/lib/db';
 import { emptyViewRows } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import {
@@ -16,10 +16,12 @@ import {
 } from './check';
 
 /*
- * The Phase 3 rows in a backup file (plan Task C1): board cards, threads and links, life stages, poem
- * orders, people and submissions. A version 1 file has none of them. Each reference must point to a
+ * The view rows in a backup file (plan Tasks C1 and H5): board cards, threads and links, life stages, poem
+ * orders, people, submissions and Codex entries. A version 1 file has none of them. Each reference must point to a
  * row of the same file, except a submission, which may name a piece that the writer deleted.
  */
+
+const CODEX_KINDS: readonly CodexKind[] = ['character', 'place', 'thing', 'lore'];
 
 const SUBMISSION_STATUSES: readonly SubmissionStatus[] = [
   'sent',
@@ -136,6 +138,19 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
     optionalText(row, 'notes', 'A submission');
   });
 
+  const codexRows = rowsOf(manifest, 'codex');
+  unique(codexRows, 'the Codex entries');
+  views.codex = checkRows(codexRows, projectId, 'A Codex entry', (row) => {
+    if (!CODEX_KINDS.includes(text(row, 'kind', 'A Codex entry') as CodexKind))
+      fail(`${DAMAGED} A Codex entry has a wrong kind.`);
+    if (text(row, 'name', 'A Codex entry').trim() === '') fail(`${DAMAGED} A Codex entry has no name.`);
+    const aliases = row.aliases;
+    if (!Array.isArray(aliases) || !aliases.every((a: unknown) => typeof a === 'string'))
+      fail(`${DAMAGED} A Codex entry has wrong other names.`);
+    optionalText(row, 'note', 'A Codex entry');
+    checkOrder(text(row, 'order', 'A Codex entry'), 'A Codex entry');
+  });
+
   return views;
 }
 
@@ -195,6 +210,7 @@ export function copyViews(
         projectId,
         itemIds: submission.itemIds.map(itemId),
       })),
+      codex: views.codex.map((entry) => ({ ...entry, id: newId(), projectId })),
     },
   };
 }

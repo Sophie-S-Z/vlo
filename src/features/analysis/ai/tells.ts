@@ -84,6 +84,12 @@ export const TELL_INFO: Readonly<Record<TellGroup, { label: string; advice: stri
 
 const words = (list: string) => list.trim().split(/\s*\|\s*/);
 
+/** Filler intensifiers. The style check marks them too. */
+export const INTENSIFIERS: readonly string[] = words(`
+  genuinely | truly | incredibly | deeply | absolutely | remarkably | exceptionally | undeniably |
+  profoundly | utterly | immensely | tremendously
+`);
+
 const LISTS: Readonly<Partial<Record<TellGroup, readonly string[]>>> = {
   vocabulary: words(`
     delve | delves | delving | delved | tapestry | testament | pivotal | crucial | realm | realms | embark |
@@ -120,10 +126,7 @@ const LISTS: Readonly<Partial<Record<TellGroup, readonly string[]>>> = {
     in many ways | it seems | generally speaking | tends to | may potentially | might potentially |
     could potentially | in some ways | to a certain degree | it is possible that | it's possible that
   `),
-  intensifier: words(`
-    genuinely | truly | incredibly | deeply | absolutely | remarkably | exceptionally | undeniably |
-    profoundly | utterly | immensely | tremendously
-  `),
+  intensifier: INTENSIFIERS,
   opener: words(`
     in today's | in an era of | in a world where | when it comes to | it's worth noting | it is worth noting |
     it's important to note | it is important to note | it's important to remember |
@@ -188,7 +191,8 @@ const TRIPLET = /\b[\w'-]+(?:\s[\w'-]+){0,3},\s+[\w'-]+(?:\s[\w'-]+){0,3},\s+(?:
 /** An em dash, an en dash, "--", or a hyphen with a space on each side. */
 const DASH = /\u2014|\u2013|--|(?<=\w) - (?=\w)/g;
 
-function phrasePattern(list: readonly string[]): RegExp {
+/** One pattern for a list of words and phrases: whole words only, any case, straight or curly apostrophes. */
+export function phrasePattern(list: readonly string[]): RegExp {
   const sorted = [...list].sort((a, b) => b.length - a.length);
   const escaped = sorted.map((phrase) => phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "'?"));
   return new RegExp(`(?<![\\p{L}\\p{N}'])(?:${escaped.join('|')})(?![\\p{L}\\p{N}])`, 'giu');

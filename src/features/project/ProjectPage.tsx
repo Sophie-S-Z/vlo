@@ -19,7 +19,12 @@ import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
+import { useCodex } from '@/features/codex/codex';
+import { resetCodex, setCodexEntries } from '@/features/codex/codexStore';
 import { usePeople } from '@/features/people/people';
+import { useResearch } from '@/features/research/research';
+import { ResearchList } from '@/features/research/ResearchList';
+import { ResearchView } from '@/features/research/ResearchView';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { hasTemplate, projectDef, templateList } from '@/features/library/templates';
@@ -120,9 +125,16 @@ export function ProjectPage() {
   useEffect(() => {
     if (memoir && people) setNamePeople(projectId, people);
   }, [memoir, people, projectId]);
+  const research = useResearch(projectId);
+  // The editor's Codex names (F42) read the entries of the open project.
+  const codex = useCodex(projectId);
+  useEffect(() => {
+    if (codex) setCodexEntries(projectId, codex);
+  }, [codex, projectId]);
   useEffect(
     () => () => {
       resetNames();
+      resetCodex();
     },
     [projectId],
   );
@@ -235,12 +247,18 @@ export function ProjectPage() {
 
   const { project, items } = state;
   const template = projectDef(project);
-  const item = openItem(project, items, params.get('item'));
+  // A research file in the address opens in place of the text (F41).
+  const researchFile = research?.find((f) => f.id === params.get('research')) ?? null;
+  const item = researchFile ? undefined : openItem(project, items, params.get('item'));
   const kind = item ? template.editorKind(item.kind) : null;
   const totalWords = items.reduce((sum, i) => sum + i.wordCount, 0);
   const fromCard = params.get(FROM_CARD);
   const open = (itemId: string) => {
     setParams({ item: itemId });
+    setDrawer(false);
+  };
+  const openResearch = (fileId: string) => {
+    setParams({ research: fileId });
     setDrawer(false);
   };
   const canOpen = (i: Item) => template.editorKind(i.kind) !== null;
@@ -385,6 +403,22 @@ export function ProjectPage() {
         ]
       : []),
     {
+      id: 'outline',
+      label: 'Open the Outline',
+      keywords: ['outline', 'cards', 'index cards', 'corkboard', 'synopsis', 'labels', 'status', 'table'],
+      run: () => {
+        void navigate(`/p/${project.id}/outline`);
+      },
+    },
+    {
+      id: 'codex',
+      label: 'Open the Codex',
+      keywords: ['codex', 'characters', 'places', 'things', 'lore', 'world', 'story bible', 'wiki'],
+      run: () => {
+        void navigate(`/p/${project.id}/codex`);
+      },
+    },
+    {
       id: 'submissions',
       label: 'Open Submissions',
       keywords: ['submissions', 'venues', 'journals', 'sent', 'follow up', 'tracker'],
@@ -517,7 +551,22 @@ export function ProjectPage() {
               <ViewTabs project={project} modeOpen={modeOpen} onModeOpenChange={setModeOpen} />
             </header>
           }
-          binder={<Binder project={project} items={items} openItemId={item?.id ?? null} onOpen={open} />}
+          binder={
+            <Binder
+              project={project}
+              items={items}
+              openItemId={item?.id ?? null}
+              onOpen={open}
+              research={
+                <ResearchList
+                  projectId={project.id}
+                  files={research ?? []}
+                  openId={researchFile?.id ?? null}
+                  onOpen={openResearch}
+                />
+              }
+            />
+          }
           details={
             <>
               <dl className="grid gap-3 text-sm">
@@ -542,7 +591,15 @@ export function ProjectPage() {
             </>
           }
           manuscript={(width) =>
-            item && kind ? (
+            researchFile ? (
+              <ResearchView
+                key={researchFile.id}
+                file={researchFile}
+                onDeleted={() => {
+                  setParams({});
+                }}
+              />
+            ) : item && kind ? (
               <>
                 {settingsError && (
                   <p role="alert" className="mx-auto mb-3 max-w-prose text-sm text-accent-text">

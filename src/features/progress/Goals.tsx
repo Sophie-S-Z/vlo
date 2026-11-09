@@ -6,12 +6,14 @@ import { Label } from '@/ui/label';
 import { Switch } from '@/ui/switch';
 import { cn } from '@/ui/cn';
 import { CountUp } from './CountUp';
-import { goalsOf, MAX_GOAL, setGoals } from './progress';
-import { dayKey, lastDays, streakOf, weekdayOf, type DayState } from './streaks';
+import { Button } from '@/ui/button';
+import { goalsOf, MAX_GOAL, MAX_TARGET, setGoals } from './progress';
+import { dayKey, deadlineGoal, lastDays, streakOf, weekdayOf, type DayState } from './streaks';
 
 /*
  * The daily goal and the streak (spec 8.4, plan Task C9, F21). Both are off by default. A rest day keeps
- * the streak. The last weeks show as a calendar, Monday first.
+ * the streak. The last weeks show as a calendar, Monday first. A deadline (F46) sets the goal from the
+ * words left and the writing days left.
  */
 
 /** Monday first, as weekday numbers (0 is Sunday). */
@@ -31,7 +33,96 @@ function days(n: number): string {
   return `${n.toLocaleString()} ${n === 1 ? 'day' : 'days'}`;
 }
 
-export function Goals({ project }: { project: Project }) {
+const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'long', timeZone: 'UTC' });
+
+function words(n: number): string {
+  return `${n.toLocaleString()} ${n === 1 ? 'word' : 'words'}`;
+}
+
+/** "Finish by": a date and a word target that set the daily goal (F46). */
+function Deadline({ project, total, save }: { project: Project; total: number; save: Save }) {
+  const id = useId();
+  const deadline = project.settings.deadline;
+  const [date, setDate] = useState('');
+  const [target, setTarget] = useState('');
+  if (deadline) {
+    const today = dayKey(clock.now());
+    const plan = deadlineGoal(
+      deadline,
+      total,
+      project.settings.wordsByDay ?? {},
+      project.settings.restDays,
+      today,
+    );
+    const when = dateFormat.format(new Date(`${deadline.date}T00:00:00Z`));
+    return (
+      <div className="grid gap-2" data-testid="deadline">
+        <p>
+          Finish by <strong className="font-semibold">{when}</strong> with {words(deadline.words)} in all.{' '}
+          {plan
+            ? `${words(Math.max(0, deadline.words - total))} left: ${words(plan.perDay)} a day over ${plan.daysLeft.toLocaleString()} writing ${plan.daysLeft === 1 ? 'day' : 'days'}.`
+            : total >= deadline.words
+              ? 'You reached the target.'
+              : 'The date has passed.'}
+        </p>
+        <Button
+          variant="outline"
+          className="justify-self-start"
+          onClick={() => {
+            save({ deadline: null });
+          }}
+        >
+          Remove the deadline
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="flex flex-wrap items-end gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save({ deadline: { date, words: Number(target.trim()) } });
+      }}
+    >
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${id}-date`}>Finish by</Label>
+        <Input
+          id={`${id}-date`}
+          type="date"
+          required
+          value={date}
+          onChange={(event) => {
+            setDate(event.target.value);
+          }}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${id}-words`}>Words in all by then</Label>
+        <Input
+          id={`${id}-words`}
+          type="number"
+          inputMode="numeric"
+          required
+          min={1}
+          max={MAX_TARGET}
+          className="max-w-40"
+          value={target}
+          onChange={(event) => {
+            setTarget(event.target.value);
+          }}
+        />
+      </div>
+      <Button type="submit" variant="outline">
+        Set a deadline
+      </Button>
+    </form>
+  );
+}
+
+type Save = (change: Parameters<typeof setGoals>[1]) => void;
+
+export function Goals({ project, total }: { project: Project; total: number }) {
   const id = useId();
   const goals = goalsOf(project.settings);
   const [goalText, setGoalText] = useState(String(goals.goalWordsPerDay));
@@ -51,7 +142,7 @@ export function Goals({ project }: { project: Project }) {
     setGoalText(String(goals.goalWordsPerDay));
   }
 
-  const save = (change: Parameters<typeof setGoals>[1]) => {
+  const save: Save = (change) => {
     setGoals(project.id, change).then(
       () => {
         setError('');
@@ -72,14 +163,17 @@ export function Goals({ project }: { project: Project }) {
 
   const record = project.settings.wordsByDay ?? {};
   const today = dayKey(clock.now());
-  const rules = { goal: goals.goalWordsPerDay, restDays };
+  const deadline = project.settings.deadline;
+  const plan = deadline ? deadlineGoal(deadline, total, record, restDays, today) : null;
+  const goal = plan?.perDay ?? goals.goalWordsPerDay;
+  const rules = { goal, restDays };
   const streak = streakOf(record, rules, today);
   // Whole weeks, Monday first, ending with the week of today.
   const count = (WEEKS_SHOWN - 1) * 7 + WEEK.indexOf(weekdayOf(today)) + 1;
   const recent = lastDays(record, rules, today, count);
   const met = recent.filter((d) => d.state === 'met').length;
   const rest = recent.filter((d) => d.state === 'rest').length;
-  const share = Math.min(1, streak.today / goals.goalWordsPerDay);
+  const share = Math.min(1, streak.today / goal);
 
   return (
     <section aria-labelledby={`${id}-title`} className="grid gap-4">
@@ -112,7 +206,7 @@ export function Goals({ project }: { project: Project }) {
                 <span className="font-display text-3xl font-semibold">
                   <CountUp value={streak.today} />
                 </span>{' '}
-                of {goals.goalWordsPerDay.toLocaleString()} words today
+                of {goal.toLocaleString()} words today
                 {streak.todayMet && <span className="text-accent-text">. Goal met.</span>}
               </p>
               <div aria-hidden="true" className="h-2 max-w-md overflow-hidden rounded-full bg-rule">
@@ -127,7 +221,7 @@ export function Goals({ project }: { project: Project }) {
               {days(streak.best)}.
             </p>
 
-            <div className="grid gap-1.5">
+            <div className={cn('grid gap-1.5', deadline && 'hidden')}>
               <Label htmlFor={`${id}-goal`}>Words a day</Label>
               <Input
                 id={`${id}-goal`}
@@ -146,10 +240,11 @@ export function Goals({ project }: { project: Project }) {
                   if (event.key === 'Enter') commitGoal();
                 }}
               />
-              <p id={`${id}-error`} role="alert" className="text-sm text-accent-text empty:hidden">
-                {error}
-              </p>
             </div>
+            <Deadline project={project} total={total} save={save} />
+            <p id={`${id}-error`} role="alert" className="text-sm text-accent-text empty:hidden">
+              {error}
+            </p>
 
             <fieldset className="grid gap-2">
               <legend className="text-sm font-medium">Rest days</legend>

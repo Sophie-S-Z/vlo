@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, addWordsToDay, dayKey, lastDays, streakOf, weekdayOf } from '@/features/progress/streaks';
+import {
+  addDays,
+  addWordsToDay,
+  dayKey,
+  deadlineGoal,
+  lastDays,
+  streakOf,
+  weekdayOf,
+} from '@/features/progress/streaks';
 
 /*
  * Plan Task C9 (F21): the streak rules. A day counts when its words reach the goal. A rest day that misses
@@ -134,5 +142,41 @@ describe('lastDays', () => {
       { day: '2026-11-04', words: 100, state: 'missed' },
       { day: '2026-11-05', words: 0, state: 'today' },
     ]);
+  });
+});
+
+describe('deadlineGoal (plan Task H2, F46)', () => {
+  // 9 November 2026 is a Monday. The deadline is Wednesday 18 November: 10 days, today and that day in.
+  const deadline = { date: '2026-11-18', words: 15_000 };
+
+  it('divides the words left by the writing days left', () => {
+    expect(deadlineGoal(deadline, 5_000, {}, [], '2026-11-09')).toEqual({ perDay: 1_000, daysLeft: 10 });
+  });
+
+  it('leaves the rest days out', () => {
+    // Saturday 14 and Sunday 15 are rest days, so 8 writing days are left.
+    expect(deadlineGoal(deadline, 5_000, {}, [6, 0], '2026-11-09')).toEqual({ perDay: 1_250, daysLeft: 8 });
+  });
+
+  it('spreads a missed day over the days left, with no penalty', () => {
+    expect(deadlineGoal(deadline, 5_000, {}, [], '2026-11-10')).toEqual({ perDay: 1_112, daysLeft: 9 });
+  });
+
+  it('keeps the goal of today the same while the writer writes', () => {
+    const record = { '2026-11-09': 600 };
+    expect(deadlineGoal(deadline, 5_600, record, [], '2026-11-09')).toEqual({ perDay: 1_000, daysLeft: 10 });
+  });
+
+  it('counts the deadline day as the last writing day, even on a rest day', () => {
+    expect(deadlineGoal(deadline, 14_000, {}, [], '2026-11-18')).toEqual({ perDay: 1_000, daysLeft: 1 });
+    expect(deadlineGoal({ ...deadline, date: '2026-11-15' }, 14_000, {}, [0], '2026-11-15')).toEqual({
+      perDay: 1_000,
+      daysLeft: 1,
+    });
+  });
+
+  it('gives null after the deadline or when the target is met', () => {
+    expect(deadlineGoal(deadline, 5_000, {}, [], '2026-11-19')).toBeNull();
+    expect(deadlineGoal(deadline, 15_000, {}, [], '2026-11-09')).toBeNull();
   });
 });
