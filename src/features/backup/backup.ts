@@ -154,6 +154,7 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
         await db.sequences.bulkAdd(backup.views.sequences);
         await db.people.bulkAdd(backup.views.people);
         await db.submissions.bulkAdd(backup.views.submissions);
+        await db.codex.bulkAdd(backup.views.codex);
         // Music belongs to the device, not the project. A file that is already here stays as it is.
         const known = new Set(await db.audioFiles.toCollection().primaryKeys());
         await db.audioFiles.bulkAdd(

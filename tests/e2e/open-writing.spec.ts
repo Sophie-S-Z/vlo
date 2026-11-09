@@ -24,7 +24,7 @@ test('open writing starts on Page 1, and its binder adds folders, pages and note
   await expect(page.getByRole('heading', { level: 2, name: 'Page 1' })).toBeVisible();
   await page.getByRole('textbox', { name: 'Page 1' }).pressSequentially('Dear Ada,');
   // Open writing has no views of its own: only Write and the views of every project.
-  await expect(tabs(page)).toHaveText(['Write', 'Outline', 'Submissions', 'Progress']);
+  await expect(tabs(page)).toHaveText(['Write', 'Outline', 'Codex', 'Submissions', 'Progress']);
 
   await binder(page).getByRole('button', { name: 'Add to binder' }).click();
   await expect(page.getByRole('menuitem')).toHaveText(['Folder', 'Page', 'Note']);
@@ -56,6 +56,7 @@ test('a mix of novel and memoir gets the starters, the binder kinds and the view
     'Timeline',
     'People',
     'Outline',
+    'Codex',
     'Submissions',
     'Progress',
   ]);

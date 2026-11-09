@@ -28,22 +28,31 @@ export const GRID_VIEW = 'grid';
  * the command menu opens it (roadmap rule 2).
  */
 const outline: Tab = { label: 'Outline', to: '/outline', active: (path) => path.endsWith('/outline') };
+/** The Codex (F42) is for every template too, with the same rule. */
+const codex: Tab = { label: 'Codex', to: '/codex', active: (path) => path.endsWith('/codex') };
 
 function tabsFor(project: Project, full: boolean, path: string): Tab[] {
   const write: Tab = {
     label: 'Write',
     to: '',
     active: (path) =>
-      !['/board', '/outline', '/timeline', '/people', '/sequences', '/submissions', '/progress'].some((end) =>
-        path.endsWith(end),
-      ),
+      ![
+        '/board',
+        '/outline',
+        '/codex',
+        '/timeline',
+        '/people',
+        '/sequences',
+        '/submissions',
+        '/progress',
+      ].some((end) => path.endsWith(end)),
   };
   // Every template has Submissions and Progress (spec 8.4), after its own views.
   const shared: Tab[] = [
     { label: 'Submissions', to: '/submissions', active: (path) => path.endsWith('/submissions') },
     { label: 'Progress', to: '/progress', active: (path) => path.endsWith('/progress') },
   ];
-  const tools = full || outline.active(path, new URLSearchParams()) ? [outline] : [];
+  const tools = [outline, codex].filter((tab) => full || tab.active(path, new URLSearchParams()));
   return [write, ...viewsOf(project), ...tools, ...shared];
 }
 

@@ -5,7 +5,7 @@ import { skipOnboarding } from './support/onboarding';
 /* Plan Task H4 (roadmap F47): the style check. Gate 1 in performance.spec.ts types with it on. */
 
 const scene = (page: Page) => page.getByRole('textbox', { name: 'Scene 1' });
-const reason = (page: Page) => page.locator('[data-vlo-style-reason]');
+const reason = (page: Page) => page.locator('[data-vlo-cursor-note]');
 
 async function switchStyleCheck(page: Page) {
   await page.getByRole('button', { name: 'More tools' }).click();

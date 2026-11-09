@@ -7,6 +7,7 @@ import {
   ALargeSmall,
   AudioLines,
   Bot,
+  BookUser,
   Asterisk,
   Baseline,
   Bold,
@@ -51,6 +52,7 @@ import type { Template } from '@/lib/db';
 import { getCraft, setCraftLabels } from '@/features/craft/craftStore';
 import { showsAliases } from '@/features/people/aliasPreview';
 import { getNames, setShowAliases } from '@/features/people/nameStore';
+import { getCodex, setShowCodexNames } from '@/features/codex/codexStore';
 import { getWritingPrefs, setWritingPrefs } from '../writingPrefs';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { openFind, openPanel } from './editorBus';
@@ -770,6 +772,20 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: () => getWritingPrefs().showAiText,
+  },
+  {
+    kind: 'run',
+    id: 'show-codex-names',
+    label: 'Show Codex names',
+    icon: BookUser,
+    group: 'review',
+    forms: BOTH,
+    keywords: ['codex', 'characters', 'places', 'names', 'world', 'story bible'],
+    run: () => {
+      setShowCodexNames(!getCodex().show);
+      return true;
+    },
+    isActive: () => getCodex().show,
   },
   {
     kind: 'run',

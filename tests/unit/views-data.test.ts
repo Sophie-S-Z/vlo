@@ -94,6 +94,15 @@ async function novelWithViews() {
     sentAt: '2026-10-01',
     status: 'sent',
   });
+  await db.codex.add({
+    id: `codex-${p}`,
+    projectId: p,
+    kind: 'character',
+    name: 'Mira',
+    aliases: ['Mi'],
+    note: 'Owes the harbour master.',
+    order: 'a0',
+  });
   return { project, first, second };
 }
 
@@ -108,10 +117,10 @@ describe('Template view rows', () => {
   test('deleting a project removes its view rows and keeps the rows of other projects', async () => {
     const { project } = await novelWithViews();
     const other = await novelWithViews();
-    expect(total(await views(project.id))).toBe(8);
+    expect(total(await views(project.id))).toBe(9);
     await deleteProject(project.id);
     expect(total(await views(project.id))).toBe(0);
-    expect(total(await views(other.project.id))).toBe(8);
+    expect(total(await views(other.project.id))).toBe(9);
   });
 
   test('deleting an item unlinks its card, drops it from each poem order, and keeps it in a submission', async () => {

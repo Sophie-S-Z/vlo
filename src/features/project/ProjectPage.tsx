@@ -19,6 +19,8 @@ import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
+import { useCodex } from '@/features/codex/codex';
+import { resetCodex, setCodexEntries } from '@/features/codex/codexStore';
 import { usePeople } from '@/features/people/people';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
@@ -120,9 +122,15 @@ export function ProjectPage() {
   useEffect(() => {
     if (memoir && people) setNamePeople(projectId, people);
   }, [memoir, people, projectId]);
+  // The editor's Codex names (F42) read the entries of the open project.
+  const codex = useCodex(projectId);
+  useEffect(() => {
+    if (codex) setCodexEntries(projectId, codex);
+  }, [codex, projectId]);
   useEffect(
     () => () => {
       resetNames();
+      resetCodex();
     },
     [projectId],
   );
@@ -390,6 +398,14 @@ export function ProjectPage() {
       keywords: ['outline', 'cards', 'index cards', 'corkboard', 'synopsis', 'labels', 'status', 'table'],
       run: () => {
         void navigate(`/p/${project.id}/outline`);
+      },
+    },
+    {
+      id: 'codex',
+      label: 'Open the Codex',
+      keywords: ['codex', 'characters', 'places', 'things', 'lore', 'world', 'story bible', 'wiki'],
+      run: () => {
+        void navigate(`/p/${project.id}/codex`);
       },
     },
     {

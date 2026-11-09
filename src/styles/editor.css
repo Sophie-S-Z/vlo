@@ -626,6 +626,12 @@ html[data-calm='true'] .vlo-fill-shimmer {
   box-decoration-break: clone;
 }
 
+/* "Show Codex names" (F42): a dotted line under each name of the Codex. */
+.vlo-manuscript .vlo-codex {
+  text-decoration: underline dotted var(--muted);
+  text-underline-offset: 0.25em;
+}
+
 /* The style check (F47): a wavy line under a word or phrase, and a light tint on a long sentence. */
 .vlo-manuscript .vlo-style:not(.vlo-style-long) {
   text-decoration: underline wavy color-mix(in oklab, var(--accent) 70%, transparent);

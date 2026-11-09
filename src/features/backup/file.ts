@@ -42,13 +42,14 @@ import type {
  * - `snapshots/<id>.yjs`: the Yjs update of each snapshot;
  * - `music/<id>`: each of the writer's music files, only when the writer asks for them.
  * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Version 3 gives the project a
- * list of templates (`templates`) in place of one `template`. Vlo still reads versions 1 and 2.
+ * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows, so
+ * an older build refuses the file and never drops them. Vlo still reads versions 1 to 3.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 4;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -69,7 +70,7 @@ export interface Backup {
   /** The Yjs update of each item that holds text, by item id. */
   updates: Map<string, Uint8Array>;
   music: BackupMusic[];
-  /** Board cards, threads, life stages, poem orders, people and submissions (Phase 3). */
+  /** Board cards, threads, life stages, poem orders, people and submissions (Phase 3), and the Codex. */
   views: ViewRows;
 }
 

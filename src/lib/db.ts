@@ -196,6 +196,22 @@ export interface Submission {
   notes?: string;
 }
 
+export type CodexKind = 'character' | 'place' | 'thing' | 'lore';
+
+/**
+ * An entry of a project's Codex (F42): a character, place, thing or piece of lore, with its other names and
+ * a note. No export, share or AI request reads the Codex.
+ */
+export interface CodexEntry {
+  id: string;
+  projectId: string;
+  kind: CodexKind;
+  name: string;
+  aliases: string[];
+  note?: string;
+  order: string;
+}
+
 /** A plain-text copy of each item, for search and readable backups (ADR 0003). */
 export interface ItemText {
   itemId: string;
@@ -295,6 +311,7 @@ export class VloDb extends Dexie {
   submissions!: Table<Submission, string>;
   networkLog!: Table<NetworkLogEntry, string>;
   shares!: Table<ShareRecord, string>;
+  codex!: Table<CodexEntry, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -334,12 +351,14 @@ export class VloDb extends Dexie {
             delete project.template;
           }),
       );
+    // Version 7 (Phase 8, Task H5): the Codex. A new table only, so no rows change.
+    this.version(7).stores({ codex: 'id, projectId' });
   }
 }
 
 export const db = new VloDb();
 
-/** The Phase 3 tables. Each row has an `id` and a `projectId`, and belongs to one project. */
+/** The view tables (Phase 3, and the Codex of Phase 8). Each row has an `id` and a `projectId`. */
 export const VIEW_TABLE_NAMES = [
   'cards',
   'threads',
@@ -348,9 +367,10 @@ export const VIEW_TABLE_NAMES = [
   'sequences',
   'people',
   'submissions',
+  'codex',
 ] as const;
 
-/** The rows of the Phase 3 tables of one project, by table. */
+/** The rows of the view tables of one project, by table. */
 export interface ViewRows {
   cards: Card[];
   threads: Thread[];
@@ -359,6 +379,7 @@ export interface ViewRows {
   sequences: Sequence[];
   people: Person[];
   submissions: Submission[];
+  codex: CodexEntry[];
 }
 
 export function emptyViewRows(): ViewRows {
@@ -370,17 +391,18 @@ export function emptyViewRows(): ViewRows {
     sequences: [],
     people: [],
     submissions: [],
+    codex: [],
   };
 }
 
-/** The Phase 3 tables of a database, for a transaction or a delete by project. */
+/** The view tables of a database, for a transaction or a delete by project. */
 export function viewTables(database: VloDb = db): Table<{ id: string; projectId: string }, string>[] {
   return VIEW_TABLE_NAMES.map(
     (name) => database[name] as unknown as Table<{ id: string; projectId: string }, string>,
   );
 }
 
-/** Reads the Phase 3 rows of a project. Call it inside a transaction that holds `viewTables()`. */
+/** Reads the view rows of a project. Call it inside a transaction that holds `viewTables()`. */
 export async function readViewRows(projectId: string, database: VloDb = db): Promise<ViewRows> {
   const rows = emptyViewRows();
   for (const name of VIEW_TABLE_NAMES) {

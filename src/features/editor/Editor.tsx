@@ -33,6 +33,7 @@ import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
 import { StyleCheck } from './extensions/styleCheck';
+import { CodexNames } from './extensions/codexNames';
 import { TypingState } from './extensions/textFill';
 import { BASE_STACK, COMFORT_FONT, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
@@ -43,7 +44,7 @@ import { PanelHost } from './toolbar/PanelHost';
 import { ReadAloudBar } from './toolbar/ReadAloudBar';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
-import { StyleReason } from './StyleReason';
+import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
 import { useWritingPrefs } from './writingPrefs';
 import '@/styles/editor.css';
@@ -155,6 +156,7 @@ export function Editor({
         AliasPreview,
         CraftSwitch,
         StyleCheck.configure({ form: kind, english }),
+        CodexNames,
         SlashMenu.configure({
           items: slashItems(kind, templates),
           listId,
@@ -252,7 +254,7 @@ export function Editor({
         <Toolbar editor={editor} kind={kind} templates={templates} />
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
-        <StyleReason editor={editor} />
+        <CursorNote editor={editor} />
       </div>
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
         {/* The Craft labels sit in a layer over the poem, outside the editable text. */}

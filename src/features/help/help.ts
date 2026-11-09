@@ -75,7 +75,16 @@ export const HELP = {
         'A memoir has the Memory Timeline, by time or by theme, and the People screen.',
         'A poetry collection has Sequences, with as many named orders of the poems as you need.',
         'Every project has Submissions and Progress.',
-        'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels. At the Simple tool level, open it from the command menu.',
+      ],
+    },
+    {
+      title: 'Plan with the Outline and the Codex',
+      steps: [
+        'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels.',
+        'Every project has the Codex: its characters, places, things and lore, with other names and a note.',
+        'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
+        'Exports, shares and AI requests leave the Codex out.',
+        'At the Simple tool level, open the Outline and the Codex from the command menu.',
       ],
     },
     {

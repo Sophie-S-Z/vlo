@@ -44,14 +44,15 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 6 has the Phase 1 tables, the music, the template views, the network log and the shares', () => {
+  test('version 7 has the Phase 1 tables, the music, the template views, the network log, the shares and the Codex', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(6);
+    expect(db.verno).toBe(7);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
       'cardLinks',
       'cards',
+      'codex',
       'itemTexts',
       'items',
       'lifeStages',
@@ -96,7 +97,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(6);
+    expect(upgraded.verno).toBe(7);
     expect((await upgraded.networkLog.get('n1'))?.host).toBe('api.groq.com');
     await upgraded.shares.add({
       id: 'sh1',
@@ -133,7 +134,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(6);
+    expect(upgraded.verno).toBe(7);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect((await upgraded.projects.get('kept'))?.templates).toEqual(['poetry']);
     expect(await upgraded.items.count()).toBe(1);
@@ -178,7 +179,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(6);
+    expect(upgraded.verno).toBe(7);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);
@@ -239,7 +240,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(6);
+    expect(upgraded.verno).toBe(7);
     const rows = await upgraded.projects.toArray();
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(byId.get('poems')?.templates).toEqual(['poetry']);

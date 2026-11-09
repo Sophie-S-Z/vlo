@@ -104,11 +104,40 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
 }) => {
   test.slow();
   await skipOnboarding(page);
-  // Review Focus 3 of Phase 8: the style check is on, so its marks are part of the typing budget.
+  // Review Focus 3 of Phase 8: the style check and the Codex names are on, so their marks count in the budget.
   await page.evaluate(() => {
     localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full', styleCheck: true }));
   });
   const seeded = await seedLarge(page);
+  // The Codex names are on too: an entry whose names come in the typed text.
+  await page.evaluate(
+    (projectId) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('vlo');
+        open.onerror = () => {
+          reject(open.error ?? new Error('No database.'));
+        };
+        open.onsuccess = () => {
+          const tx = open.result.transaction('codex', 'readwrite');
+          tx.objectStore('codex').put({
+            id: 'codex-lamp',
+            projectId,
+            kind: 'thing',
+            name: 'lamp',
+            aliases: ['water'],
+            order: 'a0',
+          });
+          tx.oncomplete = () => {
+            open.result.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            reject(tx.error ?? new Error('No write.'));
+          };
+        };
+      }),
+    seeded.projectId,
+  );
 
   // A cold page load straight to the scene also boots the app. It is logged for STATUS, not held to the budget.
   await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}`);
@@ -210,8 +239,9 @@ test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and type
   // a 100 ms ceiling that still catches a real slowdown. Real Safari is checked by hand (product owner decision).
   expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
 
-  // The scan ran on the scene, so the budget above holds with the marks on screen.
+  // The scans ran on the scene, so the budget above holds with the marks on screen.
   await expect(editor.locator('.vlo-style').first()).toBeAttached();
+  await expect(editor.locator('[spellcheck="false"]').first()).toBeAttached();
 
   const opened = await page.evaluate(() => [...new Set(window.__itemOpens)]);
   expect(opened).toEqual([`vlo-item-${seeded.longSceneId}`]);

@@ -108,7 +108,7 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 
 ### Task H5: Codex for every project (F42, F38 word list)
 
-**Files:** Create `src/features/codex/codex.ts`, `CodexPage.tsx`, `CodexMatrix.tsx`, `src/features/editor/extensions/codexNames.ts`, `tests/unit/codex.test.ts`, `tests/e2e/codex.spec.ts`. Modify `src/lib/db.ts` (version 7, `codex` table), `src/features/backup/file.ts` and `views.ts` (backup version 4), `src/app/routes.tsx`, `ViewTabs.tsx`, `ProjectPage.tsx`, `src/features/help/help.ts`.
+**Files:** Create `src/features/codex/codex.ts`, `codexStore.ts`, `CodexPage.tsx`, `CodexMatrix.tsx`, `src/features/editor/extensions/codexNames.ts`, `src/features/editor/extensions/blockScan.ts` (the paused scan that the style check and the Codex names share), `src/features/editor/CursorNote.tsx` (it was `StyleReason.tsx`), `tests/unit/codex.test.ts`, `tests/e2e/codex.spec.ts`. Modify `src/lib/db.ts` (version 7, `codex` table, a view table), `src/features/backup/file.ts`, `views.ts` and `backup.ts` (backup version 4), `src/app/routes.tsx`, `ViewTabs.tsx`, `ProjectPage.tsx`, `src/features/editor/commands/registry.ts`, `src/features/help/help.ts`, `tests/e2e/performance.spec.ts` (Gate 1 has a Codex entry).
 
 **Interfaces:**
 
@@ -116,10 +116,10 @@ Pull request H-A: Tasks H1 and H2. H-B: Tasks H3 and H4. H-C: Tasks H5 to H7. H-
 - Produces: `codexMatcher(entries): (text: string) => { from: number; to: number; entryId: string }[]`. Whole words, case as the writer typed it, longest name first.
 - Produces: `mentionMatrix(entries, itemTexts): Map<entryId, Map<itemId, number>>`.
 
-- [ ] Tests first: "Mira" and "Mira's" match, "Miranda" does not; an alias finds its entry; the matrix counts each item; a version 4 backup round trip keeps every entry; a version 3 backup still imports.
-- [ ] A Codex tab (Full level) with a list by kind and an entry panel. The matrix shows entries against the text items in binder order.
-- [ ] In the editor, Codex names have `spellcheck="false"`, so the browser does not mark them (the F38 word list: browsers let a page add no word to their dictionary). "Show Codex names" in More tools gives them a dotted underline, and a click shows the entry.
-- [ ] `codex.spec.ts`: add an entry, see its name marked in a scene, open the matrix, back up and import. Commit.
+- [x] Tests first: "Mira" and "Mira's" match, "Miranda" does not; an alias finds its entry; the matrix counts each item; a version 4 backup round trip keeps every entry; a version 3 backup still imports.
+- [x] A Codex tab (Full level) with a list by kind and an entry panel. The matrix shows entries against the text items in binder order.
+- [x] In the editor, Codex names have `spellcheck="false"`, so the browser does not mark them (the F38 word list: browsers let a page add no word to their dictionary). "Show Codex names" in More tools gives them a dotted underline, and a click shows the entry.
+- [x] `codex.spec.ts`: add an entry, see its name marked in a scene, open the matrix. The backup round trip is in `codex.test.ts` and `views-data.test.ts`. Commit.
 
 ### Task H6: Research folder (F41)
 
