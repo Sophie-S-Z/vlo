@@ -90,6 +90,30 @@ export async function addResearchFiles(projectId: string, files: readonly File[]
   return { added, tooLarge, large: (await totalSize(projectId)) > RESEARCH_WARN };
 }
 
+/** Saves a recording of a memory (F57). Its name is the question that it answers. */
+export async function addRecording(
+  projectId: string,
+  itemId: string,
+  audio: Blob,
+  name: string,
+): Promise<ResearchFile> {
+  const file: ResearchFile = {
+    id: newId(),
+    projectId,
+    itemId,
+    name: name.trim().slice(0, MAX_RESEARCH_NAME) || 'Recording',
+    type: audio.type || 'audio/webm',
+    size: audio.size,
+    addedAt: clock.now(),
+    data: audio,
+  };
+  await db.transaction('rw', db.research, db.projects, async () => {
+    await db.research.add(file);
+    await touch(projectId);
+  });
+  return file;
+}
+
 /** Adds a clipping: text that the writer pastes, with its link as text. Vlo never opens the link. */
 export async function addClipping(
   projectId: string,

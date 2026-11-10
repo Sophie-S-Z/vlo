@@ -504,6 +504,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
       text(row, 'name', 'A research file');
       text(row, 'type', 'A research file');
       for (const key of ['size', 'addedAt']) count(row, key, 'A research file');
+      if (row.itemId !== undefined) id(row, 'itemId', 'A research file');
       const clip = row.clip;
       if (
         clip !== undefined &&

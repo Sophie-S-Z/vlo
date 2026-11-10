@@ -170,7 +170,15 @@ function asCopy(source: Backup): Backup {
     sessions: backup.sessions.map((s) => ({ ...s, id: newId(), projectId })),
     // Each entry keeps its hash, which does not cover the project, so the copy's record still checks.
     authorship: backup.authorship.map((e) => ({ ...e, id: newId(), projectId })),
-    research: backup.research.map((r) => ({ ...r, info: { ...r.info, id: newId(), projectId } })),
+    research: backup.research.map((r) => ({
+      ...r,
+      info: {
+        ...r.info,
+        id: newId(),
+        projectId,
+        ...(r.info.itemId === undefined ? {} : { itemId: itemId(r.info.itemId) }),
+      },
+    })),
     itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
     updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), marks(update)])),
     views: copied.views,

@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 8,
+  version: 9,
   date: '2026-11-10',
   guide: [
     {
@@ -192,6 +192,16 @@ export const HELP = {
         'In a memoir, open People and choose Add person. Give each real name an alias.',
         'Select a name in the text and choose Mark as person, or use Mark all names before an export.',
         'A share-safe export, a share link and an AI request use the aliases in place of the real names.',
+      ],
+    },
+    {
+      title: 'Record a memory out loud',
+      steps: [
+        'In a memoir, put the cursor in a memory and choose Record a memory in More tools or the command menu.',
+        'A card asks a question about one stage of your life. Choose Next or Shuffle for another question.',
+        'Choose Record, answer out loud, then choose Stop. The recording stays with the memory, in its research files.',
+        'Choose Turn into text to put your words in at the cursor. The first time, Vlo downloads the speech model, and the audio never leaves this device.',
+        'To free the space, choose Delete the model in Settings, under Speech to text.',
       ],
     },
     {

@@ -29,7 +29,7 @@ The entries of one device and one project make one chain. The file lists each ch
 3. Make the signed text: the JSON array `["vlo-authorship-record/1",device,seq,at,minutes,typed,pasted,dictated,ai,deleted,words,prev]`, with no spaces. Its SHA-256 must equal `hash`.
 4. The signature `sig` must verify the signed text with the key of the chain.
 
-A change of one entry breaks its hash or its signature. A removed or moved entry breaks the chain. The Vlo page also refuses a field that is extra, missing or of a wrong type, so a change of any one byte of the file fails.
+A change of one entry breaks its hash or its signature. A removed or moved entry breaks the chain. The Vlo page also refuses a field that is extra, missing or of a wrong type, and a file that is not in the exact form that Vlo writes. So a change of any one byte of the file fails.
 
 ## Check a record with Python and OpenSSL
 

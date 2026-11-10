@@ -23,6 +23,7 @@ import {
   LetterText,
   Link,
   MessageSquareText,
+  Mic,
   Omega,
   List,
   ListOrdered,
@@ -82,6 +83,7 @@ export type PanelId =
   | 'footnote'
   | 'math'
   | 'read-aloud'
+  | 'memory'
   | 'person'
   | 'comment'
   | 'shortcuts';
@@ -746,6 +748,18 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     panel: 'read-aloud',
     isActive: (e) => isReading(e),
+  },
+  {
+    kind: 'panel',
+    id: 'record-memory',
+    label: 'Record a memory',
+    icon: Mic,
+    group: 'insert',
+    forms: PROSE,
+    templates: ['memoir'],
+    keywords: ['voice', 'microphone', 'interview', 'questions', 'speech to text', 'dictate', 'transcribe'],
+    slash: true,
+    panel: 'memory',
   },
   {
     kind: 'panel',

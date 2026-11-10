@@ -33,6 +33,10 @@ import { PersonPanel } from '@/features/people/PersonPanel';
 const GradientPanel = lazy(async () => ({ default: (await import('./panels/GradientPanel')).GradientPanel }));
 // So does the equation panel, which loads MathLive in turn.
 const MathPanel = lazy(async () => ({ default: (await import('./panels/MathPanel')).MathPanel }));
+// And "Record a memory" (F57), with the recorder and the speech model's code.
+const RecordDialog = lazy(async () => ({
+  default: (await import('@/features/voice/RecordDialog')).RecordDialog,
+}));
 
 /** A rectangle at the selection start, for panels opened from the / menu or the command menu. */
 function caretRect(editor: Editor): DOMRect {
@@ -62,6 +66,7 @@ function measurable(editor: Editor, anchor: PanelAnchor) {
 function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
   switch (panel) {
     case 'shortcuts':
+    case 'memory':
       return null;
     case 'font':
       return <FontPanel editor={editor} />;
@@ -113,6 +118,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   gradient: 'Gradient and shimmer',
   math: 'Equation',
   'read-aloud': 'Read aloud',
+  memory: 'Record a memory',
   person: 'Mark as person',
   comment: 'Comment',
 };
@@ -122,11 +128,27 @@ function inMathLiveUi(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('.ML__keyboard, .ui-menu-container') !== null;
 }
 
-/** Shows the panel any tool surface asked for: a popover at its button or the caret, or the shortcut sheet. */
-export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }) {
+/** The panels that open as a dialog, not as a popover. */
+const DIALOGS: readonly PanelId[] = ['shortcuts', 'memory'];
+
+/**
+ * Shows the panel any tool surface asked for: a popover at its button or the caret, the shortcut sheet, or
+ * "Record a memory", which needs the item and its language.
+ */
+export function PanelHost({
+  editor,
+  form,
+  item,
+  language,
+}: {
+  editor: Editor;
+  form: EditorForm;
+  item: { id: string; projectId: string } | null;
+  language: string | undefined;
+}) {
   const request = usePanelRequest();
   const mine = request?.editor === editor ? request : null;
-  const popover = mine && mine.panel !== 'shortcuts' ? mine : null;
+  const popover = mine && !DIALOGS.includes(mine.panel) ? mine : null;
   const anchor = useMemo(() => (popover ? measurable(editor, popover.anchor) : null), [editor, popover]);
   const keyboard = useMathKeyboard();
 
@@ -232,6 +254,45 @@ export function PanelHost({ editor, form }: { editor: Editor; form: EditorForm }
               <DialogDescription>These keys work while the cursor is in the text.</DialogDescription>
             </div>
             <ShortcutSheet form={form} />
+          </DialogContent>
+        )}
+      </Dialog>
+      <Dialog
+        open={mine?.panel === 'memory'}
+        onOpenChange={(open) => {
+          if (!open) closePanel();
+        }}
+      >
+        {mine?.panel === 'memory' && (
+          <DialogContent
+            className="top-0 right-0 left-auto h-dvh max-h-dvh w-[min(36rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 content-start overflow-y-auto rounded-none border-y-0 border-r-0"
+            onCloseAutoFocus={backToText}
+          >
+            <DialogClose asChild>
+              <Button variant="ghost" aria-label="Close" className="absolute top-4 right-4 px-3">
+                <X aria-hidden="true" className="size-4" />
+              </Button>
+            </DialogClose>
+            <div className="grid gap-1 pr-10">
+              <DialogTitle>Record a memory</DialogTitle>
+              <DialogDescription>
+                Answer a question out loud. Vlo keeps the recording with this memory, and Turn into text puts
+                your words in at the cursor.
+              </DialogDescription>
+            </div>
+            {item ? (
+              <Suspense fallback={<p className="text-sm text-muted">Loading the recorder.</p>}>
+                <RecordDialog
+                  editor={editor}
+                  projectId={item.projectId}
+                  itemId={item.id}
+                  language={language}
+                  onDone={closePanel}
+                />
+              </Suspense>
+            ) : (
+              <p className="text-sm text-muted">Open a memory to record it.</p>
+            )}
           </DialogContent>
         )}
       </Dialog>

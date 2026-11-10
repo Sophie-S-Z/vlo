@@ -8,13 +8,14 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 5,
+  version: 6,
   date: '2026-11-10',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
     'Snapshots stay in this browser. A backup or a folder save goes only to the place that you pick.',
     'The authorship record of each project stays in this browser. It holds counts and times, never text. It leaves only in a file that you download, or encrypted in sync.',
+    'The recordings of a memory stay in this browser, with the research files of the project. Turn into text runs the speech model on this device, so the audio never leaves it.',
     'A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.',
     'The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.',
     'The network log stays in this browser.',
@@ -29,8 +30,8 @@ export const PRIVACY = {
     },
     'model-download': {
       title: 'In-browser model files',
-      when: 'Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check.',
-      sends: 'Requests for the model files. No text goes with them.',
+      when: 'Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check. In any mode, when you download the speech model for Turn into text.',
+      sends: 'Requests for the model files. No text or audio goes with them.',
     },
     share: {
       title: 'Share links and comments',
@@ -54,7 +55,7 @@ export const PRIVACY = {
       title: 'Sync between your devices',
       when: 'Only after you turn on sync in Settings, and only between the devices that you pair.',
       sends:
-        'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
+        'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
     },
     room: {
       title: 'Sprint rooms',

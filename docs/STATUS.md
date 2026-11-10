@@ -861,6 +861,13 @@ Last update: 2026-11-10
     check marks each form that the sheet avoids.
   - Known limits: the style sheet check runs only in English books, as the style check does. A remote
     delete of a book leaves its series when the series row syncs.
+  - Pull request K-D holds Tasks K9 and K10. K9: Record a memory in a memoir item asks one of 60
+    questions in 6 life stages and records the answer. Each recording stays with its memory in the
+    research files, and backups keep the link. Turn into text downloads Whisper base (80 MB) once, after
+    the writer agrees, and runs it on this device. The words go in at the cursor and count as dictated.
+    Settings has Delete the model. Privacy page version 6 says so.
+  - Known limits: the speech model runs on WASM in the tests. WebGPU and Safari need a check by hand. A
+    long recording takes about as long as its audio to turn into text on WASM.
 
 ## Blocked
 

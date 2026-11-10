@@ -70,7 +70,7 @@ export const importKey = (key: DeviceKey, usage: 'verify'): Promise<CryptoKey> =
   crypto.subtle.importKey('jwk', { ...key, ext: true }, CURVE, true, [usage]);
 
 /** The file of a record: its entries in a fixed form, with no space, so each byte counts. */
-export function recordFile(entries: readonly AuthorshipEntry[]): string {
+export function recordFile(entries: readonly RecordEntry[]): string {
   const out = entries.map((e) => {
     const row: Record<string, unknown> = {};
     for (const field of FIELDS) row[field] = e[field];
@@ -186,9 +186,11 @@ async function check(json: string): Promise<VerifyResult> {
   let first = Infinity;
   let last = -Infinity;
   let words = 0;
+  const read: RecordEntry[] = [];
   for (const [index, value] of file.entries.entries()) {
     const n = index + 1;
     const e = readEntry(value, n);
+    read.push(e);
     let chain = chains.get(e.device);
     if (e.key) {
       if (chain) throw new Bad('A device starts a second chain here.', n);
@@ -219,6 +221,9 @@ async function check(json: string): Promise<VerifyResult> {
       words = e.words;
     }
   }
+  // A space, a number such as -0 or a key out of order keeps each value, so the bytes must match too.
+  if (recordFile(read) !== json)
+    throw new Bad('This file is not in the exact form that Vlo writes, so a byte changed.', null);
   return {
     ok: true,
     devices: [...chains].map(([device, chain]) => ({

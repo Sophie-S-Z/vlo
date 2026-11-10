@@ -34,6 +34,8 @@ export function toMarkdown(rows) {
     '',
     'Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License 1.1.',
     '',
+    'Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. Model files download only when the writer asks, and each keeps its own license: Qwen2.5 1.5B and SmolLM2 1.7B (Apache-2.0), and Whisper base by OpenAI (MIT) in the ONNX form of onnx-community (Apache-2.0).',
+    '',
     '| Package | Version | License | Used at |',
     '| --- | --- | --- | --- |',
     ...sorted.map(

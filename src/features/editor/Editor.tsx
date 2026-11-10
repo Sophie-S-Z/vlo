@@ -291,7 +291,12 @@ export function Editor({
       <CommentList editor={editor} />
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />
-      <PanelHost editor={editor} form={kind} />
+      <PanelHost
+        editor={editor}
+        form={kind}
+        item={itemId !== undefined && projectId !== undefined ? { id: itemId, projectId } : null}
+        language={language}
+      />
       <p id={helpId} className="text-xs text-muted">
         {HELP[kind]}
       </p>

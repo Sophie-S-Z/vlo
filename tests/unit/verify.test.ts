@@ -55,6 +55,23 @@ describe('verifyRecord', () => {
     expect(passed).toEqual([]);
   }, 60_000);
 
+  test('an added space, line break or sign fails, although each value stays the same', async () => {
+    const json = await record(2);
+    expect((await verifyRecord(json)).ok).toBe(true);
+    for (const changed of [
+      json.replace('"seq":1', '"seq": 1'),
+      `${json}\n`,
+      json.replace('"pasted":0', '"pasted":-0'),
+    ]) {
+      expect(changed).not.toBe(json);
+      expect(await verifyRecord(changed)).toEqual({
+        ok: false,
+        reason: 'This file is not in the exact form that Vlo writes, so a byte changed.',
+        entry: null,
+      });
+    }
+  });
+
   test('a removed entry and two swapped entries fail, and name the entry', async () => {
     const json = await record(3);
     expect(await verifyRecord(edit(json, (f) => f.entries.splice(1, 1)))).toEqual({
