@@ -1,11 +1,11 @@
 # Vlo privacy
 
-Version 2, 9 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 2, 10 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
 - Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.
-- The real names and aliases on the People screen stay in this browser.
+- The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.
 - Snapshots stay in this browser. A backup or a folder save goes only to the place that you pick.
 - A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.
 - The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.
@@ -30,7 +30,7 @@ Requests for the model files. No text goes with them.
 
 Only when you create a link, refresh its comments or stop sharing, and when a reader opens it or comments.
 
-The chosen items and the comments, encrypted in the browser. The key stays in the link and never goes to the server. The owner token, which lets you stop the link, goes too, and the server keeps only its hash. In a memoir, the aliases replace the real names.
+The chosen items with your questions for readers, and the comments, answers and reactions of readers, encrypted in the browser. The key stays in the link and never goes to the server. The owner token, which lets you stop the link, goes too, and the server keeps only its hash. In a memoir, the aliases replace the real names.
 
 ### Weekly usage counts
 

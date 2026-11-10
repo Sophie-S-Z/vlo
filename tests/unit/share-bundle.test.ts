@@ -113,6 +113,42 @@ describe('toBundle', () => {
     expect(bundle.sections.map((s) => s.title)).toEqual(['Maria at the coast', 'Uncle Sam stays', 'Letters']);
   });
 
+  // Review Focus 3: a share holds the accepted text, so a deleted word and a comment stay on this device.
+  test('a share holds no deleted word and no comment, even with share-safe off', async () => {
+    const deleted = { type: 'suggestion', attrs: { id: 's1', kind: 'delete', pass: 1, at: 1, by: '' } };
+    const comment = { type: 'comment', attrs: { id: 'c1', text: 'Ask Teo first.', at: 1, by: '' } };
+    const { doc } = safeExportTree({
+      project: project('memoir'),
+      items: [item('m1', 'memory', 'Letters')],
+      scope: { kind: 'project' },
+      updates: [
+        [
+          'm1',
+          updateOf(
+            {
+              type: 'doc',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    { type: 'text', text: 'Rosa', marks: [deleted] },
+                    { type: 'text', text: 'She wrote.', marks: [comment] },
+                  ],
+                },
+              ],
+            },
+            'prose',
+          ),
+        ],
+      ],
+      people: PEOPLE,
+      shareSafe: false,
+    });
+    const text = JSON.stringify(toBundle(doc, await mathmlFor(doc), 1));
+    expect(text).toContain('She wrote.');
+    expect(text.match(/Rosa|Teo/g)).toBeNull();
+  });
+
   test('keeps the plain styles and drops fonts, colors, fills and links that are not https', async () => {
     const bundle = await richBundle();
     const text = JSON.stringify(bundle);

@@ -20,7 +20,7 @@ import { db, type Project } from '@/lib/db';
 import { itemDocName } from '@/lib/itemDocName';
 import { docFromUpdate, encodeDoc, writeItemUpdate, YFRAGMENT } from '@/lib/ydocs';
 import { FakeSyncRelay } from '../fixtures/syncRelay';
-import { item, project, proseUpdate } from './export-fixtures';
+import { item, project, proseUpdate, updateOf } from './export-fixtures';
 
 /* Plan Task I6 (roadmap F49, decisions R5 and R6, ADR 0008): a sync round on one device, against a fake relay. */
 
@@ -189,6 +189,51 @@ describe('push', () => {
     expect(next.rows.find((v) => v.id === 'r1')).toEqual({ table: 'research', id: 'r1', at: 3000 });
     // The file of a deleted research row leaves the relay.
     expect(await mine('file:r1')).toBeUndefined();
+  });
+
+  // Review Focus 3: a memoir real name goes to the relay only in sealed blobs.
+  test('a real name in a person, a deleted word and a comment reaches the relay only sealed', async () => {
+    await db.people.add({
+      id: 'rosa',
+      projectId: 'p1',
+      label: 'Aunt',
+      variants: [{ real: 'Rosa', alias: 'Maria' }],
+    });
+    await db.items.add(item('m1', 'scene', 'Letters', 'ch'));
+    const deleted = { type: 'suggestion', attrs: { id: 's1', kind: 'delete', pass: 1, at: 1, by: '' } };
+    const comment = { type: 'comment', attrs: { id: 'c1', text: 'Ask Teo first.', at: 1, by: '' } };
+    await writeItemUpdate(
+      'm1',
+      updateOf(
+        {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'text', text: 'Rosa', marks: [deleted] },
+                { type: 'text', text: ' wrote.', marks: [comment] },
+              ],
+            },
+          ],
+        },
+        'prose',
+      ),
+      0,
+    );
+    now = 2000;
+    await syncOnce();
+    const blobs = [...fake.spaces.values()].flatMap((s) => s.blobs);
+    expect(blobs.length).toBeGreaterThan(0);
+    for (const b of blobs)
+      expect(`${b.key} ${b.payload} ${new TextDecoder().decode(fromBase64(b.payload))}`).not.toMatch(
+        /Rosa|Teo/,
+      );
+    // The sealed blobs hold both names, so the other devices get the whole memoir.
+    expect(JSON.stringify(await mine('rows:p1'))).toContain('Rosa');
+    const update = new TextDecoder().decode(fromBase64(((await mine('text:m1')) as TextBlob).update));
+    expect(update).toContain('Rosa');
+    expect(update).toContain('Ask Teo first.');
   });
 });
 
