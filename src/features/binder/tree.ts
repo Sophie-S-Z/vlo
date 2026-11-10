@@ -1,6 +1,7 @@
 import type { TemplateDef } from '@/features/library/templates';
 import type { Item, ItemKind } from '@/lib/db';
 import { orderBetween, sortByOrder } from '@/lib/order';
+import type { EditorForm } from '@/features/library/templates';
 
 /* Pure binder tree logic. The binder shows the tree as one flat list, so drag and drop works on rows. */
 
@@ -202,7 +203,7 @@ export function outdentTarget(
  */
 export function openTargets(
   items: readonly Item[],
-  editorKind: (kind: ItemKind) => 'prose' | 'poem' | null,
+  editorKind: (kind: ItemKind) => EditorForm | null,
 ): Map<string, Item> {
   const flat = flattenTree(items);
   // The index of the first item with an editor at or after each row.

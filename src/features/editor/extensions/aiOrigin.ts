@@ -4,6 +4,7 @@ import { Plugin, PluginKey, Selection, type Transaction } from '@tiptap/pm/state
 import { yUndoPluginKey, ySyncPluginKey } from '@tiptap/y-tiptap';
 import { AI_ORIGIN, type AiOrigin } from '../format/aiOrigin';
 import { leafText } from '../leafText';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The aiOrigin mark (spec section 5, F26). Co-writer text that the writer inserts carries the provider,
@@ -196,8 +197,8 @@ export const AiOriginMark = Mark.create({
   },
 });
 
-/** The paragraphs of a draft, or for a poem its stanzas of lines. Blank lines split them. */
-export function draftBlocks(text: string, kind: 'prose' | 'poem'): string[][] {
+/** The paragraphs of a draft, or for a poem its stanzas of lines. Blank lines split them. A script line is a paragraph. */
+export function draftBlocks(text: string, kind: EditorForm): string[][] {
   const blocks = text
     .replace(/\r\n?/g, '\n')
     .split(/\n[ \t]*\n/)
@@ -218,7 +219,7 @@ export interface Join {
 export function draftSlice(
   schema: Schema,
   text: string,
-  kind: 'prose' | 'poem',
+  kind: EditorForm,
   origin: AiOrigin,
   join: Join = { before: false, after: false },
 ): Slice {
@@ -234,8 +235,9 @@ export function draftSlice(
   const end = last[last.length - 1] ?? '';
   if (join.after && !/\s$/.test(end)) last[last.length - 1] = `${end} `;
 
-  if (kind === 'prose') {
-    const paragraph = schema.nodes.paragraph;
+  if (kind !== 'poem') {
+    // A script takes the draft as action lines.
+    const paragraph = schema.nodes[kind === 'script' ? 'scriptLine' : 'paragraph'];
     if (paragraph === undefined) throw new Error('This editor has no paragraphs.');
     if (blocks.length === 1) return new Slice(Fragment.from(inline(first[0] ?? '')), 0, 0);
     const nodes = blocks.map((block) => paragraph.create(null, inline(block[0] ?? '')));
@@ -275,7 +277,7 @@ export function insertAiText(
   editor: Editor,
   text: string,
   origin: AiOrigin,
-  kind: 'prose' | 'poem',
+  kind: EditorForm,
 ): { from: number; to: number } | null {
   if (editor.isDestroyed || !editor.isEditable) return null;
   const { from, to } = editor.state.selection;

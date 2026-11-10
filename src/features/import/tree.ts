@@ -5,10 +5,11 @@ import * as Y from 'yjs';
 import type { Backup } from '@/features/backup/file';
 import { poemExtensions } from '@/features/editor/extensions/poem';
 import { proseExtensions } from '@/features/editor/extensions/prose';
+import { scriptExtensions } from '@/features/editor/extensions/script';
 import { docBody, docText } from '@/features/editor/itemText';
 import { parsePoemText, poemDataToJSON } from '@/features/editor/poemText';
 import { newProject } from '@/features/library/projects';
-import { importTextKind, projectDef } from '@/features/library/templates';
+import { importTextKind, projectDef, type EditorForm } from '@/features/library/templates';
 import { emptyViewRows, type Item, type ItemKind, type ItemText, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
@@ -110,14 +111,15 @@ export function placeNodes(nodes: readonly ImportNode[], templates: readonly Tem
 export const editorSchemas = {
   prose: getSchema(proseExtensions(new Y.Doc())),
   poem: getSchema(poemExtensions(new Y.Doc(), { tabSpaces: 4 })),
+  script: getSchema(scriptExtensions(new Y.Doc())),
 };
 
 /** The editor document of a text, read with the editor's own rules, as a paste is. */
-function docOf(text: ImportText | undefined, form: 'prose' | 'poem'): ProseMirrorNode {
+function docOf(text: ImportText | undefined, form: EditorForm): ProseMirrorNode {
   if (form === 'poem')
     return editorSchemas.poem.nodeFromJSON(poemDataToJSON(parsePoemText(text?.poem ?? '')));
   const body = new DOMParser().parseFromString(text?.html ?? '', 'text/html').body;
-  return SchemaParser.fromSchema(editorSchemas.prose).parse(body);
+  return SchemaParser.fromSchema(editorSchemas[form]).parse(body);
 }
 
 /** The project, its items, their text copies and their Yjs updates, as a backup holds them. */

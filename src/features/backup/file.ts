@@ -29,6 +29,7 @@ import {
   MAX_PACKET_TEXT,
   MAX_VERSION_NAME,
   SCENE_BREAKS,
+  SCRIPT_STYLES,
   TRIMS,
 } from '@/lib/db';
 import type {
@@ -41,6 +42,7 @@ import type {
   ItemText,
   ItemVersion,
   Project,
+  ScriptStyle,
   Series,
   Session,
   Snapshot,
@@ -63,13 +65,14 @@ import type {
  * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows and
  * the research files, so an older build refuses the file and never drops them. Version 5 (Phase 11) adds the
  * named versions of items. Version 6 adds the authorship record. Version 7 adds the book's series (F59): its
- * row (`series`) and its shared Codex entries (`seriesCodex`). Vlo still reads versions 1 to 6.
+ * row (`series`) and its shared Codex entries (`seriesCodex`). Version 8 adds the Script template, its
+ * `script` items and their script lines (F63). Vlo still reads versions 1 to 7.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 7;
+export const BACKUP_VERSION = 8;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -109,7 +112,7 @@ export interface Backup {
   series?: { row: Series; codex: CodexEntry[] };
 }
 
-const KINDS: readonly ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'page', 'note'];
+const KINDS: readonly ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'page', 'script', 'note'];
 const STATUSES: readonly Status[] = ['idea', 'draft', 'revised', 'done'];
 const TEMPLATE_IDS: readonly string[] = TEMPLATE_ORDER;
 const AI_MODES = ['pen', 'reader', 'cowriter'];
@@ -282,6 +285,8 @@ function checkProject(value: unknown): Project {
       challenge.words >= 1
     )
   )
+    fail(`${DAMAGED} The project settings are wrong.`);
+  if (settings.scriptStyle !== undefined && !SCRIPT_STYLES.includes(settings.scriptStyle as ScriptStyle))
     fail(`${DAMAGED} The project settings are wrong.`);
   const tracking = settings.tracking;
   if (

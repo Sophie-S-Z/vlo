@@ -28,6 +28,7 @@ import {
 import { clockKey, onLocalChange, remoteTransaction, SYNC_TABLES } from './clock';
 import { mergeRows, type Version } from './merge';
 import { readSpace, SYNC_META, updateSpace, withSyncLock, type SyncSpace } from './space';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * Sync on the device (plan Task I6, ADR 0008). A round pushes what changed on this device, then pulls
@@ -318,7 +319,7 @@ async function revive(versions: readonly Version[]): Promise<void> {
   });
 }
 
-const proseMirrorOf = (doc: Y.Doc, form: 'prose' | 'poem') =>
+const proseMirrorOf = (doc: Y.Doc, form: EditorForm) =>
   yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment(YFRAGMENT), editorSchemas[form]);
 
 /**

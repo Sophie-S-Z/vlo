@@ -10,7 +10,7 @@ import {
 import { togglePick, newPick } from '@/features/library/TemplatePicker';
 import type { ItemKind } from '@/lib/db';
 
-const ALL: ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'page', 'note'];
+const ALL: ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'page', 'script', 'note'];
 
 describe('templates', () => {
   test('each template has only its own kinds', () => {
@@ -89,10 +89,10 @@ describe('mixed templates', () => {
     expect(projectDef(['poetry', 'open']).kindLabel.part).toBe('Section');
   });
 
-  test('a mix of all four templates holds every kind', () => {
+  test('a mix of all five templates holds every kind', () => {
     const def = projectDef(TEMPLATE_ORDER);
     expect([...def.kinds].sort()).toEqual([...ALL].sort());
-    expect(def.label).toBe('Novel + Memoir + Poetry + Open');
+    expect(def.label).toBe('Novel + Memoir + Poetry + Open + Script');
     for (const kind of ALL) expect(def.kindLabel[kind]).toBeTruthy();
     expect(holdsText(TEMPLATE_ORDER, 'page')).toBe(true);
     expect(holdsText(TEMPLATE_ORDER, 'chapter')).toBe(false);

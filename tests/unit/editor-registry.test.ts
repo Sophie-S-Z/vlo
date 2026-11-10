@@ -71,7 +71,7 @@ describe('the command registry', () => {
 
   test('a search finds tools by label and keyword, with every word', () => {
     const find = (q: string) => COMMANDS.filter((c) => matchesCommand(c, q)).map((c) => c.id);
-    expect(find('head')).toEqual(['heading-2', 'heading-3']);
+    expect(find('head')).toEqual(['role-heading', 'heading-2', 'heading-3']);
     expect(find('double spacing')).toEqual(['spacing']);
     expect(find('raised')).toEqual(['superscript']);
     expect(find('')).toHaveLength(COMMANDS.length);

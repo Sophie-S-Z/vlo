@@ -11,6 +11,7 @@ import { db, MAX_VERSION_NAME, MAX_VERSIONS, type Item, type ItemVersion } from 
 import { newId } from '@/lib/ids';
 import { docFromUpdate, YFRAGMENT } from '@/lib/ydocs';
 import { paragraphDiff, type ParagraphRow } from './paragraphDiff';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * Named versions of a scene, memory, poem or page (roadmap F55, plan Task K2). The text in the editor is
@@ -23,7 +24,7 @@ export const MAIN = 'Main';
 export const BEFORE_SWITCH = 'Before a switch of version';
 export const BEFORE_TAKE = 'Before Use this';
 
-type Kind = 'prose' | 'poem';
+type Kind = EditorForm;
 type ItemRef = Pick<Item, 'id' | 'projectId'>;
 
 export class VersionError extends Error {}

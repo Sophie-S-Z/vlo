@@ -21,6 +21,7 @@ import {
   type ReaderAction,
 } from './reader';
 import { passagesOf, type Source } from './retrieve';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The request that leaves for an AI engine (spec section 10, architecture review finding 3). The privacy
@@ -49,7 +50,7 @@ export interface RequestInput {
   instruction: string;
   topic: string;
   /** The open item and its editor state, which is newer than the stored copy. */
-  open: { item: Item; kind: 'prose' | 'poem'; state: EditorState } | undefined;
+  open: { item: Item; kind: EditorForm; state: EditorState } | undefined;
   inBrowser: boolean;
 }
 

@@ -477,7 +477,7 @@ describe('Reading a backup', () => {
       ['another project', (m) => (row(m, 'sessions').projectId = 'other'), /belongs to another project/],
       ['an unsafe id', (m) => (row(m, 'items').id = '../../etc'), /has a wrong id/],
       ['a wrong order', (m) => (row(m, 'items').order = ''), /has a wrong order/],
-      ['a wrong kind', (m) => (row(m, 'items').kind = 'script'), /has a wrong kind/],
+      ['a wrong kind', (m) => (row(m, 'items').kind = 'screenplay'), /has a wrong kind/],
       ['a wrong Craft switch', (m) => (row(m, 'items').craft = 'yes'), /has a wrong Craft switch/],
       ['a wrong poem form', (m) => (row(m, 'items').form = 'limerick'), /has a wrong poem form/],
       ['a version name of no text', (m) => (row(m, 'items').versionName = 42), /has no versionName/],

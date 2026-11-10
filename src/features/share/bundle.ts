@@ -2,6 +2,7 @@ import type { LatexToMathml } from '@/features/export/latex';
 import { parseMathml, type MathNode } from '@/features/export/mathml';
 import type { Align, Block, ExportDoc, Run, RunStyle } from '@/features/export/model';
 import type { NoteContent } from '@/features/editor/format/notes';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The share bundle (spec section 11, plan Task E3): the text that a reader sees, built from the aliased
@@ -38,7 +39,7 @@ export type ShareBlock =
 
 export interface ShareSection {
   title: string;
-  form: 'prose' | 'poem' | null;
+  form: EditorForm | null;
   blocks: ShareBlock[];
 }
 
@@ -389,7 +390,7 @@ function block(value: unknown, depth: number): ShareBlock {
 function section(value: unknown): ShareSection {
   if (!isObj(value) || !isStr(value.title)) fail();
   const form = value.form;
-  if (form !== 'prose' && form !== 'poem' && form !== null) fail();
+  if (form !== 'prose' && form !== 'poem' && form !== 'script' && form !== null) fail();
   return { title: value.title, form, blocks: list(value.blocks, (b) => block(b, 0)) };
 }
 

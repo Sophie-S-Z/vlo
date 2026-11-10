@@ -11,6 +11,7 @@ import { METRIC_LABEL, METRICS, setAnalysisPrefs, useAnalysisPrefs, type Metric 
 import { statsInWorker } from './analysisClient';
 import { mappedText } from './editorText';
 import { durationLabel, type FullStats } from './stats';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The stats bar: a quiet line of counts under the writing. It counts in the analysis worker after a pause
@@ -35,7 +36,7 @@ function metricLabel(metric: Metric, unit: CountUnit): string {
 export function metricText(
   metric: Metric,
   stats: FullStats,
-  kind: 'prose' | 'poem',
+  kind: EditorForm,
   unit: CountUnit = 'words',
 ): string {
   const plural = (n: number, one: string, many: string) => `${numbers.format(n)} ${n === 1 ? one : many}`;
@@ -71,7 +72,7 @@ export function metricText(
 
 interface StatsBarProps {
   editor: TiptapEditor;
-  kind: 'prose' | 'poem';
+  kind: EditorForm;
 }
 
 export function StatsBar({ editor, kind }: StatsBarProps) {

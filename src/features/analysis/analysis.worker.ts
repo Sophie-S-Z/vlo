@@ -7,6 +7,7 @@ import {
   type Source,
 } from './originality/match';
 import { fullStats, type FullStats } from './stats';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The analysis tools off the main thread, so typing never waits for them: the statistics, the AI check
@@ -14,7 +15,7 @@ import { fullStats, type FullStats } from './stats';
  */
 
 export type AnalysisRequest =
-  | { id: number; type: 'stats'; text: string; kind: 'prose' | 'poem'; language?: string | undefined }
+  | { id: number; type: 'stats'; text: string; kind: EditorForm; language?: string | undefined }
   | { id: number; type: 'ai'; text: string }
   | { id: number; type: 'originality'; text: string; sources: Source[]; options: MatchOptions };
 

@@ -23,6 +23,14 @@ const POEM_KEYS: readonly Row[] = [
   { keys: 'Mod-Enter', action: 'Start a new stanza' },
 ];
 
+const SCRIPT_KEYS: readonly Row[] = [
+  { keys: 'Tab', action: 'Change the element of the line' },
+  {
+    keys: 'Enter',
+    action: 'New line with the element that usually follows. On a character, take the grey name',
+  },
+];
+
 function keyLabel(keys: string): string {
   return keys
     .split(' ')
@@ -64,6 +72,7 @@ export function ShortcutSheet({ form }: { form: EditorForm }) {
         <Table key={group} title={GROUP_LABELS[group]} rows={rows} />
       ))}
       {form === 'poem' && <Table title="Poem lines" rows={POEM_KEYS} />}
+      {form === 'script' && <Table title="Script lines" rows={SCRIPT_KEYS} />}
       <Table title="Moving around" rows={MOVING} />
     </div>
   );

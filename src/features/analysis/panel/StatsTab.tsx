@@ -4,6 +4,7 @@ import { Switch } from '@/ui/switch';
 import { setAnalysisPrefs, useAnalysisPrefs } from '../analysisPrefs';
 import { statsInWorker } from '../analysisClient';
 import { durationLabel, LONG_SENTENCE, type FullStats, type Keyword } from '../stats';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * Every count and score of the open item: the numbers that word-count sites show, with a short note on
@@ -67,7 +68,7 @@ export function KeywordTable({ caption, rows }: { caption: string; rows: readonl
   );
 }
 
-export function useItemStats(text: string, kind: 'prose' | 'poem') {
+export function useItemStats(text: string, kind: EditorForm) {
   const [stats, setStats] = useState<FullStats | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
@@ -95,7 +96,7 @@ export function StatsTab({
 }: {
   stats: FullStats | null;
   error: boolean;
-  kind: 'prose' | 'poem';
+  kind: EditorForm;
   onShow: (from: number, to: number) => void;
 }) {
   const prefs = useAnalysisPrefs();

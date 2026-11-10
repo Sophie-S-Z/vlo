@@ -5,6 +5,7 @@ import {
   TextAlignStart,
   TextAlignEnd,
   ALargeSmall,
+  ArrowRightToLine,
   AudioLines,
   Bot,
   BookUser,
@@ -12,6 +13,7 @@ import {
   FilePenLine,
   Baseline,
   Bold,
+  Clapperboard,
   Heading2,
   Heading3,
   Highlighter,
@@ -24,7 +26,9 @@ import {
   Link,
   MessageSquareText,
   Mic,
+  Music,
   Omega,
+  Parentheses,
   List,
   ListOrdered,
   Pilcrow,
@@ -57,18 +61,20 @@ import { getNames, setShowAliases } from '@/features/people/nameStore';
 import { getCodex, setShowCodexNames } from '@/features/codex/codexStore';
 import { getWritingPrefs, setWritingPrefs } from '../writingPrefs';
 import { MAX_HANGING_EM } from '../extensions/poem';
+import { ROLE_LABELS, SCRIPT_LINE, SCRIPT_ROLES, type ScriptRole } from '../scriptRoles';
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
 import { canStyleCheck } from '../extensions/styleCheck';
 import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * Every editor tool, listed once. The toolbar, the selection menu, the / menu, the command menu (Mod-K)
  * and the shortcut sheet all read this list, so a tool has one name, one icon and one shortcut.
  */
 
-export type EditorForm = 'prose' | 'poem';
+export type { EditorForm };
 
 /** Tools that open a small panel instead of acting at once. */
 export type PanelId =
@@ -159,6 +165,8 @@ export interface PanelCommand extends BaseCommand {
 export type EditorCommand = RunCommand | PanelCommand;
 
 const BOTH: readonly EditorForm[] = ['prose', 'poem'];
+const ALL: readonly EditorForm[] = ['prose', 'poem', 'script'];
+const SCRIPT: readonly EditorForm[] = ['script'];
 const PROSE: readonly EditorForm[] = ['prose'];
 const POEM: readonly EditorForm[] = ['poem'];
 
@@ -186,6 +194,26 @@ const QUICK_CHARACTERS: readonly (readonly [string, string, string, readonly str
   ['nbsp', '\u00a0', 'Non-breaking space', ['space', 'nbsp', 'keep together']],
 ];
 
+const ROLE_ICONS: Readonly<Record<ScriptRole, LucideIcon>> = {
+  heading: Clapperboard,
+  action: Pilcrow,
+  character: UserRound,
+  parenthetical: Parentheses,
+  dialogue: MessageSquareText,
+  transition: ArrowRightToLine,
+  lyric: Music,
+};
+
+const ROLE_KEYWORDS: Readonly<Record<ScriptRole, readonly string[]>> = {
+  heading: ['scene heading', 'slugline', 'int', 'ext', 'location'],
+  action: ['description', 'stage direction'],
+  character: ['speaker', 'name', 'cue'],
+  parenthetical: ['wryly', 'aside'],
+  dialogue: ['speech', 'lines'],
+  transition: ['cut to', 'fade'],
+  lyric: ['song', 'sung'],
+};
+
 function hanging(editor: Editor): number {
   return Number(editor.getAttributes('poemLine').hanging) || 0;
 }
@@ -197,7 +225,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Undo',
     icon: Undo2,
     group: 'history',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-z',
     run: (e) => e.commands.undo(),
     isEnabled: (e) => e.can().undo(),
@@ -208,7 +236,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Redo',
     icon: Redo2,
     group: 'history',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-Shift-z',
     run: (e) => e.commands.redo(),
     isEnabled: (e) => e.can().redo(),
@@ -219,7 +247,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Bold',
     icon: Bold,
     group: 'style',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-b',
     keywords: ['strong', 'heavy'],
     slash: true,
@@ -233,7 +261,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Italic',
     icon: Italic,
     group: 'style',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-i',
     keywords: ['emphasis', 'slant'],
     slash: true,
@@ -247,7 +275,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Underline',
     icon: Underline,
     group: 'style',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-u',
     slash: true,
     selection: true,
@@ -397,6 +425,19 @@ export const COMMANDS: readonly EditorCommand[] = [
     selection: true,
     isActive: (e) => e.isActive('link'),
   },
+  // The elements of a script (F63). The toolbar's style menu, the / menu and the command menu list them.
+  ...SCRIPT_ROLES.map((role): RunCommand => ({
+    kind: 'run',
+    id: `role-${role}`,
+    label: ROLE_LABELS[role],
+    icon: ROLE_ICONS[role],
+    group: 'block',
+    forms: SCRIPT,
+    keywords: ['element', ...ROLE_KEYWORDS[role]],
+    slash: true,
+    run: (e) => e.commands.setScriptRole(role),
+    isActive: (e) => e.isActive(SCRIPT_LINE, { role }),
+  })),
   {
     kind: 'run',
     id: 'paragraph',
@@ -603,7 +644,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Special characters',
     icon: Omega,
     group: 'insert',
-    forms: BOTH,
+    forms: ALL,
     keywords: ['symbol', 'emoji', 'accent', 'greek', 'math', 'arrow', 'currency', 'fraction', 'dash'],
     panel: 'characters',
     slash: true,
@@ -632,7 +673,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Comment',
     icon: MessageSquareText,
     group: 'insert',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-Alt-m',
     keywords: ['note', 'annotation', 'remark', 'margin', 'review'],
     panel: 'comment',
@@ -645,7 +686,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Track changes',
     icon: FilePenLine,
     group: 'review',
-    forms: BOTH,
+    forms: ALL,
     keywords: ['revision', 'suggest', 'suggestions', 'redline', 'edit mode', 'pass', 'accept', 'reject'],
     run: () => {
       void saveTracking({ on: !getTracking().on }).catch(() => undefined);
@@ -716,7 +757,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Find',
     icon: TextSearch,
     group: 'review',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-f',
     keywords: ['search', 'look for'],
     run: (e) => {
@@ -730,7 +771,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Find and replace',
     icon: Replace,
     group: 'review',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-h',
     keywords: ['change', 'swap', 'substitute'],
     run: (e) => {
@@ -744,7 +785,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Read aloud',
     icon: Speech,
     group: 'review',
-    forms: BOTH,
+    forms: ALL,
     keywords: ['speak', 'listen', 'voice', 'proofread', 'text to speech', 'table read', 'dialogue'],
     slash: true,
     panel: 'read-aloud',
@@ -756,7 +797,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Speak to write',
     icon: Mic,
     group: 'insert',
-    forms: BOTH,
+    forms: ALL,
     keywords: ['voice', 'microphone', 'dictate', 'dictation', 'speech to text', 'talk'],
     slash: true,
     panel: 'speak',
@@ -779,7 +820,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Mark as person',
     icon: UserRound,
     group: 'names',
-    forms: BOTH,
+    forms: ALL,
     templates: ['memoir'],
     keywords: ['private name', 'alias', 'real name', 'people'],
     panel: 'person',
@@ -793,7 +834,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Show aliases',
     icon: VenetianMask,
     group: 'names',
-    forms: BOTH,
+    forms: ALL,
     templates: ['memoir'],
     keywords: ['private names', 'preview', 'share-safe', 'people'],
     run: () => {
@@ -808,7 +849,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Show AI text',
     icon: Bot,
     group: 'review',
-    forms: BOTH,
+    forms: ALL,
     keywords: ['ai mark', 'co-writer', 'provenance', 'highlight ai', 'hide ai'],
     run: () => {
       setWritingPrefs({ showAiText: !getWritingPrefs().showAiText });
@@ -822,7 +863,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Show Codex names',
     icon: BookUser,
     group: 'review',
-    forms: BOTH,
+    forms: ALL,
     keywords: ['codex', 'characters', 'places', 'names', 'world', 'story bible'],
     run: () => {
       setShowCodexNames(!getCodex().show);
@@ -836,7 +877,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Style check',
     icon: SpellCheck2,
     group: 'review',
-    forms: BOTH,
+    forms: ALL,
     keywords: ['repeated words', 'filler', 'cliche', 'long sentences', 'prose check', 'editing'],
     run: () => {
       setWritingPrefs({ styleCheck: !getWritingPrefs().styleCheck });
@@ -869,7 +910,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Clear formatting',
     icon: RemoveFormatting,
     group: 'clear',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-\\',
     keywords: ['plain', 'remove styles', 'reset'],
     slash: true,
@@ -882,7 +923,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Keyboard shortcuts',
     icon: Keyboard,
     group: 'help',
-    forms: BOTH,
+    forms: ALL,
     keys: 'Mod-/',
     keywords: ['keys', 'help', 'cheat sheet'],
     panel: 'shortcuts',

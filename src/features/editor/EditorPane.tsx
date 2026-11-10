@@ -7,7 +7,7 @@ import { getCraft, setCraftItem, useCraft } from '@/features/craft/craftStore';
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
-import type { Item, PageFormat, Template } from '@/lib/db';
+import type { Item, PageFormat, ScriptStyle, Template } from '@/lib/db';
 import { cleanLanguage } from '@/lib/language';
 import { countUnit } from '@/lib/wordcount';
 import { SceneBackdrop } from '@/features/scenes/SceneBackdrop';
@@ -39,6 +39,7 @@ import { TAB_ORIGIN } from './tabSync';
 import { useItemDoc } from './useItemDoc';
 import { WordCount } from './WordCount';
 import { setWritingPrefs, useWritingPrefs } from './writingPrefs';
+import type { EditorForm } from '@/features/library/templates';
 
 // Insights (statistics, AI check, originality) loads only when the writer opens it.
 const AnalysisPanel = lazy(async () => ({
@@ -55,7 +56,7 @@ const HistoryPanel = lazy(async () => ({
 
 interface EditorPaneProps {
   item: Item;
-  kind: 'prose' | 'poem';
+  kind: EditorForm;
   /** The manuscript column width in ch. */
   width: number;
   /** Active minutes between automatic snapshots. */
@@ -68,12 +69,15 @@ interface EditorPaneProps {
   scene?: string | undefined;
   /** The project language, as stored (F38). */
   language?: string | undefined;
-  /** Changes the project's font, page format or scene. */
+  /** The project's script layout (F63), as stored. */
+  scriptStyle?: ScriptStyle | undefined;
+  /** Changes the project's font, page format, scene, language or script layout. */
   onSettings?: (change: {
     font?: FontValue;
     page?: PageFormat;
     scene?: SceneChoice;
     language?: string;
+    scriptStyle?: ScriptStyle;
   }) => void;
   /** The project's templates, for the tools that only some templates offer. */
   templates?: readonly Template[] | undefined;
@@ -91,6 +95,7 @@ export function EditorPane({
   page: storedPage,
   scene: storedScene,
   language: storedLanguage,
+  scriptStyle = 'screenplay',
   onSettings,
   templates,
   beside = false,
@@ -240,6 +245,7 @@ export function EditorPane({
         <article
           className={cn('mx-auto w-full', scene !== NO_SCENE && 'vlo-scene-page')}
           style={{ maxWidth }}
+          data-script-style={kind === 'script' ? scriptStyle : undefined}
         >
           {/* The title and its counts on one row, the item's tools on the next, with their icons in line
               with the title. */}
@@ -266,6 +272,11 @@ export function EditorPane({
                 pages={pages}
                 language={language}
                 onLanguage={(next) => onSettings?.({ language: next })}
+                script={
+                  kind === 'script'
+                    ? { style: scriptStyle, onStyle: (next) => onSettings?.({ scriptStyle: next }) }
+                    : undefined
+                }
               />
               {!beside && (
                 <>

@@ -1,5 +1,6 @@
 import { countUnit, countWords } from '@/lib/wordcount';
 import { deviation, mean, sentencesOf, wordsOf, type Sentence } from './text';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * Text statistics, as word-count sites show them: counts, times, sentence and word measures, readability
@@ -227,7 +228,7 @@ function topKeywords(counts: Map<string, number>, total: number, size: number, l
 /** All the statistics of a plain text. `kind` decides what a paragraph is: a poem counts lines. */
 export function fullStats(
   text: string,
-  kind: 'prose' | 'poem',
+  kind: EditorForm,
   syllables: CountSyllables,
   language?: string,
 ): FullStats {

@@ -6,9 +6,10 @@ import { countUnit, recountItems } from './wordcount';
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
 
 /** A kind of writing. A project has one or more (`Project.templates`). */
-export type Template = 'novel' | 'memoir' | 'poetry' | 'open';
+export type Template = 'novel' | 'memoir' | 'poetry' | 'open' | 'script';
 export type AiMode = 'pen' | 'reader' | 'cowriter';
-export type ItemKind = 'part' | 'chapter' | 'scene' | 'memory' | 'poem' | 'page' | 'note';
+/** A `script` item is a scene of a screenplay or a stage play (F63). */
+export type ItemKind = 'part' | 'chapter' | 'scene' | 'memory' | 'poem' | 'page' | 'script' | 'note';
 export type Status = 'idea' | 'draft' | 'revised' | 'done';
 
 export interface Project {
@@ -58,8 +59,13 @@ export interface Project {
     packet?: PacketText;
     /** The book layout of a PDF or EPUB with book layout: trim, chapter style and matter (F51). */
     book?: BookSettings;
+    /** The layout of a Script project's scenes (F63). A screenplay when absent. */
+    scriptStyle?: ScriptStyle;
   };
 }
+
+export const SCRIPT_STYLES = ['screenplay', 'stage'] as const;
+export type ScriptStyle = (typeof SCRIPT_STYLES)[number];
 
 export const TRIMS = ['5x8', '5.25x8', '5.5x8.5', '6x9', 'a5'] as const;
 /** A print trim size: inches, or A5. */

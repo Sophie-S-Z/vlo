@@ -90,6 +90,78 @@
 }
 
 /* Poems keep every space. Wrapped parts of a line sit under the hanging indent set on the line. */
+/*
+ * A script (F63) in Courier Prime, with each element at its place on a 6-inch line of a US Letter page.
+ * The text keeps what the writer typed. A scene heading, a character and a transition show in capitals.
+ */
+.vlo-script {
+  font-family: 'Courier Prime', var(--font-manuscript);
+}
+
+.vlo-script p {
+  margin: 1em 0 0;
+}
+
+.vlo-script p:first-child,
+.vlo-script [data-role='dialogue'],
+.vlo-script [data-role='parenthetical'],
+.vlo-script [data-role='lyric'] {
+  margin-top: 0;
+}
+
+.vlo-script [data-role='heading'],
+.vlo-script [data-role='character'],
+.vlo-script [data-role='transition'] {
+  text-transform: uppercase;
+}
+
+.vlo-script [data-role='heading'] {
+  font-weight: 700;
+}
+
+.vlo-script [data-role='character'] {
+  margin-inline-start: 37%;
+}
+
+.vlo-script [data-role='parenthetical'] {
+  margin-inline: 27% 33%;
+}
+
+.vlo-script [data-role='dialogue'],
+.vlo-script [data-role='lyric'] {
+  margin-inline: 17% 25%;
+}
+
+.vlo-script [data-role='lyric'] {
+  font-style: italic;
+}
+
+.vlo-script [data-role='transition'] {
+  text-align: end;
+}
+
+/* A stage play: names in the center, speech across the line, and stage directions to the right. */
+[data-script-style='stage'] .vlo-script [data-role='heading'],
+[data-script-style='stage'] .vlo-script [data-role='character'] {
+  margin-inline: 0;
+  text-align: center;
+}
+
+[data-script-style='stage'] .vlo-script [data-role='dialogue'] {
+  margin-inline: 0;
+}
+
+[data-script-style='stage'] .vlo-script [data-role='action'],
+[data-script-style='stage'] .vlo-script [data-role='parenthetical'] {
+  margin-inline: 40% 0;
+  font-style: italic;
+}
+
+.vlo-script-ghost {
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
 .vlo-poem [data-stanza] {
   margin: 0 0 1.4em;
 }

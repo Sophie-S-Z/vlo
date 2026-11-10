@@ -1,6 +1,6 @@
 import { FileText, Minus, Plus } from 'lucide-react';
 import { useId } from 'react';
-import type { PageFormat } from '@/lib/db';
+import { SCRIPT_STYLES, type PageFormat, type ScriptStyle } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
@@ -18,11 +18,28 @@ interface PageControlProps {
   /** The project's language, as stored (F38). */
   language: string | undefined;
   onLanguage: (language: string) => void;
+  /** The layout of a Script project (F63), only for a script item. */
+  script?: { style: ScriptStyle; onStyle: (style: ScriptStyle) => void } | undefined;
 }
 
+const SCRIPT_STYLE_LABELS: Readonly<Record<ScriptStyle, string>> = {
+  screenplay: 'Screenplay',
+  stage: 'Stage play',
+};
+
 /** The page format and page zoom (plan Task A7, E7), in the header above the manuscript. */
-export function PageControl({ page, onPage, zoom, onZoom, pages, language, onLanguage }: PageControlProps) {
+export function PageControl({
+  page,
+  onPage,
+  zoom,
+  onZoom,
+  pages,
+  language,
+  onLanguage,
+  script,
+}: PageControlProps) {
   const groupId = useId();
+  const scriptId = useId();
   const zoomId = useId();
   const languageId = useId();
   const shownLanguage = language ?? DEFAULT_LANGUAGE;
@@ -85,6 +102,34 @@ export function PageControl({ page, onPage, zoom, onZoom, pages, language, onLan
             for every item in the project.
           </p>
         </div>
+
+        {script && (
+          <div className="grid gap-2">
+            <label htmlFor={scriptId} className="text-sm font-medium">
+              Script layout
+            </label>
+            <select
+              id={scriptId}
+              value={script.style}
+              aria-describedby={`${scriptId}-hint`}
+              onChange={(event) => {
+                const next = SCRIPT_STYLES.find((style) => style === event.target.value);
+                if (next) script.onStyle(next);
+              }}
+              className="min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9"
+            >
+              {SCRIPT_STYLES.map((style) => (
+                <option key={style} value={style}>
+                  {SCRIPT_STYLE_LABELS[style]}
+                </option>
+              ))}
+            </select>
+            <p id={`${scriptId}-hint`} className="text-xs text-muted">
+              A stage play puts the names in the center and the stage directions to the right. The layout is
+              the same for every scene in the project.
+            </p>
+          </div>
+        )}
 
         <div className="grid gap-2">
           <label htmlFor={languageId} className="text-sm font-medium">

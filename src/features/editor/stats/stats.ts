@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { countLines, countWords } from '@/lib/wordcount';
 import { docBody } from '../itemText';
 import { cleanDayStart, dayStartKey, type DayStart } from './dayStart';
+import type { EditorForm } from '@/features/library/templates';
 
 export { cleanDayStart, dayStartKey };
 
@@ -52,7 +53,7 @@ function countSentences(text: string): number {
 }
 
 /** The stats of a plain text. Blocks are separated by line breaks. */
-export function textStats(text: string, kind: 'prose' | 'poem', language?: string): TextStats {
+export function textStats(text: string, kind: EditorForm, language?: string): TextStats {
   const words = countWords(text, language);
   const blocks =
     kind === 'poem' ? countLines(text) : text.split(/\n{2,}/).filter((b) => b.trim() !== '').length;
@@ -67,7 +68,7 @@ export function textStats(text: string, kind: 'prose' | 'poem', language?: strin
   };
 }
 
-export function docStats(doc: ProseMirrorNode, kind: 'prose' | 'poem', language?: string): TextStats {
+export function docStats(doc: ProseMirrorNode, kind: EditorForm, language?: string): TextStats {
   return textStats(docBody(doc, kind), kind, language);
 }
 

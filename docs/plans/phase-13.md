@@ -60,8 +60,9 @@
 - Produces: `ScriptRole = 'heading' | 'action' | 'character' | 'parenthetical' | 'dialogue' | 'transition' | 'lyric'` and the node `scriptLine` with `attrs.role: ScriptRole`.
 - Produces: `nextRole(role: ScriptRole, key: 'Enter' | 'Tab'): ScriptRole`.
 
-- [ ] Tests first: Tab and Enter give the expected next role; a role survives save, reload, backup, import, sync and a version switch; an older build refuses a document with schema 8.
-- [ ] A role menu on the toolbar and in the / menu. Character names complete from the Codex. Commit.
+- [x] Tests first: Tab and Enter give the expected next role; a role survives save, reload, backup, import, sync and a version switch; an older build refuses a document with schema 8.
+- [x] A role menu on the toolbar and in the / menu. Character names complete from the Codex. Commit.
+- Built: a script scene is a new item kind, `script`, so a project can mix Script with other templates. Acts and sequences reuse the `part` and `chapter` folders. The roles live in `src/features/editor/scriptRoles.ts`, with no editor code, so the export worker reads them. Backup version 8. The Script layout (screenplay or stage play) is in the page menu of a script scene. The text keeps what the writer typed, and the editor and each export show a scene heading, a character and a transition in capitals.
 
 ### Task M3: Fountain in and out (F63)
 
