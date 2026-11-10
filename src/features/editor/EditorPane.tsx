@@ -426,6 +426,7 @@ export function EditorPane({
               kind={kind}
               label={item.title}
               itemId={item.id}
+              projectId={item.projectId}
               focusOnOpen={!beside}
               craft={labels}
               poemForm={item.form}

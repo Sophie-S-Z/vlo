@@ -16,6 +16,7 @@ function backup(template: Template, title: string, items: Item[], updates: [stri
     items,
     snapshots: [],
     versions: [],
+    authorship: [],
     sessions: [],
     itemTexts: [],
     updates: new Map(updates),

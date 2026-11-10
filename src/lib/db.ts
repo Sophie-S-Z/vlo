@@ -183,6 +183,45 @@ export interface ItemVersion {
   text: string;
 }
 
+/** The public key of a device, as the JWK fields that ECDSA P-256 needs. */
+export interface DeviceKey {
+  crv: 'P-256';
+  kty: 'EC';
+  x: string;
+  y: string;
+}
+
+/**
+ * One entry of the authorship record of a project (F54): what one device saw the writer do since its
+ * entry before. It holds counts only, never text or titles. The entries of one device in one project make
+ * a chain: `seq` counts up from 0, `prev` is the hash of the entry before, and the device key signs each
+ * hash. The first entry holds the device's public key.
+ */
+export interface AuthorshipEntry {
+  id: string;
+  projectId: string;
+  /** The SHA-256 of the device's public key, in hex. */
+  device: string;
+  seq: number;
+  at: number;
+  /** The minutes with a change since the entry before. */
+  minutes: number;
+  /** Characters by source. */
+  typed: number;
+  pasted: number;
+  dictated: number;
+  ai: number;
+  deleted: number;
+  /** The words of the project at `at`. */
+  words: number;
+  /** The hash of the entry before, or "" for the first entry. */
+  prev: string;
+  hash: string;
+  sig: string;
+  /** Only in the first entry of a chain. */
+  key?: DeviceKey;
+}
+
 /** The most versions of one item, so a slip of the button cannot fill the device. */
 export const MAX_VERSIONS = 20;
 /** The longest name of a version. */
@@ -415,6 +454,7 @@ export class VloDb extends Dexie {
   research!: Table<ResearchFile, string>;
   syncClock!: Table<ClockEntry, string>;
   itemVersions!: Table<ItemVersion, string>;
+  authorship!: Table<AuthorshipEntry, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -474,6 +514,8 @@ export class VloDb extends Dexie {
     this.version(9).stores({ [CLOCK_TABLE]: 'key, projectId, at' });
     // Version 10 (Phase 11, Task K2): the named versions of an item. A new table only.
     this.version(10).stores({ itemVersions: 'id, projectId, itemId' });
+    // Version 11 (Phase 11, Task K5): the authorship record. A new table only.
+    this.version(11).stores({ authorship: 'id, projectId' });
     this.use(syncClockMiddleware);
   }
 }

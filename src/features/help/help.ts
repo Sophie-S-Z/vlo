@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 6,
+  version: 7,
   date: '2026-11-10',
   guide: [
     {
@@ -117,6 +117,15 @@ export const HELP = {
         'For Google Docs, export to Word, then open the file in Google Drive.',
         'To post on Substack, Medium, a blog or AO3, pick Web copy, then Copy. Each line break and indent stays.',
         'For a printed book, open Book. Pick the trim size and the chapter style, and add a dedication or other pages. The preview shows each printed page, or the e-book on a reader or a phone. Then choose Export the book.',
+      ],
+    },
+    {
+      title: 'Show how you wrote a project',
+      steps: [
+        'Vlo keeps an authorship record of each project. It counts the minutes and the characters that you type, paste, dictate, take from the AI and delete. It keeps no text.',
+        'In Export, choose Download the record. Each device signs its part of the record with a key that stays on it.',
+        'Give the file to a teacher, an editor or a contest. They open the verify page at /verify and drop the file there. The check runs in their browser and sends nothing.',
+        'The check shows if someone changed the file. It cannot show who sat at the device.',
       ],
     },
     {
