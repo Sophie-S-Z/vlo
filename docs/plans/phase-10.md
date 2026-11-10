@@ -113,12 +113,12 @@ Pull request J-A: Task J1. J-B: Tasks J2 and J3. J-C: Tasks J4 to J7. Each one m
 
 ### Task J5: The Book screen and live preview (F51)
 
-**Files:** Create `src/features/book/BookPage.tsx`, `src/features/book/BookPreview.tsx`, `src/features/book/preview.worker.ts`, `tests/e2e/book.spec.ts`. Modify `src/app/routes.tsx`, `src/features/project/ViewTabs.tsx`, `src/features/editor/commands/registry.ts`, `src/features/help/help.ts`.
+**Files:** Create `src/features/book/BookPage.tsx`, `src/features/book/BookPreview.tsx`, `src/features/export/pdf/svg.ts`, `tests/e2e/book.spec.ts`. The export worker lays out and draws the preview pages, so no second worker holds a copy of the PDF code. Modify `src/app/routes.tsx`, `src/features/project/ViewTabs.tsx`, `src/features/editor/commands/registry.ts`, `src/features/help/help.ts`.
 
-- [ ] A Book tab (Full level, and "Open Book" in the command menu at every level). The left column holds the settings and the matter fields. The right column holds the preview with Print, E-reader and Phone. Print shows two facing pages on paper, with page numbers and a page slider. E-reader and Phone show the EPUB text in a sandboxed frame of that size.
-- [ ] The preview builds in a worker one second after a change. A loading state holds the page shape while it builds.
-- [ ] "Export the book" opens the Export dialog with PDF and book layout chosen.
-- [ ] `book.spec.ts`: change the trim and the chapter style, see the preview change, export the PDF, and its page count equals the preview's; reload and the settings stay; axe passes in each theme. Commit.
+- [x] A Book tab (Full level, and "Open Book" in the command menu at every level). The left column holds the settings and the matter fields. The right column holds the preview with Print, E-reader and Phone. Print shows two facing pages on paper, with page numbers and a page slider. E-reader and Phone show the EPUB text in a sandboxed frame of that size (they come with Task J6, which makes the book EPUB).
+- [x] The preview builds in a worker one second after a change. A loading state holds the page shape while it builds.
+- [x] "Export the book" opens the Export dialog with PDF and book layout chosen.
+- [x] `book.spec.ts`: change the trim and the chapter style, see the preview change, export the PDF, and its page count equals the preview's; reload and the settings stay; axe passes in each theme. Commit.
 
 ### Task J6: Book EPUB and EPUBCheck (F51)
 

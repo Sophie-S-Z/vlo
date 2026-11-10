@@ -1,4 +1,5 @@
 import { downloadBytes } from '@/lib/download';
+import type { BookSettings } from '@/lib/db';
 import type { NameCheck } from '@/lib/privacy';
 import { holdsText } from '@/features/library/templates';
 import { readItemUpdates } from '@/lib/ydocs';
@@ -78,6 +79,20 @@ export class ExportJob {
   async check(fonts: ReadonlyMap<string, Uint8Array | null>): Promise<FontSwap[]> {
     const response = await this.send({ type: 'check', fonts: [...fonts] });
     return response.type === 'checked' ? response.swaps : [];
+  }
+
+  /** Lays out the prepared text as a book, for the preview. The result is the page count and size. */
+  async lay(book: BookSettings): Promise<{ pages: number; size: readonly [number, number] }> {
+    const response = await this.send({ type: 'lay', book });
+    if (response.type !== 'laid') throw new Error('The export worker laid out no pages.');
+    return response;
+  }
+
+  /** The pages from `from` to `to` of the book laid out last, as SVG files. */
+  async draw(from: number, to: number): Promise<string[]> {
+    const response = await this.send({ type: 'draw', from, to });
+    if (response.type !== 'drawn') throw new Error('The export worker drew no pages.');
+    return response.svgs;
   }
 
   /** Makes the file. */

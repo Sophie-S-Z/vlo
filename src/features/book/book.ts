@@ -23,6 +23,12 @@ export function bookOf(project: Pick<Project, 'settings'>): BookSettings {
   return { ...DEFAULT_BOOK, ...project.settings.book };
 }
 
+/** The copyright page that a new book starts with: the year and the author. */
+export function startingCopyright(project: Pick<Project, 'authorName'>, year: number): string {
+  const author = project.authorName?.trim();
+  return `Copyright © ${String(year)}${author ? ` ${author}` : ''}\nAll rights reserved.`;
+}
+
 const INCH = 72;
 
 /** The width and height of a page of each trim. */

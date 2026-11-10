@@ -32,6 +32,8 @@ const outline: Tab = { label: 'Outline', to: '/outline', active: (path) => path.
 const codex: Tab = { label: 'Codex', to: '/codex', active: (path) => path.endsWith('/codex') };
 /** Feedback (F50) is for every template too, with the same rule. */
 const feedback: Tab = { label: 'Feedback', to: '/feedback', active: (path) => path.endsWith('/feedback') };
+/** The Book screen (F51) is for every template too, with the same rule. */
+const book: Tab = { label: 'Book', to: '/book', active: (path) => path.endsWith('/book') };
 
 function tabsFor(project: Project, full: boolean, path: string): Tab[] {
   const write: Tab = {
@@ -43,6 +45,7 @@ function tabsFor(project: Project, full: boolean, path: string): Tab[] {
         '/outline',
         '/codex',
         '/feedback',
+        '/book',
         '/timeline',
         '/people',
         '/sequences',
@@ -55,7 +58,7 @@ function tabsFor(project: Project, full: boolean, path: string): Tab[] {
     { label: 'Submissions', to: '/submissions', active: (path) => path.endsWith('/submissions') },
     { label: 'Progress', to: '/progress', active: (path) => path.endsWith('/progress') },
   ];
-  const tools = [outline, codex, feedback].filter((tab) => full || tab.active(path, new URLSearchParams()));
+  const tools = [outline, codex, feedback, book].filter((tab) => full || tab.active(path, new URLSearchParams()));
   return [write, ...viewsOf(project), ...tools, ...shared];
 }
 

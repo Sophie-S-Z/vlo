@@ -1,10 +1,11 @@
 import { BookOpen, FileText, FileType, Globe, Printer } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { bookOf } from '@/features/book/book';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { updateProjectSettings } from '@/features/library/projects';
 import { markAllInProject } from '@/features/people/markAll';
-import { type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
+import { type BookSettings, type Item, type ManuscriptSettings, type Person, type Project } from '@/lib/db';
 import { clock } from '@/lib/clock';
 import type { NameCheck } from '@/lib/privacy';
 import { Button } from '@/ui/button';
@@ -96,6 +97,8 @@ interface ExportDialogProps {
   people: readonly Person[];
   /** A named order of poems to offer, and to choose first (E2). */
   sequence?: { name: string; itemIds: readonly string[] } | undefined;
+  /** The book settings to start with: a PDF of the whole project in book layout, from the Book screen (F51). */
+  book?: BookSettings | undefined;
 }
 
 function lower(label: string): string {
@@ -138,14 +141,18 @@ export function ExportDialog({
   currentItemId,
   people,
   sequence,
+  book,
 }: ExportDialogProps) {
   const ids = useId();
   const template = projectDef(project);
   const current = items.find((i) => i.id === currentItemId && template.editorKind(i.kind) !== null) ?? null;
   const folder = current ? folderOf(items, current.id) : null;
-  const [format, setFormat] = useState<ExportFormat>('docx');
+  const [format, setFormat] = useState<ExportFormat>(book ? 'pdf' : 'docx');
   const [webTarget, setWebTarget] = useState<WebTarget>('blog');
-  const [scope, setScope] = useState<ScopeChoice>(sequence ? 'sequence' : current ? 'item' : 'project');
+  const [scope, setScope] = useState<ScopeChoice>(
+    book ? 'project' : sequence ? 'sequence' : current ? 'item' : 'project',
+  );
+  const [bookLayout, setBookLayout] = useState(book !== undefined);
   const [safe, setSafe] = useState(hasTemplate(project, 'memoir'));
   // A project with AI text, or in Co-writer mode, can add the AI provenance page (F26).
   const offersProvenance = project.aiMode === 'cowriter' || project.settings.aiInsertedAt !== undefined;
@@ -168,7 +175,11 @@ export function ExportDialog({
     [],
   );
 
-  const offersManuscript = hasTemplate(project, 'novel') && (format === 'docx' || format === 'pdf');
+  // Book layout (F51) is for a PDF or an EPUB of the whole project, in place of manuscript format.
+  const offersBook = (format === 'pdf' || format === 'epub') && scope === 'project';
+  const usesBook = offersBook && bookLayout;
+  const offersManuscript =
+    hasTemplate(project, 'novel') && (format === 'docx' || format === 'pdf') && !usesBook;
   const usesManuscript = offersManuscript && manuscript.on;
 
   const closeJob = () => {
@@ -238,6 +249,7 @@ export function ExportDialog({
         people: await privatePeople(project.id),
         shareSafe: safe,
         ...(usesManuscript ? { manuscript: details } : {}),
+        ...(usesBook ? { book: book ?? bookOf(project) } : {}),
         ...(format === 'docx' && (keepChanges || keepComments)
           ? { review: { changes: keepChanges, comments: keepComments } }
           : {}),
@@ -563,6 +575,25 @@ export function ExportDialog({
                   </label>
                 </RadioGroup>
               </fieldset>
+
+              {offersBook && (
+                <div className="grid gap-1">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id={`${ids}-book`}
+                      checked={bookLayout}
+                      onCheckedChange={setBookLayout}
+                      aria-describedby={`${ids}-book-hint`}
+                    />
+                    <label htmlFor={`${ids}-book`} className="text-sm font-medium">
+                      Book layout
+                    </label>
+                  </div>
+                  <p id={`${ids}-book-hint`} className="pl-14 text-sm text-muted">
+                    The trim size, chapter style and front and back matter of the Book screen.
+                  </p>
+                </div>
+              )}
 
               {offersManuscript && (
                 <div className="grid gap-3">

@@ -7,6 +7,7 @@ import type { ManuscriptDetails, ManuscriptSetup } from './manuscript';
 import type { ExportDoc } from './model';
 import { exportNotices, type ExportFormat } from './notices';
 import type { LoadFile } from './pdf/fonts';
+import type { PdfOptions } from './pdf/pdf';
 import { safeExportTree } from './safeTree';
 
 /*
@@ -111,6 +112,16 @@ export function checkFonts(
   return checkOwnFonts(prepared.ownFonts, bytes);
 }
 
+/** What a PDF needs besides its tree: the font files, the font swaps and standard manuscript format. */
+export function pdfOptions(prepared: PreparedExport, fonts: FontCheck, loadFile: LoadFile = appFile): PdfOptions {
+  return {
+    loadFile,
+    own: fonts.own,
+    swaps: new Map(fonts.swaps.map((s) => [s.value, s.standIn])),
+    ...(prepared.manuscript ? { manuscript: prepared.manuscript } : {}),
+  };
+}
+
 export interface MakeOptions {
   loadFile?: LoadFile;
 }
@@ -133,12 +144,7 @@ export async function makeExport(
     bytes = await toDocx(doc, manuscript ? { manuscript } : {});
   } else if (format === 'pdf') {
     const { toPdf } = await import('./pdf/pdf');
-    const result = await toPdf(doc, {
-      loadFile,
-      own: fonts.own,
-      swaps,
-      ...(manuscript ? { manuscript } : {}),
-    });
+    const result = await toPdf(doc, pdfOptions(prepared, fonts, loadFile));
     bytes = result.bytes;
     drawnStyles = result.drawnStyles;
   } else if (format === 'epub') {

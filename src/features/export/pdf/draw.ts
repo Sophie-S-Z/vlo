@@ -29,7 +29,7 @@ import {
 } from 'pdf-lib';
 import type { TextFill } from '@/features/editor/format/fill';
 import type { Face } from './fonts';
-import type { Sink } from './sink';
+import type { Box, Sink } from './sink';
 
 /*
  * Low-level drawing on one PDF page: text in any face with a drawn bold or italic, rules, boxes, gradient
@@ -50,7 +50,7 @@ export function rgbOf(hex: string): Rgb {
 }
 
 /** The slant of a drawn italic: about 12 degrees. */
-const SLANT = 0.21;
+export const SLANT = 0.21;
 
 export interface TextOptions {
   face: Face;
@@ -59,6 +59,24 @@ export interface TextOptions {
   bold?: boolean;
   /** A vertical stretch, for tall brackets in equations. */
   scaleY?: number;
+}
+
+/**
+ * The line of a gradient over a box, from its first stop to its last. CSS 90deg runs left to right and
+ * 180deg top to bottom. PDF y grows upward.
+ */
+export function gradientLine(fillStyle: TextFill, box: Box): Box {
+  const stops = fillStyle.stops;
+  const angle = (fillStyle.angle * Math.PI) / 180;
+  const dx = Math.sin(angle);
+  const dy = -Math.cos(angle);
+  const half = (Math.abs((box.x1 - box.x0) * dx) + Math.abs((box.y1 - box.y0) * dy)) / 2;
+  const cx = (box.x0 + box.x1) / 2;
+  const cy = (box.y0 + box.y1) / 2;
+  const at = (t: number) => ({ x: cx + dx * half * (2 * t - 1), y: cy + dy * half * (2 * t - 1) });
+  const start = at((stops[0]?.at ?? 0) / 100);
+  const end = at((stops[stops.length - 1]?.at ?? 100) / 100);
+  return { x0: start.x, y0: start.y, x1: end.x, y1: end.y };
 }
 
 export class Drawer implements Sink {
@@ -140,7 +158,7 @@ export class Drawer implements Sink {
     y: number,
     options: TextOptions,
     fillStyle: TextFill,
-    box: { x0: number; y0: number; x1: number; y1: number },
+    box: Box,
   ): void {
     const key = this.shading(fillStyle, box);
     const bold = options.face.fakeBold;
@@ -159,7 +177,7 @@ export class Drawer implements Sink {
     );
   }
 
-  private shading(fillStyle: TextFill, box: { x0: number; y0: number; x1: number; y1: number }): PDFName {
+  private shading(fillStyle: TextFill, box: Box): PDFName {
     const { context } = this.pdf;
     const stops = fillStyle.stops;
     const fn = (from: Rgb, to: Rgb) =>
@@ -182,20 +200,7 @@ export class Drawer implements Sink {
             Bounds: stops.slice(1, -1).map((s) => s.at / 100),
             Encode: parts.flatMap(() => [0, 1]),
           });
-    // The gradient line: CSS 90deg runs left to right and 180deg top to bottom. PDF y grows upward.
-    const angle = (fillStyle.angle * Math.PI) / 180;
-    const dx = Math.sin(angle);
-    const dy = -Math.cos(angle);
-    const w = box.x1 - box.x0;
-    const h = box.y1 - box.y0;
-    const half = (Math.abs(w * dx) + Math.abs(h * dy)) / 2;
-    const cx = (box.x0 + box.x1) / 2;
-    const cy = (box.y0 + box.y1) / 2;
-    const first = (stops[0]?.at ?? 0) / 100;
-    const last = (stops[stops.length - 1]?.at ?? 100) / 100;
-    const at = (t: number) => [cx + dx * half * (2 * t - 1), cy + dy * half * (2 * t - 1)];
-    const [x0 = 0, y0 = 0] = at(first);
-    const [x1 = 0, y1 = 0] = at(last);
+    const { x0, y0, x1, y1 } = gradientLine(fillStyle, box);
     const shading = context.obj({
       ShadingType: 2,
       ColorSpace: 'DeviceRGB',
