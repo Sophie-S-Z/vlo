@@ -18,6 +18,7 @@ import {
  * worker serves one export in three steps: prepare the export tree, check the writer's own fonts against
  * their bytes, then make the file once the writer agrees to any font swap. The book preview (F51) lays
  * out the prepared text as book pages, again for each change of the book settings, and draws pages as SVG.
+ * Its e-reader and phone previews get the book EPUB's XHTML and CSS as one page.
  */
 
 export type ExportMessage =
@@ -25,7 +26,8 @@ export type ExportMessage =
   | { type: 'check'; fonts: [string, Uint8Array | null][] }
   | { type: 'make' }
   | { type: 'lay'; book: BookSettings }
-  | { type: 'draw'; from: number; to: number };
+  | { type: 'draw'; from: number; to: number }
+  | { type: 'epub'; book: BookSettings; fontBase: string };
 
 export type ExportResponse =
   | { type: 'prepared'; ownFonts: string[]; names: NameCheck }
@@ -33,6 +35,7 @@ export type ExportResponse =
   | { type: 'file'; file: ExportFile }
   | { type: 'laid'; pages: number; size: readonly [number, number] }
   | { type: 'drawn'; svgs: string[] }
+  | { type: 'html'; html: string }
   | { type: 'error'; message: string };
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -73,6 +76,14 @@ async function handle(message: ExportMessage): Promise<void> {
     for (let i = Math.max(0, message.from); i <= message.to && i < laid.pages.length; i += 1)
       svgs.push(svgPage(laid, i));
     reply({ type: 'drawn', svgs });
+    return;
+  }
+  if (message.type === 'epub') {
+    const { epubPreview } = await import('./epub');
+    reply({
+      type: 'html',
+      html: await epubPreview({ ...prepared.doc, book: message.book }, message.fontBase),
+    });
     return;
   }
   const file = await makeExport(prepared, fonts);

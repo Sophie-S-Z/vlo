@@ -57,6 +57,14 @@ test('the preview follows the trim and chapter style, matches the PDF, and the s
   expect(pages).toBeGreaterThan(4);
   expect(await seriousIssues(page)).toEqual([]);
 
+  // The e-reader shows the book EPUB's text, front matter included.
+  await page.getByRole('radio', { name: 'E-reader' }).click();
+  const reader = page.frameLocator('iframe[title="E-reader preview"]');
+  await expect(reader.getByText('For the keepers of the light.')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('radio', { name: 'Phone' }).click();
+  await expect(page.locator('iframe[title="Phone preview"]')).toBeVisible();
+  await page.getByRole('radio', { name: 'Print' }).click();
+
   await page.getByRole('button', { name: 'Export the book' }).click();
   const dialog = page.getByRole('dialog', { name: 'Export' });
   await expect(dialog.getByRole('radio', { name: /PDF/ })).toBeChecked();

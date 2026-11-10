@@ -1,5 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
-import { bookMargins, gutterFor, TRIM_POINTS } from '@/features/book/book';
+import { bookMargins, gutterFor, isNumbered, TRIM_POINTS } from '@/features/book/book';
 import type { TextFill } from '@/features/editor/format/fill';
 import { fontLabel } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
@@ -147,9 +147,6 @@ interface Settings {
   book?: BookSettings;
 }
 
-/** A chapter title that names itself, such as "Chapter One" or "IV", gets no number above it. */
-const UNNUMBERED = /^(chapter|part|prologue|epilogue|interlude)\b/i;
-const NUMERAL = /^(\d+|[IVXLC]+)\.?$/;
 const FLEURON = '\u2766';
 
 /** Keeps the first two and the last two lines of a paragraph together, so no page has a widow or an orphan. */
@@ -548,7 +545,7 @@ class Layout {
       case 'heading': {
         if (book && folder) {
           const title = runsText(block.runs).trim();
-          return this.opening(block, block.level === 2 && !UNNUMBERED.test(title) && !NUMERAL.test(title));
+          return this.opening(block, block.level === 2 && isNumbered(title));
         }
         const sizes = manuscript ? [12, 12, 12, 12] : [22, 17, 14, 12];
         const size = (sizes[block.level - 1] ?? 12) * scale;

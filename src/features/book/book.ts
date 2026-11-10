@@ -29,6 +29,11 @@ export function startingCopyright(project: Pick<Project, 'authorName'>, year: nu
   return `Copyright © ${String(year)}${author ? ` ${author}` : ''}\nAll rights reserved.`;
 }
 
+/** A chapter title that names itself, such as "Chapter One", "Prologue" or "IV", gets no number above it. */
+export function isNumbered(title: string): boolean {
+  return !/^(chapter|part|prologue|epilogue|interlude)\b/i.test(title) && !/^(\d+|[IVXLC]+)\.?$/.test(title);
+}
+
 const INCH = 72;
 
 /** The width and height of a page of each trim. */

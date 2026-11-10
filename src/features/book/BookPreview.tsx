@@ -1,3 +1,4 @@
+import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState } from 'react';
 import { readOwnFonts, ExportJob } from '@/features/export/startExport';
 import { hasTemplate } from '@/features/library/templates';
@@ -7,10 +8,19 @@ import { cn } from '@/ui/cn';
 import { TRIM_POINTS } from './book';
 
 /*
- * The print preview of the Book screen (roadmap F51, plan Task J5). The export worker reads the text once,
- * then lays out the book again one second after each change of the settings, from the same layout as the
- * PDF. Two facing pages show at a time, as paper.
+ * The previews of the Book screen (roadmap F51, plan Tasks J5 and J6). The export worker reads the text
+ * once, then lays out the book again one second after each change of the settings. Print shows two facing
+ * pages of the PDF's own layout, as paper. E-reader and Phone show the book EPUB's XHTML and CSS in a
+ * frame of that shape. The frame runs no script.
  */
+
+type View = 'print' | 'reader' | 'phone';
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'print', label: 'Print' },
+  { id: 'reader', label: 'E-reader' },
+  { id: 'phone', label: 'Phone' },
+];
 
 /** The page indexes of a spread: the first page sits alone on the right, as in a printed book. */
 function spreadPages(spread: number, pages: number): [number | null, number | null] {
@@ -51,11 +61,18 @@ export function BookPreview({
   const [failed, setFailed] = useState(false);
   const key = JSON.stringify(book);
   const laid = shown?.laid ?? null;
-  const status = failed ? 'failed' : shown?.key === key ? 'ready' : 'building';
   const [spread, setSpread] = useState(0);
   const [urls, setUrls] = useState<{ spread: number; left: string | null; right: string | null } | null>(
     null,
   );
+  const [view, setView] = useState<View>('print');
+  // The e-reader and phone text, with the settings it shows.
+  const [page, setPage] = useState<{ key: string; html: string } | null>(null);
+  const status = failed
+    ? 'failed'
+    : (view === 'print' ? shown?.key : page?.key) === key
+      ? 'ready'
+      : 'building';
 
   const run = <T,>(task: (job: ExportJob) => Promise<T>): Promise<T> => {
     const next = queue.current.then(async () => {
@@ -155,10 +172,36 @@ export function BookPreview({
     };
   }, [laid, spread]);
 
+  // The e-reader and phone text, one second after a change, while one of them is on show.
+  const pageKey = page?.key;
+  useEffect(() => {
+    if (view === 'print' || pageKey === key) return;
+    let stale = false;
+    const fontBase = new URL(import.meta.env.BASE_URL, window.location.href).href;
+    const timer = window.setTimeout(
+      () => {
+        run((ready) => ready.epub(book, fontBase)).then(
+          (html) => {
+            if (!stale) setPage({ key, html });
+          },
+          () => {
+            if (!stale) setFailed(true);
+          },
+        );
+      },
+      pageKey === undefined ? 0 : DELAY_MS,
+    );
+    return () => {
+      stale = true;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, view]);
+
   const [width, height] = laid?.size ?? TRIM_POINTS[book.trim];
   const pages = laid?.pages ?? 0;
   const [left, right] = spreadPages(spread, pages);
-  const page = (side: 'left' | 'right', index: number | null) => {
+  const sheet = (side: 'left' | 'right', index: number | null) => {
     const url = urls?.spread === spread ? urls[side] : null;
     if (index === null) return <div className="flex-1" />;
     return (
@@ -168,24 +211,57 @@ export function BookPreview({
     );
   };
 
+  const frame = (label: string) =>
+    page && (
+      <iframe title={label} sandbox="allow-same-origin" srcDoc={page.html} className="size-full bg-white" />
+    );
+
   return (
     <div className="grid gap-3">
+      <RadioGroupPrimitive.Root
+        aria-label="Preview"
+        value={view}
+        onValueChange={(next) => {
+          setView(next as View);
+        }}
+        className="inline-flex justify-self-start gap-1 rounded-[var(--radius-card)] border border-rule bg-surface p-1"
+      >
+        {VIEWS.map((v) => (
+          <RadioGroupPrimitive.Item
+            key={v.id}
+            value={v.id}
+            className="min-h-11 rounded-[calc(var(--radius-card)-0.25rem)] px-3 text-sm font-medium text-muted outline-none hover:text-text focus-visible:ring-2 focus-visible:ring-accent data-[state=checked]:bg-bg data-[state=checked]:text-text pointer-fine:min-h-9"
+          >
+            {v.label}
+          </RadioGroupPrimitive.Item>
+        ))}
+      </RadioGroupPrimitive.Root>
       <div
         aria-busy={status === 'building'}
         className="grid place-items-center rounded-[var(--radius-card)] border border-rule bg-bg p-4 sm:p-8"
       >
-        <div
-          className={cn(
-            'flex w-full max-w-3xl transition-opacity duration-200 ease-out',
-            status === 'building' && laid && 'opacity-60',
-          )}
-          style={{ aspectRatio: `${String(2 * width)} / ${String(height)}` }}
-        >
-          {page('left', laid ? left : null)}
-          {page('right', laid ? right : 0)}
-        </div>
+        {view === 'print' ? (
+          <div
+            className={cn(
+              'flex w-full max-w-3xl transition-opacity duration-200 ease-out',
+              status === 'building' && laid && 'opacity-60',
+            )}
+            style={{ aspectRatio: `${String(2 * width)} / ${String(height)}` }}
+          >
+            {sheet('left', laid ? left : null)}
+            {sheet('right', laid ? right : 0)}
+          </div>
+        ) : view === 'reader' ? (
+          <div className="aspect-[3/4] w-full max-w-[24rem] rounded-2xl border border-rule bg-surface p-4">
+            {frame('E-reader preview')}
+          </div>
+        ) : (
+          <div className="aspect-[9/19.5] w-full max-w-[18rem] rounded-[2rem] border border-rule bg-surface p-2.5">
+            <div className="size-full overflow-hidden rounded-[1.375rem]">{frame('Phone preview')}</div>
+          </div>
+        )}
       </div>
-      {laid && pages > 1 && (
+      {view === 'print' && laid && pages > 1 && (
         <div className="grid gap-1">
           <div className="flex items-baseline justify-between">
             <label htmlFor={`${id}-page`} className="text-sm font-medium">
@@ -215,7 +291,9 @@ export function BookPreview({
           ? 'Vlo could not lay out the book. Reload the page and try again.'
           : status === 'building'
             ? 'Laying out the pages.'
-            : `${String(pages)} pages.`}
+            : view === 'print'
+              ? `${String(pages)} pages.`
+              : 'The e-book text is ready.'}
       </p>
     </div>
   );

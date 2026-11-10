@@ -5,7 +5,17 @@ import { fontLabel, localFontName, vloFont } from '@/features/editor/format/font
 import type { NoteContent } from '@/features/editor/format/notes';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { parseMathml, type MathNode } from './mathml';
-import { repeatsTitle, runsText, type Block, type ExportDoc, type Run, type RunStyle } from './model';
+import { isNumbered } from '@/features/book/book';
+import type { BookSettings } from '@/lib/db';
+import {
+  repeatsTitle,
+  runsText,
+  textBlocks,
+  type Block,
+  type ExportDoc,
+  type Run,
+  type RunStyle,
+} from './model';
 import { fontPaths, PDF_FONTS, type FontStyle, type LoadFile } from './pdf/fonts';
 
 /*
@@ -13,6 +23,10 @@ import { fontPaths, PDF_FONTS, type FontStyle, type LoadFile } from './pdf/fonts
  * chapter is one XHTML file. Poem lines keep their spaces with `white-space: pre-wrap`, and their leading
  * spaces become no-break spaces, so a reader never drops them. Footnotes are EPUB footnote asides, each
  * equation is MathML, and the fonts the text uses travel in the file.
+ *
+ * Book layout (F51, plan Task J6) adds the front and back matter as their own files, each with its
+ * `epub:type`, the contents page in the reading order, chapter numbers and the chapter and scene break
+ * styles. The Book screen shows the same XHTML and CSS as its e-reader and phone previews.
  */
 
 export interface EpubOptions {
@@ -250,8 +264,12 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
       const body = inline(book, block.runs, { ...ctx, bold: true });
       return `<${tag}${alignStyle(block.align)}>${body}</${tag}>`;
     }
-    case 'sceneBreak':
-      return '<p class="scene-break" role="separator">#</p>';
+    case 'sceneBreak': {
+      const kind = book.doc.book?.sceneBreak;
+      const mark =
+        kind === 'stars' ? '*\u2003*\u2003*' : kind === 'fleuron' ? '\u2766' : kind === 'space' ? NBSP : '#';
+      return `<p class="scene-break" role="separator">${mark}</p>`;
+    }
     case 'math':
       return `<div class="equation">${equation(book, block.latex, true)}</div>`;
     case 'quote':
@@ -288,7 +306,7 @@ function htmlLanguage(language: string): string {
   return `xml:lang="${lang}" lang="${lang}" dir="${textDirection(language)}"`;
 }
 
-function page(title: string, body: string, math: boolean, language: string): string {
+function page(title: string, body: string, math: boolean, language: string, type?: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="${XHTML_NS}" xmlns:epub="${EPUB_NS}" ${htmlLanguage(language)}>
@@ -297,7 +315,7 @@ function page(title: string, body: string, math: boolean, language: string): str
 <title>${xmlText(title)}</title>
 <link rel="stylesheet" type="text/css" href="../styles.css"/>
 </head>
-<body${math ? ' class="has-math"' : ''}>
+<body${math ? ' class="has-math"' : ''}${type ? ` epub:type="${type}"` : ''}>
 ${body}
 </body>
 </html>
@@ -309,6 +327,8 @@ interface Chapter {
   title: string;
   body: string;
   math: boolean;
+  /** The `epub:type` of the file's body, in a book. */
+  type?: string;
   /** Table of contents entries: the anchor and the title of each titled section in the file. */
   toc: { id: string; title: string; level: number }[];
 }
@@ -316,8 +336,12 @@ interface Chapter {
 /** Groups sections into files: a new file at each part or chapter title, or at each item in a flat export. */
 function chapters(book: Book): Chapter[] {
   const { doc } = book;
+  const settings = doc.book;
   const hasFolders = doc.sections.some((s) => s.form === null);
   const out: Chapter[] = [];
+  let numbered = 0;
+  // True from a chapter title to the first text after it, for the drop cap of a book.
+  let opening = false;
   let current: Chapter | null = null;
   let notes: { number: number; note: NoteContent }[] = [];
   const close = () => {
@@ -344,12 +368,26 @@ function chapters(book: Book): Chapter[] {
         body: '',
         math: false,
         toc: [],
+        ...(settings ? { type: 'bodymatter' } : {}),
       };
     }
     const file = current;
     if (!file) return;
     const sectionId = `s${String(index + 1)}`;
-    const blocks = section.blocks.filter((block) => !repeatsTitle(doc, section, block));
+    let blocks = section.blocks.filter((block) => !repeatsTitle(doc, section, block));
+    let number = '';
+    if (settings && section.form === null) {
+      const title = blocks[0];
+      opening = title?.type === 'heading' && title.level === 2;
+      if (opening && isNumbered(section.title.trim())) {
+        numbered += 1;
+        number = `<p class="chapter-number">${String(numbered)}</p>\n`;
+      }
+    } else if (settings && opening) {
+      opening = false;
+      const [first, ...rest] = blocks;
+      if (settings.dropCaps && first?.type === 'paragraph') blocks = [{ ...first, dropCap: true }, ...rest];
+    }
     const heading = blocks.find((b) => b.type === 'heading');
     if (heading?.type === 'heading') {
       file.toc.push({
@@ -361,7 +399,7 @@ function chapters(book: Book): Chapter[] {
     const ctx: Context = { notes, poem: false, bold: false, italic: false };
     const html = blocksHtml(book, blocks, ctx);
     if (html.includes('<math ')) file.math = true;
-    file.body += `<section id="${sectionId}" class="${section.form ?? 'folder'}">\n${html}\n</section>\n`;
+    file.body += `<section id="${sectionId}" class="${section.form ?? 'folder'}">\n${number}${html}\n</section>\n`;
   });
   close();
   return out;
@@ -432,23 +470,89 @@ function epubDate(date: Date): string {
   return `${date.toISOString().slice(0, 19)}Z`;
 }
 
-/** The EPUB file of an export. */
-export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<EpubResult> {
-  const toMathml = options.toMathml ?? (await mathmlFor(doc));
+/** The rules of a book's chapter style, paragraphs and matter pages (F51). */
+function bookCss(settings: BookSettings): string {
+  const align = settings.chapter === 'modern' ? 'left' : 'center';
+  return `
+p { margin: 0; text-align: justify; }
+p + p { text-indent: 1.5em; }
+p.scene-break + p { text-indent: 0; }
+.stanza p.line, section.notes p, .matter p { text-indent: 0; text-align: start; }
+section.folder { page-break-before: always; break-before: page; }
+section.folder h1, section.folder h2 { margin: 20% 0 2em; text-align: ${align}; font-weight: ${settings.chapter === 'classic' ? 'normal' : 'bold'}; }
+section.folder h2 { font-size: ${settings.chapter === 'classic' ? '1.7em' : '1.45em'}; }
+.chapter-number { margin: 20% 0 0; text-indent: 0; text-align: ${align}; line-height: 1.1; font-size: ${settings.chapter === 'modern' ? '3.2em' : '1.25em'}; }
+section.folder .chapter-number + h2 { margin-top: 0.4em; }
+.matter { margin-top: 30%; }
+.matter p { text-align: center; }
+.dedication, .epigraph { font-style: italic; }
+.matter.copyright { margin-top: 60%; font-size: 0.8em; }
+.matter.copyright p { text-align: left; }
+`;
+}
+
+interface MatterFile {
+  id: string;
+  file: string;
+  title: string;
+  body: string;
+  /** The `epub:type` of the file's body. */
+  type: 'frontmatter' | 'backmatter';
+}
+
+/** The front and back matter of a book, each with text in its own file. */
+function matterFiles(book: Book, settings: BookSettings): { front: MatterFile[]; back: MatterFile[] } {
+  const paragraphs = (body: string) =>
+    textBlocks(body)
+      .map((p) => `<p>${inline(book, p.runs, { notes: [], poem: false, bold: false, italic: false })}</p>`)
+      .join('\n');
+  const make = (id: string, title: string, body: string, type: string, back: boolean): MatterFile[] => {
+    if (body.trim() === '') return [];
+    if (back) book.use(undefined, true, false);
+    const html = back
+      ? `<section class="folder ${id}" epub:type="${type}">\n<h2>${xmlText(title)}</h2>\n${paragraphs(body)}\n</section>`
+      : `<section class="matter ${id}" epub:type="${type}">\n${paragraphs(body)}\n</section>`;
+    return [{ id, file: `text/${id}.xhtml`, title, body: html, type: back ? 'backmatter' : 'frontmatter' }];
+  };
+  return {
+    front: [
+      ...make('copyright', 'Copyright', settings.copyright, 'copyright-page', false),
+      ...make('dedication', 'Dedication', settings.dedication, 'dedication', false),
+      ...make('epigraph', 'Epigraph', settings.epigraph, 'epigraph', false),
+    ],
+    back: [
+      ...make('acknowledgments', 'Acknowledgments', settings.acknowledgments, 'acknowledgments', true),
+      ...make('about', 'About the author', settings.about, 'backmatter', true),
+    ],
+  };
+}
+
+interface FontFile {
+  font: string;
+  style: FontStyle;
+  /** The file's path in the EPUB, or under public/ for a Vlo font. */
+  path: string;
+  bytes?: Uint8Array;
+}
+
+/** Everything an EPUB holds but its zip: the files in reading order, the style sheet's parts and the fonts. */
+function prepareEpub(doc: ExportDoc, options: Pick<EpubOptions, 'own' | 'swaps'>, toMathml: LatexToMathml) {
   const book = new Book(doc, toMathml, options.own ?? new Map(), options.swaps ?? new Map());
   book.use(undefined, false, false);
   const files = chapters(book);
-  const titlePage = doc.sections.length > 1;
+  const titlePage = doc.sections.length > 1 || doc.book !== undefined;
+  const author = doc.author ? `<p class="author">${xmlText(doc.author)}</p>` : '';
   if (!titlePage) {
     const first = files[0];
-    const author = doc.author ? `<p class="author">${xmlText(doc.author)}</p>` : '';
     if (first)
       first.body = `<header class="title-page-inline"><h1>${xmlText(doc.title)}</h1>${author}</header>\n${first.body}`;
     book.use(undefined, true, false);
   }
+  const titleBody = `<section class="title-page" epub:type="titlepage"><h1>${xmlText(doc.title)}</h1>${author}</section>`;
+  const { front, back } = doc.book ? matterFiles(book, doc.book) : { front: [], back: [] };
 
   // The font files: each style the text uses, from the closest file the font has.
-  const fontFiles: { font: string; style: FontStyle; href: string; path: string; bytes?: Uint8Array }[] = [];
+  const fontFiles: FontFile[] = [];
   const drawn = new Map<string, { font: string; style: 'bold' | 'italic' }>();
   const seen = new Set<string>();
   for (const { font, bold, italic } of book.faces.values()) {
@@ -459,8 +563,12 @@ export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<Epub
         seen.add(key);
         // An OpenType font with PostScript outlines starts with "OTTO".
         const ext = String.fromCharCode(...ownBytes.slice(0, 4)) === 'OTTO' ? 'otf' : 'ttf';
-        const path = `fonts/own-${String(fontFiles.length + 1)}.${ext}`;
-        fontFiles.push({ font, style: 'regular', href: `../${path}`, path, bytes: ownBytes });
+        fontFiles.push({
+          font,
+          style: 'regular',
+          path: `fonts/own-${String(fontFiles.length + 1)}.${ext}`,
+          bytes: ownBytes,
+        });
       }
       if (bold) drawn.set(`${font}|bold`, { font: fontLabel(font), style: 'bold' });
       if (italic) drawn.set(`${font}|italic`, { font: fontLabel(font), style: 'italic' });
@@ -486,8 +594,56 @@ export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<Epub
     const key = `${font}|${style}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    fontFiles.push({ font, style, href: `../${path}`, path });
+    fontFiles.push({ font, style, path });
   }
+  /** The style sheet, with each font file at `href(file)`. */
+  const css = (href: (file: FontFile) => string) =>
+    styleSheet(
+      book,
+      fontFiles.map((f) => ({ font: f.font, style: f.style, href: href(f) })),
+    ) + (doc.book ? bookCss(doc.book) : '');
+  return { book, files, titlePage, titleBody, front, back, fontFiles, drawn, css };
+}
+
+/**
+ * The e-reader and phone previews of the Book screen (F51): the book's XHTML and CSS in one page, with each
+ * Vlo font from the app's own files under `fontBase`. An own font shows as its fallback.
+ */
+export async function epubPreview(doc: ExportDoc, fontBase: string): Promise<string> {
+  const parts = prepareEpub(doc, {}, await mathmlFor(doc));
+  const files = [
+    ...(parts.titlePage ? [parts.titleBody] : []),
+    ...parts.front.map((f) => f.body),
+    ...parts.files.map((f) => f.body),
+    ...parts.back.map((f) => f.body),
+  ];
+  const css = parts.css((f) => `${fontBase}${f.path}`);
+  return `<!DOCTYPE html>
+<html ${htmlLanguage(doc.language)}>
+<head>
+<meta charset="UTF-8"/>
+<title>${xmlText(doc.title)}</title>
+<style>${css}
+html { background: #fff; color: #1f1d1b; }
+body { margin: 1.5em 6%; }
+.preview-file + .preview-file { margin-top: 3em; border-top: 1px solid #ddd; padding-top: 1em; }
+</style>
+</head>
+<body>
+${files.map((body) => `<div class="preview-file">${body}</div>`).join('\n')}
+</body>
+</html>
+`;
+}
+
+/** The EPUB file of an export. */
+export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<EpubResult> {
+  const toMathml = options.toMathml ?? (await mathmlFor(doc));
+  const { files, titlePage, titleBody, front, back, fontFiles, drawn, css } = prepareEpub(
+    doc,
+    options,
+    toMathml,
+  );
   const loaded = await Promise.all(fontFiles.map(async (f) => f.bytes ?? options.loadFile(f.path)));
 
   const zip = new JSZip();
@@ -504,32 +660,20 @@ export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<Epub
   );
   zip.file(
     'OEBPS/styles.css',
-    styleSheet(
-      book,
-      fontFiles.map((f) => ({ font: f.font, style: f.style, href: f.href.replace('../', '') })),
-    ),
+    css((f) => f.path),
   );
   fontFiles.forEach((f, i) => {
     const bytes = loaded[i];
     if (bytes) zip.file(`OEBPS/${f.path}`, bytes);
   });
-  if (titlePage) {
-    const author = doc.author ? `<p class="author">${xmlText(doc.author)}</p>` : '';
-    zip.file(
-      'OEBPS/text/title.xhtml',
-      page(
-        doc.title,
-        `<section class="title-page" epub:type="titlepage"><h1>${xmlText(doc.title)}</h1>${author}</section>`,
-        false,
-        doc.language,
-      ),
-    );
-  }
+  if (titlePage) zip.file('OEBPS/text/title.xhtml', page(doc.title, titleBody, false, doc.language));
   for (const chapter of files)
     zip.file(
       `OEBPS/${chapter.file}`,
-      page(chapter.title || doc.title, chapter.body, chapter.math, doc.language),
+      page(chapter.title || doc.title, chapter.body, chapter.math, doc.language, chapter.type),
     );
+  for (const matter of [...front, ...back])
+    zip.file(`OEBPS/${matter.file}`, page(matter.title, matter.body, false, doc.language, matter.type));
 
   // The table of contents: the title page, then each titled section.
   const tocEntries = files.flatMap((chapter) =>
@@ -545,6 +689,7 @@ export async function toEpub(doc: ExportDoc, options: EpubOptions): Promise<Epub
       : firstFile && !titlePage
         ? [{ href: firstFile, title: doc.title }]
         : []),
+    ...back.map((matter) => ({ href: matter.file, title: matter.title })),
   ];
   zip.file(
     'OEBPS/nav.xhtml',
@@ -572,6 +717,9 @@ ${links.map((l) => `<li><a href="${xmlText(l.href)}">${xmlText(l.title)}</a></li
     '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
     '<item id="css" href="styles.css" media-type="text/css"/>',
     ...(titlePage ? ['<item id="title" href="text/title.xhtml" media-type="application/xhtml+xml"/>'] : []),
+    ...[...front, ...back].map(
+      (matter) => `<item id="${matter.id}" href="${matter.file}" media-type="application/xhtml+xml"/>`,
+    ),
     ...files.map(
       (chapter, i) =>
         `<item id="part-${String(i + 1)}" href="${chapter.file}" media-type="application/xhtml+xml"${chapter.math ? ' properties="mathml"' : ''}/>`,
@@ -581,9 +729,13 @@ ${links.map((l) => `<li><a href="${xmlText(l.href)}">${xmlText(l.title)}</a></li
         `<item id="font-${String(i + 1)}" href="${f.path}" media-type="${f.path.endsWith('.otf') ? 'font/otf' : 'font/ttf'}"/>`,
     ),
   ];
+  // A book reads: title page, front matter, contents, chapters, back matter.
   const spine = [
     ...(titlePage ? ['<itemref idref="title"/>'] : []),
+    ...front.map((matter) => `<itemref idref="${matter.id}"/>`),
+    ...(doc.book?.contents ? ['<itemref idref="nav"/>'] : []),
     ...files.map((_, i) => `<itemref idref="part-${String(i + 1)}"/>`),
+    ...back.map((matter) => `<itemref idref="${matter.id}"/>`),
   ];
   zip.file(
     'OEBPS/content.opf',

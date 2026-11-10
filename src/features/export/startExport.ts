@@ -95,6 +95,13 @@ export class ExportJob {
     return response.svgs;
   }
 
+  /** The book's EPUB text and style as one page, for the e-reader and phone previews. */
+  async epub(book: BookSettings, fontBase: string): Promise<string> {
+    const response = await this.send({ type: 'epub', book, fontBase });
+    if (response.type !== 'html') throw new Error('The export worker made no preview.');
+    return response.html;
+  }
+
   /** Makes the file. */
   async make(): Promise<ExportFile> {
     const response = await this.send({ type: 'make' });
