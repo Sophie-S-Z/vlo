@@ -359,7 +359,7 @@ export function OutlinePage() {
                         />
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-right font-mono whitespace-nowrap">
+                    <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap">
                       <span className="inline-flex min-h-11 items-center">{words.toLocaleString()}</span>
                     </td>
                   </tr>

@@ -135,7 +135,7 @@ export function SettingsPage() {
           </p>
         </Section>
 
-        <Section title="Calm mode">
+        <Section title="Motion">
           <div className="flex items-start gap-3">
             <Switch
               id={calmId}
@@ -201,7 +201,7 @@ export function SettingsPage() {
         </Section>
 
         <Section title="Backups">
-          <p className="text-muted">
+          <p className="text-sm text-muted">
             A backup is one .vlo.zip file with a whole project. Back up a project from the menu on its card in
             the Library, or with Back up project in the command menu. To move a project to another device,
             choose Import backup in the Library there.
@@ -212,7 +212,7 @@ export function SettingsPage() {
         </Section>
 
         <Section title="Devices">
-          <Suspense fallback={null}>
+          <Suspense fallback={<p className="text-sm text-muted">Loading your devices.</p>}>
             <DevicesSection />
           </Suspense>
         </Section>

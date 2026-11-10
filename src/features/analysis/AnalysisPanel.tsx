@@ -41,7 +41,7 @@ export function AnalysisPanel({ editor, kind, itemId, projectId, onShow }: Analy
     <Tabs.Root defaultValue="stats" className="grid gap-4">
       <Tabs.List
         aria-label="Insights"
-        className="flex flex-wrap gap-1 rounded-lg border border-rule bg-bg p-1"
+        className="flex flex-wrap gap-1 rounded-[var(--radius-card)] border border-rule bg-bg p-1"
       >
         <Tabs.Trigger value="stats" className={TAB}>
           Stats

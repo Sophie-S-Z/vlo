@@ -67,7 +67,7 @@ export function ProjectCard({
             {project.title}
           </Link>
         </h2>
-        <p className={cn('font-mono text-sm text-muted', list ? 'order-3' : 'mt-auto pt-6')}>
+        <p className={cn('tabular-nums text-sm text-muted', list ? 'order-3' : 'mt-auto pt-6')}>
           {formatWords(wordCount, countUnit(project.settings.language))}
         </p>
         <p

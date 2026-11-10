@@ -236,15 +236,21 @@ export function EditorPane({
           className={cn('mx-auto w-full', scene !== NO_SCENE && 'vlo-scene-page')}
           style={{ maxWidth }}
         >
-          <header className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h2 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{item.title}</h2>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-4">
-              <WordCount
-                words={item.wordCount}
-                unit={countUnit(language)}
-                lines={kind === 'poem' ? (item.lineCount ?? 0) : undefined}
-              />
-              <SaveStatus state={save} />
+          {/* The title and its counts on one row, the item's tools on the next, with their icons in line
+              with the title. */}
+          <header className="mb-4 grid gap-1">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{item.title}</h2>
+              <div className="flex items-center gap-x-4">
+                <WordCount
+                  words={item.wordCount}
+                  unit={countUnit(language)}
+                  lines={kind === 'poem' ? (item.lineCount ?? 0) : undefined}
+                />
+                <SaveStatus state={save} />
+              </div>
+            </div>
+            <div className="-ml-4 flex flex-wrap items-center">
               <PageControl
                 page={page}
                 onPage={(next) => onSettings?.({ page: next })}

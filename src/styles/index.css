@@ -9,6 +9,13 @@
 @import './themes.css';
 @import './motion.css';
 
+/* Motion curves (plan Part J0): entrances ease out, movement on the screen eases in and out. Tailwind's
+   ease-out and ease-in-out utilities read these values. */
+@theme static {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
 @custom-variant dark (&:where([data-theme='ink'], [data-theme='ink'] *));
 
 @theme inline {

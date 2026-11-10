@@ -62,7 +62,7 @@ export function FootnoteList({ editor }: { editor: Editor }) {
       <ol className="grid gap-1">
         {notes.map((note) => (
           <li key={note.number} className="flex items-baseline gap-2">
-            <span aria-hidden="true" className="w-6 shrink-0 text-right font-mono text-xs text-muted">
+            <span aria-hidden="true" className="w-6 shrink-0 text-right tabular-nums text-xs text-muted">
               {note.number}
             </span>
             <button

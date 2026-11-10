@@ -12,11 +12,11 @@ export const DialogClose = DialogPrimitive.Close;
 export const DialogTrigger = DialogPrimitive.Trigger;
 
 export const dialogOverlayClass =
-  'fixed inset-0 z-40 bg-[oklch(0.17_0.008_60/0.55)] data-[state=open]:animate-in data-[state=open]:fade-in-0';
+  'fixed inset-0 z-40 bg-[oklch(0.17_0.008_60/0.55)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:duration-200';
 
 /** The panel class shared with AlertDialog, so both dialogs look the same. */
 export const dialogPanelClass =
-  'fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[var(--radius-card)] border border-rule bg-surface p-6 text-text shadow-lg outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95';
+  'fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[var(--radius-card)] border border-rule bg-surface p-6 text-text shadow-lg outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:duration-200 data-[state=open]:ease-out';
 
 /**
  * On close, the focus goes back to the control that had it when the dialog opened (WCAG 2.4.3). Radix alone

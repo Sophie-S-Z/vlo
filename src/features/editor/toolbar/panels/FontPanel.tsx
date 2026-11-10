@@ -161,7 +161,7 @@ export function FontPanel({ editor }: { editor: Editor }) {
           onValueChange={(next) => {
             if (next === 'text' || next === 'project') setTarget(next);
           }}
-          className="grid grid-cols-2 gap-1 rounded-md bg-bg p-1"
+          className="grid grid-cols-2 gap-1 rounded-[var(--radius-card)] bg-bg p-1"
         >
           {(
             [
@@ -172,7 +172,7 @@ export function FontPanel({ editor }: { editor: Editor }) {
             <ToggleGroup.Item
               key={id}
               value={id}
-              className="min-h-11 rounded-sm px-2 text-sm text-muted outline-none focus-visible:ring-2 focus-visible:ring-accent data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:shadow-sm pointer-fine:min-h-8"
+              className="min-h-11 rounded-md px-2 text-sm text-muted outline-none focus-visible:ring-2 focus-visible:ring-accent data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:shadow-sm pointer-fine:min-h-8"
             >
               {label}
             </ToggleGroup.Item>

@@ -16,7 +16,7 @@ export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="max-sm:min-w-11 max-sm:px-0">
+        <Button variant="ghost" className="max-sm:min-w-11 max-sm:px-0">
           <Focus aria-hidden="true" className="size-4" />
           <span className="max-sm:sr-only">Focus</span>
         </Button>

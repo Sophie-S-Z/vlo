@@ -184,7 +184,7 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
               >
                 <span>{action.label}</span>
                 {action.hint && (
-                  <span aria-hidden="true" className="font-mono text-xs text-muted">
+                  <span aria-hidden="true" className="tabular-nums text-xs text-muted">
                     {action.hint}
                   </span>
                 )}

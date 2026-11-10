@@ -134,7 +134,7 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
       role="group"
       aria-label="Writing statistics"
     >
-      <p className="min-w-0 truncate font-mono">
+      <p className="min-w-0 truncate tabular-nums">
         {failed ? 'Vlo could not count this item.' : parts.length > 0 ? parts.join(' · ') : 'Counting.'}
       </p>
       <Popover>

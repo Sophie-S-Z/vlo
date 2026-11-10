@@ -18,7 +18,7 @@ function Row({ term, value }: { term: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-muted">{term}</dt>
-      <dd className="text-right font-mono">{value}</dd>
+      <dd className="text-right tabular-nums">{value}</dd>
     </div>
   );
 }

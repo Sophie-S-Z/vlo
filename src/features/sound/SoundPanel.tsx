@@ -176,7 +176,7 @@ function OwnMusic() {
                   <span className="min-w-0 flex-1 truncate" title={file.name}>
                     {file.name}
                   </span>
-                  <span className="font-mono text-xs text-muted">{minutes(file.duration)}</span>
+                  <span className="tabular-nums text-xs text-muted">{minutes(file.duration)}</span>
                   <Button
                     variant="ghost"
                     aria-label={`Play ${file.name}`}

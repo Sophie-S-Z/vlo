@@ -1,4 +1,4 @@
-import { Layers, Plus, Rows3, Sparkles } from 'lucide-react';
+import { CopyPlus, Layers, Plus, Rows3 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
@@ -194,7 +194,7 @@ export function BoardPage() {
           Add card
         </Button>
         <Button variant="outline" onClick={fromScenes} disabled={scenes.length === 0}>
-          <Sparkles aria-hidden="true" className="size-4" />
+          <CopyPlus aria-hidden="true" className="size-4" />
           Cards from scenes
         </Button>
         <Button
@@ -210,7 +210,7 @@ export function BoardPage() {
           <div
             role="group"
             aria-label="Show the board as"
-            className="ml-auto flex rounded-md border border-rule p-0.5"
+            className="ml-auto flex rounded-lg border border-rule p-0.5"
           >
             {(['board', 'list'] as const).map((option) => (
               <button
@@ -221,7 +221,7 @@ export function BoardPage() {
                   showMode(option);
                 }}
                 className={cn(
-                  'flex min-h-10 items-center gap-1.5 rounded-[5px] px-3 text-sm font-medium',
+                  'flex min-h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium',
                   mode === option ? 'bg-text text-bg' : 'text-muted hover:text-text',
                 )}
               >

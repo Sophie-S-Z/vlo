@@ -221,7 +221,7 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
           <span
             id={`${findId}-count`}
             role="status"
-            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-xs text-muted"
+            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 tabular-nums text-xs text-muted"
           >
             {count}
           </span>

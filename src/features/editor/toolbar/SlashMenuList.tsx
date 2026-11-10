@@ -118,7 +118,7 @@ export function SlashMenuList({ editor, listId }: { editor: Editor; listId: stri
               )}
               <span className="flex-1">{cmd.label}</span>
               {cmd.keys && (
-                <span aria-hidden="true" className="font-mono text-xs text-muted">
+                <span aria-hidden="true" className="tabular-nums text-xs text-muted">
                   {shortcutLabel(cmd.keys)}
                 </span>
               )}

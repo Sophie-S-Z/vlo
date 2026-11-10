@@ -187,7 +187,7 @@ export function Toolbar({
         <Icon aria-hidden="true" className="size-4 text-muted" />
         <span className="flex-1">{cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label}</span>
         {cmd.keys && (
-          <span aria-hidden="true" className="font-mono text-xs text-muted">
+          <span aria-hidden="true" className="tabular-nums text-xs text-muted">
             {shortcutLabel(cmd.keys)}
           </span>
         )}
@@ -309,7 +309,7 @@ export function Toolbar({
                 runHang(cmd);
               }}
             />
-            <span className="min-w-16 text-center font-mono text-xs text-muted">Hang {hanging} em</span>
+            <span className="min-w-16 text-center tabular-nums text-xs text-muted">Hang {hanging} em</span>
             <ToolButton
               cmd={command('hang-more')}
               state={at('hang-more')}

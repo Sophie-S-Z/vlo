@@ -17,7 +17,7 @@ function Row({ term, value, note }: { term: string; value: string; note?: string
   return (
     <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-0.5">
       <dt className="text-muted">{term}</dt>
-      <dd className="text-right font-mono">{value}</dd>
+      <dd className="text-right tabular-nums">{value}</dd>
       {note && <dd className="col-span-2 text-xs text-muted">{note}</dd>}
     </div>
   );
@@ -58,8 +58,8 @@ export function KeywordTable({ caption, rows }: { caption: string; rows: readonl
         {rows.map((row) => (
           <tr key={row.phrase} className="border-t border-rule">
             <td className="py-1 [overflow-wrap:anywhere]">{row.phrase}</td>
-            <td className="py-1 text-right font-mono">{numbers.format(row.count)}</td>
-            <td className="py-1 text-right font-mono">{String(row.density)}%</td>
+            <td className="py-1 text-right tabular-nums">{numbers.format(row.count)}</td>
+            <td className="py-1 text-right tabular-nums">{String(row.density)}%</td>
           </tr>
         ))}
       </tbody>

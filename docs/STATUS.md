@@ -609,6 +609,21 @@ Last update: 2026-11-09
 
 ## In progress
 
+- Phase 10 (plan `docs/plans/phase-10.md`, the roadmap's "Finished books" features F51, F52 and F53). The
+  product owner approved decisions J1 to J7 as recommended on 2026-11-10. Pull request J-A holds Task J1,
+  the design pass of plan Part J0:
+  - Menus and popovers grow from their trigger at scale 0.95 in 200 ms with ease-out. Dialogs open in
+    200 ms. Buttons scale to 0.97 on press. A switch knob stretches 12% while it is pressed. The Library
+    cards stagger by 30 ms. The sequence cards settle with no overshoot. A copy pulses once, and its icon
+    crossfades with scale and blur. A line at the top shows a screen that loads.
+  - Concentric corners in menus and segmented controls. Counts and times use the interface font with
+    tabular numbers. Mono stays for code, addresses and keys.
+  - The project title and its tabs take the whole row, so the AI mode badge no longer covers a tab at
+    1280 px. The project tools are quiet buttons. The item title row holds the counts, and the item tools
+    have their own row.
+  - Removed: the tilt of the template cards, the sparkle icons, a heading that repeated its switch, and
+    a size change in the Backups text.
+
 - Phase 9 (plan `docs/plans/phase-9.md`, the roadmap's "Devices and feedback" features F44, F45, F49 and
   F50). The product owner approved decisions R1 to R9 as recommended on 2026-11-09. Pull request I-A holds
   Tasks I1 to I3:
@@ -820,6 +835,7 @@ Last update: 2026-11-09
 | 2026-11-09 | Phase 7 plan approved: decisions P1 to P7 as recommended.                        |
 | 2026-11-09 | Phase 8 plan approved: decisions Q1 to Q9 as recommended.                        |
 | 2026-11-09 | Phase 9 plan approved: decisions R1 to R9 as recommended.                        |
+| 2026-11-10 | Phase 10 plan approved: decisions J1 to J7 as recommended.                       |
 
 ## Spec changes
 

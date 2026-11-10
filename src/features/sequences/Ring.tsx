@@ -168,7 +168,7 @@ export function Ring({ name, titles, motion }: { name: string; titles: readonly 
                   visibility: off >= 90 ? 'hidden' : 'visible',
                 }}
               >
-                <span className="font-mono text-xs text-muted">{String(i + 1).padStart(2, '0')}</span>
+                <span className="tabular-nums text-xs text-muted">{String(i + 1).padStart(2, '0')}</span>
                 <span className="line-clamp-3 font-display text-base leading-snug font-semibold">
                   {title}
                 </span>

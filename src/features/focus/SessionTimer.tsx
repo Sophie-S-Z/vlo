@@ -127,7 +127,7 @@ export function SessionTimer({ projectId, unit }: { projectId: string; unit: Cou
       {running === null ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="max-sm:min-w-11 max-sm:px-0">
+            <Button variant="ghost" className="max-sm:min-w-11 max-sm:px-0">
               <Timer aria-hidden="true" className="size-4" />
               <span className="max-sm:sr-only">Timer</span>
             </Button>
@@ -171,7 +171,7 @@ export function SessionTimer({ projectId, unit }: { projectId: string; unit: Cou
                 // The name holds the visible time, so a voice command that says it works (WCAG 2.5.3).
                 <span>
                   <span className="sr-only">Session timer, </span>
-                  <span className="font-mono tabular-nums">{clockText(left)}</span>
+                  <span className="tabular-nums">{clockText(left)}</span>
                   <span className="sr-only"> left</span>
                 </span>
               )}

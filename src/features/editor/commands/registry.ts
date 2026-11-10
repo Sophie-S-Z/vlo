@@ -35,7 +35,7 @@ import {
   Speech,
   SpellCheck2,
   TextSearch,
-  Sparkles,
+  Blend,
   SquareSigma,
   Strikethrough,
   Subscript,
@@ -336,7 +336,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     kind: 'panel',
     id: 'gradient',
     label: 'Gradient and shimmer',
-    icon: Sparkles,
+    icon: Blend,
     group: 'color',
     forms: BOTH,
     keywords: [

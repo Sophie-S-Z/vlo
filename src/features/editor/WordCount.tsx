@@ -12,7 +12,7 @@ export function WordCount({
   lines?: number | undefined;
 }) {
   return (
-    <p className="overflow-hidden font-mono whitespace-nowrap text-sm text-muted">
+    <p className="overflow-hidden tabular-nums whitespace-nowrap text-sm text-muted">
       {/* The key restarts the roll each time the count changes. Calm mode makes it instant. */}
       <span key={words} className="vlo-roll inline-block">
         {formatWords(words, unit)}
