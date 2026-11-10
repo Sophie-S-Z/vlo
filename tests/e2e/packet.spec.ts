@@ -8,7 +8,6 @@ import { skipOnboarding } from './support/onboarding';
 
 test('a packet saves the pieces and the texts in one zip, logs the row, and keeps the letter', async ({
   page,
-  isMobile,
 }) => {
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
@@ -18,7 +17,6 @@ test('a packet saves the pieces and the texts in one zip, logs the row, and keep
   await expect(page.getByRole('textbox', { name: 'Poem 1' })).toBeFocused();
   await page.keyboard.type('Salt on the sill.');
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
-  if (isMobile) await page.getByRole('button', { name: 'Binder' }).click();
   await page
     .getByRole('navigation', { name: 'Project views' })
     .getByRole('link', { name: 'Submissions' })
