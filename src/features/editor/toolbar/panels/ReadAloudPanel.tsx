@@ -1,7 +1,10 @@
 import type { Editor } from '@tiptap/core';
 import { Pause, Play, Square } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
+import { codexMatcher } from '@/features/codex/codex';
+import { useCodexState } from '@/features/codex/codexStore';
 import { Button } from '@/ui/button';
+import { getCast, setCast, voiceFor, type CastSettings } from '../../readAloud/cast';
 import {
   dismissReadMessage,
   getReadSettings,
@@ -15,11 +18,43 @@ import {
   useReadState,
   type ReadSettings,
 } from '../../readAloud/reader';
-import { speechAvailable, useLocalVoices } from '../../readAloud/voices';
+import { speechAvailable, useLocalVoices, type VoiceChoice } from '../../readAloud/voices';
+
+const SELECT = 'min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9';
+
+function VoiceSelect({
+  id,
+  voices,
+  value,
+  onChange,
+}: {
+  id: string;
+  voices: readonly VoiceChoice[];
+  value: string;
+  onChange: (uri: string) => void;
+}) {
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(event) => {
+        onChange(event.target.value);
+      }}
+      className={SELECT}
+    >
+      {voices.map((v) => (
+        <option key={v.uri} value={v.uri}>
+          {v.name} ({v.lang})
+        </option>
+      ))}
+    </select>
+  );
+}
 
 /*
  * The read aloud panel (plan E2): a voice, a speed, and Read, Pause and Stop. The reading goes on when
- * the panel closes, and the toolbar button shows that it is on.
+ * the panel closes, and the toolbar button shows that it is on. With Codex characters, a table read
+ * (F58) gives the narrator and each character a voice.
  */
 
 export function ReadAloudPanel({ editor }: { editor: Editor }) {
@@ -28,11 +63,28 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
   const [settings, setSettings] = useState<ReadSettings>(getReadSettings);
   const { ready, voices } = useLocalVoices();
   const read = useReadState();
+  const codex = useCodexState();
+  const projectId = codex.projectId;
+  // The choices of the open project: stored, or changed in this panel.
+  const stored = useMemo(() => (projectId ? getCast(projectId) : { on: false, voices: {} }), [projectId]);
+  const [changed, setChanged] = useState<{ projectId: string; cast: CastSettings } | null>(null);
+  const cast = changed?.projectId === projectId ? changed.cast : stored;
+  const characters = useMemo(() => codex.entries.filter((e) => e.kind === 'character'), [codex.entries]);
+  const match = useMemo(() => codexMatcher(characters), [characters]);
+  const { doc } = editor.state;
+  // Only the characters that the text names get a voice choice.
+  const named = useMemo(
+    () => new Set(match(doc.textBetween(0, doc.content.size, '\n')).map((m) => m.entryId)),
+    [match, doc],
+  );
   const mine = read.editor === editor;
   const status = mine ? read.status : 'idle';
 
   const change = (next: Partial<ReadSettings>) => {
     setSettings(setReadSettings(next));
+  };
+  const changeCast = (next: Partial<CastSettings>) => {
+    if (projectId) setChanged({ projectId, cast: setCast(projectId, next) });
   };
 
   if (!speechAvailable()) {
@@ -46,6 +98,17 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
 
   const selected = !editor.state.selection.empty;
   const chosen = voices.find((v) => v.uri === settings.voice) ?? voices[0];
+  const tableRead = projectId !== null && characters.length > 0;
+  const speakers = characters.map((c) => c.id);
+  const voiceOf = voiceFor(
+    speakers,
+    voices.map((v) => v.uri),
+    cast.voices,
+    chosen?.uri ?? null,
+  );
+  const startRead = () => {
+    startReading(editor, tableRead && cast.on ? { match, voiceOf } : undefined);
+  };
   let summary = '';
   if (status === 'reading') summary = `Reading sentence ${String(read.index + 1)} of ${String(read.count)}.`;
   else if (status === 'paused')
@@ -81,22 +144,16 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
         <>
           <div className="grid gap-1">
             <label htmlFor={voiceId} className="text-xs text-muted">
-              Voice
+              {tableRead && cast.on ? 'Voice of the narrator' : 'Voice'}
             </label>
-            <select
+            <VoiceSelect
               id={voiceId}
+              voices={voices}
               value={chosen?.uri ?? ''}
-              onChange={(event) => {
-                change({ voice: event.target.value });
+              onChange={(voice) => {
+                change({ voice });
               }}
-              className="min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9"
-            >
-              {voices.map((v) => (
-                <option key={v.uri} value={v.uri}>
-                  {v.name} ({v.lang})
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div className="grid gap-1">
             <div className="flex items-baseline justify-between">
@@ -123,14 +180,54 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
             <p className="text-xs text-muted">A new speed starts with the next sentence.</p>
           </div>
 
+          {tableRead && (
+            <fieldset className="grid gap-2">
+              <legend className="sr-only">Table read</legend>
+              <label className="flex min-h-11 items-center gap-2 pointer-fine:min-h-9">
+                <input
+                  type="checkbox"
+                  checked={cast.on}
+                  onChange={(event) => {
+                    changeCast({ on: event.target.checked });
+                  }}
+                  className="size-4 accent-[var(--accent)]"
+                />
+                Table read: a voice for each character
+              </label>
+              {cast.on &&
+                (named.size === 0 ? (
+                  <p className="text-xs text-muted">The text names no Codex character yet.</p>
+                ) : (
+                  characters
+                    .filter((c) => named.has(c.id))
+                    .map((c) => (
+                      <div key={c.id} className="grid gap-1">
+                        <label htmlFor={`${voiceId}-${c.id}`} className="text-xs text-muted">
+                          Voice of {c.name}
+                        </label>
+                        <VoiceSelect
+                          id={`${voiceId}-${c.id}`}
+                          voices={voices}
+                          value={voiceOf(c.id) ?? ''}
+                          onChange={(uri) => {
+                            changeCast({ voices: { ...cast.voices, [c.id]: uri } });
+                          }}
+                        />
+                      </div>
+                    ))
+                ))}
+              {cast.on && (
+                <p className="text-xs text-muted">
+                  Vlo finds the speaker of each quote from the names near it. A quote with no clear speaker
+                  gets the narrator&apos;s voice.
+                </p>
+              )}
+            </fieldset>
+          )}
+
           <div className="flex flex-wrap gap-2">
             {status === 'idle' && (
-              <Button
-                className="min-h-11 pointer-fine:min-h-9"
-                onClick={() => {
-                  startReading(editor);
-                }}
-              >
+              <Button className="min-h-11 pointer-fine:min-h-9" onClick={startRead}>
                 <Play aria-hidden="true" className="size-4" />
                 {selected ? 'Read the selection' : 'Read from the cursor'}
               </Button>

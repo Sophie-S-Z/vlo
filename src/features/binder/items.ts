@@ -82,13 +82,13 @@ export async function updateItem(
 }
 
 /**
- * Deletes an item and everything under it, with their snapshots, text copies and stored text. Board
+ * Deletes an item and everything under it, with their snapshots, versions, text copies and stored text. Board
  * cards of a deleted item stay on the board without their link, and each poem order drops the item.
  * A submission keeps the id, so the tracker can show "Deleted piece".
  */
 export async function deleteItem(id: string): Promise<void> {
   const now = clock.now();
-  const tables = [db.items, db.snapshots, db.itemTexts, db.projects, db.cards, db.sequences];
+  const tables = [db.items, db.snapshots, db.itemVersions, db.itemTexts, db.projects, db.cards, db.sequences];
   const ids = await db.transaction('rw', tables, async () => {
     const root = await db.items.get(id);
     if (!root) return [];
@@ -100,6 +100,7 @@ export async function deleteItem(id: string): Promise<void> {
     }
     await db.items.bulkDelete(gone);
     await db.snapshots.where('itemId').anyOf(gone).delete();
+    await db.itemVersions.where('itemId').anyOf(gone).delete();
     await db.itemTexts.bulkDelete(gone);
     await db.cards
       .where('itemId')

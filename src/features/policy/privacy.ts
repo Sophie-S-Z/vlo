@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 2,
+  version: 3,
   date: '2026-11-10',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -24,7 +24,7 @@ export const PRIVACY = {
       title: 'AI requests',
       when: 'Only in a project in Reader or Co-writer mode, after you press the button that sends a request or loads the model list of a provider.',
       sends:
-        'The text of the request, which Vlo shows you before it goes unless you turned that off, and the provider key. In a memoir, the aliases replace the real names when that switch is on. A local server on this computer keeps the text on the device.',
+        'The text of the request, which Vlo shows you before it goes unless you turned that off, and the provider key. The Reader panel also sends the Codex notes of the names in its text. In a memoir, the aliases replace the real names when that switch is on. A local server on this computer keeps the text on the device.',
     },
     'model-download': {
       title: 'In-browser model files',

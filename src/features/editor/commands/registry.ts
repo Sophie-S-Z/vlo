@@ -742,7 +742,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     icon: Speech,
     group: 'review',
     forms: BOTH,
-    keywords: ['speak', 'listen', 'voice', 'proofread', 'text to speech'],
+    keywords: ['speak', 'listen', 'voice', 'proofread', 'text to speech', 'table read', 'dialogue'],
     slash: true,
     panel: 'read-aloud',
     isActive: (e) => isReading(e),

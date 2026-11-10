@@ -62,6 +62,16 @@ async function novelWithText() {
     state: proseUpdate(['An older line.']),
     text: 'An older line.',
   });
+  await db.itemVersions.add({
+    id: `version-${project.id}`,
+    projectId: project.id,
+    itemId: first.id,
+    name: 'Darker ending',
+    createdAt: 11,
+    updatedAt: 12,
+    state: proseUpdate(['The storm wins.']),
+    text: 'The storm wins.',
+  });
   await db.sessions.add({
     id: `session-${project.id}`,
     projectId: project.id,
@@ -79,6 +89,7 @@ async function rowsOf(projectId: string) {
     project: await db.projects.get(projectId),
     items: sortById(await db.items.where('projectId').equals(projectId).toArray()),
     snapshots: sortById(await db.snapshots.where('projectId').equals(projectId).toArray()),
+    versions: sortById(await db.itemVersions.where('projectId').equals(projectId).toArray()),
     sessions: sortById(await db.sessions.where('projectId').equals(projectId).toArray()),
     itemTexts: (await db.itemTexts.where('projectId').equals(projectId).toArray()).sort((a, b) =>
       a.itemId.localeCompare(b.itemId),
@@ -163,6 +174,8 @@ describe('Backup round trip', () => {
         book: { ...DEFAULT_BOOK, trim: '6x9', chapter: 'modern', dedication: 'For Ada.' },
       },
     });
+    // A poem form (F56) is an item field, so it goes with the item.
+    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet' });
     const before = await rowsOf(project.id);
     const texts = await Promise.all(scenes.map((s) => textOf(s.id)));
     const { bytes } = await backUpProject(project.id, { music: false });
@@ -177,6 +190,7 @@ describe('Backup round trip', () => {
     const after = await rowsOf(project.id);
     expect(after.items).toEqual(before.items);
     expect(after.snapshots).toEqual(before.snapshots);
+    expect(after.versions).toEqual(before.versions);
     expect(after.sessions).toEqual(before.sessions);
     expect(after.itemTexts).toEqual(before.itemTexts);
     // The imported project counts as backed up when the file was made.
@@ -266,6 +280,8 @@ describe('Backup round trip', () => {
     for (const [index, scene] of copyScenes.entries())
       expect(await textOf(scene.id)).toBe(await textOf(scenesInOrder[index]?.id ?? ''));
     expect(copy.snapshots[0]?.itemId).toBe(copyScenes.find((s) => s.title === scenes[0]?.title)?.id);
+    expect(copy.versions[0]?.itemId).toBe(copy.snapshots[0]?.itemId);
+    expect(copy.versions[0]?.id).not.toBe(original.versions[0]?.id);
     expect(copy.itemTexts.every((t) => copy.items.some((i) => i.id === t.itemId))).toBe(true);
   });
 
@@ -431,6 +447,9 @@ describe('Reading a backup', () => {
       ['a wrong order', (m) => (row(m, 'items').order = ''), /has a wrong order/],
       ['a wrong kind', (m) => (row(m, 'items').kind = 'script'), /has a wrong kind/],
       ['a wrong Craft switch', (m) => (row(m, 'items').craft = 'yes'), /has a wrong Craft switch/],
+      ['a wrong poem form', (m) => (row(m, 'items').form = 'limerick'), /has a wrong poem form/],
+      ['a version name of no text', (m) => (row(m, 'items').versionName = 42), /has no versionName/],
+      ['an empty version name', (m) => (row(m, 'items').versionName = ' '), /has a wrong version name/],
       [
         'a wrong day of words',
         (m) => {
@@ -457,6 +476,8 @@ describe('Reading a backup', () => {
       ],
       ['a missing project', (m) => (m.project = null), /It has no project/],
       ['a snapshot of no item', (m) => (row(m, 'snapshots').itemId = 'gone'), /A snapshot has no item/],
+      ['a version of no item', (m) => (row(m, 'versions').itemId = 'gone'), /A version has no item/],
+      ['a version with no name', (m) => (row(m, 'versions').name = ' '), /A version has a wrong name/],
     ];
     for (const [, change, message] of cases) {
       const zip = await backupZip();

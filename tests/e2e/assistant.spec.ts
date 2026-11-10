@@ -151,6 +151,50 @@ test('US10: a Reader answer shows the exact request first, and has no way into t
   expect(await seriousIssues(page)).toEqual([]);
 });
 
+test('F61: the reader panel sends the Codex notes of the names in the text, and gives four cards with no Insert', async ({
+  page,
+}) => {
+  await newProject(page);
+  await page.keyboard.type('Mira hides the ledger.');
+  await saved(page);
+  const views = page.getByRole('navigation', { name: 'Project views' });
+  await views.getByRole('link', { name: 'Codex' }).click();
+  await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
+  await page.getByRole('button', { name: 'Add entry' }).click();
+  await page.getByRole('textbox', { name: 'Note' }).fill('Owes the harbour master.');
+  await page.getByRole('heading', { level: 2, name: 'Codex' }).click();
+  await views.getByRole('link', { name: 'Write' }).click();
+
+  // Co-writer mode has Insert for drafts, and still none for the readers' notes.
+  await switchTo(page, 'Co-writer');
+  await openAssistant(page);
+  await useOllama(page);
+  const sent = await fakeChat(page, 'http://localhost:11434/v1/chat/completions', [
+    '## First-time reader\nThe ledger hooks me.\n## Genre fan\nWhere is the storm?\n',
+    '## Developmental editor\nRaise the stakes.\n## Line editor\nTwo verbs repeat.',
+  ]);
+  await panel(page).getByLabel('What to ask').selectOption('panel');
+  await panel(page).getByRole('button', { name: 'Prepare the request' }).click();
+  const exact = drawer(page).getByLabel('The exact text');
+  await expect(exact).toContainText('Mira hides the ledger.');
+  await expect(exact).toContainText('- Mira (character): Owes the harbour master.');
+  await drawer(page).getByRole('button', { name: 'Send' }).click();
+
+  const answer = panel(page).getByRole('listitem').filter({ hasText: 'Reader panel on Scene 1' });
+  await expect(answer).toContainText('Done.');
+  const readers = answer.getByRole('list', { name: 'Readers' }).getByRole('listitem');
+  await expect(readers.getByRole('heading')).toHaveText([
+    'First-time reader',
+    'Genre fan',
+    'Developmental editor',
+    'Line editor',
+  ]);
+  await expect(readers.nth(3)).toContainText('Two verbs repeat.');
+  await expect(answer.getByRole('button', { name: /Insert/ })).toHaveCount(0);
+  expect(sent[0]?.messages[1]?.content).toContain('Owes the harbour master.');
+  expect(await seriousIssues(page)).toEqual([]);
+});
+
 test('a Co-writer draft goes in with the AI mark, one Undo takes it out, and the export can list it', async ({
   page,
 }) => {

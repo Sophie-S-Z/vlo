@@ -34,7 +34,7 @@ import { cancelWebLlmLoad, LOAD_CANCELLED, loadWebLlm, unloadWebLlm } from './en
 import { engineName, EngineSettings } from './EngineSettings';
 import { KeyDialog } from './KeyDialog';
 import { sessionKey } from './keys';
-import { READER_ACTIONS, restoreNames, type AiRequest } from './reader';
+import { READER_ACTIONS, restoreNames, splitPanel, type AiRequest } from './reader';
 import { buildAiRequest, isCowriterAction, type ActionId } from './request';
 import { SendDrawer } from './SendDrawer';
 import { DEFAULT_ENGINE, drawerOff, loadEngineChoice, setDrawerOff, type EngineChoice } from './settings';
@@ -440,6 +440,12 @@ export default function AssistantPanel({ project, items, item, kind, onInserted 
               />
             </div>
           )}
+          {action === 'panel' && (
+            <p className="text-sm text-muted">
+              Four readers give notes: a first-time reader, a genre fan, a developmental editor and a line
+              editor. The request holds the notes of the Codex entries that the text names.
+            </p>
+          )}
           {action === 'continue' && (
             <div className="grid gap-1.5">
               <Label htmlFor={`${id}-words`}>Length</Label>
@@ -597,6 +603,21 @@ export default function AssistantPanel({ project, items, item, kind, onInserted 
   );
 }
 
+/** An answer is not a drag source, so no answer reaches the text without Insert. */
+function AnswerText({ text }: { text: string }) {
+  return (
+    <div
+      className="vlo-answer text-sm whitespace-pre-wrap [overflow-wrap:anywhere]"
+      draggable={false}
+      onDragStart={(event) => {
+        event.preventDefault();
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
 function AnswerCard({
   entry,
   canInsert,
@@ -619,6 +640,7 @@ function AnswerCard({
   const drafts =
     entry.result === 'alternatives' && !running ? splitAlternatives(entry.text) : [entry.text.trim()];
   const writable = entry.result === 'draft' || entry.result === 'alternatives';
+  const readers = entry.result === 'panel' ? splitPanel(entry.text) : [];
 
   return (
     <li
@@ -654,33 +676,35 @@ function AnswerCard({
         )}
       </div>
 
-      {drafts.map((text, index) => (
-        <div key={index} className="grid gap-2">
-          {drafts.length > 1 && <p className="text-xs font-semibold text-muted">Version {index + 1}</p>}
-          {/* An answer is not a drag source, so no answer reaches the text without Insert. */}
-          <div
-            className="vlo-answer text-sm whitespace-pre-wrap [overflow-wrap:anywhere]"
-            draggable={false}
-            onDragStart={(event) => {
-              event.preventDefault();
-            }}
-          >
-            {text || (running ? 'Waiting for the first words.' : '')}
+      {readers.length > 0 ? (
+        <ul aria-label="Readers" className="grid gap-2">
+          {readers.map(({ reader, notes }, index) => (
+            <li key={index} className="grid gap-1 rounded-md border border-rule p-2">
+              <h5 className="text-xs font-semibold text-muted">{reader}</h5>
+              <AnswerText text={notes} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        drafts.map((text, index) => (
+          <div key={index} className="grid gap-2">
+            {drafts.length > 1 && <p className="text-xs font-semibold text-muted">Version {index + 1}</p>}
+            <AnswerText text={text || (running ? 'Waiting for the first words.' : '')} />
+            {canInsert && writable && !running && text !== '' && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    onInsert(text);
+                  }}
+                >
+                  {drafts.length > 1 ? `Insert version ${String(index + 1)}` : 'Insert'}
+                </Button>
+              </div>
+            )}
           </div>
-          {canInsert && writable && !running && text !== '' && (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onInsert(text);
-                }}
-              >
-                {drafts.length > 1 ? `Insert version ${String(index + 1)}` : 'Insert'}
-              </Button>
-            </div>
-          )}
-        </div>
-      ))}
+        ))
+      )}
 
       {!canInsert && writable && !running && openTitle && (
         <p className="text-sm text-muted">Open {openTitle} to insert this draft.</p>

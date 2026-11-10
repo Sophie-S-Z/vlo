@@ -15,6 +15,7 @@ import { ScenePicker } from '@/features/scenes/ScenePicker';
 import { SoundControl } from '@/features/sound/SoundPanel';
 import { cleanScene, NO_SCENE, type SceneChoice } from '@/features/scenes/scenes';
 import { Button } from '@/ui/button';
+import { Segmented } from '@/ui/segmented';
 import { cn } from '@/ui/cn';
 import {
   Dialog,
@@ -45,6 +46,9 @@ const AnalysisPanel = lazy(async () => ({
 }));
 
 // The history panel and the diff library load only when the writer opens History.
+const VersionsPanel = lazy(async () => ({
+  default: (await import('@/features/versions/VersionsPanel')).VersionsPanel,
+}));
 const HistoryPanel = lazy(async () => ({
   default: (await import('@/features/snapshots/HistoryPanel')).HistoryPanel,
 }));
@@ -100,6 +104,7 @@ export function EditorPane({
   const { id, projectId } = item;
   const target = useMemo(() => ({ id, projectId }), [id, projectId]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyTab, setHistoryTab] = useState<'snapshots' | 'versions'>('snapshots');
   const [insightsOpen, setInsightsOpen] = useState(false);
   // The words that a report asked to show. They take the selection after Insights closes.
   const showRange = useRef<{ from: number; to: number } | null>(null);
@@ -338,23 +343,46 @@ export function EditorPane({
                   <div className="grid gap-1 pr-10">
                     <DialogTitle>History</DialogTitle>
                     <DialogDescription>
-                      Vlo saves a snapshot of {item.title} after every {snapshotEveryMinutes} minutes of
-                      writing. Restoring one saves the current text first.
+                      {historyTab === 'snapshots'
+                        ? `Vlo saves a snapshot of ${item.title} after every ${String(snapshotEveryMinutes)} minutes of writing. Restoring one saves the current text first.`
+                        : `Named versions of ${item.title}. A switch keeps the text in the editor as a version.`}
                     </DialogDescription>
                   </div>
+                  <Segmented
+                    label="Show"
+                    value={historyTab}
+                    options={[
+                      { value: 'snapshots', label: 'Snapshots' },
+                      { value: 'versions', label: 'Versions' },
+                    ]}
+                    onChange={setHistoryTab}
+                  />
                   {editor && open && (
-                    <Suspense fallback={<p className="text-muted">Loading history.</p>}>
-                      <HistoryPanel
-                        item={item}
-                        kind={kind}
-                        editor={editor}
-                        doc={open.doc}
-                        currentText={currentText}
-                        onRestored={(message) => {
-                          setNotice(message);
-                          setHistoryOpen(false);
-                        }}
-                      />
+                    <Suspense fallback={<p className="text-muted">Loading {historyTab}.</p>}>
+                      {historyTab === 'snapshots' ? (
+                        <HistoryPanel
+                          item={item}
+                          kind={kind}
+                          editor={editor}
+                          doc={open.doc}
+                          currentText={currentText}
+                          onRestored={(message) => {
+                            setNotice(message);
+                            setHistoryOpen(false);
+                          }}
+                        />
+                      ) : (
+                        <VersionsPanel
+                          item={item}
+                          kind={kind}
+                          editor={editor}
+                          doc={open.doc}
+                          onSwitched={(message) => {
+                            setNotice(message);
+                            setHistoryOpen(false);
+                          }}
+                        />
+                      )}
                     </Suspense>
                   )}
                 </DialogContent>
@@ -400,6 +428,7 @@ export function EditorPane({
               itemId={item.id}
               focusOnOpen={!beside}
               craft={labels}
+              poemForm={item.form}
               onEditor={onEditor}
               font={font}
               page={page}

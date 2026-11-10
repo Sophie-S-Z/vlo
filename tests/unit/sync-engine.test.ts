@@ -242,6 +242,79 @@ describe('push', () => {
   });
 });
 
+describe('item versions (F55)', () => {
+  test('each version goes in a blob of its own, and comes back as the same row', async () => {
+    const version = {
+      id: 'v1',
+      projectId: 'p1',
+      itemId: 's1',
+      name: 'Darker ending',
+      createdAt: 1,
+      updatedAt: 1,
+      state: proseUpdate(['The storm wins.']),
+      text: 'The storm wins.',
+    };
+    await db.itemVersions.add(version);
+    now = 2000;
+    await syncOnce();
+    // The rows blob stays small: the version's state is only in its own blob.
+    const rowsBlob = (await mine('rows:p1')) as RowsBlob;
+    expect(rowsBlob.rows.some((v) => v.table === 'itemVersions')).toBe(false);
+    const own = (await mine('version:v1')) as RowsBlob;
+    expect([...(own.rows[0]?.row?.state as Uint8Array)]).toEqual([...version.state]);
+
+    // The other device gets it, with its Yjs state as bytes.
+    await db.itemVersions.clear();
+    await fromOther(
+      'version:v2',
+      rows([{ table: 'itemVersions', id: 'v2', at: 5000, row: { ...version, id: 'v2' } }]),
+    );
+    now = 6000;
+    await syncOnce();
+    const got = await db.itemVersions.get('v2');
+    expect(ArrayBuffer.isView(got?.state)).toBe(true);
+    // The bytes can come from another realm in the test database, so they compare as a list.
+    expect({ ...got, state: [...(got?.state ?? [])] }).toEqual({
+      ...version,
+      id: 'v2',
+      state: [...version.state],
+    });
+  });
+
+  test('a delete of the item there takes its versions and their blobs here, and revives none', async () => {
+    const version = (id: string) => ({
+      id,
+      projectId: 'p1',
+      itemId: 's1',
+      name: id,
+      createdAt: 1,
+      updatedAt: 1,
+      state: proseUpdate(['Calm.']),
+      text: 'Calm.',
+    });
+    await db.itemVersions.bulkAdd([version('v1'), version('v2')]);
+    now = 2000;
+    await syncOnce();
+    expect(await mine('version:v1')).not.toBeUndefined();
+
+    // v2 changed here after the change that the other device's delete of it saw.
+    now = 3000;
+    await db.itemVersions.update('v2', { name: 'Renamed' });
+    await fromOther(
+      'rows:p1',
+      rows([
+        { table: 'items', id: 's1', at: 4000 },
+        { table: 'itemVersions', id: 'v2', at: 4000, seen: 1000 },
+      ]),
+    );
+    now = 5000;
+    await syncOnce();
+    expect(await db.itemVersions.count()).toBe(0);
+    expect(await mine('version:v1')).toBeUndefined();
+    expect(await mine('version:v2')).toBeUndefined();
+  });
+});
+
 describe('pull', () => {
   test('rows merge by time, and a delete there removes the item, its text and a whole project here', async () => {
     await db.projects.add(novel('p2'));

@@ -6,8 +6,8 @@ import { orderAfterLast, sortByOrder } from '@/lib/order';
 
 /*
  * The Codex of a project (roadmap F42, plan Task H5): characters, places, things and lore, each with
- * other names and a note. It lives in its own table, so no export, share or AI request reads it. People
- * stays the memoir's private-names tool (decision Q3).
+ * other names and a note. It lives in its own table, so no export or share reads it. Only the reader panel
+ * (F61) sends the notes of the names in its text. People stays the memoir's private-names tool (decision Q3).
  */
 
 export const CODEX_KINDS: readonly { id: CodexKind; label: string; heading: string }[] = [

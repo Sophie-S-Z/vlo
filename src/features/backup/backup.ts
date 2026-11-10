@@ -38,6 +38,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       db.projects,
       db.items,
       db.snapshots,
+      db.itemVersions,
       db.sessions,
       db.itemTexts,
       db.audioFiles,
@@ -48,6 +49,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       project: await db.projects.get(projectId),
       items: await db.items.where('projectId').equals(projectId).toArray(),
       snapshots: await db.snapshots.where('projectId').equals(projectId).toArray(),
+      versions: await db.itemVersions.where('projectId').equals(projectId).toArray(),
       sessions: await db.sessions.where('projectId').equals(projectId).toArray(),
       itemTexts: await db.itemTexts.where('projectId').equals(projectId).toArray(),
       music: options.music ? await db.audioFiles.orderBy('addedAt').toArray() : [],
@@ -75,6 +77,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     project,
     items: rows.items,
     snapshots: rows.snapshots,
+    versions: rows.versions,
     sessions: rows.sessions,
     itemTexts: rows.itemTexts,
     updates: new Map(updates),
@@ -142,6 +145,13 @@ function asCopy(backup: Backup): Backup {
       itemId: itemId(s.itemId),
       state: marks(s.state),
     })),
+    versions: backup.versions.map((v) => ({
+      ...v,
+      id: newId(),
+      projectId,
+      itemId: itemId(v.itemId),
+      state: marks(v.state),
+    })),
     sessions: backup.sessions.map((s) => ({ ...s, id: newId(), projectId })),
     research: backup.research.map((r) => ({ ...r, info: { ...r.info, id: newId(), projectId } })),
     itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
@@ -169,6 +179,7 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
         db.projects,
         db.items,
         db.snapshots,
+        db.itemVersions,
         db.sessions,
         db.itemTexts,
         db.audioFiles,
@@ -186,6 +197,7 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
             : recountItems(backup.items, backup.itemTexts, language),
         );
         await db.snapshots.bulkAdd(backup.snapshots);
+        await db.itemVersions.bulkAdd(backup.versions);
         await db.sessions.bulkAdd(backup.sessions);
         await db.itemTexts.bulkPut(backup.itemTexts);
         await db.cards.bulkAdd(backup.views.cards);

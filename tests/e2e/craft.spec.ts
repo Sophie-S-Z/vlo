@@ -187,3 +187,19 @@ test('D2: the install leaves the pronouncing dictionary out', async ({ page }) =
   expect(worker).toContain('craft.worker');
   expect(worker).not.toContain('assets/craft/');
 });
+
+test('F56: a form check names what breaks the form, and the form stays with the poem', async ({ page }) => {
+  await newPoem(page);
+  await pasteLines(page, QUATRAIN);
+  await switchCraft(page);
+  const form = page.getByRole('combobox', { name: 'Form' });
+  await expect(form).toBeVisible({ timeout: 20_000 });
+  await form.selectOption('haiku');
+  await expect(page.getByText('A haiku has 3 lines. This poem has 4.')).toBeVisible();
+
+  await form.selectOption('pantoum');
+  await expect(page.getByText('A pantoum has two or more stanzas of 4 lines.')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: 'Form' })).toHaveValue('pantoum', { timeout: 20_000 });
+  expect(await seriousIssues(page)).toEqual([]);
+});

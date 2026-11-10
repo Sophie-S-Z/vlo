@@ -3,7 +3,9 @@ import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { useSyncExternalStore } from 'react';
 import { setDucked } from '@/features/sound/controller';
-import { sentencesIn, type Sentence } from './sentences';
+import type { CodexMatch } from '@/features/codex/codex';
+import { castSentences } from './dialogue';
+import { sentencesIn, spokenText, type Sentence } from './sentences';
 import { findLocalVoice, speechAvailable } from './voices';
 
 /*
@@ -171,7 +173,7 @@ function speak(editor: Editor, index: number): void {
     return;
   }
   const settings = getReadSettings();
-  const voice = findLocalVoice(settings.voice);
+  const voice = findLocalVoice(sentence.voice === undefined ? settings.voice : sentence.voice);
   if (!voice) {
     finish(editor, 'This device has no on-device voice now, so Vlo stopped reading.');
     return;
@@ -208,11 +210,18 @@ function finish(editor: Editor, message: string | null): void {
   setState({ status: 'idle', editor: null, index: 0, count: 0, message });
 }
 
+/** A table read (F58): the characters' names and the voice of each speaker. */
+export interface Cast {
+  match: (text: string) => CodexMatch[];
+  voiceOf: (speaker: string | null) => string | null;
+}
+
 /**
  * Reads the selection, or from the sentence at the cursor to the end of the text. Call it from the
- * writer's click or key, so the browser lets the voice speak.
+ * writer's click or key, so the browser lets the voice speak. With a cast, each character's quotes
+ * get the character's voice.
  */
-export function startReading(editor: Editor): void {
+export function startReading(editor: Editor, cast?: Cast): void {
   if (state.editor && state.status !== 'idle') finish(state.editor, null);
   if (!speechAvailable()) {
     setState({ message: 'This browser cannot read aloud.' });
@@ -227,7 +236,18 @@ export function startReading(editor: Editor): void {
   }
   const { doc, selection } = editor.state;
   let found: Sentence[];
-  if (!selection.empty) found = sentencesIn(doc, selection.from, selection.to);
+  if (cast) {
+    const { from, to, empty } = selection;
+    // A selection cuts the sentences at its ends, as a plain read does.
+    found = castSentences(doc, cast.match, cast.voiceOf)
+      .filter((s) => (empty ? s.to >= from : s.to > from && s.from < to))
+      .map((s) => {
+        if (empty || (s.from >= from && s.to <= to)) return s;
+        const cut = { from: Math.max(s.from, from), to: Math.min(s.to, to) };
+        return { ...s, ...cut, text: spokenText(doc, cut.from, cut.to) };
+      })
+      .filter((s) => /[\p{L}\p{N}]/u.test(s.text));
+  } else if (!selection.empty) found = sentencesIn(doc, selection.from, selection.to);
   else {
     const all = sentencesIn(doc);
     // From the sentence that holds the cursor, or the next one after it.

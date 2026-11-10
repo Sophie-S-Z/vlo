@@ -827,6 +827,21 @@ Last update: 2026-11-10
   - Show aliases hides each real name with a decoration. The caret can still move into the hidden text,
     and typing there changes the real name. The switch is a preview, so turn it off to edit names.
 
+- Phase 11 (plan `docs/plans/phase-11.md`, the roadmap's "Only in Vlo" features F54 to F61). The product
+  owner approved decisions K1 to K9 as recommended on 2026-11-10. Pull request K-A holds Tasks K1 to K4:
+  - K1: a Form select with the Craft labels of a poem checks a sonnet, villanelle, ghazal, haiku, pantoum
+    or sestina. Each note names its line, and a click moves the cursor there. Rhyme and syllables are
+    checked in English only. Six public-domain or Vlo fixtures give 0 notes.
+  - K2: named versions of an item in the History dialog: save, switch, rename, delete with Undo, and a
+    paragraph compare with "Use this". A switch and a "Use this" take a snapshot first. Versions sync in
+    their own blobs and go in backups (database version 10, backup version 5).
+  - K3: a table read in the Read aloud panel gives each Codex character that the text names a voice of
+    its own. Vlo finds the speaker of each quote from a speech verb, a name, a quote that goes on, or a
+    two-person exchange. The choices stay on this device.
+  - K4: the Reader panel in the Assistant asks four readers for notes in one request, with the Codex
+    notes of the names in the text (at most 600 tokens, aliased in a memoir). Each reader gets a card with
+    no Insert. Privacy page version 3 says so.
+
 ## Blocked
 
 - Nothing.
@@ -863,6 +878,7 @@ Last update: 2026-11-10
 | 2026-11-09 | Phase 8 plan approved: decisions Q1 to Q9 as recommended.                        |
 | 2026-11-09 | Phase 9 plan approved: decisions R1 to R9 as recommended.                        |
 | 2026-11-10 | Phase 10 plan approved: decisions J1 to J7 as recommended.                       |
+| 2026-11-10 | Phase 11 plan approved: decisions K1 to K9 as recommended.                       |
 
 ## Spec changes
 

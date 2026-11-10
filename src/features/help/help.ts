@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 5,
+  version: 6,
   date: '2026-11-10',
   guide: [
     {
@@ -42,12 +42,38 @@ export const HELP = {
       ],
     },
     {
+      title: 'Hear your text read aloud',
+      steps: [
+        'Choose Read aloud in More tools. Vlo reads from the cursor, or only the selected words.',
+        'Vlo uses only the voices on this device, so your text stays here.',
+        'When the Codex has characters, turn on Table read. Each character speaks in a voice of their own, and you can pick each voice.',
+      ],
+    },
+    {
+      title: 'Write a poem in a form',
+      steps: [
+        'In a poem, choose More tools, then Craft labels.',
+        'Pick a form above the poem: sonnet, villanelle, ghazal, haiku, pantoum or sestina.',
+        'Vlo lists each line that breaks the form: the line count, the rhyme, a refrain, an end word or the syllables. Choose a note to go to its line.',
+        'Rhyme and syllables are checked in English. The lines, stanzas, refrains and end words are checked in every language.',
+      ],
+    },
+    {
       title: 'Go back to an earlier draft',
       steps: [
         'Vlo saves a snapshot after every 10 minutes of writing.',
         'Choose History, then Save a snapshot now before a bold edit.',
         'Pick a snapshot in History to see its changes from the current text.',
         'Choose Restore this snapshot. Vlo saves the current text as a snapshot first.',
+      ],
+    },
+    {
+      title: 'Keep versions of a scene or poem',
+      steps: [
+        'To try a new direction, choose History, then Versions, and save the text as a named version.',
+        'Switch to this puts a version in the editor and keeps the text it replaces as a version.',
+        'Compare shows each paragraph that differs. Use this takes one paragraph of the other version into your text.',
+        'Versions go in backups and sync. Exports and word counts use the version in the editor.',
       ],
     },
     {
@@ -120,7 +146,7 @@ export const HELP = {
         'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels.',
         'Every project has the Codex: its characters, places, things and lore, with other names and a note.',
         'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
-        'Exports, shares and AI requests leave the Codex out.',
+        'Exports and shares leave the Codex out. Only the Reader panel of the Assistant sends the notes of the names in its text.',
         'At the Simple tool level, open the Outline and the Codex from the command menu.',
       ],
     },

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { db } from '@/lib/db';
+import type { PoemForm } from './forms';
 
 /*
  * The Craft switch of the open poem (spec 8.3, plan Task C7). Each poem keeps its own switch in its item
@@ -42,4 +43,15 @@ export async function setCraftLabels(itemId: string, on: boolean): Promise<void>
   // The store changes first, so the menu and the labels answer at once.
   if (state.itemId === itemId) setCraftItem(itemId, on);
   await db.items.update(itemId, { craft: on });
+}
+
+/** Sets the form that the poem's Craft labels check, or takes it off with null (F56). */
+export async function setPoemForm(itemId: string, form: PoemForm | null): Promise<void> {
+  await db.items
+    .where('id')
+    .equals(itemId)
+    .modify((item) => {
+      if (form === null) delete item.form;
+      else item.form = form;
+    });
 }

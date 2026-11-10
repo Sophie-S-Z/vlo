@@ -1,7 +1,9 @@
+import { codexMatcher } from '@/features/codex/codex';
+import type { CodexEntry } from '@/lib/db';
 import { aliasesOf, aliasText, type PrivatePerson } from '@/lib/privacy';
 import type { ChatMessage } from './engine/types';
 import { estimateTokens } from './engine/types';
-import { READER_SYSTEM } from './prompts';
+import { PANEL_READERS, READER_PANEL, READER_SYSTEM } from './prompts';
 import { findPassages, namesIn, passagesText, type Passage } from './retrieve';
 
 /*
@@ -10,10 +12,10 @@ import { findPassages, namesIn, passagesText, type Passage } from './retrieve';
  * synopsis field, which is metadata and not manuscript text.
  */
 
-export type ReaderAction = 'feedback' | 'ask' | 'synopsis' | 'tags' | 'continuity';
+export type ReaderAction = 'feedback' | 'ask' | 'synopsis' | 'tags' | 'continuity' | 'panel';
 
 /** What the panel does with an answer. */
-export type ResultKind = 'notes' | 'synopsis' | 'draft' | 'alternatives' | 'ideas';
+export type ResultKind = 'notes' | 'synopsis' | 'draft' | 'alternatives' | 'ideas' | 'panel';
 
 export interface AiRequest {
   action: string;
@@ -45,6 +47,8 @@ export interface ReaderContext {
   budget: number;
   /** The most tokens of other passages, for Ask the manuscript and the continuity check. */
   passageBudget?: number;
+  /** The project's Codex, for the reader panel. */
+  codex?: readonly CodexEntry[];
 }
 
 export const READER_ACTIONS: readonly { id: ReaderAction; label: string; needsItem: boolean }[] = [
@@ -53,7 +57,43 @@ export const READER_ACTIONS: readonly { id: ReaderAction; label: string; needsIt
   { id: 'synopsis', label: 'Summarize for synopsis', needsItem: true },
   { id: 'tags', label: 'Suggest tags or themes', needsItem: true },
   { id: 'continuity', label: 'Continuity check', needsItem: true },
+  { id: 'panel', label: 'Reader panel', needsItem: true },
 ];
+
+/** The most tokens of Codex notes in a reader panel request (plan decision K8). */
+export const CODEX_BUDGET = 600;
+
+/**
+ * The Codex entries that the text names, one a line with their other names and note, at most
+ * `CODEX_BUDGET` tokens. An entry that the text does not name stays out.
+ */
+export function codexContext(entries: readonly CodexEntry[], text: string): string {
+  const named = new Set(codexMatcher(entries)(text).map((m) => m.entryId));
+  const lines = entries
+    .filter((e) => named.has(e.id))
+    .map((e) => {
+      const also = e.aliases.length > 0 ? `, also called ${e.aliases.join(', ')}` : '';
+      const note = e.note?.trim().replace(/\s+/g, ' ') ?? '';
+      return `- ${e.name} (${e.kind}${also})${note === '' ? '' : `: ${note}`}`;
+    });
+  return fitText(lines.join('\n'), CODEX_BUDGET).text;
+}
+
+/**
+ * The notes of each reader of a panel answer, by the line that starts with the reader's name, as a
+ * heading ("## Genre fan", "1. Genre fan") or a label ("**Genre fan:** ..."). Text before the first
+ * reader stays out.
+ */
+export function splitPanel(answer: string): { reader: string; notes: string }[] {
+  const text = answer.replace(/\r\n?/g, '\n');
+  const names = PANEL_READERS.join('|');
+  const heading = new RegExp(`^[#*_ \\t]*(?:\\d+[.)][ \\t]*)?[*_]*(${names})[*_]*(?::[*_]*|[ \\t]*$)`, 'gim');
+  const marks = [...text.matchAll(heading)];
+  return marks.map((m, i) => ({
+    reader: PANEL_READERS.find((r) => r.toLowerCase() === m[1]?.toLowerCase()) ?? m[1] ?? '',
+    notes: text.slice(m.index + m[0].length, marks[i + 1]?.index ?? text.length).trim(),
+  }));
+}
 
 /** The text cut to whole words within `budget` tokens. */
 export function fitText(text: string, budget: number): { text: string; cut: boolean } {
@@ -181,6 +221,20 @@ export function readerRequest(action: ReaderAction, context: ReaderContext): AiR
         ],
         maxTokens: 700,
         result: 'notes',
+      };
+    }
+    case 'panel': {
+      // Only the names in the text that goes, which can be the first part of the item.
+      const notes = codexContext(context.codex ?? [], text);
+      const codex = notes === '' ? '' : `\n\nMy notes on the names in it:\n<notes>\n${notes}\n</notes>`;
+      return {
+        ...base,
+        label: `Reader panel on ${item.title}`,
+        messages: [
+          { role: 'user', content: `${READER_PANEL}\n\nThe ${item.kind}, "${item.title}":\n${text}${codex}` },
+        ],
+        maxTokens: 900,
+        result: 'panel',
       };
     }
   }

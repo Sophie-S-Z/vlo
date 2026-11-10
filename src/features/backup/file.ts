@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import * as Y from 'yjs';
+import { isPoemForm } from '@/features/craft/forms';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
@@ -21,13 +22,22 @@ import {
   type Json,
 } from './check';
 import { checkViews } from './views';
-import { CHAPTER_STYLES, MAX_BOOK_TEXT, MAX_LABELS, MAX_PACKET_TEXT, SCENE_BREAKS, TRIMS } from '@/lib/db';
+import {
+  CHAPTER_STYLES,
+  MAX_BOOK_TEXT,
+  MAX_LABELS,
+  MAX_PACKET_TEXT,
+  MAX_VERSION_NAME,
+  SCENE_BREAKS,
+  TRIMS,
+} from '@/lib/db';
 import type {
   AudioFile,
   ResearchFile,
   Item,
   ItemKind,
   ItemText,
+  ItemVersion,
   Project,
   Session,
   Snapshot,
@@ -42,17 +52,19 @@ import type {
  * - `items/<id>.yjs`: each item's Yjs update, which is the text itself;
  * - `items/<id>.md`: a readable copy of each item, for a writer who has no Vlo at hand;
  * - `snapshots/<id>.yjs`: the Yjs update of each snapshot;
+ * - `versions/<id>.yjs`: the Yjs state of each named version of an item;
  * - `music/<id>`: each of the writer's music files, only when the writer asks for them;
  * - `research/<id>`: each research file of the project. A clipping has no file: its text is in the row.
  * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Version 3 gives the project a
  * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows and
- * the research files, so an older build refuses the file and never drops them. Vlo still reads versions 1 to 3.
+ * the research files, so an older build refuses the file and never drops them. Version 5 (Phase 11) adds the
+ * named versions of items. Vlo still reads versions 1 to 4.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 4;
+export const BACKUP_VERSION = 5;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -76,6 +88,8 @@ export interface Backup {
   project: Project;
   items: Item[];
   snapshots: Snapshot[];
+  /** The named versions of items that are not in the editor (F55). */
+  versions: ItemVersion[];
   sessions: Session[];
   itemTexts: ItemText[];
   /** The Yjs update of each item that holds text, by item id. */
@@ -108,11 +122,11 @@ export function holdsText(project: Pick<Project, 'templates'>, kind: ItemKind): 
   return templateHoldsText(project.templates, kind);
 }
 
-/** A snapshot row without its Yjs bytes, which go in their own file. */
-function withoutState(snapshot: Snapshot): Omit<Snapshot, 'state'> {
-  const row: Partial<Snapshot> = { ...snapshot };
-  delete row.state;
-  return row as Omit<Snapshot, 'state'>;
+/** A snapshot or version row without its Yjs bytes, which go in their own file. */
+function withoutState<T extends { state: Uint8Array }>(row: T): Omit<T, 'state'> {
+  const copy: Partial<T> = { ...row };
+  delete copy.state;
+  return copy as Omit<T, 'state'>;
 }
 
 /** Writes the backup file. */
@@ -126,6 +140,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     project: backup.project,
     items: backup.items,
     snapshots: backup.snapshots.map(withoutState),
+    versions: backup.versions.map(withoutState),
     sessions: backup.sessions,
     itemTexts: backup.itemTexts,
     music: backup.music.map((m) => m.info),
@@ -146,6 +161,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     zip.file(`items/${item.id}.md`, toMarkdown(readable));
   }
   for (const snapshot of backup.snapshots) zip.file(`snapshots/${snapshot.id}.yjs`, snapshot.state);
+  for (const version of backup.versions) zip.file(`versions/${version.id}.yjs`, version.state);
   // Music is already compressed, so it goes in as it is.
   for (const { info, data } of backup.music) zip.file(`music/${info.id}`, data, { compression: 'STORE' });
   // Most research files are images, PDFs and audio, which are compressed already.
@@ -314,6 +330,12 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     if (row.lineCount !== undefined) count(row, 'lineCount', what);
     if (row.craft !== undefined && typeof row.craft !== 'boolean')
       fail(`${DAMAGED} ${what} has a wrong Craft switch.`);
+    if (row.form !== undefined && !isPoemForm(row.form)) fail(`${DAMAGED} ${what} has a wrong poem form.`);
+    if (row.versionName !== undefined) {
+      const versionName = text(row, 'versionName', what);
+      if (versionName.trim() === '' || versionName.length > MAX_VERSION_NAME)
+        fail(`${DAMAGED} ${what} has a wrong version name.`);
+    }
     optionalText(row, 'labelId', what);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);
@@ -395,6 +417,21 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
       text(row, 'text', 'A snapshot');
     },
   );
+  const versionRows = checkRows<Omit<ItemVersion, 'state'>>(
+    manifest.versions === undefined ? [] : list(manifest, 'versions'),
+    project.id,
+    'A version',
+    (row) => {
+      id(row, 'id', 'A version');
+      if (!itemIds.has(id(row, 'itemId', 'A version'))) fail(`${DAMAGED} A version has no item.`);
+      const name = text(row, 'name', 'A version');
+      if (name.trim() === '' || name.length > MAX_VERSION_NAME)
+        fail(`${DAMAGED} A version has a wrong name.`);
+      count(row, 'createdAt', 'A version');
+      count(row, 'updatedAt', 'A version');
+      text(row, 'text', 'A version');
+    },
+  );
   const sessions = checkRows<Session>(list(manifest, 'sessions'), project.id, 'A writing session', (row) => {
     id(row, 'id', 'A writing session');
     for (const key of ['startedAt', 'endedAt', 'wordsAdded', 'poemsAdded'])
@@ -457,6 +494,13 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     checkUpdate(state, 'a snapshot');
     snapshots.push({ ...row, state });
   }
+  const versions: ItemVersion[] = [];
+  for (const row of versionRows) {
+    const state = await readEntry(zip, `versions/${row.id}.yjs`);
+    if (state === null) fail(`${DAMAGED} A version of an item is missing.`);
+    checkUpdate(state, 'a version');
+    versions.push({ ...row, state });
+  }
   const music: BackupMusic[] = [];
   for (const row of musicRows) {
     const data = await readEntry(zip, `music/${row.id as string}`);
@@ -484,6 +528,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     project,
     items,
     snapshots,
+    versions,
     sessions,
     itemTexts,
     updates,

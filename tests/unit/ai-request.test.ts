@@ -90,6 +90,34 @@ describe('buildAiRequest', () => {
     expect(JSON.stringify(built.request)).not.toMatch(/Rosa|Gran/);
   });
 
+  test('the reader panel sends the aliased Codex notes of the names in the text only (F61)', async () => {
+    await db.codex.bulkAdd([
+      {
+        id: 'c1',
+        projectId: 'p1',
+        kind: 'character',
+        name: 'Aunt Rosa',
+        aliases: [],
+        note: 'Rosa taught me to swim.',
+        order: 'a0',
+      },
+      {
+        id: 'c2',
+        projectId: 'p1',
+        kind: 'character',
+        name: 'Uncle Teo',
+        aliases: [],
+        note: 'He kept a secret.',
+        order: 'a1',
+      },
+    ]);
+    const built = await buildAiRequest(input({ action: 'panel' }));
+    if (!built.ok) throw new Error(built.message);
+    const body = JSON.stringify(built.request);
+    expect(body).toContain('Aunt Maria (character): Maria taught me to swim.');
+    expect(body).not.toMatch(/Rosa|Gran|secret/);
+  });
+
   test('with the alias switch off, the request keeps the real names', async () => {
     const off: Project = { ...PROJECT, settings: { ...PROJECT.settings, aliasAiRequests: false } };
     const built = await buildAiRequest(input({ project: off }));
