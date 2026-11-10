@@ -32,7 +32,7 @@
 
 - Everything in the Phase 0 to 10 plans' Global Constraints still holds: only `src/lib/net.ts` makes requests, Pen mode sends no AI request, WCAG 2.2 AA in each theme, each budget in spec section 12, and the Part J0 UI and motion rules of `docs/plans/phase-10.md`.
 - Never lose a word (roadmap rule 1). Each new table and field gets a test for save, reload, backup, import and sync. A version switch and a "Use this" take a snapshot first.
-- Simple first (roadmap rule 2). Each tool stays hidden until the writer asks: Versions in the item menu, the form check in the Craft panel, the table read in More tools, the reader panel in the Assistant, sprints in the session timer, the series in the Library, voice capture in a memory item. The command menu opens each one at every level.
+- Simple first (roadmap rule 2). Each tool stays hidden until the writer asks: Versions in the History dialog, the form check with the Craft labels, the table read in the Read aloud panel, the reader panel in the Assistant, sprints in the session timer, the series in the Library, voice capture in a memory item. The command menu opens each one at every level.
 - Initial JavaScript stays under 250 KB gzip. Every new screen, panel and worker loads on use. The Transformers.js runtime and its WASM files load only after the writer turns on speech to text, and the service worker does not precache them.
 - Proof, not promises. The model download, each sprint room call and each reader panel request go in the network log. Audio never leaves the device.
 - One Dexie version and one backup version for each pull request that adds a table or a field that needs an upgrade.
@@ -42,7 +42,7 @@
 1. **A record that passes after a change.** Expected: a change of one byte anywhere in the record file fails the check, and the page names the first entry that fails. Pinned in Task K6.
 2. **A version switch that loses words or marks.** Expected: after a switch and a switch back, the text, the AI marks, the comments and the private-name marks are the same. Pinned in Task K2.
 3. **A real name in a reader panel request.** Expected: a memoir request with a Codex note that holds a private name sends the alias only. Pinned in Task K4.
-4. **A form check that marks a correct poem.** Expected: 0 problems for the public-domain fixtures (Shakespeare's Sonnet 18, Robinson's "The House on the Hill", Swinburne's "Sestina", Dobson's pantoum "In Town") and for Vlo's own ghazal and haiku fixtures. Pinned in Task K1.
+4. **A form check that marks a correct poem.** Expected: 0 problems for the public-domain fixtures (Shakespeare's Sonnet 130, Robinson's "The House on the Hill", Kipling's "Sestina of the Tramp-Royal", Dobson's pantoum "In Town") and for Vlo's own ghazal and haiku fixtures. Pinned in Task K1.
 5. **Text or titles in a sprint room.** Expected: each room request holds only the room code, the nickname, the word count and a random member id. Pinned in Task K7.
 6. **Audio that leaves the device.** Expected: during a recording and its transcription, the network log shows only the one model download. Pinned in Task K9.
 
@@ -54,53 +54,57 @@ Pull request K-A: Tasks K1 to K4. K-B: Tasks K5 and K6. K-C: Tasks K7 and K8. K-
 
 ### Task K1: Poetry forms (F56)
 
-**Files:** Create `src/features/craft/forms.ts`, `tests/unit/forms.test.ts`, `tests/fixtures/forms/*`. Modify `src/lib/db.ts` (`Item.form?`), `src/features/craft/CraftLabels.tsx`, `src/features/help/help.ts`.
+**Files:** Create `src/features/craft/forms.ts`, `src/features/craft/FormCheck.tsx`, `tests/unit/forms.test.ts`, `tests/fixtures/forms/*`. Modify `src/lib/db.ts` (`Item.form?`), `src/features/craft/craftStore.ts`, `src/features/craft/CraftLabels.tsx`, `src/features/editor/Editor.tsx`, `src/features/editor/EditorPane.tsx`, `src/features/backup/file.ts`, `src/features/help/help.ts`.
 
 **Interfaces:**
 
 - Produces: `PoemForm = 'sonnet' | 'villanelle' | 'ghazal' | 'haiku' | 'pantoum' | 'sestina'` and `Item.form?: PoemForm`.
-- Produces: `checkForm(form, lines: readonly string[], scans: readonly LineScan[] | null): FormNote[]`, with `FormNote = { line: number | null; kind: 'count' | 'rhyme' | 'refrain' | 'endword' | 'syllables' | 'meter'; message: string }`. `scans` is null in a language other than English, and then the check does structure and refrains only.
+- Produces: `checkForm(form, stanzas: readonly (readonly string[])[], scans: readonly LineScan[] | null): FormNote[]`, with `FormNote = { line: number | null; kind: 'count' | 'rhyme' | 'refrain' | 'endword' | 'syllables' | 'meter'; message: string }`. `scans` is null in a language other than English, and then the check does structure and refrains only.
 
-- [ ] Tests first: each fixture gives 0 notes; a sonnet of 13 lines gives one count note; a villanelle with a changed refrain names the line; a sestina with a wrong end word names the stanza; a pantoum with a broken repeat names both lines; a haiku of 5-8-5 names line 2; a ghazal whose second line does not end with the refrain names the couplet; a Hebrew poem gets structure notes and no rhyme notes.
-- [ ] A "Form" select in the Craft panel. The notes show as a short list under it, and each note moves the cursor to its line. A form with no notes shows one line of text, with no badge.
-- [ ] The form round trips through save, reload, backup, import and sync. Commit.
+- [x] Tests first: each fixture gives 0 notes; a sonnet of 13 lines gives one count note; a villanelle with a changed refrain names the line; a sestina with a wrong end word names the stanza; a pantoum with a broken repeat names both lines; a haiku of 5-8-5 names line 2; a ghazal whose second line does not end with the refrain names the couplet; a Hebrew poem gets structure notes and no rhyme notes.
+- [x] A "Form" select with the Craft labels of a poem (More tools, then Craft labels). The notes show as a short list under it, and each note moves the cursor to its line. A form with no notes shows one line of text, with no badge.
+- [x] The form round trips through save, reload, backup, import and sync. Commit.
+- Built: meter drift is a syllable check. A line whose syllables differ from the measure of the form, or of most lines, by more than 2 gets a note. A stress check for each line marked correct public-domain poems, because poets turn feet on purpose.
 
 ### Task K2: Versions (F55)
 
-**Files:** Create `src/features/versions/versions.ts`, `src/features/versions/VersionsPanel.tsx`, `src/features/versions/paragraphDiff.ts`, `tests/unit/versions.test.ts`, `tests/e2e/versions.spec.ts`. Modify `src/lib/db.ts` (table `versions`, `Item.versionName?`, database version 10), `src/features/sync/clock.ts`, `src/features/backup/file.ts` (backup version 5), `src/features/binder/*` (item menu), `src/features/help/help.ts`.
+**Files:** Create `src/features/versions/versions.ts`, `src/features/versions/VersionsPanel.tsx`, `src/features/versions/paragraphDiff.ts`, `tests/unit/versions.test.ts`, `tests/e2e/versions.spec.ts`. Create `src/ui/segmented.tsx`. Modify `src/lib/db.ts` (table `itemVersions`, `Item.versionName?`, database version 10), `src/features/sync/clock.ts`, `src/features/sync/blobs.ts`, `src/features/sync/engine.ts`, `src/features/backup/file.ts` (backup version 5), `src/features/backup/backup.ts`, `src/features/binder/items.ts`, `src/features/library/projects.ts`, `src/features/snapshots/snapshots.ts`, `src/features/editor/EditorPane.tsx` (the History dialog), `src/features/help/help.ts`.
 
 **Interfaces:**
 
-- Produces: `Version = { id; projectId; itemId; name; createdAt; updatedAt; state: Uint8Array; text: string }`. The item's own text is the active version, and `Item.versionName` names it ("Main" when absent).
-- Produces: `saveVersion(itemId, name)`, `switchVersion(itemId, versionId)`, `renameVersion`, `deleteVersion`, and `takeParagraph(itemId, versionId, paragraph)`. Each change of the live text goes through the snapshot restore path with `KEEP_AI_MARKS`.
+- Produces: `ItemVersion = { id; projectId; itemId; name; createdAt; updatedAt; state: Uint8Array; text: string }`. The item's own text is the active version, and `Item.versionName` names it ("Main" when absent).
+- Produces: `saveVersion`, `switchVersion`, `renameVersion`, `deleteVersion`, `undoDelete` and `takeBlock`. Each change of the live text goes through `applyState` of the snapshot restore path, with `KEEP_AI_MARKS`.
 - Produces: `paragraphDiff(a: string[], b: string[])`: the paragraphs of two versions aligned by LCS, each pair marked same, changed, only in A or only in B.
 
-- [ ] Tests first: a switch and a switch back give the same Yjs text and marks; a switch takes a snapshot "Before switch"; "Use this" changes only its paragraph; a delete of the active version is not possible; versions round trip through backup, import and a two-device sync; the word count, the search, the exports and the AI read the active version only.
-- [ ] The Versions panel opens from the item menu: the list of versions, "Save as a version", Switch, Rename, Delete (with Undo) and Compare. Compare shows two columns on a wide screen and one column with a toggle on a phone.
-- [ ] `versions.spec.ts`: save a version, edit, switch, compare, use one paragraph, reload, and the text is right; axe passes in each theme. Commit.
+- [x] Tests first: a switch and a switch back give the same Yjs text and marks; a switch takes a snapshot "Before switch"; "Use this" changes only its paragraph; a delete of the active version is not possible; versions round trip through backup, import and a two-device sync; the word count, the search, the exports and the AI read the active version only.
+- [x] The Versions tab of the History dialog: the list of versions, "Save the text now as a version", Switch to this, Rename, Delete (with Undo) and Compare. Compare lists only the paragraphs that differ, each with the text now above the other version, in one column on every screen.
+- [x] `versions.spec.ts`: save a version, edit, switch, compare, use one paragraph, reload, and the text is right; axe passes. Commit.
+- Built: Versions sit in History, next to Snapshots, because both keep earlier text. Each version syncs in its own `version:<id>` blob, so the rows blob stays under the relay's limit.
 
 ### Task K3: Table read (F58)
 
-**Files:** Create `src/features/editor/readAloud/dialogue.ts`, `src/features/editor/readAloud/TableRead.tsx`, `tests/unit/dialogue.test.ts`. Modify `src/features/editor/readAloud/reader.ts`, `src/features/editor/commands/registry.ts`, `src/features/help/help.ts`.
+**Files:** Create `src/features/editor/readAloud/dialogue.ts`, `src/features/editor/readAloud/cast.ts`, `tests/unit/dialogue.test.ts`, `tests/e2e/table-read.spec.ts`. Modify `src/features/editor/readAloud/reader.ts`, `src/features/editor/readAloud/sentences.ts`, `src/features/editor/toolbar/panels/ReadAloudPanel.tsx`, `src/features/editor/commands/registry.ts`, `src/features/help/help.ts`.
 
 **Interfaces:**
 
-- Produces: `dialogueParts(paragraphs, names): Part[]` with `Part = { from; to; speaker: string | null }`. `speaker` is a Codex entry id, or null for the narrator.
+- Produces: `speakersOf(paragraphs, match): Segment[][]` with `Segment = { from; to; speaker: string | null }`. `speaker` is a Codex entry id, or null for the narrator. `castSentences(doc, match, voiceOf)` gives the sentences with a voice for each, and `startReading(editor, cast?)` reads them.
 - Consumes: `localVoices`, `findLocalVoice` and the sentence reader of `reader.ts`. Voice choices are in `localStorage` under the project id.
 
-- [ ] Tests first: straight and curly quotes, a quote that runs over two paragraphs, "said Mara" and "Mara said", an alias, a two-person exchange with no names, a quote with no speaker, nested single quotes, and French and German quote marks.
-- [ ] The Table read panel lists the speakers it found and the narrator, each with a voice select and a sample button. Play, Pause and Stop. The sentence that plays is marked in the text, as read aloud does now. With no on-device voice, the panel says so and offers no Play. Commit.
+- [x] Tests first: straight and curly quotes, a quote that runs over two paragraphs, "said Mara" and "Mara said", an alias, a two-person exchange with no names, a quote with no speaker, nested single quotes, and French and German quote marks.
+- [x] A "Table read" switch in the Read aloud panel, when the Codex has characters. It lists each character that the text names, each with a voice select. The main voice is the narrator's. Read, Pause and Stop, the mark on the sentence that plays, and the message for no on-device voice are the ones of read aloud. Commit.
+- Built: the table read is part of the Read aloud panel, so the writer has one place for read aloud. A character with no choice gets one of the other voices in turn. The sample button is not built: the first sentence of a read is the sample.
 
 ### Task K4: Reader panel (F61)
 
-**Files:** Modify `src/features/ai/reader.ts`, `src/features/ai/prompts.ts`, `src/features/ai/AssistantPanel.tsx`, `src/lib/db.ts` (the Codex comment), `tests/unit/reader-panel.test.ts`, `src/features/help/help.ts`, `docs/privacy.md`.
+**Files:** Create `tests/unit/reader-panel.test.ts`. Modify `src/features/ai/reader.ts`, `src/features/ai/prompts.ts`, `src/features/ai/request.ts`, `src/features/ai/AssistantPanel.tsx`, `src/lib/db.ts` and `src/features/codex/codex.ts` (the Codex comments), `src/features/help/help.ts`, `src/features/policy/privacy.ts` and `docs/privacy.md` (privacy version 3), `tests/unit/ai-request.test.ts`, `tests/e2e/assistant.spec.ts`.
 
 **Interfaces:**
 
-- Produces: `ReaderAction` gets `'panel'`. `codexContext(entries, passage, people): string` gives the notes of the entries that the passage names, at most 600 tokens, with aliases for private names.
+- Produces: `ReaderAction` and `ResultKind` get `'panel'`. `codexContext(entries, text): string` gives the notes of the entries that the text names, at most 600 tokens. `privateRequest` then gives the private names their aliases in the whole request, notes included. `splitPanel(text)` gives the notes of each reader.
 
-- [ ] Tests first: the request holds only the named entries; a private name in a note becomes its alias; the context stops at 600 tokens; a request for the in-browser model fits its 3,500-token limit; the answer splits into four cards by reader; no card has an Insert control.
-- [ ] "Reader panel" in the Assistant in Reader mode, with the four readers as four cards. The drawer shows the passage and the Codex notes before the request goes. Run the a11y and unit suites. Commit, then open pull request K-A.
+- [x] Tests first: the request holds only the named entries; a private name in a note becomes its alias; the context stops at 600 tokens; a request for the in-browser model fits its 3,500-token limit; the answer splits into four cards by reader; no card has an Insert control.
+- [x] "Reader panel" in the Assistant, with the four readers as four cards. The drawer shows the passage and the Codex notes before the request goes. Run the a11y and unit suites. Commit, then open pull request K-A.
+- Built: the Reader panel is a Read action, so Co-writer mode has it too. Its cards have no Insert control in either mode.
 
 ### Task K5: The authorship record (F54)
 
