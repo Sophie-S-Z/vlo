@@ -42,6 +42,14 @@ export const HELP = {
       ],
     },
     {
+      title: 'Hear your text read aloud',
+      steps: [
+        'Choose Read aloud in More tools. Vlo reads from the cursor, or only the selected words.',
+        'Vlo uses only the voices on this device, so your text stays here.',
+        'When the Codex has characters, turn on Table read. Each character speaks in a voice of their own, and you can pick each voice.',
+      ],
+    },
+    {
       title: 'Write a poem in a form',
       steps: [
         'In a poem, choose More tools, then Craft labels.',

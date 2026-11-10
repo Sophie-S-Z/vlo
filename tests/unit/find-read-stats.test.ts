@@ -1,6 +1,7 @@
 import { Editor } from '@tiptap/core';
 import * as Y from 'yjs';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { codexMatcher } from '@/features/codex/codex';
 import {
   endFind,
   findMatches,
@@ -337,6 +338,45 @@ describe('read aloud (E2)', () => {
     e.commands.insertContentAt(1, 'Well, ');
     speech.finish();
     expect(speech.said.map((s) => s.text)).toEqual(['One.', 'Two.']);
+  });
+});
+
+describe('table read (F58)', () => {
+  afterEach(() => {
+    stopReading();
+    vi.unstubAllGlobals();
+  });
+
+  const cast = {
+    match: codexMatcher([
+      { id: 'mara', projectId: 'p', kind: 'character', name: 'Mara', aliases: [], order: 'a0' },
+    ]),
+    voiceOf: (speaker: string | null) => (speaker === 'mara' ? 'local-2' : 'local-1'),
+  };
+
+  test('reads each quote in its speaker’s voice and the narration in the main voice', () => {
+    const speech = fakeSpeech([LOCAL, LOCAL_2]);
+    const e = mount('prose', '<p>“Run now,” said Mara. The tide rose.</p>');
+    e.commands.setTextSelection(1);
+    startReading(e, cast);
+    for (let i = 0; i < 2; i += 1) speech.finish();
+    expect(speech.said.map((s) => [s.text, s.voice])).toEqual([
+      ['“Run now,”', 'local-2'],
+      ['said Mara.', 'local-1'],
+      ['The tide rose.', 'local-1'],
+    ]);
+  });
+
+  test('a selection cuts the parts at its ends', () => {
+    const speech = fakeSpeech([LOCAL, LOCAL_2]);
+    const e = mount('prose', '<p>“Run now,” said Mara.</p>');
+    e.commands.setTextSelection({ from: 6, to: 17 });
+    startReading(e, cast);
+    speech.finish();
+    expect(speech.said.map((s) => [s.text, s.voice])).toEqual([
+      ['now,”', 'local-2'],
+      ['said', 'local-1'],
+    ]);
   });
 });
 

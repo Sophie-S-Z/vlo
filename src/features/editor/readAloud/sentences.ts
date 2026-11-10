@@ -10,6 +10,8 @@ export interface Sentence {
   from: number;
   to: number;
   text: string;
+  /** The voice of a table read (F58). Absent for the writer's chosen voice, null for the device default. */
+  voice?: string | null;
 }
 
 let segmenter: Intl.Segmenter | null = null;
@@ -20,6 +22,11 @@ export function splitSentences(text: string): { index: number; text: string }[] 
   const parts: { index: number; text: string }[] = [];
   for (const part of segmenter.segment(text)) parts.push({ index: part.index, text: part.segment });
   return parts;
+}
+
+/** The words to speak between two positions, with each equation or note marker as a space. */
+export function spokenText(doc: ProseMirrorNode, from: number, to: number): string {
+  return doc.textBetween(from, to, ' ', ' ').replaceAll(NODE_MARK, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -41,11 +48,7 @@ export function sentencesIn(doc: ProseMirrorNode, from = 0, to = doc.content.siz
       if (end <= from || start >= to) continue;
       start = Math.max(start, from);
       end = Math.min(end, to);
-      const spoken = doc
-        .textBetween(start, end, ' ', ' ')
-        .replaceAll(NODE_MARK, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      const spoken = spokenText(doc, start, end);
       // A sentence of only an equation or a note marker has nothing to say.
       if (/[\p{L}\p{N}]/u.test(spoken)) sentences.push({ from: start, to: end, text: spoken });
     }
