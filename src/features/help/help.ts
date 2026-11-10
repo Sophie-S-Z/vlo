@@ -177,6 +177,16 @@ export const HELP = {
       ],
     },
     {
+      title: 'Write a series',
+      steps: [
+        'In the Library, open the menu of a book and choose Add to a series. Make a new series or add the book to one.',
+        'In the Codex of a book, open an entry and turn on Share with the series. Each book of the series then shows it.',
+        'The Series page shows the books in order, their words, the mentions of each shared entry and the style sheet.',
+        'A style sheet rule names a form to use and the forms to avoid. In an English book, the style check marks each form to avoid.',
+        'A book that leaves the series keeps a copy of each shared entry whose names its text holds.',
+      ],
+    },
+    {
       title: 'Keep real names private',
       steps: [
         'In a memoir, open People and choose Add person. Give each real name an alias.',

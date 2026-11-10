@@ -1,17 +1,38 @@
 import { INTENSIFIERS, phrasePattern } from './ai/tells';
 import { LONG_SENTENCE, STOP_WORDS } from './stats';
+import type { StyleRule } from '@/lib/db';
 import { plainChars, sentencesOf, wordsOf, type Span } from './text';
 
 /*
  * The style check (roadmap F47, plan Task H4). It finds repeated words, filler words, cliches and long
- * sentences in one paragraph or poem line. Pure, so the tests and the editor share it. The word lists
- * are English, so the editor runs the check only in English projects.
+ * sentences in one paragraph or poem line, and the forms that a series style sheet avoids (F59). Pure, so
+ * the tests and the editor share it. The word lists are English, so the editor runs the check only in
+ * English projects.
  */
 
-export type StyleKind = 'repeat' | 'filler' | 'cliche' | 'long';
+export type StyleKind = 'repeat' | 'filler' | 'cliche' | 'long' | 'sheet';
 
 export interface StyleNote extends Span {
   kind: StyleKind;
+  /** The form that the style sheet asks for, on a 'sheet' note. */
+  use?: string;
+}
+
+/** Finds the forms that a style sheet avoids in a text, whole words in any case. */
+export type SheetMatcher = (text: string) => StyleNote[];
+
+export function sheetMatcher(rules: readonly StyleRule[]): SheetMatcher {
+  const useOf = new Map<string, string>();
+  for (const rule of rules)
+    for (const form of rule.avoid)
+      if (!useOf.has(form.toLowerCase())) useOf.set(form.toLowerCase(), rule.use);
+  if (useOf.size === 0) return () => [];
+  const pattern = phrasePattern([...useOf.keys()]);
+  return (text) =>
+    matches(pattern, text, 'sheet').flatMap((note) => {
+      const use = useOf.get(text.slice(note.from, note.to).toLowerCase());
+      return use === undefined ? [] : [{ ...note, use }];
+    });
 }
 
 /** A word that comes back within this many words is a repeat. */
@@ -82,9 +103,13 @@ function matches(pattern: RegExp, text: string, kind: StyleKind): StyleNote[] {
  * The style notes of one paragraph or poem line, in text order. A stop word, a word under 3 letters and a
  * word with a capital letter, such as a name, never count as a repeat. A poem line has no long sentence.
  */
-export function styleNotes(text: string, form: 'prose' | 'poem'): StyleNote[] {
+export function styleNotes(text: string, form: 'prose' | 'poem', sheet?: SheetMatcher): StyleNote[] {
   const plain = plainChars(text);
-  const notes = [...matches(FILLER, plain, 'filler'), ...matches(CLICHES, plain, 'cliche')];
+  const notes = [
+    ...matches(FILLER, plain, 'filler'),
+    ...matches(CLICHES, plain, 'cliche'),
+    ...(sheet ? sheet(plain) : []),
+  ];
 
   const lastSeen = new Map<string, number>();
   wordsOf(plain).forEach((word, index) => {
@@ -105,8 +130,10 @@ export function styleNotes(text: string, form: 'prose' | 'poem'): StyleNote[] {
 }
 
 /** Why the check marks these words, for the line under the toolbar. */
-export function styleReason(kind: StyleKind, text: string): string {
+export function styleReason(kind: StyleKind, text: string, use = ''): string {
   switch (kind) {
+    case 'sheet':
+      return `The series style sheet uses "${use}" for "${text}".`;
     case 'repeat':
       return `"${text}" comes again within ${String(REPEAT_WINDOW)} words. Use another word, or keep it on purpose.`;
     case 'filler':

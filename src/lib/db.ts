@@ -336,6 +336,25 @@ export interface CodexEntry {
   order: string;
 }
 
+/** A rule of a series style sheet (F59): the form to use, and the forms that the style check marks. */
+export interface StyleRule {
+  use: string;
+  avoid: string[];
+  note?: string;
+}
+
+/**
+ * Books in an order that share Codex entries and a style sheet (F59). A shared Codex entry belongs to
+ * the series: its `projectId` is the series id. A project is in at most one series.
+ */
+export interface Series {
+  id: string;
+  title: string;
+  projectIds: string[];
+  styleSheet: StyleRule[];
+  updatedAt: number;
+}
+
 /**
  * A research file of a project (F41): an image, a PDF, an audio file, or a clipping of text that the
  * writer pastes with its link. It stays on this device. Vlo never fetches a clipping's link.
@@ -465,6 +484,7 @@ export class VloDb extends Dexie {
   syncClock!: Table<ClockEntry, string>;
   itemVersions!: Table<ItemVersion, string>;
   authorship!: Table<AuthorshipEntry, string>;
+  series!: Table<Series, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -526,6 +546,8 @@ export class VloDb extends Dexie {
     this.version(10).stores({ itemVersions: 'id, projectId, itemId' });
     // Version 11 (Phase 11, Task K5): the authorship record. A new table only.
     this.version(11).stores({ authorship: 'id, projectId' });
+    // Version 12 (Phase 11, Task K8): series of books. A new table only.
+    this.version(12).stores({ series: 'id, *projectIds' });
     this.use(syncClockMiddleware);
   }
 }

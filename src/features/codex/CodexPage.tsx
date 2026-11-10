@@ -8,11 +8,13 @@ import { projectDef } from '@/features/library/templates';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import { ProjectMissing } from '@/features/project/ViewNotices';
-import { db, type CodexEntry, type CodexKind } from '@/lib/db';
+import { shareEntry, useSeriesOf } from '@/features/series/series';
+import { db, type CodexEntry, type CodexKind, type Series } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
+import { Switch } from '@/ui/switch';
 import { Textarea } from '@/ui/textarea';
 import {
   addEntry,
@@ -129,10 +131,14 @@ function AddEntryForm({ projectId, onAdded }: { projectId: string; onAdded: (ent
 /** The open entry. Each field saves when it loses focus. */
 function EntryPanel({
   entry,
+  projectId,
+  series,
   mentions,
   onDelete,
 }: {
   entry: CodexEntry;
+  projectId: string;
+  series: Series | null;
   mentions: number;
   onDelete: (entry: CodexEntry) => void;
 }) {
@@ -238,6 +244,31 @@ function EntryPanel({
           }}
         />
       </div>
+      {series && (
+        <div className="grid gap-1.5">
+          <div className="flex items-center gap-3">
+            <Switch
+              id={`${id}-shared`}
+              checked={entry.projectId === series.id}
+              aria-describedby={`${id}-shared-help`}
+              onCheckedChange={(shared) => {
+                shareEntry(entry.id, projectId, shared).then(
+                  () => {
+                    setError('');
+                  },
+                  (problem: unknown) => {
+                    setError(problemText(problem));
+                  },
+                );
+              }}
+            />
+            <Label htmlFor={`${id}-shared`}>Share with the series</Label>
+          </div>
+          <p id={`${id}-shared-help`} className="text-xs text-muted">
+            Each book of {series.title} shows a shared entry. Turn it off to keep the entry in this book only.
+          </p>
+        </div>
+      )}
       {error && (
         <p role="alert" className="text-sm text-accent-text">
           {error}
@@ -252,6 +283,7 @@ export function CodexPage() {
   const [params, setParams] = useSearchParams();
   const state = useProject(projectId);
   const entries = useCodex(projectId);
+  const series = useSeriesOf(projectId);
   const texts = useLiveQuery(() => db.itemTexts.where('projectId').equals(projectId).toArray(), [projectId]);
   const [message, setMessage] = useState('');
   const [deleted, setDeleted] = useState<CodexEntry | null>(null);
@@ -262,7 +294,7 @@ export function CodexPage() {
     if (deleted) undoRef.current?.focus();
   }, [deleted]);
 
-  if (state.status === 'loading' || entries === undefined) return null;
+  if (state.status === 'loading' || entries === undefined || series === undefined) return null;
   if (state.status === 'missing') return <ProjectMissing />;
 
   const { project, items } = state;
@@ -294,8 +326,9 @@ export function CodexPage() {
       <div className="grid max-w-prose gap-1">
         <h2 className="font-display text-2xl font-semibold">Codex</h2>
         <p className="text-sm text-muted">
-          The characters, places, things and lore of this project. Only you see the Codex: exports, shares and
-          AI requests leave it out. The browser does not mark these names as spelling mistakes.
+          The characters, places, things and lore of this project. Only you see the Codex: exports and shares
+          leave it out, and only the reader panel sends the notes of the names in its passage. The browser
+          does not mark these names as spelling mistakes.
         </p>
       </div>
 
@@ -368,6 +401,8 @@ export function CodexPage() {
             <EntryPanel
               key={open.id}
               entry={open}
+              projectId={project.id}
+              series={series}
               mentions={total(open)}
               onDelete={(target) => {
                 deleteEntry(target.id).then(
@@ -387,7 +422,7 @@ export function CodexPage() {
         </div>
       )}
 
-      <CodexMatrix entries={entries} items={textItems} matrix={matrix} />
+      <CodexMatrix entries={entries} columns={textItems} noun="item" matrix={matrix} />
     </section>
   );
 }

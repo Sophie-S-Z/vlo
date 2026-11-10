@@ -21,7 +21,8 @@ import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
 import { useCodex } from '@/features/codex/codex';
-import { resetCodex, setCodexEntries } from '@/features/codex/codexStore';
+import { resetCodex, setCodexEntries, setStyleSheetRules } from '@/features/codex/codexStore';
+import { useSeriesOf } from '@/features/series/series';
 import { resetTracking, setProjectTracking } from '@/features/editor/trackingStore';
 import { usePeople } from '@/features/people/people';
 import { useResearch } from '@/features/research/research';
@@ -30,7 +31,7 @@ import { ResearchView } from '@/features/research/ResearchView';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectTransitionName } from '@/features/library/ProjectCard';
 import { hasTemplate, projectDef, templateList } from '@/features/library/templates';
-import { db, type AiMode, type Item, type Project } from '@/lib/db';
+import { db, type AiMode, type Item, type Project, type StyleRule } from '@/lib/db';
 import { countUnit } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
@@ -92,6 +93,8 @@ function openItem(project: Project, items: readonly Item[], requested: string | 
   );
 }
 
+const NO_RULES: readonly StyleRule[] = [];
+
 export function ProjectPage() {
   const { projectId = '' } = useParams();
   const [params, setParams] = useSearchParams();
@@ -148,6 +151,11 @@ export function ProjectPage() {
   useEffect(() => {
     if (codex) setCodexEntries(projectId, codex);
   }, [codex, projectId]);
+  // The style check marks the forms that the series style sheet avoids (F59).
+  const series = useSeriesOf(projectId);
+  useEffect(() => {
+    if (series !== undefined) setStyleSheetRules(series?.styleSheet ?? NO_RULES);
+  }, [series]);
   // Track changes (F44) follows the open project's setting.
   const tracking = state.status === 'ready' ? state.project.settings.tracking : undefined;
   useEffect(() => {
@@ -528,6 +536,18 @@ export function ProjectPage() {
         void navigate(`/p/${project.id}/progress`);
       },
     },
+    ...(series
+      ? [
+          {
+            id: 'series',
+            label: `Open ${series.title}`,
+            keywords: ['series', 'books', 'style sheet', 'shared codex', 'sequel'],
+            run: () => {
+              void navigate(`/series/${series.id}`);
+            },
+          },
+        ]
+      : []),
     {
       id: 'library',
       label: 'Go to the Library',

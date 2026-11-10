@@ -1,14 +1,16 @@
 import { Copy, Download, ListOrdered, Pencil, Plus, Trash2 } from 'lucide-react';
 import { countUnit } from '@/lib/wordcount';
-import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { STATUS_LABEL } from '@/features/binder/BinderItem';
+import { formatWords } from '@/features/library/format';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { usePeople } from '@/features/people/people';
 import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
-import type { Sequence } from '@/lib/db';
+import type { Item, Sequence } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Input } from '@/ui/input';
@@ -153,7 +155,7 @@ export function SequencesPage() {
     latest.current = { current, ordered };
   });
 
-  const actions = useMemo<SequenceActions>(
+  const actions = useMemo<SequenceActions<Item>>(
     () => ({
       move: (from, to) => {
         const { current: sequence, ordered: list } = latest.current;
@@ -181,6 +183,15 @@ export function SequencesPage() {
       },
     }),
     [navigate, projectId],
+  );
+  const unit = countUnit(state.status === 'ready' ? state.project.settings.language : undefined);
+  const details = useCallback(
+    (poem: Item) => (
+      <p className="mt-0.5 text-xs text-muted">
+        {formatWords(poem.wordCount, unit)}, {STATUS_LABEL[poem.status].toLowerCase()}
+      </p>
+    ),
+    [unit],
   );
 
   if (state.status === 'loading' || sequences === undefined) return null;
@@ -374,7 +385,8 @@ export function SequencesPage() {
                     poems={ordered}
                     motion={motion}
                     actions={actions}
-                    unit={countUnit(project.settings.language)}
+                    noun="poem"
+                    details={details}
                   />
                 )}
               </div>

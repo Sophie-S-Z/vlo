@@ -44,10 +44,12 @@ export async function collectBackup(projectId: string, options: { music: boolean
       db.itemTexts,
       db.audioFiles,
       db.research,
+      db.series,
       ...viewTables(),
     ],
     async () => ({
       project: await db.projects.get(projectId),
+      series: await db.series.where('projectIds').equals(projectId).first(),
       items: await db.items.where('projectId').equals(projectId).toArray(),
       snapshots: await db.snapshots.where('projectId').equals(projectId).toArray(),
       versions: await db.itemVersions.where('projectId').equals(projectId).toArray(),
@@ -59,6 +61,10 @@ export async function collectBackup(projectId: string, options: { music: boolean
       views: await readViewRows(projectId),
     }),
   );
+  const series = rows.series && {
+    row: rows.series,
+    codex: await db.codex.where('projectId').equals(rows.series.id).toArray(),
+  };
   if (!rows.project) throw new Error('The project is not on this device.');
   const project = rows.project;
   const textItems = rows.items.filter((item) => holdsText(project, item.kind));
@@ -87,6 +93,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     music,
     research,
     views: rows.views,
+    ...(series ? { series } : {}),
   };
 }
 
@@ -120,12 +127,17 @@ export function projectWithId(id: string): Promise<Project | undefined> {
   return db.projects.get(id);
 }
 
-/** The backup with new ids for the project and every row, and "(copy)" after the title. */
-function asCopy(backup: Backup): Backup {
+/**
+ * The backup with new ids for the project and every row, and "(copy)" after the title. The copy is in no
+ * series: it keeps each shared Codex entry of the series as its own.
+ */
+function asCopy(source: Backup): Backup {
+  const { series, ...backup } = source;
   const projectId = newId();
   const ids = new Map(backup.items.map((item) => [item.id, newId()]));
   const itemId = (old: string) => ids.get(old) ?? old;
-  const copied = copyViews(backup.views, projectId, itemId);
+  const views = series ? { ...backup.views, codex: [...backup.views.codex, ...series.codex] } : backup.views;
+  const copied = copyViews(views, projectId, itemId);
   // Each private-name mark in the text names a person by id, so it moves to the new id too.
   const marks = (update: Uint8Array) =>
     backup.views.people.length === 0 ? update : remapNameMarks(update, copied.personId);
@@ -165,6 +177,23 @@ function asCopy(backup: Backup): Backup {
   };
 }
 
+/**
+ * Puts the book back in its series (F59). A series that is not here comes back with this book only. A
+ * shared entry that is here stays as it is. The books keep the order of the backup.
+ */
+async function joinSeries(series: NonNullable<Backup['series']>, projectId: string): Promise<void> {
+  const here = await db.series.get(series.row.id);
+  const stored = await db.codex.bulkGet(series.codex.map((entry) => entry.id));
+  await db.codex.bulkAdd(series.codex.filter((_, i) => stored[i] === undefined));
+  const order = series.row.projectIds;
+  const books = new Set([...(here?.projectIds ?? []), projectId]);
+  const projectIds = [
+    ...order.filter((id) => books.has(id)),
+    ...[...books].filter((id) => !order.includes(id)),
+  ];
+  await db.series.put({ ...(here ?? series.row), projectIds });
+}
+
 /** Stores a checked backup. Returns the id of the project in the Library. */
 export async function importBackup(source: Backup, mode: ImportMode): Promise<string> {
   const backup = mode === 'copy' ? asCopy(source) : source;
@@ -190,9 +219,11 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
         db.itemTexts,
         db.audioFiles,
         db.research,
+        db.series,
         ...viewTables(),
       ],
       async () => {
+        if (backup.series) await joinSeries(backup.series, backup.project.id);
         // The file is a backup of this state, so the project counts as backed up when the file was made.
         await db.projects.add({ ...backup.project, lastBackupAt: backup.createdAt || now });
         // A backup made before Chinese and Japanese counted characters (F38) holds word counts.

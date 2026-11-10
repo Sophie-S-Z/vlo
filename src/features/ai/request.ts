@@ -2,10 +2,10 @@ import type { JSONContent } from '@tiptap/core';
 import type { EditorState } from '@tiptap/pm/state';
 import { docBody } from '@/features/editor/itemText';
 import { leafText } from '@/features/editor/leafText';
+import { codexFor } from '@/features/codex/codex';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { privatePeople } from '@/features/people/people';
 import { db, type Item, type Project } from '@/lib/db';
-import { sortByOrder } from '@/lib/order';
 import type { PrivatePerson } from '@/lib/privacy';
 import type { Target } from './assistantStore';
 import { COWRITER_ACTIONS, cowriterRequest, type CowriterAction } from './cowriter';
@@ -104,9 +104,7 @@ export async function buildAiRequest(input: RequestInput): Promise<BuiltRequest>
         question: input.question,
         passages: needsAll ? await passages(project, items, context) : [],
         // Only the reader panel reads the Codex (plan decision K8).
-        ...(action === 'panel'
-          ? { codex: sortByOrder(await db.codex.where('projectId').equals(project.id).toArray()) }
-          : {}),
+        ...(action === 'panel' ? { codex: await codexFor(project.id) } : {}),
         budget,
         ...(input.inBrowser ? { passageBudget: WEBLLM_PASSAGES } : {}),
       });

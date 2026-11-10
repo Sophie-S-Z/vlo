@@ -14,8 +14,9 @@ import { downloadBackup } from '@/features/backup/downloadBackup';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
 import { backupDue, changedSinceBackup } from '@/features/backup/reminder';
 import { SafariSteps } from '@/features/backup/SafariSteps';
+import { SeriesDialog } from '@/features/series/SeriesDialog';
 import { clock } from '@/lib/clock';
-import { db, type Project } from '@/lib/db';
+import { db, type Project, type Series } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { DeleteDialog } from './DeleteDialog';
@@ -65,6 +66,12 @@ export function LibraryPage() {
   const [deleting, setDeleting] = useState<Project | null>(null);
   const [changing, setChanging] = useState<Project | null>(null);
   const [backingUp, setBackingUp] = useState<Project | null>(null);
+  const [joining, setJoining] = useState<Project | null>(null);
+  const series = useLiveQuery(
+    async () => (await db.series.toArray()).sort((a, b) => a.title.localeCompare(b.title)),
+    [],
+    [] as Series[],
+  );
   // The time the Library opened, for the backup dates on the cards.
   const [now] = useState(() => clock.now());
   // With folder save on, the folder keeps the copies, so the Library asks only after 7 days. Else it
@@ -216,8 +223,12 @@ export function LibraryPage() {
               onRename={() => {
                 setRenaming(project);
               }}
+              series={series.find((s) => s.projectIds.includes(project.id))}
               onTemplates={() => {
                 setChanging(project);
+              }}
+              onSeries={() => {
+                setJoining(project);
               }}
               onDelete={() => {
                 setDeleting(project);
@@ -227,6 +238,36 @@ export function LibraryPage() {
         </ul>
       )}
 
+      {series.length > 0 && (
+        <section aria-labelledby="library-series" className="mt-10 grid gap-3">
+          <h2 id="library-series" className="font-display text-2xl font-semibold">
+            Series
+          </h2>
+          <ul className="grid gap-2">
+            {series.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-baseline gap-x-3">
+                <Link
+                  to={`/series/${s.id}`}
+                  className="font-display text-lg font-semibold [overflow-wrap:anywhere]"
+                >
+                  {s.title}
+                </Link>
+                <span className="text-sm text-muted">
+                  {s.projectIds.length === 1 ? '1 book' : `${String(s.projectIds.length)} books`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <SeriesDialog
+        project={joining}
+        series={series}
+        onClose={() => {
+          setJoining(null);
+        }}
+      />
       <RenameDialog
         project={renaming}
         onClose={() => {

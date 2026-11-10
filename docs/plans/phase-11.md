@@ -143,8 +143,9 @@ Pull request K-A: Tasks K1 to K4. K-B: Tasks K5 and K6. K-C: Tasks K7 and K8. K-
 - Produces: SQL functions `room_create`, `room_join`, `room_post` and `room_state`, with the limits of decision K7, a check on each value, and the daily cleanup of migration 0003.
 - Produces: `createRoom()`, `joinRoom(code, nickname)`, `postWords(words)` and `roomState()`. The panel polls every 15 seconds while a sprint runs and stops when it ends.
 
-- [ ] Tests first: a sprint result counts only the words of its time; the month calendar sums `wordsByDay` for the month; each room request body holds only the allowed fields; a full room and an old code give a clear message; the SQL limits hold in the migration test.
-- [ ] The session timer gets a word target and a result card with a short pulse on success (Part J0). Progress gets "Start a month challenge" and the calendar. "Sprint with friends" shows only when the build has a Supabase URL. Commit.
+- [x] Tests first: a sprint result counts only the words of its time; the month calendar sums `wordsByDay` for the month; each room request body holds only the allowed fields; a full room and an old code give a clear message; the SQL limits hold in the migration test.
+- [x] The session timer gets a word target and a result card with a short pulse on success (Part J0). Progress gets "Start a month challenge" and the calendar. "Sprint with friends" shows only when the build has a Supabase URL. Commit.
+- Built: `room_join` and `room_post` give the standings, so no `room_state` call is needed. The challenge is `{ month; words }`. A room code is six letters with no I or O, the member id is 16 random bytes, and pg_cron runs `cleanup_rooms`. Privacy page version 5 and help version 8 say so.
 
 ### Task K8: Series (F59)
 
@@ -156,8 +157,9 @@ Pull request K-A: Tasks K1 to K4. K-B: Tasks K5 and K6. K-C: Tasks K7 and K8. K-
 - Produces: `codexFor(projectId)`: the project's own entries and the shared entries of its series. Every reader of the Codex moves to it.
 - Produces: the style check kind `'sheet'`: a word in `avoid` gets a note that names `use`.
 
-- [ ] Tests first: a shared entry shows in each book and its names mark in each editor; a book that leaves the series keeps a copy of each shared entry it uses; the style sheet marks an avoided form in each book; a backup of one book holds the series row and the shared entries, and its import into a fresh browser makes the series again; a two-device sync keeps the series.
-- [ ] "Make a series" and "Add to series" in the Library. The Series page: the books in order (drag to reorder), the words of each book and of all, the shared Codex, the style sheet and the mentions table across the books. Commit, then open pull request K-C.
+- [x] Tests first: a shared entry shows in each book and its names mark in each editor; a book that leaves the series keeps a copy of each shared entry it uses; the style sheet marks an avoided form in each book; a backup of one book holds the series row and the shared entries, and its import into a fresh browser makes the series again; a two-device sync keeps the series.
+- [x] "Make a series" and "Add to series" in the Library. The Series page: the books in order (drag to reorder), the words of each book and of all, the shared Codex, the style sheet and the mentions table across the books. Commit, then open pull request K-C.
+- Built: a shared entry has the series id as its `projectId`, so no `seriesId` field is needed. The series row and its shared entries sync in a blob of their own (`rows:<seriesId>`). "Share with the series" is a switch on an entry in the Codex. Off gives the entry to the book that turns it off. A deleted book leaves its series, and the series goes with its last book. A copy import keeps the shared entries as the book's own and joins no series. The Series page reuses the card list of the Collection Sequencer. In a book of a series, the command menu has "Open <series title>".
 
 ### Task K9: Memoir voice capture (F57)
 

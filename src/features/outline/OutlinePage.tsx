@@ -133,7 +133,7 @@ export function OutlinePage() {
   useEffect(() => {
     latest.current = { cards, folder, def };
   });
-  const actions = useMemo<SequenceActions>(
+  const actions = useMemo<SequenceActions<Item>>(
     () => ({
       move: (from, to) => {
         const { cards: list, folder: parent } = latest.current;

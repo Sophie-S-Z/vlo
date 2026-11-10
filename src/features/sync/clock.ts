@@ -21,9 +21,17 @@ export const SYNC_TABLES = [
   'research',
   'itemVersions',
   'authorship',
+  'series',
 ] as const;
 
 export type SyncTable = (typeof SYNC_TABLES)[number];
+
+/**
+ * The project of a synced row, which groups the rows in sync blobs. A project's own row has its id. A
+ * series (F59) is a group of its own: its row and its shared Codex entries have the series id.
+ */
+export const scopeOf = (table: string, row: { id: string; projectId?: string }): string =>
+  table === 'projects' || table === 'series' ? row.id : (row.projectId ?? '');
 
 /** When a row of a synced table last changed, and whether a delete removed it. */
 export interface ClockEntry {
@@ -31,7 +39,7 @@ export interface ClockEntry {
   key: string;
   table: SyncTable;
   id: string;
-  /** The project of the row. A project's own row has its id. */
+  /** The project of the row, by `scopeOf`. */
   projectId: string;
   /** The time of the change, from the clock of the device that made it. */
   at: number;
@@ -59,7 +67,7 @@ function entry(table: string, row: { id: string; projectId?: string }, at: numbe
     key: clockKey(table, row.id),
     table: table as SyncTable,
     id: row.id,
-    projectId: table === 'projects' ? row.id : (row.projectId ?? ''),
+    projectId: scopeOf(table, row),
     at,
   };
 }
