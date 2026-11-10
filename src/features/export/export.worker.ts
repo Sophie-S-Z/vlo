@@ -1,10 +1,9 @@
 /// <reference lib="webworker" />
 import type { BookSettings } from '@/lib/db';
 import type { NameCheck } from '@/lib/privacy';
-import type { FontCheck, FontSwap } from './fontCheck';
+import { checkOwnFonts, type FontCheck, type FontSwap } from './fontCheck';
 import type { LaidOutPdf } from './pdf/pdf';
 import {
-  checkFonts,
   makeExport,
   pdfOptions,
   prepareExport,
@@ -58,7 +57,7 @@ async function handle(message: ExportMessage): Promise<void> {
   }
   if (!prepared) throw new Error('The export has no prepared text.');
   if (message.type === 'check') {
-    fonts = checkFonts(prepared, new Map(message.fonts));
+    fonts = checkOwnFonts(prepared.ownFonts, new Map(message.fonts));
     reply({ type: 'checked', swaps: fonts.swaps });
     return;
   }

@@ -55,8 +55,6 @@ export function BookPreview({
   const id = useId();
   const start = useRef({ project, items });
   const job = useRef<Promise<ExportJob> | null>(null);
-  // The worker answers one call at a time.
-  const queue = useRef<Promise<unknown>>(Promise.resolve());
   // The last layout, with the settings it shows. A change of settings is building until its layout comes.
   const [shown, setShown] = useState<{ key: string; laid: Laid } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -75,14 +73,11 @@ export function BookPreview({
       ? 'ready'
       : 'building';
 
-  const run = <T,>(task: (job: ExportJob) => Promise<T>): Promise<T> => {
-    const next = queue.current.then(async () => {
-      const ready = await job.current;
-      if (!ready) throw new Error('The preview stopped.');
-      return task(ready);
-    });
-    queue.current = next.catch(() => undefined);
-    return next;
+  // The job runs its steps one at a time, in the order of the calls.
+  const run = async <T,>(task: (job: ExportJob) => Promise<T>): Promise<T> => {
+    const ready = await job.current;
+    if (!ready) throw new Error('The preview stopped.');
+    return task(ready);
   };
 
   // One job for the screen: it reads the text, the private names and the writer's own fonts once.

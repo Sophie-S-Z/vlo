@@ -5,11 +5,11 @@ import { deleteItemDoc } from '@/lib/itemDocName';
 import { countUnit, recountItems } from '@/lib/wordcount';
 import { READ_AT_ONCE, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
+import { holdsText } from '@/features/library/templates';
 import { remapNameMarks } from '@/features/people/markAll';
 import { copyViews } from './views';
 import {
   backupFileName,
-  holdsText,
   readBackup,
   writeBackup,
   type Backup,
@@ -67,7 +67,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
   };
   if (!rows.project) throw new Error('The project is not on this device.');
   const project = rows.project;
-  const textItems = rows.items.filter((item) => holdsText(project, item.kind));
+  const textItems = rows.items.filter((item) => holdsText(project.templates, item.kind));
   const updates = await readItemUpdates(textItems.map((item) => item.id));
   const music = await Promise.all(
     rows.music.map(async ({ data, ...info }): Promise<BackupMusic> => ({
@@ -202,10 +202,35 @@ async function joinSeries(series: NonNullable<Backup['series']>, projectId: stri
   await db.series.put({ ...(here ?? series.row), projectIds });
 }
 
-/** Stores a checked backup. Returns the id of the project in the Library. */
+/**
+ * Stores a checked backup. Returns the id of the project in the Library. Replace keeps the device copy in
+ * memory until the backup is stored, and puts it back if a write fails, so the device always holds one of
+ * the two (architecture review finding 4).
+ */
 export async function importBackup(source: Backup, mode: ImportMode): Promise<string> {
-  const backup = mode === 'copy' ? asCopy(source) : source;
-  if (mode === 'replace') await deleteProject(backup.project.id, { keepShares: true });
+  const read = mode === 'copy' ? asCopy(source) : source;
+  // The file is a backup of this state, so the project counts as backed up when the file was made.
+  const backup = { ...read, project: { ...read.project, lastBackupAt: read.createdAt || clock.now() } };
+  if (mode !== 'replace') {
+    await storeBackup(backup);
+    return backup.project.id;
+  }
+  const before = await collectBackup(backup.project.id, { music: false });
+  await deleteProject(backup.project.id, { keepShares: true });
+  try {
+    await storeBackup(backup);
+  } catch (error) {
+    await storeBackup(before);
+    throw error;
+  }
+  return backup.project.id;
+}
+
+/**
+ * Stores the text, then the rows in one transaction. A failed write removes the text it stored, so it
+ * leaves no half project in the Library.
+ */
+async function storeBackup(backup: Backup): Promise<void> {
   const now = clock.now();
   const written: string[] = [];
   try {
@@ -232,8 +257,7 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
       ],
       async () => {
         if (backup.series) await joinSeries(backup.series, backup.project.id);
-        // The file is a backup of this state, so the project counts as backed up when the file was made.
-        await db.projects.add({ ...backup.project, lastBackupAt: backup.createdAt || now });
+        await db.projects.add(backup.project);
         // A backup made before Chinese and Japanese counted characters (F38) holds word counts.
         const { language } = backup.project.settings;
         await db.items.bulkAdd(
@@ -270,5 +294,4 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
     await Promise.all(written.map((itemId) => deleteItemDoc(itemId).catch(() => undefined)));
     throw error;
   }
-  return backup.project.id;
 }

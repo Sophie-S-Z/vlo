@@ -1,11 +1,11 @@
 import * as Y from 'yjs';
 import { DOC_SCHEMA, docSchema, stampDocSchema } from '@/features/editor/docSchema';
 import { sendToTabs } from '@/features/editor/tabSync';
-import { projectDef } from '@/features/library/templates';
+import { holdsText } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { matchNames, type PrivatePerson } from '@/lib/privacy';
-import { openItemDoc, YFRAGMENT } from '@/lib/ydocs';
+import { docFromUpdate, openItemDoc, READ_AT_ONCE, readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
 import { personIdOf, PRIVATE_NAME } from './markName';
 
 /*
@@ -157,16 +157,12 @@ export function remapNameMarks(update: Uint8Array, personId: (old: string) => st
   }
 }
 
-/** Items read at the same time, so a long book does not open hundreds of databases at once. */
-const AT_ONCE = 6;
-
 /** The ids of the project's items that have text. */
 async function textItems(projectId: string): Promise<string[]> {
   const project = await db.projects.get(projectId);
   if (!project) return [];
-  const template = projectDef(project);
   const items = await db.items.where('projectId').equals(projectId).toArray();
-  return items.filter((i) => template.editorKind(i.kind) !== null).map((i) => i.id);
+  return items.filter((i) => holdsText(project.templates, i.kind)).map((i) => i.id);
 }
 
 /** Runs `step` on the open document of each item, a few at a time. */
@@ -174,9 +170,9 @@ async function eachDoc(
   ids: readonly string[],
   step: (id: string, doc: Y.Doc) => Promise<void>,
 ): Promise<void> {
-  for (let i = 0; i < ids.length; i += AT_ONCE) {
+  for (let i = 0; i < ids.length; i += READ_AT_ONCE) {
     await Promise.all(
-      ids.slice(i, i + AT_ONCE).map(async (id) => {
+      ids.slice(i, i + READ_AT_ONCE).map(async (id) => {
         const open = openItemDoc(id);
         try {
           await open.ready;
@@ -231,19 +227,10 @@ export async function markAllInProject(
 /** Counts the marked and unmarked names in the whole project. */
 export async function scanProject(projectId: string, people: readonly PrivatePerson[]): Promise<NameScan> {
   const scan: NameScan = { marked: new Map(), unmarked: new Map() };
-  const ids = await textItems(projectId);
-  for (let i = 0; i < ids.length; i += AT_ONCE) {
-    await Promise.all(
-      ids.slice(i, i + AT_ONCE).map(async (id) => {
-        const open = openItemDoc(id);
-        try {
-          await open.ready;
-          scanNames(open.doc, people, scan);
-        } finally {
-          await open.close();
-        }
-      }),
-    );
+  for (const [, update] of await readItemUpdates(await textItems(projectId))) {
+    const doc = docFromUpdate(update);
+    scanNames(doc, people, scan);
+    doc.destroy();
   }
   return scan;
 }

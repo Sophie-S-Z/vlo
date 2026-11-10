@@ -2,7 +2,7 @@ import { Editor, type JSONContent } from '@tiptap/core';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 import { afterEach, beforeAll, describe, expect, test } from 'vitest';
-import { draftBlocks, insertAiText, KEEP_AI_MARKS } from '@/features/editor/extensions/aiOrigin';
+import { draftBlocks, findTarget, insertAiText, KEEP_AI_MARKS } from '@/features/editor/extensions/aiOrigin';
 import { poemExtensions } from '@/features/editor/extensions/poem';
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { AI_ORIGIN, aiLabelOf, aiOriginOf, type AiOrigin } from '@/features/editor/format/aiOrigin';
@@ -154,6 +154,48 @@ describe('Insert (Co-writer)', () => {
     const { editor } = mount('prose', '<p>Text</p>');
     expect(insertAiText(editor, ' \n\n ', ORIGIN, 'prose')).toBeNull();
     expect(editor.state.doc.textContent).toBe('Text');
+  });
+});
+
+describe('the words a rewrite replaces (architecture review finding 6)', () => {
+  /** The target of `text` where it is now. */
+  function targetOf(editor: Editor, text: string) {
+    const from = posOf(editor, text);
+    return { from, to: from + text.length, text };
+  }
+
+  test('keeps the range while the words are still there', () => {
+    const { editor } = mount('prose', '<p>The gulls slept on the wall.</p>');
+    const target = targetOf(editor, 'slept on');
+    expect(findTarget(editor.state.doc, target, '\n\n')).toEqual(target);
+  });
+
+  test('finds the words again after text before them changed', () => {
+    const { editor } = mount('prose', '<p>The gulls slept on the wall.</p><p>Rain.</p>');
+    const target = targetOf(editor, 'Rain');
+    editor.commands.insertContentAt(1, 'At dusk ');
+    const found = findTarget(editor.state.doc, target, '\n\n');
+    expect(found).toEqual(targetOf(editor, 'Rain'));
+    expect(found?.from).not.toBe(target.from);
+  });
+
+  test('finds the words across a bold run', () => {
+    const { editor } = mount('prose', '<p>The <strong>gulls</strong> slept.</p>');
+    const target = { from: 1, to: 17, text: 'The gulls slept.' };
+    editor.commands.insertContentAt(0, '<p>First.</p>');
+    expect(findTarget(editor.state.doc, target, '\n\n')?.text).toBe('The gulls slept.');
+  });
+
+  test('gives null when the words are gone, match twice, or span two blocks that moved', () => {
+    const { editor } = mount('prose', '<p>The gulls slept.</p><p>The tide came in.</p>');
+    const gone = targetOf(editor, 'The gulls');
+    const twice = { ...targetOf(editor, 'The'), from: 0 };
+    const blocks = { from: 0, to: 0, text: 'slept.\n\nThe tide' };
+    editor.commands.insertContentAt(1, 'At dusk ');
+    editor.commands.insertContentAt(posOf(editor, 'gulls'), 'old ');
+    expect(findTarget(editor.state.doc, gone, '\n\n')).toBeNull();
+    expect(findTarget(editor.state.doc, twice, '\n\n')).toBeNull();
+    expect(findTarget(editor.state.doc, blocks, '\n\n')).toBeNull();
   });
 });
 
