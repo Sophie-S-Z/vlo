@@ -512,13 +512,18 @@ describe('Reading a backup', () => {
         /The project settings are wrong/,
       ],
       [
-        'two sources with one key',
+        'a source key with a space',
         (m) => {
           const projectId = (m.project as { id: string }).id;
-          const source = { projectId, key: 'marlow2019', type: 'book', authors: [], title: 'Night Ferry' };
           m.sources = [
-            { ...source, id: 'source-a' },
-            { ...source, id: 'source-b' },
+            {
+              id: 'source-a',
+              projectId,
+              key: 'marlow 2019',
+              type: 'book',
+              authors: [],
+              title: 'Night Ferry',
+            },
           ];
         },
         /A source has a wrong key/,

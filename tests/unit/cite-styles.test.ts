@@ -218,6 +218,9 @@ describe('a bibliography in each export', () => {
       'A citation names a source that this project does not have now. It shows “[missing source]”.',
     );
     expect(prepareExport(request('markdown', 'mla')).doc.sections.at(-1)?.title).toBe('Works Cited');
+    // Two rows with one key, as after two devices sync: the first row is cited, as in the editor.
+    const twice = prepareExport({ ...request('markdown'), sources: [...sources, { ...article, key: 'k0' }] });
+    expect(twice.doc.sections.at(-1)?.blocks).toEqual(last?.blocks);
   });
 
   test('Markdown, web, Word, EPUB and PDF each hold the citations and the list', async () => {

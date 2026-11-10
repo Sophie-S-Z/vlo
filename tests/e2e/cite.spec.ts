@@ -33,7 +33,7 @@ test('a citation from the / menu follows the style, and an export ends with the 
   await expect(panel.getByRole('status')).toHaveText('Added Night Ferry.');
   expect(await seriousIssues(page)).toEqual([]);
   await panel.getByLabel('Page').fill('12');
-  await panel.getByRole('button', { name: 'Cite Night Ferry' }).click();
+  await panel.getByRole('button', { name: 'Cite Marlow and Quill 2019, Night Ferry' }).click();
   const cite = text.locator('.vlo-cite');
   await expect(cite).toHaveText('(Marlow & Quill, 2019, p. 12)');
 

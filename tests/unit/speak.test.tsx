@@ -74,7 +74,7 @@ test('the words go in at the cursor, and the panel closes', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Speak' }));
   await screen.findByRole('button', { name: 'Stop and write' });
   tick(2);
-  expect(screen.getByText('Listening, 0:02 of 0:30')).toBeTruthy();
+  expect(screen.getByText('Listening').parentElement?.textContent).toBe('Listening, 0:02 of 0:30');
   fireEvent.click(screen.getByRole('button', { name: 'Stop and write' }));
   await vi.waitFor(() => {
     expect(done).toHaveBeenCalledOnce();

@@ -89,12 +89,15 @@ test('a file imports, an edit saves, and Undo gives back a deleted source', asyn
 
   fireEvent.click(screen.getByRole('button', { name: 'Edit Lights on the Water' }));
   const form = screen.getByRole('form', { name: 'Edit source' });
+  // Focus moves into the form, and back to the Edit button after Save.
+  expect(document.activeElement).toBe(within(form).getByLabelText('Type'));
   expect(within(form).getByLabelText<HTMLTextAreaElement>('Editors of the book').value).toBe('Hale, Mina');
   // A key does not change after the source is added.
   expect(within(form).queryByLabelText('Key')).toBeNull();
   fireEvent.change(within(form).getByLabelText('Pages'), { target: { value: '45-68' } });
   fireEvent.click(within(form).getByRole('button', { name: 'Save' }));
   expect(await screen.findByText('Saved Lights on the Water.')).toBeDefined();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Edit Lights on the Water' }));
   expect((await db.sources.toArray()).find((s) => s.key === 'bjork_lights_2020')?.pages).toBe('45–68');
 
   fireEvent.click(screen.getByRole('button', { name: 'Delete Tides and Timetables' }));
@@ -104,12 +107,15 @@ test('a file imports, an edit saves, and Undo gives back a deleted source', asyn
   fireEvent.click(undo);
   expect(await screen.findByText('Restored Tides and Timetables.')).toBeDefined();
   expect(await db.sources.count()).toBe(4);
+  await waitFor(() => {
+    expect(document.activeElement?.getAttribute('aria-label')).toMatch(/^Cite .*, Tides and Timetables$/);
+  });
 });
 
 test('Cite puts a citation with the page at the cursor, and Style changes the style of the project', async () => {
   await addSources(projectId, parseBibtex(readFileSync('tests/fixtures/sources/zotero.bib', 'utf8')));
   fireEvent.change(await screen.findByLabelText('Page'), { target: { value: '12' } });
-  fireEvent.click(screen.getByRole('button', { name: /^Cite Night Ferry/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^Cite Marlow and Quill 2019, Night Ferry/ }));
   expect(done).toBe(1);
   expect(editor.getJSON().content[0]?.content?.at(-1)).toEqual({
     type: 'cite',

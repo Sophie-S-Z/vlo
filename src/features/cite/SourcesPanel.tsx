@@ -168,6 +168,12 @@ function SourceForm({
     </div>
   );
 
+  // The form takes the place of the list, so focus moves to its first field.
+  const first = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    first.current?.focus();
+  }, []);
+
   return (
     <form
       className="grid gap-3"
@@ -191,6 +197,7 @@ function SourceForm({
       <div className="grid gap-1.5">
         <Label htmlFor={`${id}-type`}>Type</Label>
         <select
+          ref={first}
           id={`${id}-type`}
           className={SELECT}
           value={values.type}
@@ -239,12 +246,18 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
   const [problem, setProblem] = useState('');
   const [deleted, setDeleted] = useState<Source | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const undo = useRef<HTMLButtonElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  // The control that gets focus when it shows: the Undo after a delete, or the button that the writer used.
+  const back = useRef<string | null>(null);
   const id = useId();
 
   useEffect(() => {
-    if (deleted) undo.current?.focus();
-  }, [deleted]);
+    if (back.current === null) return;
+    const target = root.current?.querySelector<HTMLElement>(`[data-focus="${back.current}"]`);
+    if (!target) return;
+    target.focus();
+    back.current = null;
+  });
 
   const announce = (text: string) => {
     setDeleted(null);
@@ -280,7 +293,7 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
     );
 
   return (
-    <div className="grid gap-3">
+    <div ref={root} className="grid gap-3">
       <div className="grid gap-1">
         <h2 className="text-sm font-medium">Cite a source</h2>
         <p className="text-sm text-muted">
@@ -332,7 +345,8 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
             <li key={source.id} className="flex items-center gap-1">
               <Button
                 variant="ghost"
-                aria-label={`Cite ${source.title}`}
+                data-focus={`cite-${source.id}`}
+                aria-label={`Cite ${[authorsShort(source), source.year].filter(Boolean).join(' ')}, ${source.title}`}
                 className="block min-w-0 flex-1 px-2 py-1 text-left font-normal whitespace-normal [overflow-wrap:anywhere]"
                 onClick={() => {
                   editor.chain().focus().insertCitation(source.key, page).run();
@@ -347,7 +361,9 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
                 variant="ghost"
                 className="px-2"
                 aria-label={`Edit ${source.title}`}
+                data-focus={`edit-${source.id}`}
                 onClick={() => {
+                  back.current = `edit-${source.id}`;
                   setEditing(source);
                 }}
               >
@@ -362,6 +378,7 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
                     (gone) => {
                       setProblem('');
                       setMessage(`Deleted ${source.title}. Its citations show “[missing source]”.`);
+                      back.current = 'undo';
                       setDeleted(gone ?? null);
                     },
                     () => {
@@ -382,12 +399,13 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
         </p>
         {deleted && (
           <Button
-            ref={undo}
             variant="outline"
+            data-focus="undo"
             onClick={() => {
               const source = deleted;
               restoreSource(source).then(
                 () => {
+                  back.current = `cite-${source.id}`;
                   announce(`Restored ${source.title}.`);
                 },
                 () => {
@@ -424,7 +442,9 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
           Import a file
         </Button>
         <Button
+          data-focus="add"
           onClick={() => {
+            back.current = 'add';
             setEditing('new');
           }}
         >

@@ -420,7 +420,10 @@ function checkDraft(draft: SourceDraft): SourceDraft {
   return clean;
 }
 
-/** Adds sources to a project. A key that the project has, or that the list has twice, gets a suffix. */
+/**
+ * Adds sources to a project. A key that the project has, or that the list has twice, gets a suffix. A
+ * deleted source frees its key, so a new source with that key takes the old citations, as in Pandoc.
+ */
 export async function addSources(projectId: string, drafts: readonly SourceDraft[]): Promise<Source[]> {
   const clean = drafts.map(checkDraft);
   return db.transaction('rw', db.sources, db.projects, async () => {

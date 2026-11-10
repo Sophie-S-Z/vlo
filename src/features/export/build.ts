@@ -125,7 +125,8 @@ function citeSections(
   style: CiteStyle,
   language: string,
 ): { list: ExportSection | null; missing: number } {
-  const byKey = new Map(sources.map((s) => [s.key, s]));
+  // When two sources have one key, the first one is cited, as in the editor.
+  const byKey = new Map([...sources].reverse().map((s) => [s.key, s]));
   const cited = new Set<Source>();
   let missing = 0;
   for (const run of sections.flatMap((s) => runsOf(s.blocks))) {

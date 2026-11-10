@@ -98,6 +98,12 @@ export function readFountain(name: string, source: string): FountainFile {
       speech = false;
       return;
     }
+    // Inside a speech, each line is dialogue or a parenthetical, whatever mark it starts with. Only a lyric keeps its mark.
+    if (speech && !text.startsWith('~')) {
+      add(/^\(.*\)$/.test(text) ? 'parenthetical' : 'dialogue', text);
+      blankBefore = false;
+      return;
+    }
     const section = /^(#+)\s*(.*)$/.exec(text);
     const synopsis = /^=(?!==)\s*(.*)$/.exec(text);
     if (section) {
@@ -124,7 +130,6 @@ export function readFountain(name: string, source: string): FountainFile {
     else if (text.startsWith('>') && text.endsWith('<')) add('action', text.slice(1, -1).trim());
     else if (text.startsWith('>')) add('transition', text.slice(1).trim());
     else if (/^\.[^.]/.test(text)) add('heading', text.slice(1).trim());
-    else if (speech) add(/^\(.*\)$/.test(text) ? 'parenthetical' : 'dialogue', text);
     else if (blankBefore && HEADING.test(text)) add('heading', text);
     else if (blankBefore && next === '' && TRANSITION.test(text)) add('transition', text);
     else if (

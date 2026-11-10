@@ -52,8 +52,10 @@ export function SpeakPanel({
             Speak
           </Button>
         )}
-        <p role="status" className="text-sm text-muted tabular-nums">
-          {recording ? `Listening, ${clock(seconds)} of ${clock(MAX_SECONDS)}` : ''}
+        {/* Only "Listening" is live, so a screen reader does not read the time each second. */}
+        <p className="text-sm text-muted tabular-nums">
+          <span role="status">{recording ? 'Listening' : ''}</span>
+          {recording ? `, ${clock(seconds)} of ${clock(MAX_SECONDS)}` : ''}
         </p>
       </div>
       <LevelMeter level={recorder.level} />

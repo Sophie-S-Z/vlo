@@ -143,11 +143,9 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
 
   const sourceRows = rowsOf(manifest, 'sources');
   unique(sourceRows, 'the sources');
-  const keys = new Set<string>();
+  // Two devices can add the same key before they sync, so a key can be on two rows. The first one is cited.
   views.sources = checkRows(sourceRows, projectId, 'A source', (row) => {
-    const key = text(row, 'key', 'A source');
-    if (!SOURCE_KEY.test(key) || keys.has(key)) fail(`${DAMAGED} A source has a wrong key.`);
-    keys.add(key);
+    if (!SOURCE_KEY.test(text(row, 'key', 'A source'))) fail(`${DAMAGED} A source has a wrong key.`);
     if (!SOURCE_TYPES.includes(text(row, 'type', 'A source') as SourceType))
       fail(`${DAMAGED} A source has a wrong type.`);
     names(row, 'authors');
