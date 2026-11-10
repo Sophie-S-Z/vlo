@@ -607,8 +607,13 @@ Last update: 2026-11-10
   - Focus stays in a useful place after Stop, Remove and the key dialog. "Prepare the request" waits for
     the request before it takes a second press.
 
-## Done in Phases 7 to 12
+## Done in Phases 7 to 13
 
+- Phase 13 (plan `docs/plans/phase-13.md`, roadmap 2 "Every form", F62 to F64). The product owner
+  approved roadmap 2 decisions R1 to R6 as recommended on 2026-11-10.
+  - M1 (F62): Speak to write in More tools, the / menu and the command menu of every prose and poem item.
+    A clip stops at 30 seconds, the Whisper model of F57 turns it into text on the device, and the words go
+    in at the cursor as dictated. No audio is kept. Record a memory shares the recorder and model parts.
 - Phase 12 (plan `docs/plans/phase-12.md`): the five findings that the Phase 6 architecture review left
   for a later release (`docs/architecture-review-phase-6.md`, findings 4 to 8).
   - L1: Replace import keeps the device copy in memory, and puts it back when a write of the backup fails.
