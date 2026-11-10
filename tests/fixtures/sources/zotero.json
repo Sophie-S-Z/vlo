@@ -1,0 +1,6 @@
+[
+	{"id":"http://zotero.org/users/123/items/ABCD1234","type":"book","title":"Night Ferry: A History of the North Sea Crossing","publisher":"Harbour Press","publisher-place":"London","author":[{"family":"Marlow","given":"Ada"},{"family":"Quill","given":"Jonah"}],"issued":{"date-parts":[["2019"]]}},
+	{"id":"bjork2020","type":"chapter","title":"Lights on the Water","container-title":"Harbours of the North","publisher":"Fjord Books","page":"45-67","author":[{"family":"Björk","given":"Søren"}],"editor":[{"family":"Hale","given":"Mina"}],"issued":{"date-parts":[[2020]]}},
+	{"id":"osei2021","type":"article-journal","title":"Tides and Timetables","container-title":"Journal of Maritime Studies","volume":"12","issue":"3","page":"201-219","DOI":"https://doi.org/10.1000/tides.2021.3","URL":"https://example.org/~osei/tides","author":[{"family":"Osei","given":"Kwame"}],"issued":{"date-parts":[[2021,3]]}},
+	{"id":"board2022","type":"webpage","title":"Ferry timetables","container-title":"North Sea Ferries","URL":"https://example.org/ferries","author":[{"literal":"North Sea Ferry Board"}],"issued":{"date-parts":[[2022]]},"accessed":{"date-parts":[[2024,5,1]]}}
+]

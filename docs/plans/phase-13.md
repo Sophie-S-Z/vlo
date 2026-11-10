@@ -84,8 +84,9 @@
 
 **Files:** Create `src/features/cite/sources.ts`, `src/features/cite/SourcesPanel.tsx`, `tests/unit/sources.test.ts`. Modify `src/lib/db.ts` (table `sources`, database version 13), `src/features/sync/*`, `src/features/backup/file.ts` (backup version 8), `src/features/library/projects.ts`.
 
-- [ ] Tests first: a BibTeX file and a CSL-JSON file from Zotero import with authors, title, container, year, pages and DOI; a duplicate key gets a suffix; sources round trip through save, reload, backup, import and sync.
-- [ ] The Sources panel in More tools lists, edits and deletes sources, with Undo. Commit.
+- [x] Tests first: a BibTeX file and a CSL-JSON file from Zotero import with authors, title, container, year, pages and DOI; a duplicate key gets a suffix; sources round trip through save, reload, backup, import and sync.
+- [x] The Sources panel in More tools lists, edits and deletes sources, with Undo. Commit.
+- Built: the backup version is 9, because M-B took version 8. A source has a type (book, chapter, article or web page) and a key that does not change after the writer adds it. A citation names its source by that key, not by its id, so a copy of the project keeps its citations with no change to the text. The BibTeX reader turns LaTeX accents into letters and keeps the characters of a URL. A CSL-JSON id that is a Zotero link is no key, so Vlo makes one from the first author and the year. "Cite a source" opens the panel from More tools in Open writing and memoir. The editor reads the sources from `cite/sourceStore.ts`, which the project screen fills.
 
 ### Task M6: Citations in the text (F64)
 

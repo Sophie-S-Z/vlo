@@ -44,9 +44,9 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 12 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex, research, the sync clock, the item versions, the authorship record and the series', () => {
+  test('version 13 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex, research, the sync clock, the item versions, the authorship record, the series and the sources', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(12);
+    expect(db.verno).toBe(13);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
@@ -67,6 +67,7 @@ describe('Vlo database', () => {
       'sessions',
       'shares',
       'snapshots',
+      'sources',
       'submissions',
       'syncClock',
       'threads',
@@ -102,7 +103,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(12);
+    expect(upgraded.verno).toBe(13);
     expect((await upgraded.networkLog.get('n1'))?.host).toBe('api.groq.com');
     await upgraded.shares.add({
       id: 'sh1',
@@ -139,7 +140,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(12);
+    expect(upgraded.verno).toBe(13);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect((await upgraded.projects.get('kept'))?.templates).toEqual(['poetry']);
     expect(await upgraded.items.count()).toBe(1);
@@ -184,7 +185,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(12);
+    expect(upgraded.verno).toBe(13);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);
@@ -245,7 +246,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(12);
+    expect(upgraded.verno).toBe(13);
     const rows = await upgraded.projects.toArray();
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(byId.get('poems')?.templates).toEqual(['poetry']);
@@ -297,7 +298,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(12);
+    expect(upgraded.verno).toBe(13);
     expect((await upgraded.items.get('a'))?.wordCount).toBe(5);
     expect((await upgraded.items.get('b'))?.wordCount).toBe(2);
     await upgraded.delete();

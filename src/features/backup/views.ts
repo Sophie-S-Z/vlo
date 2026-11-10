@@ -1,5 +1,6 @@
-import type { CodexEntry, CodexKind, SubmissionStatus, ViewRows } from '@/lib/db';
-import { emptyViewRows } from '@/lib/db';
+import type { CodexEntry, CodexKind, SourceType, SubmissionStatus, ViewRows } from '@/lib/db';
+import { emptyViewRows, SOURCE_TYPES } from '@/lib/db';
+import { SOURCE_KEY } from '@/features/cite/sources';
 import { newId } from '@/lib/ids';
 import {
   checkOrder,
@@ -16,8 +17,8 @@ import {
 } from './check';
 
 /*
- * The view rows in a backup file (plan Tasks C1 and H5): board cards, threads and links, life stages, poem
- * orders, people, submissions and Codex entries. A version 1 file has none of them. Each reference must point to a
+ * The view rows in a backup file (plan Tasks C1, H5 and M5): board cards, threads and links, life stages,
+ * poem orders, people, submissions, Codex entries and sources. A version 1 file has none of them. Each reference must point to a
  * row of the same file, except a submission, which may name a piece that the writer deleted.
  */
 
@@ -140,7 +141,39 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
 
   views.codex = checkCodex(rowsOf(manifest, 'codex'), projectId);
 
+  const sourceRows = rowsOf(manifest, 'sources');
+  unique(sourceRows, 'the sources');
+  const keys = new Set<string>();
+  views.sources = checkRows(sourceRows, projectId, 'A source', (row) => {
+    const key = text(row, 'key', 'A source');
+    if (!SOURCE_KEY.test(key) || keys.has(key)) fail(`${DAMAGED} A source has a wrong key.`);
+    keys.add(key);
+    if (!SOURCE_TYPES.includes(text(row, 'type', 'A source') as SourceType))
+      fail(`${DAMAGED} A source has a wrong type.`);
+    names(row, 'authors');
+    if (row.editors !== undefined) names(row, 'editors');
+    text(row, 'title', 'A source');
+    for (const key of ['container', 'publisher', 'year', 'volume', 'issue', 'pages', 'doi', 'url'])
+      optionalText(row, key, 'A source');
+  });
+
   return views;
+}
+
+/** The authors or editors of a source: a list of names, each with a family name. */
+function names(row: Json, key: string): void {
+  const value = row[key];
+  if (
+    !Array.isArray(value) ||
+    !value.every(
+      (name: unknown) =>
+        typeof name === 'object' &&
+        name !== null &&
+        typeof (name as Json).family === 'string' &&
+        ((name as Json).given === undefined || typeof (name as Json).given === 'string'),
+    )
+  )
+    fail(`${DAMAGED} A source has wrong ${key}.`);
 }
 
 /** Codex entries of a project, or the shared entries of a series (F59) when `scopeId` is the series id. */
@@ -215,6 +248,8 @@ export function copyViews(
         itemIds: submission.itemIds.map(itemId),
       })),
       codex: views.codex.map((entry) => ({ ...entry, id: newId(), projectId })),
+      // A citation names its source by key, so the keys stay as they are.
+      sources: views.sources.map((source) => ({ ...source, id: newId(), projectId })),
     },
   };
 }
