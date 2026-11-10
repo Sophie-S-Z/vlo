@@ -280,6 +280,39 @@ describe('item versions (F55)', () => {
       state: [...version.state],
     });
   });
+
+  test('a delete of the item there takes its versions and their blobs here, and revives none', async () => {
+    const version = (id: string) => ({
+      id,
+      projectId: 'p1',
+      itemId: 's1',
+      name: id,
+      createdAt: 1,
+      updatedAt: 1,
+      state: proseUpdate(['Calm.']),
+      text: 'Calm.',
+    });
+    await db.itemVersions.bulkAdd([version('v1'), version('v2')]);
+    now = 2000;
+    await syncOnce();
+    expect(await mine('version:v1')).not.toBeUndefined();
+
+    // v2 changed here after the change that the other device's delete of it saw.
+    now = 3000;
+    await db.itemVersions.update('v2', { name: 'Renamed' });
+    await fromOther(
+      'rows:p1',
+      rows([
+        { table: 'items', id: 's1', at: 4000 },
+        { table: 'itemVersions', id: 'v2', at: 4000, seen: 1000 },
+      ]),
+    );
+    now = 5000;
+    await syncOnce();
+    expect(await db.itemVersions.count()).toBe(0);
+    expect(await mine('version:v1')).toBeUndefined();
+    expect(await mine('version:v2')).toBeUndefined();
+  });
 });
 
 describe('pull', () => {

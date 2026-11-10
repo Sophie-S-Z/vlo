@@ -678,8 +678,8 @@ function AnswerCard({
 
       {readers.length > 0 ? (
         <ul aria-label="Readers" className="grid gap-2">
-          {readers.map(({ reader, notes }) => (
-            <li key={reader} className="grid gap-1 rounded-md border border-rule p-2">
+          {readers.map(({ reader, notes }, index) => (
+            <li key={index} className="grid gap-1 rounded-md border border-rule p-2">
               <h5 className="text-xs font-semibold text-muted">{reader}</h5>
               <AnswerText text={notes} />
             </li>

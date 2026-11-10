@@ -65,11 +65,18 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
   const read = useReadState();
   const codex = useCodexState();
   const projectId = codex.projectId;
-  const [cast, setCastState] = useState<CastSettings>(() =>
-    projectId ? getCast(projectId) : { on: false, voices: {} },
-  );
+  // The choices of the open project: stored, or changed in this panel.
+  const stored = useMemo(() => (projectId ? getCast(projectId) : { on: false, voices: {} }), [projectId]);
+  const [changed, setChanged] = useState<{ projectId: string; cast: CastSettings } | null>(null);
+  const cast = changed?.projectId === projectId ? changed.cast : stored;
   const characters = useMemo(() => codex.entries.filter((e) => e.kind === 'character'), [codex.entries]);
   const match = useMemo(() => codexMatcher(characters), [characters]);
+  const { doc } = editor.state;
+  // Only the characters that the text names get a voice choice.
+  const named = useMemo(
+    () => new Set(match(doc.textBetween(0, doc.content.size, '\n')).map((m) => m.entryId)),
+    [match, doc],
+  );
   const mine = read.editor === editor;
   const status = mine ? read.status : 'idle';
 
@@ -77,7 +84,7 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
     setSettings(setReadSettings(next));
   };
   const changeCast = (next: Partial<CastSettings>) => {
-    if (projectId) setCastState(setCast(projectId, next));
+    if (projectId) setChanged({ projectId, cast: setCast(projectId, next) });
   };
 
   if (!speechAvailable()) {
@@ -99,9 +106,6 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
     cast.voices,
     chosen?.uri ?? null,
   );
-  // Only the characters that the text names get a voice choice.
-  const { doc } = editor.state;
-  const named = new Set(match(doc.textBetween(0, doc.content.size, '\n')).map((m) => m.entryId));
   const startRead = () => {
     startReading(editor, tableRead && cast.on ? { match, voiceOf } : undefined);
   };

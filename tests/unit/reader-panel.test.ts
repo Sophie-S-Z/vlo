@@ -120,5 +120,9 @@ describe('splitPanel', () => {
       { reader: 'Line editor', notes: 'Line editor work is light here.' },
     ]);
     expect(splitPanel('No headings at all.')).toEqual([]);
+    expect(splitPanel('1. First-time reader\r\nI was lost.\r\n2) **Genre fan**\r\nMore storm.')).toEqual([
+      { reader: 'First-time reader', notes: 'I was lost.' },
+      { reader: 'Genre fan', notes: 'More storm.' },
+    ]);
   });
 });

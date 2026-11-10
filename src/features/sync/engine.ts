@@ -195,9 +195,15 @@ async function listNew(space: SyncSpace): Promise<Listed[]> {
   }
 }
 
-/** Removes the rest of a project that another device deleted, as `deleteProject` does. Gives its item ids. */
-async function dropProject(id: string): Promise<string[]> {
-  const itemIds = await db.items.where('projectId').equals(id).primaryKeys();
+/**
+ * Removes the rest of a project that another device deleted, as `deleteProject` does. Gives its items and
+ * the rows with a blob of their own, so this device drops their blobs.
+ */
+async function dropProject(id: string): Promise<Pick<Version, 'table' | 'id'>[]> {
+  const gone: Pick<Version, 'table' | 'id'>[] = [];
+  for (const table of ['items', 'research', 'itemVersions'] as const)
+    for (const rowId of await syncTable(table).where('projectId').equals(id).primaryKeys())
+      gone.push({ table, id: rowId });
   for (const name of [
     ...SYNC_TABLES.filter((t) => t !== 'projects'),
     'snapshots',
@@ -207,12 +213,12 @@ async function dropProject(id: string): Promise<string[]> {
   ])
     await db.table(name).where('projectId').equals(id).delete();
   await db.appMeta.delete(dayStartKey(id));
-  return itemIds;
+  return gone;
 }
 
 interface Applied {
   taken: number;
-  /** The items and files that went. */
+  /** The rows that went, for their blobs and texts. */
   gone: Pick<Version, 'table' | 'id'>[];
   /** The blobs that this device must send again. */
   resend: string[];
@@ -254,8 +260,7 @@ async function applyRows(blobs: RowsBlob[], since: number): Promise<Applied> {
         else {
           await syncTable(v.table).delete(v.id);
           gone.push(v);
-          if (v.table === 'projects')
-            for (const id of await dropProject(v.id)) gone.push({ table: 'items', id });
+          if (v.table === 'projects') gone.push(...(await dropProject(v.id)));
         }
         await db.syncClock.put({
           key,
@@ -277,7 +282,17 @@ async function applyRows(blobs: RowsBlob[], since: number): Promise<Applied> {
     const itemIds = gone.filter((g) => g.table === 'items').map((g) => g.id);
     await db.itemTexts.bulkDelete(itemIds);
     await db.snapshots.where('itemId').anyOf(itemIds).delete();
-    await db.itemVersions.where('itemId').anyOf(itemIds).delete();
+    const versionIds = await db.itemVersions.where('itemId').anyOf(itemIds).primaryKeys();
+    await db.itemVersions.bulkDelete(versionIds);
+    gone.push(...versionIds.map((id) => ({ table: 'itemVersions' as const, id })));
+    // A version whose item went stays gone, unless its item comes back too. The delete above took its row.
+    const back = new Set(applied.revive.filter((v) => v.table === 'items').map((v) => v.id));
+    const kept: Version[] = [];
+    for (const v of applied.revive) {
+      const itemId = v.table === 'itemVersions' ? String(v.row?.itemId) : null;
+      if (itemId === null || back.has(itemId) || (await db.items.get(itemId))) kept.push(v);
+    }
+    applied.revive = kept;
   });
   return applied;
 }

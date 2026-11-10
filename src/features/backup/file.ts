@@ -308,6 +308,11 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     if (row.craft !== undefined && typeof row.craft !== 'boolean')
       fail(`${DAMAGED} ${what} has a wrong Craft switch.`);
     if (row.form !== undefined && !isPoemForm(row.form)) fail(`${DAMAGED} ${what} has a wrong poem form.`);
+    if (row.versionName !== undefined) {
+      const versionName = text(row, 'versionName', what);
+      if (versionName.trim() === '' || versionName.length > MAX_VERSION_NAME)
+        fail(`${DAMAGED} ${what} has a wrong version name.`);
+    }
     optionalText(row, 'labelId', what);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);

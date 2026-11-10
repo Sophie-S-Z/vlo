@@ -100,6 +100,11 @@ describe('each form names what is wrong', () => {
     expect(check('sestina', poem)).toEqual([
       { line: 8, kind: 'endword', message: 'Line 9 should end with “done” (stanza 2).' },
     ]);
+    // "ie" is the end of "die", but a word of 1 or 2 letters is not a form of an end word.
+    const short = withLine(fixture('tramp-royal'), 6, 'What do it matter where or how, says ie');
+    expect(check('sestina', short)).toEqual([
+      { line: 6, kind: 'endword', message: 'Line 7 should end with “die” (stanza 2).' },
+    ]);
   });
 
   test('a pantoum with a broken repeat names the line', () => {

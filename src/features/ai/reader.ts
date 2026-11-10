@@ -81,10 +81,13 @@ export function codexContext(entries: readonly CodexEntry[], text: string): stri
 
 /**
  * The notes of each reader of a panel answer, by the line that starts with the reader's name, as a
- * heading ("## Genre fan") or a label ("**Genre fan:** ..."). Text before the first reader stays out.
+ * heading ("## Genre fan", "1. Genre fan") or a label ("**Genre fan:** ..."). Text before the first
+ * reader stays out.
  */
-export function splitPanel(text: string): { reader: string; notes: string }[] {
-  const heading = new RegExp(`^[#*_ \\t]*(${PANEL_READERS.join('|')})[*_]*(?::[*_]*|[ \\t]*$)`, 'gim');
+export function splitPanel(answer: string): { reader: string; notes: string }[] {
+  const text = answer.replace(/\r\n?/g, '\n');
+  const names = PANEL_READERS.join('|');
+  const heading = new RegExp(`^[#*_ \\t]*(?:\\d+[.)][ \\t]*)?[*_]*(${names})[*_]*(?::[*_]*|[ \\t]*$)`, 'gim');
   const marks = [...text.matchAll(heading)];
   return marks.map((m, i) => ({
     reader: PANEL_READERS.find((r) => r.toLowerCase() === m[1]?.toLowerCase()) ?? m[1] ?? '',

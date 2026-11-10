@@ -237,11 +237,16 @@ function pantoum(
   return scans ? [...notes, ...driftNotes(scans)] : notes;
 }
 
-/** True when a line's last word is the end word, or a longer form of it, such as "along" for "long". */
-function endsWith(line: string, word: string): boolean {
-  const last = wordsOf(line).at(-1) ?? '';
-  return last.length > 0 && (last === word || last.endsWith(word) || word.endsWith(last));
+/**
+ * True for the same end word, or a longer form of it, such as "along" for "long". The shorter word has
+ * 3 letters or more, so "a" is not a form of "sea".
+ */
+function sameWord(a: string, b: string): boolean {
+  if (a === b) return a !== '';
+  return Math.min(a.length, b.length) >= 3 && (a.endsWith(b) || b.endsWith(a));
 }
+
+const endsWith = (line: string, word: string) => sameWord(wordsOf(line).at(-1) ?? '', word);
 
 /** The order of the end words in each stanza: the last, the first, the fifth, the second, and so on. */
 const SESTINA_TURN = [5, 0, 4, 1, 3, 2];
@@ -258,12 +263,13 @@ function sestina(
   notes.push(...stanzaNotes('sestina', groups, size));
   if (notes.length > 0) return notes;
   let order = range(0, 6).map((k) => wordsOf(lines[k] ?? '').at(-1) ?? '');
-  const words = order;
+  // A first-stanza line with no word gives no end word to check.
+  const words = order.filter((w) => w !== '');
   for (let s = 1; s < 6; s += 1) {
     order = SESTINA_TURN.map((k) => order[k] ?? '');
     (groups[s] ?? []).forEach((line, k) => {
       const want = order[k] ?? '';
-      if (endsWith(lines[line] ?? '', want)) return;
+      if (want === '' || endsWith(lines[line] ?? '', want)) return;
       notes.push({
         line,
         kind: 'endword',
@@ -283,7 +289,7 @@ function sestina(
       });
     }
   }
-  const missing = words.filter((w) => !envoiWords.some((e) => e === w || e.endsWith(w)));
+  const missing = words.filter((w) => !envoiWords.some((e) => sameWord(e, w)));
   if (missing.length > 0 && envoi[0] !== undefined) {
     notes.push({
       line: envoi[0],

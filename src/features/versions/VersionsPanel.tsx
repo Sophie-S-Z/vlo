@@ -257,8 +257,8 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
         initial=""
         submit={(name) =>
           run(async () => {
-            await saveVersion(item, editor, doc, kind, name);
-            setMessage(`Saved “${name.trim()}”. The editor keeps the text.`);
+            const saved = await saveVersion(item, editor, doc, kind, name);
+            setMessage(`Saved “${saved}”. The editor keeps the text.`);
           }, 'Vlo could not save the version. Try again.')
         }
       />

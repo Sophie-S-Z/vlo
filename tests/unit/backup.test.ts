@@ -443,6 +443,8 @@ describe('Reading a backup', () => {
       ['a wrong kind', (m) => (row(m, 'items').kind = 'script'), /has a wrong kind/],
       ['a wrong Craft switch', (m) => (row(m, 'items').craft = 'yes'), /has a wrong Craft switch/],
       ['a wrong poem form', (m) => (row(m, 'items').form = 'limerick'), /has a wrong poem form/],
+      ['a version name of no text', (m) => (row(m, 'items').versionName = 42), /has no versionName/],
+      ['an empty version name', (m) => (row(m, 'items').versionName = ' '), /has a wrong version name/],
       [
         'a wrong day of words',
         (m) => {

@@ -55,10 +55,16 @@ async function freshItem(itemId: string): Promise<Item> {
   return item;
 }
 
-/** Keeps a copy of the text in the editor as a new version. The editor keeps its text. */
-export async function saveVersion(item: ItemRef, editor: Editor, doc: Y.Doc, kind: Kind, name: string) {
+/** Keeps a copy of the text in the editor as a new version, and gives its name. The editor keeps its text. */
+export async function saveVersion(
+  item: ItemRef,
+  editor: Editor,
+  doc: Y.Doc,
+  kind: Kind,
+  name: string,
+): Promise<string> {
   const now = clock.now();
-  await db.transaction('rw', db.items, db.itemVersions, async () => {
+  return db.transaction('rw', db.items, db.itemVersions, async () => {
     const fresh = await freshItem(item.id);
     const others = await versionsOf(item.id);
     if (others.length >= MAX_VERSIONS)
@@ -74,6 +80,7 @@ export async function saveVersion(item: ItemRef, editor: Editor, doc: Y.Doc, kin
       state: Y.encodeStateAsUpdate(doc),
       text: docText(editor.state.doc, kind),
     });
+    return clean;
   });
 }
 
@@ -91,9 +98,9 @@ export async function switchVersion(
   const target = await db.itemVersions.get(versionId);
   if (target?.itemId !== item.id) throw new VersionError('Vlo could not find that version.');
   const fresh = await freshItem(item.id);
-  const text = docText(editor.state.doc, kind);
-  await takeSnapshot(item, doc, text, BEFORE_SWITCH);
+  await takeSnapshot(item, doc, docText(editor.state.doc, kind), BEFORE_SWITCH);
   const now = clock.now();
+  // The text and the state from the same moment, after any word typed while the snapshot saved.
   await db.itemVersions.add({
     id: newId(),
     projectId: item.projectId,
@@ -102,7 +109,7 @@ export async function switchVersion(
     createdAt: now,
     updatedAt: now,
     state: Y.encodeStateAsUpdate(doc),
-    text,
+    text: docText(editor.state.doc, kind),
   });
   applyState(editor, target.state);
   await db.transaction('rw', db.items, db.itemVersions, async () => {
@@ -194,12 +201,19 @@ export async function takeBlock(
   b: number,
 ): Promise<void> {
   const other = versionDoc(editor, state);
-  const { rows } = compare(editor.state.doc, other);
-  const index = rows.findIndex((r) => r.kind !== 'onlyA' && r.b === b);
-  const row = rows[index];
   const block = blocksOf(other)[b];
-  if (!row || !block || row.kind === 'same') return;
+  const find = () => {
+    const { rows } = compare(editor.state.doc, other);
+    const index = rows.findIndex((r) => r.kind !== 'onlyA' && r.b === b);
+    const row = rows[index];
+    return row && row.kind !== 'same' ? { rows, index, row } : null;
+  };
+  if (!block || !find()) return;
   await takeSnapshot(item, doc, docText(editor.state.doc, kind), BEFORE_TAKE);
+  // The text can change while the snapshot saves, so find the place again.
+  const found = find();
+  if (!found) return;
+  const { rows, index, row } = found;
   // The block of the text now that the new one replaces or follows.
   const before = rows.slice(0, index).findLast((r) => r.kind !== 'onlyB');
   const target = row.kind === 'changed' ? row.a : before ? before.a + 1 : 0;
