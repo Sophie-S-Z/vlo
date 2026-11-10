@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { readDocx } from './docx';
+import { readFountain } from './fountain';
 import { readMarkdown, readPlainText } from './markdown';
 import { titleOfFile, titleOfName } from './outline';
 import { readScrivener, type FileMap } from './scrivener';
@@ -7,7 +8,7 @@ import { ImportError, type ImportNode, type ImportSource } from './tree';
 
 /*
  * Turns the files that the writer picked into one `ImportSource` (roadmap F34): a .scriv folder or its
- * zip, or Word, Markdown and text files, alone, in a folder or in a zip. Folders become folders, in the
+ * zip, or Word, Markdown, Fountain and text files, alone, in a folder or in a zip. Folders become folders, in the
  * order of their names. Hidden folders, such as Obsidian's .obsidian, stay out.
  */
 
@@ -30,6 +31,8 @@ function decodeText(bytes: Uint8Array): string {
     return new TextDecoder('windows-1252').decode(bytes);
   }
 }
+const FOUNTAIN = /\.(fountain|spmd)$/i;
+
 const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 function hidden(path: string): boolean {
@@ -61,6 +64,7 @@ async function fileNodes(file: PickedFile, skipped: string[]): Promise<ImportNod
   }
   if (/\.(md|markdown)$/i.test(name)) return readMarkdown(name, decodeText(await file.read()));
   if (/\.txt$/i.test(name)) return [readPlainText(name, decodeText(await file.read()))];
+  if (FOUNTAIN.test(name)) return readFountain(name, decodeText(await file.read())).nodes;
   return null;
 }
 
@@ -71,6 +75,14 @@ export async function readPicked(picked: readonly PickedFile[]): Promise<ImportS
   const [zip] = files;
   if (files.length === 1 && zip && /\.zip$/i.test(zip.path))
     files = (await unzip(zip)).filter((f) => !hidden(f.path));
+
+  // One Fountain file keeps the title and the author of its title page.
+  const [only] = files;
+  if (files.length === 1 && only && FOUNTAIN.test(only.path)) {
+    const { title, author, nodes } = readFountain(only.path, decodeText(await only.read()));
+    if (nodes.length === 0) throw new ImportError('This Fountain file has no script in it.');
+    return { title, ...(author ? { author } : {}), nodes, skipped: [] };
+  }
 
   if (files.some((f) => /\.scrivx$/i.test(f.path))) {
     const map: FileMap = new Map(files.map((f) => [f.path, f.read]));
@@ -112,7 +124,8 @@ export async function readPicked(picked: readonly PickedFile[]): Promise<ImportS
   }
   if (other > 0) skipped.push(other === 1 ? '1 other file' : `${String(other)} other files`);
   const nodes = root.children ?? [];
-  if (nodes.length === 0) throw new ImportError('Vlo found no Word, Markdown or text file to import.');
+  if (nodes.length === 0)
+    throw new ImportError('Vlo found no Word, Markdown, Fountain or text file to import.');
   const title =
     top !== '' ? titleOfName(top) : picked.length === 1 ? titleOfFile(first.path) : 'Imported writing';
   return { title, nodes, skipped };

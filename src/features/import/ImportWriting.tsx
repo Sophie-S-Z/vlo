@@ -29,22 +29,24 @@ const MAX_BYTES = 1024 * 1024 * 1024;
 
 const READ_FAILED = 'Vlo could not read these files. Pick them again.';
 
-function summary(nodes: readonly ImportNode[]): { texts: number; words: number; indented: boolean } {
+function summary(nodes: readonly ImportNode[]) {
   let texts = 0;
   let words = 0;
   let indented = false;
+  let script = false;
   const walk = (list: readonly ImportNode[]) => {
     for (const node of list) {
       if (node.text) {
         texts += 1;
         words += countWords(node.text.poem);
         indented ||= /^[ \t]+\S/m.test(node.text.poem);
+        script ||= node.text.html.includes('data-role=');
       }
       walk(node.children ?? []);
     }
   };
   walk(nodes);
-  return { texts, words, indented };
+  return { texts, words, indented, script };
 }
 
 export function ImportWriting() {
@@ -135,7 +137,7 @@ export function ImportWriting() {
       }}
       type="file"
       multiple
-      {...(isFolder ? {} : { accept: '.docx,.md,.markdown,.txt,.zip' })}
+      {...(isFolder ? {} : { accept: '.docx,.md,.markdown,.txt,.fountain,.spmd,.zip' })}
       className="sr-only"
       tabIndex={-1}
       aria-hidden="true"
@@ -151,7 +153,9 @@ export function ImportWriting() {
   const counts = source ? summary(source.nodes) : null;
   // Only the poem editor keeps the spaces and tabs at the start of a line.
   const def = projectDef(pick.value);
-  const losesIndents = counts?.indented === true && def.editorKind(importTextKind(pick.value)) !== 'poem';
+  const textForm = def.editorKind(importTextKind(pick.value));
+  const losesIndents = counts?.indented === true && textForm !== 'poem';
+  const losesRoles = counts?.script === true && textForm !== 'script';
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
@@ -163,9 +167,9 @@ export function ImportWriting() {
       <DialogContent className="max-w-2xl">
         <DialogTitle>Import writing</DialogTitle>
         <DialogDescription>
-          Vlo reads Word (.docx), Markdown, plain text and Scrivener projects. Pick files, a zip, or a folder
-          such as a .scriv folder. In a Word or Markdown file, each Heading 1 starts a folder and each Heading
-          2 starts an item.
+          Vlo reads Word (.docx), Markdown, Fountain scripts, plain text and Scrivener projects. Pick files, a
+          zip, or a folder such as a .scriv folder. In a Word or Markdown file, each Heading 1 starts a folder
+          and each Heading 2 starts an item.
         </DialogDescription>
         {fileInput(files, false)}
         {fileInput(folder, true)}
@@ -203,6 +207,11 @@ export function ImportWriting() {
               {losesIndents && (
                 <p className="text-muted">
                   Some lines start with spaces or tabs. To keep these indents, pick Poetry collection.
+                </p>
+              )}
+              {losesRoles && (
+                <p className="text-muted">
+                  This is a script. To keep each scene heading, character and line of dialogue, pick Script.
                 </p>
               )}
             </div>

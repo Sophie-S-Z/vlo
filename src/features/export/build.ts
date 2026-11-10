@@ -9,8 +9,8 @@ import { itemBlocks, noteCounter, updateToJson } from './read';
 /*
  * Puts the items of an export in reading order with their titles. Notes are research, so no export
  * holds them. A folder (part or chapter) gives a heading. In a novel, scenes give no heading of their
- * own: a scene break separates the scenes of a chapter, as in a printed book. Memories and poems keep
- * their titles.
+ * own: a scene break separates the scenes of a chapter, as in a printed book. A script scene has its own
+ * scene heading line, so it gives no heading either. Memories and poems keep their titles.
  */
 
 export type ExportScope =
@@ -124,7 +124,8 @@ export function buildExportDoc({ project, items, scope, updates, review, book }:
     } else {
       lastWasScene = false;
       // A single memory or poem is the whole export, and the title names it.
-      blocks.push({ type: 'heading', level: 2, runs: [{ type: 'text', text: item.title, style: {} }] });
+      if (form !== 'script')
+        blocks.push({ type: 'heading', level: 2, runs: [{ type: 'text', text: item.title, style: {} }] });
     }
     blocks.push(...body);
     sections.push({ id: item.id, title: item.title, form, blocks });

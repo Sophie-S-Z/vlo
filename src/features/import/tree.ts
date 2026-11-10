@@ -45,6 +45,8 @@ export interface ImportNode {
 
 export interface ImportSource {
   title: string;
+  /** The author that the files name, such as a Fountain title page's. */
+  author?: string;
   nodes: ImportNode[];
   /** What the readers left out, such as "2 tables", for the summary. */
   skipped: string[];
@@ -124,7 +126,10 @@ function docOf(text: ImportText | undefined, form: EditorForm): ProseMirrorNode 
 
 /** The project, its items, their text copies and their Yjs updates, as a backup holds them. */
 export function toBackup(source: ImportSource, templates: readonly Template[], now: number): Backup {
-  const project = newProject({ title: source.title, templates }, now);
+  const project = newProject(
+    { title: source.title, templates, ...(source.author ? { authorName: source.author } : {}) },
+    now,
+  );
   const def = projectDef(project.templates);
   const items: Item[] = [];
   const itemTexts: ItemText[] = [];

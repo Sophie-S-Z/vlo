@@ -68,8 +68,9 @@
 
 **Files:** Create `src/features/export/fountain.ts`, `src/features/import/fountain.ts`, `tests/unit/fountain.test.ts`, `tests/fixtures/scripts/*`. Modify `src/features/export/notices.ts` (`ExportFormat` gets `'fountain'` and `'fdx'`), `src/features/export/run.ts`, `src/features/import/ImportWriting.tsx`.
 
-- [ ] Tests first: a Fountain fixture imports with each role and each scene in the binder, and exports to the same text; forced elements (`!`, `@`, `>`, `.`) keep their role; FDX opens as XML with one `Paragraph` for each line and the right `Type`.
-- [ ] Table read (F58) reads a script by its character lines with no speaker guess. Commit.
+- [x] Tests first: a Fountain fixture imports with each role and each scene in the binder, and exports to the same text; forced elements (`!`, `@`, `>`, `.`) keep their role; FDX opens as XML with one `Paragraph` for each line and the right `Type`.
+- [x] Table read (F58) reads a script by its character lines with no speaker guess. Commit.
+- Built: `src/features/export/fountain.ts` writes both files from the export tree. A Fountain section (`#`, `##`) is an act or a sequence, a `=` synopsis goes on its scene, and notes and boneyard stay in the text. Final Draft has no lyric element, so a lyric is italic dialogue. A Script project offers the two formats in the export dialog. The import dialog says "pick Script" when a file is a script and the pick is not. `xmlText` moved to `src/features/export/xml.ts` for the EPUB and FDX writers.
 
 ### Task M4: The script PDF (F63)
 

@@ -1,5 +1,6 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { CodexMatch } from '@/features/codex/codex';
+import type { CodexEntry } from '@/lib/db';
 import { blockText } from '../textMap';
 import { splitSentences, spokenText, type Sentence } from './sentences';
 
@@ -11,6 +12,7 @@ import { splitSentences, spokenText, type Sentence } from './sentences';
  * 3. A quote that goes on from an open quote of the paragraph before keeps its speaker.
  * 4. In a two-person exchange with no names, the speaker before the last one.
  * 5. Else the narrator.
+ * A script (F63) needs no guess: each character line names the speaker of the lines under it.
  */
 
 /** A part of a paragraph, by offset. `speaker` is a Codex entry id, or null for the narrator. */
@@ -130,6 +132,34 @@ export function speakersOf(
   });
 }
 
+/** The Codex character of a script's character line, such as "ALICE (V.O.)". Case does not count. */
+export function cueSpeaker(cue: string, characters: readonly CodexEntry[]): string | null {
+  const name = cue
+    .replace(/\([^)]*\)|\^/g, '')
+    .trim()
+    .toUpperCase();
+  return (
+    characters.find((c) => [c.name, ...c.aliases].some((n) => n.trim().toUpperCase() === name))?.id ?? null
+  );
+}
+
+/** The speakers of a script's lines. The character line itself is a cue, so no one reads it. */
+function scriptSpeakers(
+  lines: readonly { text: string; role: unknown }[],
+  cue: (text: string) => string | null,
+): Segment[][] {
+  let speaker: string | null = null;
+  return lines.map(({ text, role }) => {
+    if (role === 'character') {
+      speaker = cue(text);
+      return [];
+    }
+    const speech = role === 'dialogue' || role === 'lyric';
+    if (!speech && role !== 'parenthetical') speaker = null;
+    return text.trim() === '' ? [] : [{ from: 0, to: text.length, speaker: speech ? speaker : null }];
+  });
+}
+
 /**
  * The sentences of the document for a table read, each with the voice of its speaker. A quote and the
  * narration around it are separate sentences, so each gets its own voice.
@@ -138,17 +168,20 @@ export function castSentences(
   doc: ProseMirrorNode,
   match: (text: string) => CodexMatch[],
   voiceOf: (speaker: string | null) => string | null,
+  cue: (text: string) => string | null = () => null,
 ): Sentence[] {
-  const blocks: { text: string; at: (index: number) => number }[] = [];
+  const blocks: { text: string; role: unknown; at: (index: number) => number }[] = [];
   doc.descendants((node, pos) => {
     if (!node.isTextblock) return true;
-    blocks.push(blockText(node, pos));
+    blocks.push({ ...blockText(node, pos), role: node.attrs.role });
     return false;
   });
-  const segments = speakersOf(
-    blocks.map((b) => b.text),
-    match,
-  );
+  const segments = blocks.some((b) => b.role !== undefined)
+    ? scriptSpeakers(blocks, cue)
+    : speakersOf(
+        blocks.map((b) => b.text),
+        match,
+      );
   const out: Sentence[] = [];
   blocks.forEach(({ text, at }, index) => {
     for (const segment of segments[index] ?? []) {

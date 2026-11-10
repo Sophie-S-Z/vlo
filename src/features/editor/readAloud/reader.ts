@@ -213,6 +213,8 @@ function finish(editor: Editor, message: string | null): void {
 /** A table read (F58): the characters' names and the voice of each speaker. */
 export interface Cast {
   match: (text: string) => CodexMatch[];
+  /** The speaker of a script's character line (F63). */
+  cue: (text: string) => string | null;
   voiceOf: (speaker: string | null) => string | null;
 }
 
@@ -239,7 +241,7 @@ export function startReading(editor: Editor, cast?: Cast): void {
   if (cast) {
     const { from, to, empty } = selection;
     // A selection cuts the sentences at its ends, as a plain read does.
-    found = castSentences(doc, cast.match, cast.voiceOf)
+    found = castSentences(doc, cast.match, cast.voiceOf, cast.cue)
       .filter((s) => (empty ? s.to >= from : s.to > from && s.from < to))
       .map((s) => {
         if (empty || (s.from >= from && s.to <= to)) return s;

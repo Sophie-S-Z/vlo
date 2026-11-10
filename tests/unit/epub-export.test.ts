@@ -1,7 +1,8 @@
 import JSZip from 'jszip';
 import { describe, expect, test } from 'vitest';
 import { buildExportDoc } from '@/features/export/build';
-import { toEpub, xmlText, type EpubOptions } from '@/features/export/epub';
+import { toEpub, type EpubOptions } from '@/features/export/epub';
+import { xmlText } from '@/features/export/xml';
 import type { ExportDoc } from '@/features/export/model';
 import {
   item,
