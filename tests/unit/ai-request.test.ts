@@ -118,6 +118,30 @@ describe('buildAiRequest', () => {
     expect(body).not.toMatch(/Rosa|Gran|secret/);
   });
 
+  test('a shared Codex note of a series gets the aliases of the People of each book (F59)', async () => {
+    await db.series.add({ id: 's1', title: 'Coast', projectIds: ['p1', 'p2'], styleSheet: [], updatedAt: 0 });
+    await db.people.add({
+      id: 'hale',
+      projectId: 'p2',
+      label: 'Margaret',
+      variants: [{ real: 'Margaret Hale', alias: 'Anne Lowe' }],
+    });
+    await db.codex.add({
+      id: 'c3',
+      projectId: 's1',
+      kind: 'character',
+      name: 'Aunt Rosa',
+      aliases: [],
+      note: 'Margaret Hale was her sister.',
+      order: 'a0',
+    });
+    const built = await buildAiRequest(input({ action: 'panel' }));
+    if (!built.ok) throw new Error(built.message);
+    const body = JSON.stringify(built.request);
+    expect(body).toContain('Aunt Maria (character): Anne Lowe was her sister.');
+    expect(body).not.toMatch(/Margaret|Hale/);
+  });
+
   test('with the alias switch off, the request keeps the real names', async () => {
     const off: Project = { ...PROJECT, settings: { ...PROJECT.settings, aliasAiRequests: false } };
     const built = await buildAiRequest(input({ project: off }));

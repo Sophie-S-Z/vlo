@@ -55,7 +55,7 @@ export const PRIVACY = {
       title: 'Sync between your devices',
       when: 'Only after you turn on sync in Settings, and only between the devices that you pair.',
       sends:
-        'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
+        'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
     },
     room: {
       title: 'Sprint rooms',

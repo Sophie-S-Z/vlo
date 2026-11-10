@@ -138,7 +138,7 @@ afterEach(async () => {
 });
 
 describe('push', () => {
-  test('the first push sends each project, each text and each research file up to 2 MB, then only changes', async () => {
+  test('the first push sends each project, each text and each research file up to 2 MB but no recording, then only changes', async () => {
     await db.cards.add(card('c1', 'Storm'));
     await db.research.bulkAdd([
       {
@@ -159,6 +159,16 @@ describe('push', () => {
         addedAt: 0,
         data: new Blob(['x']),
       },
+      {
+        id: 'r3',
+        projectId: 'p1',
+        itemId: 's1',
+        name: 'Where did you grow up?',
+        type: 'audio/webm',
+        size: 3,
+        addedAt: 0,
+        data: new Blob(['abc']),
+      },
     ]);
     now = 2000;
     expect(await syncOnce()).toEqual({ pushed: 3, pulled: 0 });
@@ -169,9 +179,10 @@ describe('push', () => {
       'items:s1',
       'projects:p1',
     ]);
-    // A folder has no text, and the large file stays on this device.
+    // A folder has no text. The large file and the recording of a memory stay on this device.
     expect(await mine('text:ch')).toBeUndefined();
     expect(await mine('file:r2')).toBeUndefined();
+    expect(await mine('file:r3')).toBeUndefined();
     expect(
       docFromUpdate(fromBase64(((await mine('text:s1')) as TextBlob).update))
         .getXmlFragment(YFRAGMENT)

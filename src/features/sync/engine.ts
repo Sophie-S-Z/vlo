@@ -171,7 +171,8 @@ async function push(sync: Sync, started: number): Promise<number> {
         const update = toBase64(await readItemUpdate(v.id));
         await put(`text:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, itemId: v.id, update });
       }
-      if (v.table === 'research' && Number(v.row.size) <= MAX_SYNC_FILE)
+      // The recording of a memory (F57) never leaves this device, not even sealed.
+      if (v.table === 'research' && Number(v.row.size) <= MAX_SYNC_FILE && v.row.itemId === undefined)
         await put(`file:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] });
       if (v.table === 'itemVersions')
         await put(`version:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] });

@@ -5,6 +5,7 @@ import { leafText } from '@/features/editor/leafText';
 import { codexFor } from '@/features/codex/codex';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { privatePeople } from '@/features/people/people';
+import { seriesOf } from '@/features/series/series';
 import { db, type Item, type Project } from '@/lib/db';
 import type { PrivatePerson } from '@/lib/privacy';
 import type { Target } from './assistantStore';
@@ -122,7 +123,11 @@ export async function buildAiRequest(input: RequestInput): Promise<BuiltRequest>
     try {
       const openDoc = open && { id: open.item.id, doc: open.state.doc.toJSON() as JSONContent };
       const written = items.filter((i) => template.editorKind(i.kind) !== null);
-      people = withMarkedNames(await privatePeople(project.id), await projectMarkedNames(written, openDoc));
+      // A shared Codex note in the reader panel can name a person of another book of the series (F59).
+      const series = action === 'panel' ? await seriesOf(project.id) : undefined;
+      const books = series?.projectIds ?? [project.id];
+      const known = (await Promise.all(books.map(privatePeople))).flat();
+      people = withMarkedNames(known, await projectMarkedNames(written, openDoc));
     } catch {
       // A memoir request never goes without every person and every marked name.
       return {
