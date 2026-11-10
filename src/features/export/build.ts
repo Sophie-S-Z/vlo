@@ -95,6 +95,13 @@ export function textDoc(project: BuildInput['project'], body: string): ExportDoc
   };
 }
 
+/** True when the sections hold script scenes and no other text, so a PDF uses the script layout. */
+function isScript(sections: readonly ExportSection[]): boolean {
+  return (
+    sections.some((s) => s.form === 'script') && sections.every((s) => s.form === null || s.form === 'script')
+  );
+}
+
 export function buildExportDoc({ project, items, scope, updates, review, book }: BuildInput): ExportDoc {
   const template = projectDef(project);
   const list = scopeItems(items, scope);
@@ -144,5 +151,6 @@ export function buildExportDoc({ project, items, scope, updates, review, book }:
     language: cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE,
     sections,
     ...(book ? { book } : {}),
+    ...(isScript(sections) ? { script: project.settings.scriptStyle ?? 'screenplay' } : {}),
   };
 }

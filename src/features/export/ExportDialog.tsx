@@ -198,7 +198,9 @@ export function ExportDialog({
   );
 
   // Book layout (F51) is for a PDF or an EPUB of the whole project, in place of manuscript format.
-  const offersBook = (format === 'pdf' || format === 'epub') && scope === 'project';
+  // A script has its own page layout, so it has no book layout.
+  const offersBook =
+    (format === 'pdf' || format === 'epub') && scope === 'project' && !hasTemplate(project, 'script');
   const usesBook = offersBook && bookLayout;
   const offersManuscript =
     hasTemplate(project, 'novel') && (format === 'docx' || format === 'pdf') && !usesBook;

@@ -1,7 +1,7 @@
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { TextFill } from '@/features/editor/format/fill';
 import type { ScriptRole } from '@/features/editor/scriptRoles';
-import type { BookSettings } from '@/lib/db';
+import type { BookSettings, ScriptStyle } from '@/lib/db';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
@@ -153,6 +153,8 @@ export interface ExportDoc {
   sections: ExportSection[];
   /** Book layout: a trim size, chapter openings and front and back matter (F51). Only a PDF and an EPUB read it. */
   book?: BookSettings;
+  /** The layout of an export that holds only script scenes (F63). A PDF then uses the script layout. */
+  script?: ScriptStyle;
 }
 
 /**

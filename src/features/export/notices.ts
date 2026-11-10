@@ -65,7 +65,13 @@ function scan(doc: ExportDoc): Looks {
     for (const block of list) {
       switch (block.type) {
         case 'paragraph':
-          if (block.align || block.lineSpacing !== undefined || block.dropCap || block.firstLineIndent) {
+          // A script line's place comes from its role, so it is not the writer's layout.
+          if (
+            (block.align && !block.role) ||
+            block.lineSpacing !== undefined ||
+            block.dropCap ||
+            block.firstLineIndent
+          ) {
             looks.layout = true;
           }
           runs(block.runs);
@@ -177,6 +183,12 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
       notices.push('Metallic and prismatic words keep their colors as a gradient, without the sheen.');
     }
     notices.push(...fontNameNotice([...looks.fonts]));
+  } else if (format === 'pdf' && doc.script) {
+    if (looks.color || looks.highlight || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {
+      notices.push(
+        'A script PDF sets every word in Courier Prime 12 pt, in black. Colors, highlights, fonts and sizes stay in Vlo.',
+      );
+    }
   } else if (format === 'pdf') {
     if (looks.fills.has('metallic') || looks.fills.has('prismatic')) {
       notices.push('Metallic and prismatic words keep their colors as a gradient, without the sheen.');

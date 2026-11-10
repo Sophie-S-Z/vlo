@@ -614,6 +614,13 @@ Last update: 2026-11-10
   - M1 (F62): Speak to write in More tools, the / menu and the command menu of every prose and poem item.
     A clip stops at 30 seconds, the Whisper model of F57 turns it into text on the device, and the words go
     in at the cursor as dictated. No audio is kept. Record a memory shares the recorder and model parts.
+  - M2 to M4 (F63): the Script template, with acts, sequences and scenes. A script scene is the item kind
+    `script`, with one block node, `scriptLine`, whose role is a scene heading, action, character,
+    parenthetical, dialogue, transition or lyric. Tab changes the role, Enter starts the role that usually
+    follows, and a character line completes Codex names. Doc schema 8 and backup version 8. Fountain import
+    and export, Final Draft export, and a script PDF in Courier Prime with 55 lines on a page, "(MORE)" and
+    "(CONT'D)". A project setting picks screenplay or stage play. A table read takes each speaker from the
+    character line.
 - Phase 12 (plan `docs/plans/phase-12.md`): the five findings that the Phase 6 architecture review left
   for a later release (`docs/architecture-review-phase-6.md`, findings 4 to 8).
   - L1: Replace import keeps the device copy in memory, and puts it back when a write of the backup fails.

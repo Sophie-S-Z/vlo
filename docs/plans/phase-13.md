@@ -76,8 +76,9 @@
 
 **Files:** Create `src/features/export/pdf/script.ts`, `tests/unit/script-pdf.test.ts`. Modify `src/features/export/pdf/pdf.ts`.
 
-- [ ] Tests first: each role's left margin and width; 55 lines per page; "(MORE)" and "(CONT'D)" when dialogue breaks across a page; scene headings never end a page; the stage play style puts character names in the center.
+- [x] Tests first: each role's left margin and width; 55 lines per page; "(MORE)" and "(CONT'D)" when dialogue breaks across a page; scene headings never end a page; the stage play style puts character names in the center.
 - [ ] Check the PDF of the public-domain fixture by hand against its original. Commit.
+- Built: `buildExportDoc` sets `script` on an export that holds only script scenes, and `toPdf` then uses `pdf/script.ts`. The layout is a pure function of lines and places, so the tests read it with no PDF. A title page names the title and the author, and the pages from page 2 have numbers. A script project offers no book layout. The fixture is Vlo's own short script (`tests/fixtures/scripts/night-ferry.fountain`). The check by hand against a public-domain screenplay PDF waits for the product owner.
 
 ### Task M5: Sources (F64)
 

@@ -202,6 +202,7 @@ export const HELP = {
         'Tab changes the element of the line. Enter starts the element that usually follows, so dialogue follows a character.',
         'On a character line, Vlo shows the rest of a Codex character name in grey. Enter takes the name.',
         'To change to a stage play, choose the page button above the text, then Script layout.',
+        'Export gives a script PDF in Courier Prime on US Letter, a Fountain file or a Final Draft file. Import writing reads a Fountain file.',
       ],
     },
     {
