@@ -242,6 +242,46 @@ describe('push', () => {
   });
 });
 
+describe('item versions (F55)', () => {
+  test('each version goes in a blob of its own, and comes back as the same row', async () => {
+    const version = {
+      id: 'v1',
+      projectId: 'p1',
+      itemId: 's1',
+      name: 'Darker ending',
+      createdAt: 1,
+      updatedAt: 1,
+      state: proseUpdate(['The storm wins.']),
+      text: 'The storm wins.',
+    };
+    await db.itemVersions.add(version);
+    now = 2000;
+    await syncOnce();
+    // The rows blob stays small: the version's state is only in its own blob.
+    const rowsBlob = (await mine('rows:p1')) as RowsBlob;
+    expect(rowsBlob.rows.some((v) => v.table === 'itemVersions')).toBe(false);
+    const own = (await mine('version:v1')) as RowsBlob;
+    expect([...(own.rows[0]?.row?.state as Uint8Array)]).toEqual([...version.state]);
+
+    // The other device gets it, with its Yjs state as bytes.
+    await db.itemVersions.clear();
+    await fromOther(
+      'version:v2',
+      rows([{ table: 'itemVersions', id: 'v2', at: 5000, row: { ...version, id: 'v2' } }]),
+    );
+    now = 6000;
+    await syncOnce();
+    const got = await db.itemVersions.get('v2');
+    expect(ArrayBuffer.isView(got?.state)).toBe(true);
+    // The bytes can come from another realm in the test database, so they compare as a list.
+    expect({ ...got, state: [...(got?.state ?? [])] }).toEqual({
+      ...version,
+      id: 'v2',
+      state: [...version.state],
+    });
+  });
+});
+
 describe('pull', () => {
   test('rows merge by time, and a delete there removes the item, its text and a whole project here', async () => {
     await db.projects.add(novel('p2'));

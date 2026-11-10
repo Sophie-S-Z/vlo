@@ -15,6 +15,7 @@ function backup(template: Template, title: string, items: Item[], updates: [stri
     project: { ...project(template), id: title, title, aiMode: 'pen', createdAt: 0, updatedAt: 0 },
     items,
     snapshots: [],
+    versions: [],
     sessions: [],
     itemTexts: [],
     updates: new Map(updates),

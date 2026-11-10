@@ -19,6 +19,7 @@ export const SYNC_TABLES = [
   'submissions',
   'codex',
   'research',
+  'itemVersions',
 ] as const;
 
 export type SyncTable = (typeof SYNC_TABLES)[number];

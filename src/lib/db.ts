@@ -117,6 +117,8 @@ export interface Item {
   craft?: boolean;
   /** The form that the Craft labels check the poem against (F56). None when absent. */
   form?: PoemForm;
+  /** The name of the version in the editor (F55). "Main" when absent. */
+  versionName?: string;
   /** The id of one of the project's labels (F40). An id that the project no longer has shows no label. */
   labelId?: string;
   createdAt: number;
@@ -138,6 +140,27 @@ export interface Snapshot {
   state: Uint8Array;
   text: string;
 }
+
+/**
+ * A named version of an item's text that is not in the editor now (F55). The item's own text is the
+ * active version. A switch puts this state in the editor and keeps the text it replaces as a version.
+ */
+export interface ItemVersion {
+  id: string;
+  projectId: string;
+  itemId: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  /** The whole Yjs state, so a switch keeps every mark. */
+  state: Uint8Array;
+  text: string;
+}
+
+/** The most versions of one item, so a slip of the button cannot fill the device. */
+export const MAX_VERSIONS = 20;
+/** The longest name of a version. */
+export const MAX_VERSION_NAME = 60;
 
 export interface Session {
   id: string;
@@ -364,6 +387,7 @@ export class VloDb extends Dexie {
   codex!: Table<CodexEntry, string>;
   research!: Table<ResearchFile, string>;
   syncClock!: Table<ClockEntry, string>;
+  itemVersions!: Table<ItemVersion, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -421,6 +445,8 @@ export class VloDb extends Dexie {
       });
     // Version 9 (Phase 9, Task I6): the sync clock. A new table only; the middleware fills it.
     this.version(9).stores({ [CLOCK_TABLE]: 'key, projectId, at' });
+    // Version 10 (Phase 11, Task K2): the named versions of an item. A new table only.
+    this.version(10).stores({ itemVersions: 'id, projectId, itemId' });
     this.use(syncClockMiddleware);
   }
 }

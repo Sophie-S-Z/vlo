@@ -60,6 +60,15 @@ export const HELP = {
       ],
     },
     {
+      title: 'Keep versions of a scene or poem',
+      steps: [
+        'To try a new direction, choose History, then Versions, and save the text as a named version.',
+        'Switch to this puts a version in the editor and keeps the text it replaces as a version.',
+        'Compare shows each paragraph that differs. Use this takes one paragraph of the other version into your text.',
+        'Versions go in backups and sync. Exports and word counts use the version in the editor.',
+      ],
+    },
+    {
       title: 'Revise with Track changes',
       steps: [
         'Choose Track changes in More tools. New words are underlined and deleted words are struck through.',

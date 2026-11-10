@@ -155,6 +155,7 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       db.projects,
       db.items,
       db.snapshots,
+      db.itemVersions,
       db.sessions,
       db.itemTexts,
       db.appMeta,
@@ -168,6 +169,7 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       await db.items.where('projectId').equals(id).delete();
       for (const table of viewTables()) await table.where('projectId').equals(id).delete();
       await db.snapshots.where('projectId').equals(id).delete();
+      await db.itemVersions.where('projectId').equals(id).delete();
       await db.sessions.where('projectId').equals(id).delete();
       await db.itemTexts.where('projectId').equals(id).delete();
       await db.research.where('projectId').equals(id).delete();

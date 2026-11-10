@@ -55,15 +55,25 @@ export function blobKey(keys: SyncKeys, name: string): Promise<string> {
   return hmacName(keys.name, name);
 }
 
-/** A research file's bytes go in the JSON as base64. */
+/** A research file's bytes and an item version's Yjs state go in the JSON as base64. */
 async function packRow(version: Version): Promise<Version> {
-  const data = version.row?.data;
+  const row = version.row;
+  // A test database can give bytes of another realm, so the check reads the shape, not the class.
+  const state = row?.state;
+  if (version.table === 'itemVersions' && ArrayBuffer.isView(state))
+    return {
+      ...version,
+      row: { ...row, state: toBase64(new Uint8Array(state.buffer, state.byteOffset, state.byteLength)) },
+    };
+  const data = row?.data;
   if (version.table !== 'research' || !(data instanceof Blob)) return version;
-  return { ...version, row: { ...version.row, data: toBase64(new Uint8Array(await data.arrayBuffer())) } };
+  return { ...version, row: { ...row, data: toBase64(new Uint8Array(await data.arrayBuffer())) } };
 }
 
 function unpackRow(version: Version): Version {
   const row = version.row;
+  if (version.table === 'itemVersions' && typeof row?.state === 'string')
+    return { ...version, row: { ...row, state: fromBase64(row.state) } };
   if (version.table !== 'research' || typeof row?.data !== 'string') return version;
   return { ...version, row: { ...row, data: new Blob([fromBase64(row.data)], { type: String(row.type) }) } };
 }

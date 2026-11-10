@@ -99,9 +99,18 @@ async function dropBlobs({ space, keys }: Sync, names: string[]): Promise<void> 
     await call('sync_drop', space, { p_device: space.deviceId, p_key: await blobKey(keys, name) });
 }
 
-/** The name of the blob of an item's text or of a research file, or null for a row with no blob. */
-const blobName = (v: Pick<Version, 'table' | 'id'>) =>
-  v.table === 'items' ? `text:${v.id}` : v.table === 'research' ? `file:${v.id}` : null;
+/**
+ * The rows that go in a blob of their own, by table, so a few large ones cannot pass the relay's blob
+ * limit: research files and the Yjs state of item versions.
+ */
+const OWN_BLOB: Partial<Record<Version['table'], string>> = { research: 'file', itemVersions: 'version' };
+
+/** The name of the blob of an item's text, a research file or a version, or null for a row with no blob. */
+const blobName = (v: Pick<Version, 'table' | 'id'>) => {
+  if (v.table === 'items') return `text:${v.id}`;
+  const own = OWN_BLOB[v.table];
+  return own === undefined ? null : `${own}:${v.id}`;
+};
 const blobNames = (versions: readonly Pick<Version, 'table' | 'id'>[]) =>
   versions.flatMap((v) => blobName(v) ?? []);
 
@@ -149,8 +158,7 @@ async function push(sync: Sync, started: number): Promise<number> {
   for (const projectId of projectIds) {
     const versions = [...(await localVersions(projectId)).values()];
     const project = versions.find((v) => v.table === 'projects')?.row as Project | undefined;
-    // Research files go in their own blobs, so a few large files cannot pass the relay's blob limit.
-    const rows = versions.filter((v) => v.table !== 'research' || !v.row);
+    const rows = versions.filter((v) => OWN_BLOB[v.table] === undefined || !v.row);
     await put(`rows:${projectId}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows });
     for (const v of versions) {
       const name = blobName(v);
@@ -162,6 +170,8 @@ async function push(sync: Sync, started: number): Promise<number> {
       }
       if (v.table === 'research' && Number(v.row.size) <= MAX_SYNC_FILE)
         await put(`file:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] });
+      if (v.table === 'itemVersions')
+        await put(`version:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] });
     }
   }
   await dropBlobs(sync, blobNames(changes.filter((e) => e.gone)));
@@ -267,6 +277,7 @@ async function applyRows(blobs: RowsBlob[], since: number): Promise<Applied> {
     const itemIds = gone.filter((g) => g.table === 'items').map((g) => g.id);
     await db.itemTexts.bulkDelete(itemIds);
     await db.snapshots.where('itemId').anyOf(itemIds).delete();
+    await db.itemVersions.where('itemId').anyOf(itemIds).delete();
   });
   return applied;
 }

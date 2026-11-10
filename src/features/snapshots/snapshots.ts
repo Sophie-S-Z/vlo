@@ -54,8 +54,6 @@ export function snapshotsOf(itemId: string): Promise<Snapshot[]> {
 
 /**
  * Puts a snapshot's text back. The current text is saved first as a "Before restore" snapshot.
- * The editor replaces its content in one transaction, so the change goes into the item's live Yjs
- * document and its history continues.
  */
 export async function restoreSnapshot(
   item: ItemRef,
@@ -67,10 +65,17 @@ export async function restoreSnapshot(
   const snapshot = await db.snapshots.get(snapshotId);
   if (snapshot?.itemId !== item.id) throw new Error('Vlo could not find that snapshot.');
   await takeSnapshot(item, doc, docText(editor.state.doc, kind), BEFORE_RESTORE);
-  const old = docFromUpdate(snapshot.state);
+  applyState(editor, snapshot.state);
+}
+
+/**
+ * Puts a stored Yjs state in the editor in one transaction, so the change goes into the item's live Yjs
+ * document and its history continues. The AI marks and the suggestions of the state come back as they were.
+ */
+export function applyState(editor: Editor, state: Uint8Array): void {
+  const old = docFromUpdate(state);
   try {
     const node = yXmlFragmentToProseMirrorRootNode(old.getXmlFragment(YFRAGMENT), editor.schema);
-    // A restore brings back the AI marks and the suggestions of the snapshot as they were.
     editor
       .chain()
       .setMeta(KEEP_AI_MARKS, true)
