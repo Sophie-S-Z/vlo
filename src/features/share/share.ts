@@ -37,6 +37,8 @@ export interface ShareInput {
   /** The items to share. Vlo puts them in binder order. */
   itemIds: readonly string[];
   people: readonly PrivatePerson[];
+  /** The writer's questions for the readers. Empty questions stay out. */
+  questions?: readonly string[];
 }
 
 export interface PreparedShare {
@@ -74,7 +76,9 @@ export async function prepareShare(input: ShareInput): Promise<PreparedShare> {
     people: [...input.people],
     shareSafe: hasTemplate(input.project, 'memoir'),
   });
-  return { bundle: toBundle(doc, await mathmlFor(doc), clock.now()), itemIds, names };
+  const questions = (input.questions ?? []).map((q) => q.trim()).filter((q) => q !== '');
+  const bundle = toBundle(doc, await mathmlFor(doc), clock.now());
+  return { bundle: questions.length > 0 ? { ...bundle, questions } : bundle, itemIds, names };
 }
 
 /** A size in megabytes with one decimal, such as 2.8. */
@@ -113,6 +117,7 @@ export async function createShare(
     ownerToken,
     key: text,
     revoked: false,
+    ...(prepared.bundle.questions ? { questions: prepared.bundle.questions } : {}),
     comments: [],
     commentsReadAt: 0,
   };

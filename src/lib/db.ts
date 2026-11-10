@@ -286,8 +286,13 @@ export interface StoredComment {
   /** The section and block of the bundle that the comment is about. */
   section: number;
   block: number;
-  /** The first 12 words of that block, so the writer sees the place after the text changes. */
+  /** The first 12 words of that block, or the words the reader selected, as `ReaderComment` holds them. */
   quote: string;
+  start?: number;
+  end?: number;
+  reaction?: 'loved' | 'funny' | 'moved' | 'lost' | 'bored' | 'unconvinced';
+  /** The index of the link's question that `text` answers. */
+  question?: number;
   name?: string;
   text: string;
   /** When the server took the comment, in milliseconds. */
@@ -312,6 +317,8 @@ export interface ShareRecord {
   /** Base64url of the 32-byte AES-GCM key. */
   key: string;
   revoked: boolean;
+  /** The questions that the link asks its readers (F50). */
+  questions?: string[];
   comments: StoredComment[];
   /** When Vlo last read the comments, or 0. */
   commentsReadAt: number;

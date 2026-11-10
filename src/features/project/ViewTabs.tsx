@@ -30,6 +30,8 @@ export const GRID_VIEW = 'grid';
 const outline: Tab = { label: 'Outline', to: '/outline', active: (path) => path.endsWith('/outline') };
 /** The Codex (F42) is for every template too, with the same rule. */
 const codex: Tab = { label: 'Codex', to: '/codex', active: (path) => path.endsWith('/codex') };
+/** Feedback (F50) is for every template too, with the same rule. */
+const feedback: Tab = { label: 'Feedback', to: '/feedback', active: (path) => path.endsWith('/feedback') };
 
 function tabsFor(project: Project, full: boolean, path: string): Tab[] {
   const write: Tab = {
@@ -40,6 +42,7 @@ function tabsFor(project: Project, full: boolean, path: string): Tab[] {
         '/board',
         '/outline',
         '/codex',
+        '/feedback',
         '/timeline',
         '/people',
         '/sequences',
@@ -52,7 +55,7 @@ function tabsFor(project: Project, full: boolean, path: string): Tab[] {
     { label: 'Submissions', to: '/submissions', active: (path) => path.endsWith('/submissions') },
     { label: 'Progress', to: '/progress', active: (path) => path.endsWith('/progress') },
   ];
-  const tools = [outline, codex].filter((tab) => full || tab.active(path, new URLSearchParams()));
+  const tools = [outline, codex, feedback].filter((tab) => full || tab.active(path, new URLSearchParams()));
   return [write, ...viewsOf(project), ...tools, ...shared];
 }
 

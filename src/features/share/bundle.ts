@@ -48,7 +48,13 @@ export interface ShareBundle {
   author?: string;
   createdAt: number;
   sections: ShareSection[];
+  /** The writer's questions for the readers, shown after the text (F50). */
+  questions?: string[];
 }
+
+/** The most questions that a link asks, and the longest question. */
+export const MAX_QUESTIONS = 5;
+export const MAX_QUESTION = 300;
 
 /** The MathML elements that the reader view draws. Any other element makes the bundle unreadable. */
 export const MATH_TAGS: ReadonlySet<string> = new Set([
@@ -387,17 +393,25 @@ function section(value: unknown): ShareSection {
   return { title: value.title, form, blocks: list(value.blocks, (b) => block(b, 0)) };
 }
 
+function question(value: unknown): string {
+  if (!isStr(value) || value.trim() === '' || value.length > MAX_QUESTION) fail();
+  return value;
+}
+
 /** The bundle, checked field by field, or null when any part is not a bundle that Vlo makes. */
 export function parseBundle(value: unknown): ShareBundle | null {
   try {
     if (!isObj(value) || value.v !== 1 || !isStr(value.title) || !isNum(value.createdAt)) fail();
     if (value.author !== undefined && !isStr(value.author)) fail();
+    const questions = value.questions === undefined ? [] : list(value.questions, question);
+    if (questions.length > MAX_QUESTIONS) fail();
     return {
       v: 1,
       title: value.title,
       ...(isStr(value.author) ? { author: value.author } : {}),
       createdAt: value.createdAt,
       sections: list(value.sections, section),
+      ...(questions.length > 0 ? { questions } : {}),
     };
   } catch (problem) {
     if (problem instanceof Invalid || problem instanceof RangeError) return null;
@@ -417,26 +431,28 @@ export function runsText(runs: readonly ShareRun[]): string {
 /** The longest block quote, in UTF-16 units, that a comment holds. */
 export const MAX_QUOTE = 200;
 
+/** The plain text of a block. The offsets of a comment on some words are offsets in this text. */
+export function textOfBlock(b: ShareBlock): string {
+  switch (b.type) {
+    case 'p':
+    case 'h':
+      return runsText(b.runs);
+    case 'stanza':
+      return b.lines.map((l) => runsText(l.runs)).join(' ');
+    case 'quote':
+      return b.blocks.map(textOfBlock).join(' ');
+    case 'list':
+      return b.items.flat().map(textOfBlock).join(' ');
+    case 'break':
+      return '';
+    case 'math':
+      return '';
+  }
+}
+
 /** The first 12 words of a block, for the place of a comment, at most MAX_QUOTE long. */
 export function blockQuote(item: ShareBlock): string {
-  const all = (b: ShareBlock): string => {
-    switch (b.type) {
-      case 'p':
-      case 'h':
-        return runsText(b.runs);
-      case 'stanza':
-        return b.lines.map((l) => runsText(l.runs)).join(' ');
-      case 'quote':
-        return b.blocks.map(all).join(' ');
-      case 'list':
-        return b.items.flat().map(all).join(' ');
-      case 'break':
-        return '';
-      case 'math':
-        return '';
-    }
-  };
-  const words = all(item).split(/\s+/).filter(Boolean).slice(0, 12).join(' ');
+  const words = textOfBlock(item).split(/\s+/).filter(Boolean).slice(0, 12).join(' ');
   if (words.length <= MAX_QUOTE) return words;
   // A language with no spaces, or a long address, gives long "words". The cut never splits a character.
   let cut = words.slice(0, MAX_QUOTE - 1);
