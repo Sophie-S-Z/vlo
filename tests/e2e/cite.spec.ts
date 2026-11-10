@@ -22,6 +22,8 @@ test('a citation from the / menu follows the style, and an export ends with the 
   await page.keyboard.press('Enter');
 
   const panel = page.getByRole('dialog', { name: 'Cite a source' });
+  // The word count rolls in after a typing pause. Axe must not read it half faded.
+  await expect(page.getByText('5 words', { exact: true })).toBeVisible();
   await panel.getByRole('button', { name: 'Add a source' }).click();
   const form = panel.getByRole('form', { name: 'Add a source' });
   await form.getByLabel('Authors').fill('Marlow, Ada\nQuill, Jonah');
