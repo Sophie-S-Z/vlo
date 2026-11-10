@@ -13,7 +13,7 @@ test.use({ serviceWorkers: 'block' });
 
 const THEMES = ['ink', 'paper', 'sepia', 'contrast'] as const;
 const VIEWS = ['Board', 'Plot Grid', 'Timeline', 'People', 'Sequences', 'Submissions', 'Progress'];
-const PAGES = ['/', '/settings', '/network', '/ai-policy', '/privacy', '/help', '/nope'];
+const PAGES = ['/', '/settings', '/network', '/ai-policy', '/privacy', '/help', '/verify', '/nope'];
 
 async function setTheme(page: Page, theme: (typeof THEMES)[number]) {
   await page.addInitScript((t) => {

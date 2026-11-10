@@ -242,6 +242,43 @@ describe('push', () => {
   });
 });
 
+describe('the authorship record (F54)', () => {
+  test('each entry goes in the rows blob and comes back as the same row', async () => {
+    const entry = {
+      id: 'a1',
+      projectId: 'p1',
+      device: 'd'.repeat(64),
+      seq: 0,
+      at: 1,
+      minutes: 1,
+      typed: 12,
+      pasted: 0,
+      dictated: 0,
+      ai: 0,
+      deleted: 0,
+      words: 3,
+      prev: '',
+      hash: 'h'.repeat(64),
+      sig: 's'.repeat(128),
+      key: { crv: 'P-256' as const, kty: 'EC' as const, x: 'x', y: 'y' },
+    };
+    await db.authorship.add(entry);
+    now = 2000;
+    await syncOnce();
+    const rowsBlob = (await mine('rows:p1')) as RowsBlob;
+    expect(rowsBlob.rows.find((v) => v.table === 'authorship')?.row).toEqual(entry);
+
+    await db.authorship.clear();
+    await fromOther(
+      'rows:p1',
+      rows([{ table: 'authorship', id: 'a2', at: 5000, row: { ...entry, id: 'a2' } }]),
+    );
+    now = 6000;
+    await syncOnce();
+    expect(await db.authorship.get('a2')).toEqual({ ...entry, id: 'a2' });
+  });
+});
+
 describe('item versions (F55)', () => {
   test('each version goes in a blob of its own, and comes back as the same row', async () => {
     const version = {

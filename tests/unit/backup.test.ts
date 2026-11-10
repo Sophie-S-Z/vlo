@@ -1,6 +1,8 @@
 import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { exportRecord, flushEntry, noteChange } from '@/features/authorship/record';
+import { verifyRecord } from '@/features/authorship/verify';
 import { backUpProject, collectBackup, importBackup, readBackup } from '@/features/backup/backup';
 import { BACKUP_VERSION, BackupError, backupFileName, writeBackup } from '@/features/backup/file';
 import { backupDue, backupLabel, daysBetween } from '@/features/backup/reminder';
@@ -72,6 +74,8 @@ async function novelWithText() {
     state: proseUpdate(['The storm wins.']),
     text: 'The storm wins.',
   });
+  noteChange(project.id, 'typed', 40, 2);
+  await flushEntry(project.id);
   await db.sessions.add({
     id: `session-${project.id}`,
     projectId: project.id,
@@ -91,6 +95,7 @@ async function rowsOf(projectId: string) {
     snapshots: sortById(await db.snapshots.where('projectId').equals(projectId).toArray()),
     versions: sortById(await db.itemVersions.where('projectId').equals(projectId).toArray()),
     sessions: sortById(await db.sessions.where('projectId').equals(projectId).toArray()),
+    authorship: sortById(await db.authorship.where('projectId').equals(projectId).toArray()),
     itemTexts: (await db.itemTexts.where('projectId').equals(projectId).toArray()).sort((a, b) =>
       a.itemId.localeCompare(b.itemId),
     ),
@@ -192,6 +197,8 @@ describe('Backup round trip', () => {
     expect(after.snapshots).toEqual(before.snapshots);
     expect(after.versions).toEqual(before.versions);
     expect(after.sessions).toEqual(before.sessions);
+    expect(after.authorship).toEqual(before.authorship);
+    expect(after.authorship).toHaveLength(1);
     expect(after.itemTexts).toEqual(before.itemTexts);
     // The imported project counts as backed up when the file was made.
     expect(after.project).toEqual({ ...before.project, lastBackupAt: backedUp });
@@ -282,6 +289,9 @@ describe('Backup round trip', () => {
     expect(copy.snapshots[0]?.itemId).toBe(copyScenes.find((s) => s.title === scenes[0]?.title)?.id);
     expect(copy.versions[0]?.itemId).toBe(copy.snapshots[0]?.itemId);
     expect(copy.versions[0]?.id).not.toBe(original.versions[0]?.id);
+    // The copy's authorship record still checks: no hash covers the project.
+    expect(copy.authorship[0]?.hash).toBe(original.authorship[0]?.hash);
+    expect(await verifyRecord((await exportRecord(copyId)) ?? '')).toMatchObject({ ok: true });
     expect(copy.itemTexts.every((t) => copy.items.some((i) => i.id === t.itemId))).toBe(true);
   });
 
@@ -478,6 +488,11 @@ describe('Reading a backup', () => {
       ['a snapshot of no item', (m) => (row(m, 'snapshots').itemId = 'gone'), /A snapshot has no item/],
       ['a version of no item', (m) => (row(m, 'versions').itemId = 'gone'), /A version has no item/],
       ['a version with no name', (m) => (row(m, 'versions').name = ' '), /A version has a wrong name/],
+      [
+        'an authorship entry with no hash',
+        (m) => delete row(m, 'authorship').hash,
+        /An authorship entry has no hash/,
+      ],
     ];
     for (const [, change, message] of cases) {
       const zip = await backupZip();

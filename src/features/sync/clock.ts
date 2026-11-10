@@ -20,6 +20,7 @@ export const SYNC_TABLES = [
   'codex',
   'research',
   'itemVersions',
+  'authorship',
 ] as const;
 
 export type SyncTable = (typeof SYNC_TABLES)[number];

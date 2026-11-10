@@ -4,6 +4,7 @@ import { AliasPreview } from '@/features/people/aliasPreview';
 import type { PageFormat, Template } from '@/lib/db';
 import { textDirection } from '@/lib/language';
 import type * as Y from 'yjs';
+import { AuthorshipCount } from '@/features/authorship/sourcePlugin';
 import { FocusTools } from '@/features/focus/focusExtension';
 import { centerCaret, refreshFocus } from '@/features/focus/focusPlugin';
 import { useFocusPrefs } from '@/features/focus/focusPrefs';
@@ -77,6 +78,8 @@ interface EditorProps {
   language?: string | undefined;
   /** The item of the text, so the Assistant knows which item the active editor holds. */
   itemId?: string;
+  /** The project of the text, for its authorship record (F54). */
+  projectId?: string;
   /** Shows the Craft labels over the poem. */
   craft?: boolean;
   /** The form that the Craft labels check the poem against (F56). */
@@ -143,6 +146,7 @@ export function Editor({
   templates,
   language,
   itemId,
+  projectId,
   craft = false,
   poemForm,
 }: EditorProps) {
@@ -167,6 +171,7 @@ export function Editor({
         CraftSwitch,
         StyleCheck.configure({ form: kind, english }),
         CodexNames,
+        AuthorshipCount.configure({ projectId: projectId ?? null }),
         SlashMenu.configure({
           items: slashItems(kind, templates),
           listId,
@@ -194,7 +199,7 @@ export function Editor({
       shouldRerenderOnTransaction: false,
       editorProps: { attributes: editorAttributes(label, kind, helpId, writing.showAiText) },
     },
-    [doc, kind, smart, english],
+    [doc, kind, smart, english, projectId],
   );
 
   // A rename changes the editor's accessible name at once, without reopening the item.

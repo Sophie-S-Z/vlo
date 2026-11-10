@@ -157,6 +157,7 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       db.snapshots,
       db.itemVersions,
       db.sessions,
+      db.authorship,
       db.itemTexts,
       db.appMeta,
       db.shares,
@@ -171,6 +172,7 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       await db.snapshots.where('projectId').equals(id).delete();
       await db.itemVersions.where('projectId').equals(id).delete();
       await db.sessions.where('projectId').equals(id).delete();
+      await db.authorship.where('projectId').equals(id).delete();
       await db.itemTexts.where('projectId').equals(id).delete();
       await db.research.where('projectId').equals(id).delete();
       // The keys and owner tokens of the project's links go with it. The delete dialog warns first.

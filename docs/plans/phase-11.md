@@ -116,8 +116,9 @@ Pull request K-A: Tasks K1 to K4. K-B: Tasks K5 and K6. K-C: Tasks K7 and K8. K-
 - Produces: `sourcePlugin`: it counts the characters of each transaction by source (typed, paste or drop, dictation, AI insert, delete) and skips changes from Yjs, undo of a remote change and snapshot restores. `flushEntry(projectId)` adds an entry when a session ends, when the page hides, and every 10 minutes of writing with changes.
 - Produces: `exportRecord(projectId): Blob`, the file `<project> authorship record.json` with the entries and each device's public key as JWK.
 
-- [ ] Tests first: typing, a paste, a drop, an AI insert and a delete count in the right field; a sync change counts nothing; each entry links to the one before; two devices give two chains that both check; the record round trips through backup, import and sync; the file holds no text and no titles.
-- [ ] "Authorship record" in the Export dialog (all modes), with one line on what it holds. Commit.
+- [x] Tests first: typing, a paste, a drop, an AI insert and a delete count in the right field; a sync change counts nothing; each entry links to the one before; two devices give two chains that both check; the record round trips through backup, import and sync; the file holds no text and no titles.
+- [x] "Authorship record" in the Export dialog (all modes), with one line on what it holds. Commit.
+- Built: the plugin is the `AuthorshipCount` extension in `sourcePlugin.ts`. `exportRecord(projectId)` gives the file text, or null when the project has no entry. Only the first entry of a chain holds the key. A hash leaves out the project id, so a copy of a project still passes. The record also goes in project deletes, `/privacy` (version 4) and the session end of the timer.
 
 ### Task K6: The check page (F54)
 
@@ -127,9 +128,10 @@ Pull request K-A: Tasks K1 to K4. K-B: Tasks K5 and K6. K-C: Tasks K7 and K8. K-
 
 - Produces: `verifyRecord(json: string): Promise<VerifyResult>`, with `VerifyResult = { ok: true; devices; totals; first; last } | { ok: false; reason; entry: number | null }`.
 
-- [ ] Tests first: a good record passes; a change of each byte of a small record fails (a loop over every byte); a removed entry, two swapped entries and a new key with a good chain each fail or show the new key; a file that is not JSON fails with a clear reason.
-- [ ] `/verify` takes a file by drop or by picker and shows the result: totals by source, the time span, each device key as a short fingerprint, and what the check proves and does not prove. It works offline. `docs/authorship-record.md` gives the format and the steps, so anyone can check a record with no Vlo code.
-- [ ] `verify.spec.ts`: export a record, check it, change one byte, check again; axe passes in each theme. Commit, then open pull request K-B.
+- [x] Tests first: a good record passes; a change of each byte of a small record fails (a loop over every byte); a removed entry, two swapped entries and a new key with a good chain each fail or show the new key; a file that is not JSON fails with a clear reason.
+- [x] `/verify` takes a file by drop or by picker and shows the result: totals by source, the time span, each device key as a short fingerprint, and what the check proves and does not prove. It works offline. `docs/authorship-record.md` gives the format and the steps, so anyone can check a record with no Vlo code.
+- [x] `verify.spec.ts`: export a record, check it, change one byte, check again; axe passes in each theme. Commit, then open pull request K-B.
+- Built: `VerifyResult` also gives `words`, the length of the project at the last entry. The help page (version 7) has the section "Show how you wrote a project", and `a11y.spec.ts` checks `/verify` in each theme.
 
 ### Task K7: Sprints, challenges and rooms (F60)
 

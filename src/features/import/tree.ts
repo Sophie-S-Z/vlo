@@ -169,6 +169,7 @@ export function toBackup(source: ImportSource, templates: readonly Template[], n
     items,
     snapshots: [],
     versions: [],
+    authorship: [],
     sessions: [],
     itemTexts,
     updates,

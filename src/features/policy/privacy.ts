@@ -8,12 +8,13 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 3,
+  version: 4,
   date: '2026-11-10',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
     'Snapshots stay in this browser. A backup or a folder save goes only to the place that you pick.',
+    'The authorship record of each project stays in this browser. It holds counts and times, never text. It leaves only in a file that you download, or encrypted in sync.',
     'A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.',
     'The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.',
     'The network log stays in this browser.',

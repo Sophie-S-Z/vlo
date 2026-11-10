@@ -1,5 +1,6 @@
 import { Timer } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { flushEntry } from '@/features/authorship/record';
 import { clock } from '@/lib/clock';
 import type { Session } from '@/lib/db';
 import { formatWords } from '@/features/library/format';
@@ -43,6 +44,7 @@ async function finishSession(projectId: string, running: Running): Promise<numbe
   const totals = await projectTotals(projectId);
   const words = Math.max(0, totals.words - running.start.words);
   await endSession(running.session.id, words, totals.poems - running.start.poems);
+  await flushEntry(projectId).catch(() => undefined);
   return words;
 }
 

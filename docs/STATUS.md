@@ -828,7 +828,8 @@ Last update: 2026-11-10
     and typing there changes the real name. The switch is a preview, so turn it off to edit names.
 
 - Phase 11 (plan `docs/plans/phase-11.md`, the roadmap's "Only in Vlo" features F54 to F61). The product
-  owner approved decisions K1 to K9 as recommended on 2026-11-10. Pull request K-A holds Tasks K1 to K4:
+  owner approved decisions K1 to K9 as recommended on 2026-11-10. Pull request #30 (K-A, merged on
+  2026-11-10) holds Tasks K1 to K4:
   - K1: a Form select with the Craft labels of a poem checks a sonnet, villanelle, ghazal, haiku, pantoum
     or sestina. Each note names its line, and a click moves the cursor there. Rhyme and syllables are
     checked in English only. Six public-domain or Vlo fixtures give 0 notes.
@@ -841,6 +842,15 @@ Last update: 2026-11-10
   - K4: the Reader panel in the Assistant asks four readers for notes in one request, with the Codex
     notes of the names in the text (at most 600 tokens, aliased in a memoir). Each reader gets a card with
     no Insert. Privacy page version 3 says so.
+  - Pull request K-B holds Tasks K5 and K6. K5: an authorship record of each project counts the minutes
+    and the characters that the writer types, pastes or drops, dictates, takes from the AI and deletes. It
+    keeps no text. Each device signs its own chain of entries with a P-256 key that stays on it. The
+    record syncs and goes in backups (database version 11, backup version 6). Export has Download the
+    record. Privacy page version 4 says so.
+  - K6: `/verify` checks a record file in the browser and sends nothing. A change of any one byte fails,
+    and the page names the entry. `docs/authorship-record.md` gives the format and a Python and OpenSSL
+    script that checks a record with no Vlo code.
+  - Known limits: the device clock gives the times. One sync blob holds about 8,000 entries of a project.
 
 ## Blocked
 

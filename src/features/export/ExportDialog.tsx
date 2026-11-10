@@ -23,6 +23,7 @@ import { folderOf, type ExportScope } from './build';
 import type { FontSwap } from './fontCheck';
 import type { ExportFormat } from './notices';
 import type { ExportFile, ExportRequest } from './run';
+import { RecordDownload } from '@/features/authorship/RecordDownload';
 import { ExportJob, readOwnFonts, saveFile } from './startExport';
 import { recordError, recordFeature } from '@/features/usage/usage';
 
@@ -746,6 +747,8 @@ export function ExportDialog({
                   Vlo could not make the file. Check the storage space on this device and try again.
                 </p>
               )}
+
+              <RecordDownload project={project} />
 
               <div className="flex flex-wrap justify-end gap-2">
                 <DialogClose asChild>

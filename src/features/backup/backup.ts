@@ -40,6 +40,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       db.snapshots,
       db.itemVersions,
       db.sessions,
+      db.authorship,
       db.itemTexts,
       db.audioFiles,
       db.research,
@@ -51,6 +52,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       snapshots: await db.snapshots.where('projectId').equals(projectId).toArray(),
       versions: await db.itemVersions.where('projectId').equals(projectId).toArray(),
       sessions: await db.sessions.where('projectId').equals(projectId).toArray(),
+      authorship: await db.authorship.where('projectId').equals(projectId).toArray(),
       itemTexts: await db.itemTexts.where('projectId').equals(projectId).toArray(),
       music: options.music ? await db.audioFiles.orderBy('addedAt').toArray() : [],
       research: await db.research.where('projectId').equals(projectId).sortBy('addedAt'),
@@ -79,6 +81,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     snapshots: rows.snapshots,
     versions: rows.versions,
     sessions: rows.sessions,
+    authorship: rows.authorship,
     itemTexts: rows.itemTexts,
     updates: new Map(updates),
     music,
@@ -153,6 +156,8 @@ function asCopy(backup: Backup): Backup {
       state: marks(v.state),
     })),
     sessions: backup.sessions.map((s) => ({ ...s, id: newId(), projectId })),
+    // Each entry keeps its hash, which does not cover the project, so the copy's record still checks.
+    authorship: backup.authorship.map((e) => ({ ...e, id: newId(), projectId })),
     research: backup.research.map((r) => ({ ...r, info: { ...r.info, id: newId(), projectId } })),
     itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
     updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), marks(update)])),
@@ -181,6 +186,7 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
         db.snapshots,
         db.itemVersions,
         db.sessions,
+        db.authorship,
         db.itemTexts,
         db.audioFiles,
         db.research,
@@ -199,6 +205,7 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
         await db.snapshots.bulkAdd(backup.snapshots);
         await db.itemVersions.bulkAdd(backup.versions);
         await db.sessions.bulkAdd(backup.sessions);
+        await db.authorship.bulkAdd(backup.authorship);
         await db.itemTexts.bulkPut(backup.itemTexts);
         await db.cards.bulkAdd(backup.views.cards);
         await db.threads.bulkAdd(backup.views.threads);

@@ -33,6 +33,7 @@ import {
 } from '@/lib/db';
 import type {
   AudioFile,
+  AuthorshipEntry,
   ResearchFile,
   Item,
   ItemKind,
@@ -58,13 +59,13 @@ import type {
  * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Version 3 gives the project a
  * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows and
  * the research files, so an older build refuses the file and never drops them. Version 5 (Phase 11) adds the
- * named versions of items. Vlo still reads versions 1 to 4.
+ * named versions of items. Version 6 adds the authorship record. Vlo still reads versions 1 to 5.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 5;
+export const BACKUP_VERSION = 6;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -91,6 +92,8 @@ export interface Backup {
   /** The named versions of items that are not in the editor (F55). */
   versions: ItemVersion[];
   sessions: Session[];
+  /** The authorship record of each device (F54). */
+  authorship: AuthorshipEntry[];
   itemTexts: ItemText[];
   /** The Yjs update of each item that holds text, by item id. */
   updates: Map<string, Uint8Array>;
@@ -142,6 +145,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     snapshots: backup.snapshots.map(withoutState),
     versions: backup.versions.map(withoutState),
     sessions: backup.sessions,
+    authorship: backup.authorship,
     itemTexts: backup.itemTexts,
     music: backup.music.map((m) => m.info),
     research: backup.research.map((r) => r.info),
@@ -437,6 +441,19 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     for (const key of ['startedAt', 'endedAt', 'wordsAdded', 'poemsAdded'])
       count(row, key, 'A writing session');
   });
+  const authorship = checkRows<AuthorshipEntry>(
+    manifest.authorship === undefined ? [] : list(manifest, 'authorship'),
+    project.id,
+    'An authorship entry',
+    (row) => {
+      const what = 'An authorship entry';
+      id(row, 'id', what);
+      for (const key of ['device', 'prev', 'hash', 'sig']) text(row, key, what);
+      for (const key of ['seq', 'at', 'minutes', 'typed', 'pasted', 'dictated', 'ai', 'deleted', 'words'])
+        count(row, key, what);
+      if (row.key !== undefined && !isObject(row.key)) fail(`${DAMAGED} ${what} has a wrong device key.`);
+    },
+  );
   const itemTexts = checkRows<ItemText>(list(manifest, 'itemTexts'), project.id, 'A text copy', (row) => {
     if (!itemIds.has(id(row, 'itemId', 'A text copy'))) fail(`${DAMAGED} A text copy has no item.`);
     text(row, 'text', 'A text copy');
@@ -530,6 +547,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     snapshots,
     versions,
     sessions,
+    authorship,
     itemTexts,
     updates,
     music,

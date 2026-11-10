@@ -44,12 +44,13 @@ afterEach(async () => {
 });
 
 describe('Vlo database', () => {
-  test('version 10 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex, research, the sync clock and the item versions', () => {
+  test('version 11 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex, research, the sync clock, the item versions and the authorship record', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(10);
+    expect(db.verno).toBe(11);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
+      'authorship',
       'cardLinks',
       'cards',
       'codex',
@@ -100,7 +101,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(10);
+    expect(upgraded.verno).toBe(11);
     expect((await upgraded.networkLog.get('n1'))?.host).toBe('api.groq.com');
     await upgraded.shares.add({
       id: 'sh1',
@@ -137,7 +138,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(10);
+    expect(upgraded.verno).toBe(11);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect((await upgraded.projects.get('kept'))?.templates).toEqual(['poetry']);
     expect(await upgraded.items.count()).toBe(1);
@@ -182,7 +183,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(10);
+    expect(upgraded.verno).toBe(11);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);
@@ -243,7 +244,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(10);
+    expect(upgraded.verno).toBe(11);
     const rows = await upgraded.projects.toArray();
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(byId.get('poems')?.templates).toEqual(['poetry']);
@@ -295,7 +296,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(10);
+    expect(upgraded.verno).toBe(11);
     expect((await upgraded.items.get('a'))?.wordCount).toBe(5);
     expect((await upgraded.items.get('b'))?.wordCount).toBe(2);
     await upgraded.delete();

@@ -103,6 +103,11 @@ export const routes: RouteObject[] = [
         path: 'privacy',
         lazy: async () => ({ Component: (await import('@/features/policy/PrivacyPage')).PrivacyPage }),
       },
+      // The check of an authorship record (F54): it reads a file in the browser and needs no project.
+      {
+        path: 'verify',
+        lazy: async () => ({ Component: (await import('@/features/authorship/VerifyPage')).VerifyPage }),
+      },
       {
         path: 'help',
         lazy: async () => ({ Component: (await import('@/features/help/HelpPage')).HelpPage }),
