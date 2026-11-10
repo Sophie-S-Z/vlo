@@ -42,6 +42,8 @@ export interface Project {
     followUpDays?: Record<string, number>;
     /** A date to finish by and the project's word target then, which sets the daily goal (F46). */
     deadline?: Deadline;
+    /** The month challenge (F60). */
+    challenge?: Challenge;
     /** Net words added on each local day, by the date as YYYY-MM-DD, for goals and streaks (F21). */
     wordsByDay?: Record<string, number>;
     /** The time of the first Co-writer insert, so each export offers the AI provenance page (F26). */
@@ -97,6 +99,12 @@ export type Pass = 1 | 2 | 3 | 4 | 5;
 export interface Tracking {
   on: boolean;
   pass: Pass;
+}
+
+/** The words to write in one month, as YYYY-MM: the month challenge (F60). */
+export interface Challenge {
+  month: string;
+  words: number;
 }
 
 /** A date as YYYY-MM-DD and the project's total words to reach by the end of that day (F46). */
@@ -234,6 +242,8 @@ export interface Session {
   endedAt: number;
   wordsAdded: number;
   poemsAdded: number;
+  /** The word target of a sprint (F60). A session with none is a plain writing session. */
+  target?: number;
 }
 
 /* Phase 3 tables (spec section 5, plan Task C1). Each belongs to one project. */
@@ -370,7 +380,7 @@ export interface AudioFile {
 }
 
 /** Why a request left the app (spec section 5). */
-export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality' | 'sync';
+export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality' | 'sync' | 'room';
 
 /** One request that left the app's origin (spec section 5, F25). It never holds a key, a header or a body. */
 export interface NetworkLogEntry {

@@ -268,6 +268,19 @@ function checkProject(value: unknown): Project {
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);
+  const challenge = settings.challenge;
+  if (
+    challenge !== undefined &&
+    !(
+      isObject(challenge) &&
+      typeof challenge.month === 'string' &&
+      /^\d{4}-\d{2}$/.test(challenge.month) &&
+      typeof challenge.words === 'number' &&
+      Number.isInteger(challenge.words) &&
+      challenge.words >= 1
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
   const tracking = settings.tracking;
   if (
     tracking !== undefined &&
@@ -440,6 +453,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     id(row, 'id', 'A writing session');
     for (const key of ['startedAt', 'endedAt', 'wordsAdded', 'poemsAdded'])
       count(row, key, 'A writing session');
+    if (row.target !== undefined) count(row, 'target', 'A writing session');
   });
   const authorship = checkRows<AuthorshipEntry>(
     manifest.authorship === undefined ? [] : list(manifest, 'authorship'),

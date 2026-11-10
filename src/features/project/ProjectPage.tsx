@@ -107,6 +107,7 @@ export function ProjectPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [sprintOpen, setSprintOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
@@ -510,9 +511,19 @@ export function ProjectPage() {
       },
     },
     {
+      id: 'sprint',
+      label: 'Start a sprint…',
+      keywords: ['sprint', 'timer', 'session', 'word target', 'friends', 'room', 'write in'],
+      run: () => {
+        afterMenu.current = () => {
+          setSprintOpen(true);
+        };
+      },
+    },
+    {
       id: 'progress',
       label: 'Open Progress',
-      keywords: ['progress', 'goal', 'streak', 'words', 'sessions', 'map', 'tiles'],
+      keywords: ['progress', 'goal', 'streak', 'words', 'sessions', 'map', 'tiles', 'month challenge'],
       run: () => {
         void navigate(`/p/${project.id}/progress`);
       },
@@ -555,7 +566,14 @@ export function ProjectPage() {
           onLeaveFocus={() => {
             changeFocusMode(false);
           }}
-          timer={<SessionTimer projectId={project.id} unit={countUnit(project.settings.language)} />}
+          timer={
+            <SessionTimer
+              projectId={project.id}
+              unit={countUnit(project.settings.language)}
+              sprintOpen={sprintOpen}
+              onSprintOpenChange={setSprintOpen}
+            />
+          }
           {...(project.aiMode === 'pen'
             ? {}
             : {

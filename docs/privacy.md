@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 4, 10 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 5, 10 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -50,6 +50,12 @@ Up to 6 short phrases from the open item. A phrase that holds a private name sta
 Only after you turn on sync in Settings, and only between the devices that you pair.
 
 Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.
+
+### Sprint rooms
+
+Only when you sprint with friends, from the start of the sprint to its end.
+
+The room code, the nickname that you type, the count of the sprint and a random id for this sprint. Never a title or a word of text. A room ends 24 hours after someone makes it.
 
 ## Contact
 

@@ -83,7 +83,9 @@ async function novelWithText() {
     endedAt: 2,
     wordsAdded: 8,
     poemsAdded: 0,
+    target: 500,
   });
+  await db.projects.update(project.id, { 'settings.challenge': { month: '2026-11', words: 50_000 } });
   return { project: (await db.projects.get(project.id)) ?? project, scenes };
 }
 

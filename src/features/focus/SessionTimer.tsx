@@ -1,6 +1,14 @@
 import { Timer } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushEntry } from '@/features/authorship/record';
+import { postWords, type Room, type Standing } from '@/features/sprints/room';
+import { RoomPanel } from '@/features/sprints/RoomPanel';
+import {
+  SprintDialog,
+  SprintResult,
+  type SprintOutcome,
+  type SprintStart,
+} from '@/features/sprints/SprintDialog';
 import { clock } from '@/lib/clock';
 import type { Session } from '@/lib/db';
 import { formatWords } from '@/features/library/format';
@@ -14,8 +22,14 @@ import {
   AlertDialogTitle,
 } from '@/ui/alert-dialog';
 import { Button } from '@/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
-import { endSession, projectTotals, startSession } from './sessions';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/ui/dropdown-menu';
+import { closeSession, projectTotals, startSession } from './sessions';
 
 export const SESSION_LENGTHS = [10, 15, 25, 45, 60] as const;
 
@@ -27,6 +41,8 @@ interface Running {
   start: { words: number; poems: number };
   /** True once the time is up and the writer chose to keep writing. */
   overtime: boolean;
+  /** The sprint room, when the writer sprints with friends (F60). */
+  room?: Room;
 }
 
 const RADIUS = 9;
@@ -41,9 +57,7 @@ function clockText(ms: number): string {
 
 /** Closes a session with what the project gained since it started. Returns the words added. */
 async function finishSession(projectId: string, running: Running): Promise<number> {
-  const totals = await projectTotals(projectId);
-  const words = Math.max(0, totals.words - running.start.words);
-  await endSession(running.session.id, words, totals.poems - running.start.poems);
+  const words = await closeSession(projectId, running.session.id, running.start);
   await flushEntry(projectId).catch(() => undefined);
   return words;
 }
@@ -52,11 +66,23 @@ async function finishSession(projectId: string, running: Running): Promise<numbe
  * A writing session timer. At the end a gentle prompt asks to close the session. Nothing is lost or
  * counted against the writer if they keep going. The ring updates once a second, outside the editor.
  */
-export function SessionTimer({ projectId, unit }: { projectId: string; unit: CountUnit }) {
+export function SessionTimer({
+  projectId,
+  unit,
+  sprintOpen,
+  onSprintOpenChange,
+}: {
+  projectId: string;
+  unit: CountUnit;
+  /** The sprint dialog, which the command menu opens too. */
+  sprintOpen: boolean;
+  onSprintOpenChange: (open: boolean) => void;
+}) {
   const [running, setRunning] = useState<Running | null>(null);
   const [now, setNow] = useState(() => clock.now());
   const [asking, setAsking] = useState(false);
   const [message, setMessage] = useState('');
+  const [outcome, setOutcome] = useState<SprintOutcome | null>(null);
   const runningRef = useRef<Running | null>(null);
   useEffect(() => {
     runningRef.current = running;
@@ -104,12 +130,22 @@ export function SessionTimer({ projectId, unit }: { projectId: string; unit: Cou
     };
   }, [running]);
 
-  async function start(minutes: number) {
-    const [session, totals] = await Promise.all([startSession(projectId, minutes), projectTotals(projectId)]);
+  async function start(minutes: number, sprint?: Omit<SprintStart, 'minutes'>) {
+    const [session, totals] = await Promise.all([
+      startSession(projectId, minutes, sprint?.target),
+      projectTotals(projectId),
+    ]);
     const startedAt = session.startedAt;
     setNow(startedAt);
-    setMessage(`Session started. ${String(minutes)} minutes.`);
-    setRunning({ session, endsAt: startedAt + minutes * 60_000, minutes, start: totals, overtime: false });
+    setMessage(`${sprint ? 'Sprint' : 'Session'} started. ${String(minutes)} minutes.`);
+    setRunning({
+      session,
+      endsAt: startedAt + minutes * 60_000,
+      minutes,
+      start: totals,
+      overtime: false,
+      ...(sprint?.room ? { room: sprint.room } : {}),
+    });
   }
 
   async function close() {
@@ -118,8 +154,23 @@ export function SessionTimer({ projectId, unit }: { projectId: string; unit: Cou
     const words = await finishSession(projectId, running);
     setRunning(null);
     setAsking(false);
-    setMessage(`Session closed. You wrote ${formatWords(words, unit)}.`);
+    const target = running.session.target;
+    if (target === undefined) {
+      setMessage(`Session closed. You wrote ${formatWords(words, unit)}.`);
+      return;
+    }
+    // The last post gives the room the final words. The result shows without the room if it fails.
+    let standings: Standing[] | undefined;
+    if (running.room) standings = await postWords(running.room, words).catch(() => undefined);
+    setOutcome({ words, target, minutes: running.minutes, ...(standings ? { standings } : {}) });
   }
+
+  // The words of the running sprint so far, for its room. It changes only with the sprint.
+  const startWords = running?.start.words;
+  const sprintWords = useCallback(
+    async () => Math.max(0, (await projectTotals(projectId)).words - (startWords ?? 0)),
+    [projectId, startWords],
+  );
 
   const left = running ? running.endsAt - now : 0;
   const fraction = running ? Math.min(1, Math.max(0, left / (running.minutes * 60_000))) : 0;
@@ -145,6 +196,14 @@ export function SessionTimer({ projectId, unit }: { projectId: string; unit: Cou
                 Write for {minutes} minutes
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => {
+                onSprintOpenChange(true);
+              }}
+            >
+              Start a sprint
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
@@ -180,13 +239,31 @@ export function SessionTimer({ projectId, unit }: { projectId: string; unit: Cou
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => void close()}>Close session</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void close()}>
+              {running.session.target === undefined ? 'Close session' : 'End the sprint'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      {running?.room && <RoomPanel room={running.room} words={sprintWords} />}
       <p role="status" className="sr-only">
         {message}
       </p>
+      <SprintDialog
+        // One session at a time: a sprint starts only when no session runs.
+        open={sprintOpen && running === null}
+        onOpenChange={onSprintOpenChange}
+        lengths={SESSION_LENGTHS}
+        unit={unit}
+        onStart={({ minutes, ...sprint }) => start(minutes, sprint)}
+      />
+      <SprintResult
+        outcome={outcome}
+        unit={unit}
+        onClose={() => {
+          setOutcome(null);
+        }}
+      />
 
       <AlertDialog
         open={asking}

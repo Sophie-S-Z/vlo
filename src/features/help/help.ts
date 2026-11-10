@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 7,
+  version: 8,
   date: '2026-11-10',
   guide: [
     {
@@ -126,6 +126,23 @@ export const HELP = {
         'In Export, choose Download the record. Each device signs its part of the record with a key that stays on it.',
         'Give the file to a teacher, an editor or a contest. They open the verify page at /verify and drop the file there. The check runs in their browser and sends nothing.',
         'The check shows if someone changed the file. It cannot show who sat at the device.',
+      ],
+    },
+    {
+      title: 'Sprint and take a month challenge',
+      steps: [
+        'Choose Timer, then Start a sprint. Pick the minutes and a word target. Only the words that you write in the sprint count.',
+        'At the end, the result shows your words and the target.',
+        'In Progress, type the words for this month and choose Start a month challenge. The calendar shows the words of each day.',
+      ],
+    },
+    {
+      title: 'Sprint with friends',
+      needsSharing: true,
+      steps: [
+        'In Start a sprint, turn on Sprint with friends and type a nickname.',
+        'Leave the room code empty to make a room, then give its six-letter code to your friends. They type it in the same place.',
+        'Choose Room next to the timer to see the words of each writer. The room gets only your nickname and your count, never your text.',
       ],
     },
     {
