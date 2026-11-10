@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
+import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
 import { holdsText as templateHoldsText, TEMPLATE_ORDER } from '@/features/library/templates';
@@ -20,7 +21,7 @@ import {
   type Json,
 } from './check';
 import { checkViews } from './views';
-import { MAX_LABELS, MAX_PACKET_TEXT } from '@/lib/db';
+import { CHAPTER_STYLES, MAX_BOOK_TEXT, MAX_LABELS, MAX_PACKET_TEXT, SCENE_BREAKS, TRIMS } from '@/lib/db';
 import type {
   AudioFile,
   ResearchFile,
@@ -263,6 +264,20 @@ function checkProject(value: unknown): Project {
     !(
       isObject(packet) &&
       [packet.letter, packet.bio].every((t) => typeof t === 'string' && t.length <= MAX_PACKET_TEXT)
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
+  const book = settings.book;
+  if (
+    book !== undefined &&
+    !(
+      isObject(book) &&
+      (TRIMS as readonly unknown[]).includes(book.trim) &&
+      (CHAPTER_STYLES as readonly unknown[]).includes(book.chapter) &&
+      (SCENE_BREAKS as readonly unknown[]).includes(book.sceneBreak) &&
+      typeof book.dropCaps === 'boolean' &&
+      typeof book.contents === 'boolean' &&
+      BOOK_TEXTS.every((key) => typeof book[key] === 'string' && book[key].length <= MAX_BOOK_TEXT)
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);

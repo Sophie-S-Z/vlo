@@ -108,27 +108,27 @@ Pull request J-A: Task J1. J-B: Tasks J2 and J3. J-C: Tasks J4 to J7. Each one m
 - Produces: `gutterFor(pages: number): number` in points, by the KDP table.
 - Produces: a `Sink` interface with the drawing calls of `Drawer`. `Drawer` writes pdf-lib pages. `SvgSink` records each page as SVG for the preview.
 
-- [ ] Tests first: each trim gives its page size; the inside margin is on the right of even pages and the left of odd pages; the gutter follows the page count; a chapter starts on a right-hand page with a blank page before it when needed; no widow and no orphan on any page of the 100,000-word fixture; front matter comes in the order half title, title, copyright, dedication, epigraph, contents; contents page numbers match the chapter pages; back matter comes after the last chapter; a plain PDF with no book settings does not change.
-- [ ] Commit.
+- [x] Tests first: each trim gives its page size; the inside margin is on the right of even pages and the left of odd pages; the gutter follows the page count; a chapter starts on a right-hand page with a blank page before it when needed; no widow and no orphan on any page of the 100,000-word fixture; front matter comes in the order half title, title, copyright, dedication, epigraph, contents; contents page numbers match the chapter pages; back matter comes after the last chapter; a plain PDF with no book settings does not change.
+- [x] Commit.
 
 ### Task J5: The Book screen and live preview (F51)
 
-**Files:** Create `src/features/book/BookPage.tsx`, `src/features/book/BookPreview.tsx`, `src/features/book/preview.worker.ts`, `tests/e2e/book.spec.ts`. Modify `src/app/routes.tsx`, `src/features/project/ViewTabs.tsx`, `src/features/editor/commands/registry.ts`, `src/features/help/help.ts`.
+**Files:** Create `src/features/book/BookPage.tsx`, `src/features/book/BookPreview.tsx`, `src/features/export/pdf/svg.ts`, `tests/e2e/book.spec.ts`. The export worker lays out and draws the preview pages, so no second worker holds a copy of the PDF code. Modify `src/app/routes.tsx`, `src/features/project/ViewTabs.tsx`, `src/features/editor/commands/registry.ts`, `src/features/help/help.ts`.
 
-- [ ] A Book tab (Full level, and "Open Book" in the command menu at every level). The left column holds the settings and the matter fields. The right column holds the preview with Print, E-reader and Phone. Print shows two facing pages on paper, with page numbers and a page slider. E-reader and Phone show the EPUB text in a sandboxed frame of that size.
-- [ ] The preview builds in a worker one second after a change. A loading state holds the page shape while it builds.
-- [ ] "Export the book" opens the Export dialog with PDF and book layout chosen.
-- [ ] `book.spec.ts`: change the trim and the chapter style, see the preview change, export the PDF, and its page count equals the preview's; reload and the settings stay; axe passes in each theme. Commit.
+- [x] A Book tab (Full level, and "Open Book" in the command menu at every level). The left column holds the settings and the matter fields. The right column holds the preview with Print, E-reader and Phone. Print shows two facing pages on paper, with page numbers and a page slider. E-reader and Phone show the EPUB text in a sandboxed frame of that size.
+- [x] The preview builds in a worker one second after a change. A loading state holds the page shape while it builds.
+- [x] "Export the book" opens the Export dialog with PDF and book layout chosen.
+- [x] `book.spec.ts`: change the trim and the chapter style, see the preview change, export the PDF, and its page count equals the preview's; reload and the settings stay; axe passes in each theme. Commit.
 
 ### Task J6: Book EPUB and EPUBCheck (F51)
 
-**Files:** Modify `src/features/export/epub.ts`, `tests/unit/epub-export.test.ts`, `.github/workflows/ci.yml`.
+**Files:** Modify `src/features/export/epub.ts`, `src/features/book/BookPreview.tsx`, `.github/workflows/ci.yml`. Create `tests/unit/book-epub.test.ts`.
 
-- [ ] Tests first: the EPUB holds the front and back matter as their own files with the right `epub:type`; the contents page lists the chapters; the chapter style and the scene break style are in the CSS.
-- [ ] CI downloads EPUBCheck 5.3.0, checks its SHA-256, and runs it on the three fixture books. Expected: 0 errors. Commit.
+- [x] Tests first: the EPUB holds the front and back matter as their own files with the right `epub:type`; the contents page lists the chapters; the chapter style and the scene break style are in the CSS.
+- [x] CI downloads EPUBCheck 5.3.0, checks its SHA-256, and runs it on the three fixture books. Expected: 0 errors. Commit.
 
 ### Task J7: Gate 10 and the release
 
-- [ ] Update STATUS, the help page and `docs/privacy.md` if needed. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 10 diff against Review Focus 1 to 5. Fix each high finding.
+- [x] Update STATUS, the help page and `docs/privacy.md` if needed. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 10 diff against Review Focus 1 to 5. Fix each high finding.
 - [ ] Open pull request J-C. Ask the product owner to run "Run workflow" for all 4 browsers.

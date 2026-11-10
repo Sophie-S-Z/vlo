@@ -1,3 +1,4 @@
+import { BOOK_TEXTS } from '@/features/book/book';
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { Block, ExportDoc, Run } from '@/features/export/model';
 
@@ -6,7 +7,8 @@ import type { Block, ExportDoc, Run } from '@/features/export/model';
  * `shareSafe`. With the switch on, each marked private name becomes the alias of its person. Then each
  * unmarked exact match of a real name becomes its alias too, longest name first, in the text, the
  * headings, the notes, the equations and the titles. A link whose address holds a real name loses its
- * address. `nameCheck` lists the unmarked names for the check before export.
+ * address. The book's front and back matter is plain text, so each name in it is unmarked. `nameCheck`
+ * lists the unmarked names for the check before export.
  */
 
 export interface Alias {
@@ -403,6 +405,7 @@ export function shareSafe(doc: ExportDoc, people: readonly PrivatePerson[], on: 
     note: (note) => joinRuns(aliasAcross(note, lookup.all, (run, text) => ({ ...run, text }))),
     latex: (latex) => aliasText(latex, lookup.all),
   };
+  const book = doc.book;
   return {
     ...doc,
     title: aliasText(doc.title, lookup.all),
@@ -411,6 +414,12 @@ export function shareSafe(doc: ExportDoc, people: readonly PrivatePerson[], on: 
       title: aliasText(section.title, lookup.all),
       blocks: mapBlocks(section.blocks, handlers),
     })),
+    ...(book && {
+      book: {
+        ...book,
+        ...Object.fromEntries(BOOK_TEXTS.map((key) => [key, aliasText(book[key], lookup.all)])),
+      },
+    }),
   };
 }
 
@@ -480,6 +489,9 @@ export function nameCheck(doc: ExportDoc, people: readonly PrivatePerson[]): Nam
       section.blocks.filter((b) => b.type !== 'heading' || b.level > 2),
       handlers,
     );
+  }
+  for (const key of BOOK_TEXTS) {
+    for (const m of findMatches(doc.book?.[key] ?? '', lookup.all)) add(unmarked, m.name);
   }
   return { unmarked: counted(unmarked, true), changed: counted(changed, false) };
 }

@@ -1,5 +1,6 @@
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { TextFill } from '@/features/editor/format/fill';
+import type { BookSettings } from '@/lib/db';
 
 /*
  * The export tree (plan Part B). Every exporter reads this one tree, never the editor or the Yjs
@@ -146,6 +147,8 @@ export interface ExportDoc {
   /** The language of the writing, as a BCP 47 tag (F38). */
   language: string;
   sections: ExportSection[];
+  /** Book layout: a trim size, chapter openings and front and back matter (F51). Only a PDF and an EPUB read it. */
+  book?: BookSettings;
 }
 
 /**
@@ -176,6 +179,24 @@ export function runsText(runs: readonly Run[]): string {
  */
 export function bookmarkName(itemId: string): string {
   return `vlo_${itemId.replace(/-/g, '')}`;
+}
+
+/** The paragraphs of plain text. A blank line starts a new paragraph, and a single line break stays a break. */
+export function textBlocks(body: string): ParagraphBlock[] {
+  return body
+    .replace(/\r\n?/g, '\n')
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph !== '')
+    .map((paragraph) => ({
+      type: 'paragraph',
+      runs: paragraph
+        .split('\n')
+        .flatMap((line, i): Run[] => [
+          ...(i > 0 ? [{ type: 'break' } as const] : []),
+          { type: 'text', text: line, style: {} },
+        ]),
+    }));
 }
 
 /** Every run of some blocks, in reading order. */
