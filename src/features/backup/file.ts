@@ -5,7 +5,7 @@ import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
-import { holdsText as templateHoldsText, TEMPLATE_ORDER } from '@/features/library/templates';
+import { holdsText, TEMPLATE_ORDER } from '@/features/library/templates';
 import {
   BackupError,
   checkOrder,
@@ -124,11 +124,6 @@ export function backupFileName(title: string, date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   const day = `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   return `${backupNamePrefix(title)}${day}${BACKUP_EXTENSION}`;
-}
-
-/** True when the item kind holds text in this template. Folders hold only their children. */
-export function holdsText(project: Pick<Project, 'templates'>, kind: ItemKind): boolean {
-  return templateHoldsText(project.templates, kind);
 }
 
 /** A snapshot or version row without its Yjs bytes, which go in their own file. */
@@ -520,7 +515,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
   for (const item of items) {
     const update = await readEntry(zip, `items/${item.id}.yjs`);
     if (update === null) {
-      if (holdsText(project, item.kind)) fail(`${DAMAGED} The text of “${item.title}” is missing.`);
+      if (holdsText(project.templates, item.kind)) fail(`${DAMAGED} The text of “${item.title}” is missing.`);
       continue;
     }
     checkUpdate(update, `“${item.title}”`);

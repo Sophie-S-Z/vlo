@@ -19,7 +19,7 @@ Scope: all of `src/`, reviewed on 2026-11-08 at commit `582032d`, with findings 
    - `ai/AssistantPanel.tsx` collects the open item's text, the passages and the marked names, then puts the aliases in and checks the size. `ai/names.ts` and `ai/projectNames.ts` each have this one caller, which must call them in the right order. Only browser tests check that order.
    - Fix: `ai/request.ts` builds the aliased, size-checked request and its name restore step, or gives a message for the writer. The panel keeps its React state. Unit tests check the privacy order on the memoir fixture.
 
-## Findings for a later release
+## Findings for a later release (fixed in Phase 12)
 
 4. **"Replace" import deletes the device copy before it stores the new one** (`backup/backup.ts` `importBackup`).
    - If a later write fails, the device holds neither version. The writer still has the backup file, and chose to replace the device copy, so the risk is a lost retry, not lost words.

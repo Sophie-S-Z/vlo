@@ -263,6 +263,26 @@ describe('Backup round trip', () => {
     expect(await db.projects.count()).toBe(1);
   });
 
+  test('a replace that fails puts the device copy back (architecture review finding 4)', async () => {
+    const { project, scenes } = await novelWithText();
+    const { bytes } = await backUpProject(project.id, { music: false });
+    const first = scenes[0];
+    if (!first) throw new Error('No scene.');
+    await writeItemUpdate(first.id, proseUpdate(['A line written after the backup.']), 2);
+    await db.items.add({ ...first, id: 'item-after', title: 'After', order: 'a9' });
+    const items = await db.items.where('projectId').equals(project.id).count();
+
+    // The first write of the rows fails, as on a full disk. The write that puts the device copy back works.
+    vi.spyOn(db.snapshots, 'bulkAdd').mockRejectedValueOnce(new Error('QuotaExceededError'));
+    await expect(importBackup(await readBackup(bytes), 'replace')).rejects.toThrow('QuotaExceededError');
+
+    expect(await db.projects.get(project.id)).toMatchObject({ title: 'Salt Year' });
+    expect(await db.items.where('projectId').equals(project.id).count()).toBe(items);
+    expect(await db.items.get('item-after')).toBeDefined();
+    expect(await textOf(first.id)).toContain('after the backup');
+    expect(await db.snapshots.where('projectId').equals(project.id).count()).toBe(1);
+  });
+
   test('a copy gets new ids, keeps the tree and the text, and sits next to the original', async () => {
     const { project, scenes } = await novelWithText();
     const { bytes } = await backUpProject(project.id, { music: false });

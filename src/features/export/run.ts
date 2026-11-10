@@ -104,14 +104,6 @@ export function prepareExport(request: ExportRequest): PreparedExport {
   return { format: request.format, name, doc, manuscript, ownFonts, names };
 }
 
-/** Sorts the own fonts by whether they may go in the file. Bytes are null for a font Vlo cannot read. */
-export function checkFonts(
-  prepared: PreparedExport,
-  bytes: ReadonlyMap<string, Uint8Array | null>,
-): FontCheck {
-  return checkOwnFonts(prepared.ownFonts, bytes);
-}
-
 /** What a PDF needs besides its tree: the font files, the font swaps and standard manuscript format. */
 export function pdfOptions(
   prepared: PreparedExport,
@@ -130,7 +122,7 @@ export interface MakeOptions {
   loadFile?: LoadFile;
 }
 
-/** Makes the file. `fonts` comes from `checkFonts`, after the writer agreed to any swap. */
+/** Makes the file. `fonts` comes from `checkOwnFonts`, after the writer agreed to any swap. */
 export async function makeExport(
   prepared: PreparedExport,
   fonts: FontCheck = { own: new Map(), swaps: [] },
@@ -184,7 +176,7 @@ export async function runExport(
   options: MakeOptions = {},
 ): Promise<ExportFile> {
   const prepared = prepareExport(request);
-  return makeExport(prepared, checkFonts(prepared, ownFontBytes), options);
+  return makeExport(prepared, checkOwnFonts(prepared.ownFonts, ownFontBytes), options);
 }
 
 export type { FontSwap };

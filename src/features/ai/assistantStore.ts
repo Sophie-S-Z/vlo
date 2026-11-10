@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { Target } from '@/features/editor/extensions/aiOrigin';
 import { EngineError, type Engine } from './engine/types';
 import type { AiRequest, ResultKind } from './reader';
 
@@ -10,12 +11,8 @@ import type { AiRequest, ResultKind } from './reader';
 
 export type EntryStatus = 'running' | 'done' | 'stopped' | 'error';
 
-/** The words that a rewrite replaces on Insert, as positions in the item's document and their text. */
-export interface Target {
-  from: number;
-  to: number;
-  text: string;
-}
+/** The words that a rewrite replaces on Insert. */
+export type { Target };
 
 export interface Entry {
   id: string;

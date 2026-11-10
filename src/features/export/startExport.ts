@@ -27,12 +27,15 @@ export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Prom
 
 /**
  * One export in the export worker, step by step: prepare, check the writer's own fonts, make the file.
- * The dialog asks about font swaps between the check and the file.
+ * The dialog asks about font swaps between the check and the file. Each step waits for the one before it,
+ * so two callers never mix their answers, and the worker runs one step at a time.
  */
 export class ExportJob {
   private readonly worker: Worker;
   private waiting: { resolve: (response: ExportResponse) => void; reject: (error: Error) => void } | null =
     null;
+  private queue: Promise<unknown> = Promise.resolve();
+  private closed = false;
 
   private constructor() {
     this.worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
@@ -50,10 +53,18 @@ export class ExportJob {
   }
 
   private send(message: ExportMessage, transfer: Transferable[] = []): Promise<ExportResponse> {
-    return new Promise((resolve, reject) => {
-      this.waiting = { resolve, reject };
-      this.worker.postMessage(message, transfer);
-    });
+    const step = () =>
+      new Promise<ExportResponse>((resolve, reject) => {
+        if (this.closed) {
+          reject(new Error('The export stopped.'));
+          return;
+        }
+        this.waiting = { resolve, reject };
+        this.worker.postMessage(message, transfer);
+      });
+    const next = this.queue.then(step, step);
+    this.queue = next.catch(() => undefined);
+    return next;
   }
 
   /** Reads the items and prepares the export. The result lists the own fonts that the file needs. */
@@ -110,6 +121,7 @@ export class ExportJob {
   }
 
   close(): void {
+    this.closed = true;
     this.worker.terminate();
     this.waiting?.reject(new Error('The export stopped.'));
     this.waiting = null;

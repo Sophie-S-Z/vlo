@@ -1,7 +1,7 @@
 import { Square, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { getActiveEditor } from '@/features/editor/commands/editorBus';
-import { insertAiText } from '@/features/editor/extensions/aiOrigin';
+import { findTarget, insertAiText } from '@/features/editor/extensions/aiOrigin';
 import { leafText } from '@/features/editor/leafText';
 import { updateItem } from '@/features/binder/items';
 import { updateProjectSettings } from '@/features/library/projects';
@@ -13,7 +13,6 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { Textarea } from '@/ui/textarea';
-import type { Node as PmNode } from '@tiptap/pm/model';
 import {
   clearProject,
   getEntries,
@@ -45,42 +44,6 @@ import { recordAiRequest } from '@/features/usage/usage';
  * stays here. In Reader mode no answer has a way into the manuscript. In Co-writer mode, Insert puts a
  * draft in the text with the aiOrigin mark, and only when the writer presses it.
  */
-
-/** The words that a rewrite replaces, found again after the text changed. */
-function findTarget(doc: PmNode, target: Target, sep: string): Target | null {
-  const inDoc = target.to <= doc.content.size;
-  if (inDoc && doc.textBetween(target.from, target.to, sep, leafText) === target.text) return target;
-  // The words moved. A text in one block with one match is still the same words.
-  if (target.text === '' || target.text.includes('\n')) return null;
-  const found: Target[] = [];
-  doc.descendants((node, pos) => {
-    if (found.length > 1) return false;
-    if (!node.isTextblock) return true;
-    let offset = pos + 1;
-    let text = '';
-    const starts: { at: number; pos: number }[] = [];
-    node.forEach((child) => {
-      if (child.isText) {
-        starts.push({ at: text.length, pos: offset });
-        text += child.text ?? '';
-      } else text += '\uFFFC';
-      offset += child.nodeSize;
-    });
-    let at = text.indexOf(target.text);
-    while (at >= 0 && found.length <= 1) {
-      const start = [...starts].reverse().find((s) => s.at <= at);
-      if (start) {
-        const from = start.pos + (at - start.at);
-        found.push({ from, to: from + target.text.length, text: target.text });
-      }
-      at = text.indexOf(target.text, at + 1);
-    }
-    return false;
-  });
-  const only = found.length === 1 ? found[0] : undefined;
-  if (!only) return null;
-  return doc.textBetween(only.from, only.to, sep, leafText) === target.text ? only : null;
-}
 
 const selectClass =
   'min-h-11 w-full rounded-md border border-rule bg-bg px-3 text-base text-text focus-visible:border-accent';

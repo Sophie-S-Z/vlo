@@ -3,6 +3,7 @@ import { Fragment, Slice, type MarkType, type Node as ProseMirrorNode, type Sche
 import { Plugin, PluginKey, Selection, type Transaction } from '@tiptap/pm/state';
 import { yUndoPluginKey, ySyncPluginKey } from '@tiptap/y-tiptap';
 import { AI_ORIGIN, type AiOrigin } from '../format/aiOrigin';
+import { leafText } from '../leafText';
 
 /*
  * The aiOrigin mark (spec section 5, F26). Co-writer text that the writer inserts carries the provider,
@@ -291,4 +292,50 @@ export function insertAiText(
   undo?.stopCapturing();
   editor.commands.focus();
   return range;
+}
+
+/** Words of the text, as positions in the item's document and their text. */
+export interface Target {
+  from: number;
+  to: number;
+  text: string;
+}
+
+/**
+ * The words that a rewrite replaces, found again after the text changed: the same range, or else the only
+ * match of the words inside one block. Gives null when the words are gone or match more than once.
+ */
+export function findTarget(doc: ProseMirrorNode, target: Target, sep: string): Target | null {
+  const inDoc = target.to <= doc.content.size;
+  if (inDoc && doc.textBetween(target.from, target.to, sep, leafText) === target.text) return target;
+  // The words moved. A text in one block with one match is still the same words.
+  if (target.text === '' || target.text.includes('\n')) return null;
+  const found: Target[] = [];
+  doc.descendants((node, pos) => {
+    if (found.length > 1) return false;
+    if (!node.isTextblock) return true;
+    let offset = pos + 1;
+    let text = '';
+    const starts: { at: number; pos: number }[] = [];
+    node.forEach((child) => {
+      if (child.isText) {
+        starts.push({ at: text.length, pos: offset });
+        text += child.text ?? '';
+      } else text += '\uFFFC';
+      offset += child.nodeSize;
+    });
+    let at = text.indexOf(target.text);
+    while (at >= 0 && found.length <= 1) {
+      const start = [...starts].reverse().find((s) => s.at <= at);
+      if (start) {
+        const from = start.pos + (at - start.at);
+        found.push({ from, to: from + target.text.length, text: target.text });
+      }
+      at = text.indexOf(target.text, at + 1);
+    }
+    return false;
+  });
+  const only = found.length === 1 ? found[0] : undefined;
+  if (!only) return null;
+  return doc.textBetween(only.from, only.to, sep, leafText) === target.text ? only : null;
 }

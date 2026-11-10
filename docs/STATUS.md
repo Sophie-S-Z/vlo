@@ -607,8 +607,58 @@ Last update: 2026-11-10
   - Focus stays in a useful place after Stop, Remove and the key dialog. "Prepare the request" waits for
     the request before it takes a second press.
 
-## In progress
+## Done in Phases 7 to 12
 
+- Phase 12 (plan `docs/plans/phase-12.md`): the five findings that the Phase 6 architecture review left
+  for a later release (`docs/architecture-review-phase-6.md`, findings 4 to 8).
+  - L1: Replace import keeps the device copy in memory, and puts it back when a write of the backup fails.
+  - L2: the export job sends one step at a time, in the order of the calls, so two callers never mix their
+    answers. The book preview uses this order and has no queue of its own.
+  - L3: `findTarget`, which finds the words that a co-writer rewrite replaces, moved from the Assistant
+    panel to `editor/extensions/aiOrigin.ts`, next to `insertAiText`, with unit tests.
+  - L4: Mark all counts names from `readItemUpdates`, and uses `holdsText` and `READ_AT_ONCE`.
+  - L5: the pass-through wrappers `holdsText` in `backup/file.ts` and `checkFonts` in `export/run.ts` are gone.
+- Phase 11 (plan `docs/plans/phase-11.md`, the roadmap's "Only in Vlo" features F54 to F61). The product
+  owner approved decisions K1 to K9 as recommended on 2026-11-10. Pull request #30 (K-A, merged on
+  2026-11-10) holds Tasks K1 to K4:
+  - K1: a Form select with the Craft labels of a poem checks a sonnet, villanelle, ghazal, haiku, pantoum
+    or sestina. Each note names its line, and a click moves the cursor there. Rhyme and syllables are
+    checked in English only. Six public-domain or Vlo fixtures give 0 notes.
+  - K2: named versions of an item in the History dialog: save, switch, rename, delete with Undo, and a
+    paragraph compare with "Use this". A switch and a "Use this" take a snapshot first. Versions sync in
+    their own blobs and go in backups (database version 10, backup version 5).
+  - K3: a table read in the Read aloud panel gives each Codex character that the text names a voice of
+    its own. Vlo finds the speaker of each quote from a speech verb, a name, a quote that goes on, or a
+    two-person exchange. The choices stay on this device.
+  - K4: the Reader panel in the Assistant asks four readers for notes in one request, with the Codex
+    notes of the names in the text (at most 600 tokens, aliased in a memoir). Each reader gets a card with
+    no Insert. Privacy page version 3 says so.
+  - Pull request K-B holds Tasks K5 and K6. K5: an authorship record of each project counts the minutes
+    and the characters that the writer types, pastes or drops, dictates, takes from the AI and deletes. It
+    keeps no text. Each device signs its own chain of entries with a P-256 key that stays on it. The
+    record syncs and goes in backups (database version 11, backup version 6). Export has Download the
+    record. Privacy page version 4 says so.
+  - K6: `/verify` checks a record file in the browser and sends nothing. A change of any one byte fails,
+    and the page names the entry. `docs/authorship-record.md` gives the format and a Python and OpenSSL
+    script that checks a record with no Vlo code.
+  - Known limits: the device clock gives the times. One sync blob holds about 8,000 entries of a project.
+  - Pull request K-C holds Tasks K7 and K8. K7: a sprint is a timer session with a word target, and its
+    result card counts only the words of its time. Progress has a month challenge with a calendar. With a
+    Supabase project, friends sprint in a room (migration 0006): the room gets a six-letter code, a random
+    member id, a nickname and a count, never text. Privacy page version 5 says so.
+  - K8: a series of books shares Codex entries and a style sheet (database version 12, backup version 7).
+    The Library has Add to a series, and the Series page orders the books, counts their words, shows the
+    mentions of each shared entry in each book and edits the style sheet. In an English book, the style
+    check marks each form that the sheet avoids.
+  - Known limits: the style sheet check runs only in English books, as the style check does. A remote
+    delete of a book leaves its series when the series row syncs.
+  - Pull request K-D holds Tasks K9 and K10. K9: Record a memory in a memoir item asks one of 60
+    questions in 6 life stages and records the answer. Each recording stays with its memory in the
+    research files, and backups keep the link. Turn into text downloads Whisper base (80 MB) once, after
+    the writer agrees, and runs it on this device. The words go in at the cursor and count as dictated.
+    Settings has Delete the model. Privacy page version 6 says so.
+  - Known limits: the speech model runs on WASM in the tests. WebGPU and Safari need a check by hand. A
+    long recording takes about as long as its audio to turn into text on WASM.
 - Phase 10 (plan `docs/plans/phase-10.md`, the roadmap's "Finished books" features F51, F52 and F53). The
   product owner approved decisions J1 to J7 as recommended on 2026-11-10. Pull request J-A holds Task J1,
   the design pass of plan Part J0:
@@ -760,14 +810,15 @@ Last update: 2026-11-10
     the phone toolbar is the same at both levels. They now open the drawer or check the level in another
     way, and they pass with the review fixes on both profiles. The board pinch timing test failed again, as
     noted below for this container. Initial JavaScript: 215 KB gzip.
-- Phase 2: every pull request merged.
+
+## Open
+
 - CI: the repository is public, so Actions minutes are free. A pull request runs the checks, the export files
   job and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
   run it before each phase gate. The browser jobs run one worker, so the timing tests have the CPU alone.
 - Phase 4: pull request #12 merged on 2026-11-06. The checks by hand for OpenRouter and Groq with a key,
   the in-browser model on WebGPU, and input method typing inside AI text are still open.
-- Phase 5: the plan is `docs/plans/phase-5.md`, approved on 2026-11-07. E0 to E6 are built on the branch
-  `claude/project-thread-9q00v8`. Sharing stays off in each build until the Supabase project exists
+- Supabase: sharing, sealed sync and sprint rooms stay off in each build until the Supabase project exists
   (`docs/sharing-setup.md`, decision S1): the product owner makes it and gives the URL and the anon key.
   Then the values go in a committed `.env`, and the host goes in the CSP in `vercel.json`.
 - Phase 5, Gate 5: a fresh security review found no critical issue. Its high findings are fixed: long quotes,
@@ -776,9 +827,6 @@ Last update: 2026-11-10
   MathML values, the grants and search path of each function, and clearer messages.
 - Phase 5, open by hand: a real Supabase project with the 4 migrations, a share opened on a real phone, and
   the keepalive workflow once the Actions minutes reset.
-- Phase 3: the plan is `docs/plans/phase-3.md`, approved on 2026-11-05. C1 (data model and backup format) and
-  C2 (Story Board, Plot Grid and List view) are in review. C3 (Memory Timeline, People and private names) is
-  built. C4 (Collection Sequencer and Craft labels) is built. C5 (Submissions and Progress) is built. Gate 3 is next.
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
@@ -791,9 +839,6 @@ Last update: 2026-11-10
 - After a deep AI check in Reader mode, a switch back to Pen frees the model only when the Assistant code
   loaded too. On a large screen it always loads, because the Assistant opens in Reader mode. On a phone the
   model can stay in memory until the tab closes. It sends nothing.
-- Architecture review findings 4 to 8 (`docs/architecture-review-phase-6.md`) wait for a later release:
-  Replace import keeps no device copy on failure, the export worker steps depend on their order, the
-  co-writer Insert logic is inside the panel, Mark all has its own reader, and two pass-through wrappers.
 - CI Firefox: 3 to 9 tests a run time out in their first page.goto, on every run since the first phases. Each
   one passes on its retry. The stuck load never reaches DOMContentLoaded, so the stall is before the page
   runs. A wait for the HTML first and a fixed 127.0.0.1 address did not change it, so both were taken back.
@@ -826,48 +871,6 @@ Last update: 2026-11-10
     same second can miss its mark. The name check before each export finds it, and Mark all again marks it.
   - Show aliases hides each real name with a decoration. The caret can still move into the hidden text,
     and typing there changes the real name. The switch is a preview, so turn it off to edit names.
-
-- Phase 11 (plan `docs/plans/phase-11.md`, the roadmap's "Only in Vlo" features F54 to F61). The product
-  owner approved decisions K1 to K9 as recommended on 2026-11-10. Pull request #30 (K-A, merged on
-  2026-11-10) holds Tasks K1 to K4:
-  - K1: a Form select with the Craft labels of a poem checks a sonnet, villanelle, ghazal, haiku, pantoum
-    or sestina. Each note names its line, and a click moves the cursor there. Rhyme and syllables are
-    checked in English only. Six public-domain or Vlo fixtures give 0 notes.
-  - K2: named versions of an item in the History dialog: save, switch, rename, delete with Undo, and a
-    paragraph compare with "Use this". A switch and a "Use this" take a snapshot first. Versions sync in
-    their own blobs and go in backups (database version 10, backup version 5).
-  - K3: a table read in the Read aloud panel gives each Codex character that the text names a voice of
-    its own. Vlo finds the speaker of each quote from a speech verb, a name, a quote that goes on, or a
-    two-person exchange. The choices stay on this device.
-  - K4: the Reader panel in the Assistant asks four readers for notes in one request, with the Codex
-    notes of the names in the text (at most 600 tokens, aliased in a memoir). Each reader gets a card with
-    no Insert. Privacy page version 3 says so.
-  - Pull request K-B holds Tasks K5 and K6. K5: an authorship record of each project counts the minutes
-    and the characters that the writer types, pastes or drops, dictates, takes from the AI and deletes. It
-    keeps no text. Each device signs its own chain of entries with a P-256 key that stays on it. The
-    record syncs and goes in backups (database version 11, backup version 6). Export has Download the
-    record. Privacy page version 4 says so.
-  - K6: `/verify` checks a record file in the browser and sends nothing. A change of any one byte fails,
-    and the page names the entry. `docs/authorship-record.md` gives the format and a Python and OpenSSL
-    script that checks a record with no Vlo code.
-  - Known limits: the device clock gives the times. One sync blob holds about 8,000 entries of a project.
-  - Pull request K-C holds Tasks K7 and K8. K7: a sprint is a timer session with a word target, and its
-    result card counts only the words of its time. Progress has a month challenge with a calendar. With a
-    Supabase project, friends sprint in a room (migration 0006): the room gets a six-letter code, a random
-    member id, a nickname and a count, never text. Privacy page version 5 says so.
-  - K8: a series of books shares Codex entries and a style sheet (database version 12, backup version 7).
-    The Library has Add to a series, and the Series page orders the books, counts their words, shows the
-    mentions of each shared entry in each book and edits the style sheet. In an English book, the style
-    check marks each form that the sheet avoids.
-  - Known limits: the style sheet check runs only in English books, as the style check does. A remote
-    delete of a book leaves its series when the series row syncs.
-  - Pull request K-D holds Tasks K9 and K10. K9: Record a memory in a memoir item asks one of 60
-    questions in 6 life stages and records the answer. Each recording stays with its memory in the
-    research files, and backups keep the link. Turn into text downloads Whisper base (80 MB) once, after
-    the writer agrees, and runs it on this device. The words go in at the cursor and count as dictated.
-    Settings has Delete the model. Privacy page version 6 says so.
-  - Known limits: the speech model runs on WASM in the tests. WebGPU and Safari need a check by hand. A
-    long recording takes about as long as its audio to turn into text on WASM.
 
 ## Blocked
 
