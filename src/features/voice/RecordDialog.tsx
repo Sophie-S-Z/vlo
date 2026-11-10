@@ -1,14 +1,13 @@
 import type { Editor } from '@tiptap/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Mic, Shuffle, Square } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { addRecording } from '@/features/research/research';
 import { db, type ResearchFile } from '@/lib/db';
 import { Button } from '@/ui/button';
-import { downloadModel, MODEL_SIZE, modelReady } from './model';
 import { PROMPTS } from './prompts';
-import { startRecording, type Recording } from './recorder';
-import { insertDictation, transcribe } from './speech';
+import { clock, LevelMeter, SpeechStatus } from './SpeechParts';
+import { useRecorder, useSpeech } from './useSpeech';
 
 /*
  * "Record a memory" (roadmap F57, plan Task K9, decision K4): a question card, a recorder with a level
@@ -19,23 +18,6 @@ import { insertDictation, transcribe } from './speech';
 const QUESTIONS = PROMPTS.flatMap(({ stage, questions }) =>
   questions.map((question) => ({ stage, question })),
 );
-
-type Speech =
-  | { step: 'idle' }
-  | { step: 'ask'; clip: ResearchFile }
-  | { step: 'download'; share: number }
-  | { step: 'working' }
-  | { step: 'error'; message: string };
-
-const clock = (seconds: number) =>
-  `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
-
-function recordProblem(problem: unknown): string {
-  if (problem instanceof DOMException && problem.name === 'NotAllowedError')
-    return 'Vlo cannot use the microphone. Allow the microphone for this site in the browser settings, then try again.';
-  if (typeof MediaRecorder === 'undefined') return 'This browser cannot record audio.';
-  return 'Vlo could not start the recording. Check that a microphone is connected.';
-}
 
 function Clip({
   clip,
@@ -90,12 +72,8 @@ export function RecordDialog({
   onDone: () => void;
 }) {
   const [index, setIndex] = useState(0);
-  const [recording, setRecording] = useState<Recording | null>(null);
-  const [level, setLevel] = useState(0);
-  const [seconds, setSeconds] = useState(0);
-  const [problem, setProblem] = useState('');
-  const [speech, setSpeech] = useState<Speech>({ step: 'idle' });
-  const stopDownload = useRef<AbortController | null>(null);
+  const recorder = useRecorder();
+  const speech = useSpeech(editor, language, onDone);
   const clips = useLiveQuery(
     () =>
       db.research
@@ -106,95 +84,17 @@ export function RecordDialog({
     [projectId, itemId],
   );
   const current = QUESTIONS[index] ?? QUESTIONS[0];
-
-  // The meter and the time follow the recording on each frame.
-  useEffect(() => {
-    if (!recording) return;
-    const started = performance.now();
-    let frame = requestAnimationFrame(function tick() {
-      setLevel(recording.level());
-      setSeconds((performance.now() - started) / 1000);
-      frame = requestAnimationFrame(tick);
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [recording]);
-
-  // A dialog that closes during a recording or a download stops it.
-  const live = useRef({ recording, stopDownload });
-  useEffect(() => {
-    live.current = { recording, stopDownload };
-  });
-  useEffect(
-    () => () => {
-      live.current.recording?.cancel();
-      live.current.stopDownload.current?.abort();
-    },
-    [],
-  );
-
-  const record = async () => {
-    setProblem('');
-    try {
-      setRecording(await startRecording());
-    } catch (error) {
-      setProblem(recordProblem(error));
-    }
-  };
+  const { recording, setProblem } = recorder;
 
   const stop = async () => {
-    if (!recording) return;
-    setRecording(null);
-    setLevel(0);
-    const audio = await recording.stop();
+    const audio = await recorder.stop();
+    if (!audio) return;
     await addRecording(projectId, itemId, audio, current?.question ?? 'Recording').catch(() => {
       setProblem('Vlo could not save the recording on this device.');
     });
   };
 
-  const toText = async (clip: ResearchFile) => {
-    if (!clip.data) return;
-    setSpeech({ step: 'working' });
-    try {
-      const text = await transcribe(clip.data, language);
-      if (text === '') {
-        setSpeech({ step: 'error', message: 'Vlo found no words in this recording.' });
-        return;
-      }
-      insertDictation(editor, text);
-      onDone();
-    } catch {
-      setSpeech({
-        step: 'error',
-        message:
-          'Vlo could not turn this recording into text. Try again, or delete the model in Settings and download it again.',
-      });
-    }
-  };
-
-  const download = async (clip: ResearchFile) => {
-    const controller = new AbortController();
-    stopDownload.current = controller;
-    setSpeech({ step: 'download', share: 0 });
-    try {
-      await downloadModel((share) => {
-        setSpeech({ step: 'download', share });
-      }, controller.signal);
-    } catch {
-      setSpeech(
-        controller.signal.aborted
-          ? { step: 'idle' }
-          : { step: 'error', message: 'The download stopped. Check the connection and try again.' },
-      );
-      return;
-    } finally {
-      stopDownload.current = null;
-    }
-    await toText(clip);
-  };
-
-  const busy = recording !== null || speech.step === 'download' || speech.step === 'working';
+  const busy = recording || speech.busy;
 
   return (
     <div className="grid gap-6">
@@ -211,7 +111,7 @@ export function RecordDialog({
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            disabled={recording !== null}
+            disabled={recording}
             onClick={() => {
               setIndex((i) => (i + 1) % QUESTIONS.length);
             }}
@@ -220,7 +120,7 @@ export function RecordDialog({
           </Button>
           <Button
             variant="ghost"
-            disabled={recording !== null}
+            disabled={recording}
             onClick={() => {
               // Another question, never the same one again.
               const step = 1 + Math.floor(Math.random() * (QUESTIONS.length - 1));
@@ -241,84 +141,27 @@ export function RecordDialog({
               Stop
             </Button>
           ) : (
-            <Button disabled={busy} onClick={() => void record()}>
+            <Button disabled={busy} onClick={() => void recorder.record()}>
               <Mic aria-hidden="true" className="size-4" />
               Record
             </Button>
           )}
           <p role="status" className="text-sm text-muted tabular-nums">
-            {recording ? `Recording, ${clock(seconds)}` : ''}
+            {recording ? `Recording, ${clock(recorder.seconds)}` : ''}
           </p>
         </div>
-        <div aria-hidden="true" className="h-2 max-w-xs overflow-hidden rounded-full bg-rule">
-          <div
-            className="h-full origin-left rounded-full bg-accent"
-            style={{ transform: `scaleX(${String(level)})` }}
-          />
-        </div>
+        <LevelMeter level={recorder.level} />
         <p className="text-sm text-muted">
           The audio stays on this device, with the research files of this memory.
         </p>
-        {problem && (
+        {recorder.problem && (
           <p role="alert" className="text-sm text-accent-text">
-            {problem}
+            {recorder.problem}
           </p>
         )}
       </section>
 
-      {speech.step === 'ask' && (
-        <section
-          aria-label="Download the speech model"
-          className="grid gap-3 rounded-[var(--radius-card)] border border-accent p-4"
-        >
-          <p className="text-sm">
-            To turn speech into text, Vlo downloads the Whisper base model once ({MODEL_SIZE}) from Hugging
-            Face. Then the model runs on this device, and the audio never leaves it. You can delete the model
-            in Settings.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void download(speech.clip)}>Download {MODEL_SIZE}</Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setSpeech({ step: 'idle' });
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </section>
-      )}
-      <div
-        className={
-          speech.step === 'download' || speech.step === 'working' || speech.step === 'error'
-            ? 'grid gap-2'
-            : 'sr-only'
-        }
-      >
-        <p role="status" className="text-sm text-muted">
-          {speech.step === 'download' &&
-            `Downloading the speech model: ${String(Math.floor(speech.share * 100))}%.`}
-          {speech.step === 'working' &&
-            'Turning the recording into text. A long recording takes a minute or more.'}
-        </p>
-        {speech.step === 'download' && (
-          <Button
-            variant="ghost"
-            className="justify-self-start"
-            onClick={() => {
-              stopDownload.current?.abort();
-            }}
-          >
-            Stop the download
-          </Button>
-        )}
-        {speech.step === 'error' && (
-          <p role="alert" className="text-sm text-accent-text">
-            {speech.message}
-          </p>
-        )}
-      </div>
+      <SpeechStatus speech={speech} />
 
       <section aria-labelledby="record-clips" className="grid gap-2">
         <h3 id="record-clips" className="text-base font-semibold">
@@ -332,15 +175,7 @@ export function RecordDialog({
                 clip={clip}
                 busy={busy}
                 onText={(target) => {
-                  modelReady().then(
-                    (ready) => {
-                      if (ready) void toText(target);
-                      else setSpeech({ step: 'ask', clip: target });
-                    },
-                    () => {
-                      setSpeech({ step: 'error', message: 'This browser cannot keep the speech model.' });
-                    },
-                  );
+                  if (target.data) void speech.toText(target.data);
                 }}
               />
             ))}

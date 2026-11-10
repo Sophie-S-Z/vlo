@@ -33,10 +33,11 @@ import { PersonPanel } from '@/features/people/PersonPanel';
 const GradientPanel = lazy(async () => ({ default: (await import('./panels/GradientPanel')).GradientPanel }));
 // So does the equation panel, which loads MathLive in turn.
 const MathPanel = lazy(async () => ({ default: (await import('./panels/MathPanel')).MathPanel }));
-// And "Record a memory" (F57), with the recorder and the speech model's code.
+// And "Record a memory" (F57) and "Speak to write" (F62), with the recorder and the speech model's code.
 const RecordDialog = lazy(async () => ({
   default: (await import('@/features/voice/RecordDialog')).RecordDialog,
 }));
+const SpeakPanel = lazy(async () => ({ default: (await import('@/features/voice/SpeakPanel')).SpeakPanel }));
 
 /** A rectangle at the selection start, for panels opened from the / menu or the command menu. */
 function caretRect(editor: Editor): DOMRect {
@@ -63,7 +64,15 @@ function measurable(editor: Editor, anchor: PanelAnchor) {
   };
 }
 
-function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
+function PanelBody({
+  editor,
+  panel,
+  language,
+}: {
+  editor: Editor;
+  panel: PanelId;
+  language: string | undefined;
+}) {
   switch (panel) {
     case 'shortcuts':
     case 'memory':
@@ -90,6 +99,12 @@ function PanelBody({ editor, panel }: { editor: Editor; panel: PanelId }) {
       return <FootnotePanel editor={editor} />;
     case 'read-aloud':
       return <ReadAloudPanel editor={editor} />;
+    case 'speak':
+      return (
+        <Suspense fallback={<p className="text-sm text-muted">Loading the recorder.</p>}>
+          <SpeakPanel editor={editor} language={language} onDone={closePanel} />
+        </Suspense>
+      );
     case 'gradient':
       return (
         <Suspense fallback={<p className="text-sm text-muted">Loading the gradient editor.</p>}>
@@ -118,6 +133,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   gradient: 'Gradient and shimmer',
   math: 'Equation',
   'read-aloud': 'Read aloud',
+  speak: 'Speak to write',
   memory: 'Record a memory',
   person: 'Mark as person',
   comment: 'Comment',
@@ -216,7 +232,8 @@ export function PanelHost({
               popover.panel === 'font' ||
               popover.panel === 'gradient' ||
               popover.panel === 'math' ||
-              popover.panel === 'read-aloud'
+              popover.panel === 'read-aloud' ||
+              popover.panel === 'speak'
                 ? 'w-[min(24rem,calc(100vw-1.5rem))]'
                 : undefined
             }
@@ -232,7 +249,7 @@ export function PanelHost({
               focusText(editor);
             }}
           >
-            <PanelBody editor={editor} panel={popover.panel} />
+            <PanelBody editor={editor} panel={popover.panel} language={language} />
           </PopoverContent>
         )}
       </Popover>

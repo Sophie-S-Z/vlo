@@ -83,6 +83,7 @@ export type PanelId =
   | 'footnote'
   | 'math'
   | 'read-aloud'
+  | 'speak'
   | 'memory'
   | 'person'
   | 'comment'
@@ -751,13 +752,24 @@ export const COMMANDS: readonly EditorCommand[] = [
   },
   {
     kind: 'panel',
+    id: 'speak',
+    label: 'Speak to write',
+    icon: Mic,
+    group: 'insert',
+    forms: BOTH,
+    keywords: ['voice', 'microphone', 'dictate', 'dictation', 'speech to text', 'talk'],
+    slash: true,
+    panel: 'speak',
+  },
+  {
+    kind: 'panel',
     id: 'record-memory',
     label: 'Record a memory',
     icon: Mic,
     group: 'insert',
     forms: PROSE,
     templates: ['memoir'],
-    keywords: ['voice', 'microphone', 'interview', 'questions', 'speech to text', 'dictate', 'transcribe'],
+    keywords: ['voice', 'microphone', 'interview', 'questions', 'speech to text', 'transcribe'],
     slash: true,
     panel: 'memory',
   },

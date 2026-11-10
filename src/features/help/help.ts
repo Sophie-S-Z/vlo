@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 9,
+  version: 10,
   date: '2026-11-10',
   guide: [
     {
@@ -192,6 +192,15 @@ export const HELP = {
         'In a memoir, open People and choose Add person. Give each real name an alias.',
         'Select a name in the text and choose Mark as person, or use Mark all names before an export.',
         'A share-safe export, a share link and an AI request use the aliases in place of the real names.',
+      ],
+    },
+    {
+      title: 'Speak to write',
+      steps: [
+        'Put the cursor where the words go, then choose Speak to write in More tools, the / menu or the command menu.',
+        'Choose Speak and talk. Choose Stop and write, or stop after 30 seconds, and your words go in at the cursor.',
+        'The first time, Vlo downloads the speech model. The model runs on this device, the audio never leaves it, and Vlo does not keep the audio.',
+        'The authorship record counts these words as dictated, and they are your own words, with no AI mark.',
       ],
     },
     {
