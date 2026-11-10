@@ -825,6 +825,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     forms: PROSE,
     templates: ['open', 'memoir'],
     keywords: ['citation', 'sources', 'reference', 'bibliography', 'zotero', 'bibtex', 'works cited'],
+    slash: true,
     panel: 'cite',
   },
   {

@@ -155,9 +155,10 @@ export function ProjectPage() {
   }, [codex, projectId]);
   // The editor's citations (F64) read the sources of the open project.
   const sources = useSources(projectId);
+  const citeStyle = state.status === 'ready' ? state.project.settings.citeStyle : undefined;
   useEffect(() => {
-    if (sources) setSources(projectId, sources);
-  }, [sources, projectId]);
+    if (sources) setSources(projectId, sources, citeStyle);
+  }, [sources, projectId, citeStyle]);
   // The style check marks the forms that the series style sheet avoids (F59).
   const series = useSeriesOf(projectId);
   useEffect(() => {

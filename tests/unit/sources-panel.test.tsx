@@ -1,28 +1,45 @@
 import { readFileSync } from 'node:fs';
+import { Editor } from '@tiptap/core';
+import * as Y from 'yjs';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { SourcesPanel } from '@/features/cite/SourcesPanel';
-import { useSources } from '@/features/cite/sources';
+import { addSources, parseBibtex, useSources } from '@/features/cite/sources';
 import { getSources, resetSources, setSources } from '@/features/cite/sourceStore';
+import { proseExtensions } from '@/features/editor/extensions/prose';
 import { createProject } from '@/features/library/projects';
 import { db } from '@/lib/db';
 
 /* Roadmap 2 F64, plan Task M5: the Sources panel lists, adds, edits and deletes sources, with Undo. */
 
-/** The panel with the live sources of a project, as the project screen gives them. */
+/** The panel with the live sources and style of a project, as the project screen gives them. */
 function Host({ projectId }: { projectId: string }) {
   const sources = useSources(projectId);
+  const style = useLiveQuery(async () => (await db.projects.get(projectId))?.settings.citeStyle, [projectId]);
   useEffect(() => {
-    if (sources) setSources(projectId, sources);
-  }, [projectId, sources]);
-  return <SourcesPanel />;
+    if (sources) setSources(projectId, sources, style);
+  }, [projectId, sources, style]);
+  return (
+    <SourcesPanel
+      editor={editor}
+      onDone={() => {
+        done += 1;
+      }}
+    />
+  );
 }
 
 let projectId = '';
+let editor: Editor;
+let done = 0;
 
 beforeEach(async () => {
   await db.open();
+  done = 0;
+  editor = new Editor({ element: document.createElement('div'), extensions: proseExtensions(new Y.Doc()) });
+  editor.commands.setContent('<p>A night.</p>');
   ({
     project: { id: projectId },
   } = await createProject({ title: 'Essays', templates: ['open'] }));
@@ -33,6 +50,7 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   cleanup();
+  editor.destroy();
   resetSources();
   await db.delete();
 });
@@ -86,4 +104,22 @@ test('a file imports, an edit saves, and Undo gives back a deleted source', asyn
   fireEvent.click(undo);
   expect(await screen.findByText('Restored Tides and Timetables.')).toBeDefined();
   expect(await db.sources.count()).toBe(4);
+});
+
+test('Cite puts a citation with the page at the cursor, and Style changes the style of the project', async () => {
+  await addSources(projectId, parseBibtex(readFileSync('tests/fixtures/sources/zotero.bib', 'utf8')));
+  fireEvent.change(await screen.findByLabelText('Page'), { target: { value: '12' } });
+  fireEvent.click(screen.getByRole('button', { name: /^Cite Night Ferry/ }));
+  expect(done).toBe(1);
+  expect(editor.getJSON().content[0]?.content?.at(-1)).toEqual({
+    type: 'cite',
+    attrs: { key: 'marlow_night_2019', page: '12' },
+  });
+  fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'mla' } });
+  await waitFor(async () => {
+    expect((await db.projects.get(projectId))?.settings.citeStyle).toBe('mla');
+  });
+  await waitFor(() => {
+    expect(getSources().style).toBe('mla');
+  });
 });

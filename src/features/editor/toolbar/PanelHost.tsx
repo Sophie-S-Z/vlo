@@ -95,7 +95,7 @@ function PanelBody({
     case 'comment':
       return <CommentPanel editor={editor} onDone={closePanel} />;
     case 'cite':
-      return <SourcesPanel />;
+      return <SourcesPanel editor={editor} onDone={closePanel} />;
     case 'characters':
       return <CharactersPanel editor={editor} />;
     case 'footnote':

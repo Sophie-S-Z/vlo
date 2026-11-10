@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
 import { db, type Source, type SourceName, type SourceType } from '@/lib/db';
 import { newId } from '@/lib/ids';
+import { pageRange } from './styles';
 
 /*
  * The sources of a project (roadmap 2 F64, plan Task M5). A writer types a source in, or imports a BibTeX
@@ -41,7 +42,7 @@ function cleanDraft(draft: RawDraft): SourceDraft {
     const value = clip(draft[field] ?? '');
     if (value !== '') out[field] = value;
   }
-  if (out.pages) out.pages = out.pages.replace(/\s*-{1,2}\s*/g, '–');
+  if (out.pages) out.pages = pageRange(out.pages);
   if (out.doi) out.doi = out.doi.replace(/^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)/i, '');
   return out;
 }

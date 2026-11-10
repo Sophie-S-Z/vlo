@@ -1,7 +1,9 @@
+import type { Editor } from '@tiptap/core';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
-import type { Source, SourceType } from '@/lib/db';
-import { SOURCE_TYPES } from '@/lib/db';
+import { updateProjectSettings } from '@/features/library/projects';
+import type { CiteStyle, Source, SourceType } from '@/lib/db';
+import { CITE_STYLES, SOURCE_TYPES } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
@@ -17,13 +19,16 @@ import {
   type SourceDraft,
 } from './sources';
 import { useSourceState } from './sourceStore';
+import { CITE_STYLE_LABELS } from './styles';
 
 /*
- * The Sources panel (roadmap 2 F64, plan Task M5): the sources of the project, with Edit, Delete and Undo.
- * The writer types a source in, or imports a BibTeX or CSL JSON file from Zotero.
+ * "Cite a source" (roadmap 2 F64, plan Tasks M5 and M6): the sources of the project, with Cite, Edit,
+ * Delete and Undo, and the project's citation style. The writer types a source in, or imports a BibTeX or
+ * CSL JSON file from Zotero.
  */
 
 const SAVE_FAILED = 'Vlo could not save on this device. Check the storage space and try again.';
+const SELECT = 'min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9';
 
 const TYPE_LABELS: Readonly<Record<SourceType, string>> = {
   book: 'Book',
@@ -187,7 +192,7 @@ function SourceForm({
         <Label htmlFor={`${id}-type`}>Type</Label>
         <select
           id={`${id}-type`}
-          className="min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9"
+          className={SELECT}
           value={values.type}
           onChange={(event) => {
             setValues((v) => ({ ...v, type: event.target.value as SourceType }));
@@ -226,14 +231,16 @@ function SourceForm({
   );
 }
 
-export function SourcesPanel() {
-  const { projectId, sources } = useSourceState();
+export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () => void }) {
+  const { projectId, sources, style } = useSourceState();
   const [editing, setEditing] = useState<Source | 'new' | null>(null);
+  const [page, setPage] = useState('');
   const [message, setMessage] = useState('');
   const [problem, setProblem] = useState('');
   const [deleted, setDeleted] = useState<Source | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const undo = useRef<HTMLButtonElement>(null);
+  const id = useId();
 
   useEffect(() => {
     if (deleted) undo.current?.focus();
@@ -275,9 +282,46 @@ export function SourcesPanel() {
   return (
     <div className="grid gap-3">
       <div className="grid gap-1">
-        <h2 className="text-sm font-medium">Sources</h2>
-        <p className="text-sm text-muted">The books, articles and web pages that this project cites.</p>
+        <h2 className="text-sm font-medium">Cite a source</h2>
+        <p className="text-sm text-muted">
+          Choose a source to cite it at the cursor. Exports add a list of the works that you cite.
+        </p>
       </div>
+      {sources.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${id}-page`}>Page</Label>
+            <Input
+              id={`${id}-page`}
+              value={page}
+              placeholder="Optional"
+              onChange={(event) => {
+                setPage(event.target.value);
+              }}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${id}-style`}>Style</Label>
+            <select
+              id={`${id}-style`}
+              className={SELECT}
+              value={style}
+              onChange={(event) => {
+                if (projectId === null) return;
+                updateProjectSettings(projectId, { citeStyle: event.target.value as CiteStyle }).catch(() => {
+                  setProblem(SAVE_FAILED);
+                });
+              }}
+            >
+              {CITE_STYLES.map((value) => (
+                <option key={value} value={value}>
+                  {CITE_STYLE_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
       {sources.length === 0 ? (
         <p className="text-sm text-muted">
           No sources yet. Add one, or import a BibTeX or CSL JSON file from Zotero.
@@ -286,11 +330,19 @@ export function SourcesPanel() {
         <ul aria-label="Sources" className="grid max-h-64 gap-1 overflow-y-auto">
           {sources.map((source) => (
             <li key={source.id} className="flex items-center gap-1">
-              <span className="min-w-0 flex-1 text-sm [overflow-wrap:anywhere]">
+              <Button
+                variant="ghost"
+                aria-label={`Cite ${source.title}`}
+                className="block min-w-0 flex-1 px-2 py-1 text-left font-normal whitespace-normal [overflow-wrap:anywhere]"
+                onClick={() => {
+                  editor.chain().focus().insertCitation(source.key, page).run();
+                  onDone();
+                }}
+              >
                 {authorsShort(source)}
                 {source.year ? ` ${source.year}` : ''}
                 <span className="block text-xs text-muted">{source.title}</span>
-              </span>
+              </Button>
               <Button
                 variant="ghost"
                 className="px-2"

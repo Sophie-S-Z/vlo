@@ -265,6 +265,22 @@
   outline-offset: 1px;
 }
 
+/* A citation (F64) reads as text in the style of the project. A citation of a deleted source is marked. */
+.vlo-manuscript .vlo-cite {
+  border-radius: 0.2em;
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+
+.vlo-manuscript .vlo-cite.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.vlo-manuscript .vlo-cite-missing {
+  text-decoration: underline wavy var(--accent);
+  text-underline-offset: 0.2em;
+}
+
 .vlo-manuscript .vlo-math-pending,
 .vlo-manuscript .vlo-math-error {
   font-family: var(--font-mono);

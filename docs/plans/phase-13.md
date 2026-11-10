@@ -92,8 +92,9 @@
 
 **Files:** Create `src/features/editor/extensions/cite.ts`, `tests/unit/cite.test.ts`. Modify `src/features/editor/extensions/prose.ts`, `src/features/editor/extensions/slashMenu.ts`, `src/features/editor/docSchema.ts` (`DOC_SCHEMA` 9).
 
-- [ ] Tests first: "Cite" puts an inline `cite` atom with the source id and an optional page; the atom shows the short form of the project's style; a deleted source shows "[missing source]"; copy and paste between items keeps the atom.
-- [ ] Commit.
+- [x] Tests first: "Cite" puts an inline `cite` atom with the source id and an optional page; the atom shows the short form of the project's style; a deleted source shows "[missing source]"; copy and paste between items keeps the atom.
+- [x] Commit.
+- Built: the atom holds the source's key, not its id (see Task M5). Its plain text is Pandoc's form, such as "[@marlow2019, 12]", for search, copies and readable backups. The node view reads the sources and the style from `cite/sourceStore.ts`, so a change of either changes each citation at once. The panel's Style list sets `settings.citeStyle`. "Cite a source" has no shortcut, which changes decision M4: Chrome keeps Ctrl+Shift+C and Cmd+Option+C for its inspector, so the writer types "/cite" or uses the command menu.
 
 ### Task M7: Bibliography in exports and Gate 13
 
