@@ -158,6 +158,8 @@ describe('Backup round trip', () => {
     await db.projects.update(project.id, {
       settings: { ...project.settings, packet: { letter: 'Dear editors,', bio: 'I write by the sea.' } },
     });
+    // A poem form (F56) is an item field, so it goes with the item.
+    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet' });
     const before = await rowsOf(project.id);
     const texts = await Promise.all(scenes.map((s) => textOf(s.id)));
     const { bytes } = await backUpProject(project.id, { music: false });
@@ -426,6 +428,7 @@ describe('Reading a backup', () => {
       ['a wrong order', (m) => (row(m, 'items').order = ''), /has a wrong order/],
       ['a wrong kind', (m) => (row(m, 'items').kind = 'script'), /has a wrong kind/],
       ['a wrong Craft switch', (m) => (row(m, 'items').craft = 'yes'), /has a wrong Craft switch/],
+      ['a wrong poem form', (m) => (row(m, 'items').form = 'limerick'), /has a wrong poem form/],
       [
         'a wrong day of words',
         (m) => {

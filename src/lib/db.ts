@@ -1,4 +1,5 @@
 import { Dexie, type Table } from 'dexie';
+import type { PoemForm } from '@/features/craft/forms';
 import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
 import { countUnit, recountItems } from './wordcount';
 
@@ -114,6 +115,8 @@ export interface Item {
   lineCount?: number;
   /** True when the poem shows its Craft labels (spec 8.3). Off when absent. */
   craft?: boolean;
+  /** The form that the Craft labels check the poem against (F56). None when absent. */
+  form?: PoemForm;
   /** The id of one of the project's labels (F40). An id that the project no longer has shows no label. */
   labelId?: string;
   createdAt: number;

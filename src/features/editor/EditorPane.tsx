@@ -400,6 +400,7 @@ export function EditorPane({
               itemId={item.id}
               focusOnOpen={!beside}
               craft={labels}
+              poemForm={item.form}
               onEditor={onEditor}
               font={font}
               page={page}

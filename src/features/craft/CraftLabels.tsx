@@ -1,6 +1,8 @@
 import type { Editor } from '@tiptap/react';
 import { useEffect, useRef, useState } from 'react';
 import { scanInWorker } from './craftClient';
+import { FormCheck } from './FormCheck';
+import type { PoemForm } from './forms';
 import type { LineScan } from './scan';
 
 /*
@@ -34,9 +36,24 @@ function linesOf(editor: Editor): PoemLine[] {
   return out;
 }
 
+/** The texts of the lines, stanza by stanza. */
+function stanzasOf(editor: Editor, texts: readonly string[]): string[][] {
+  const out: string[][] = [];
+  let next = 0;
+  editor.state.doc.forEach((node) => {
+    if (node.type.name !== 'stanza') return;
+    out.push(texts.slice(next, next + node.childCount));
+    next += node.childCount;
+  });
+  return out;
+}
+
 interface Scanned {
   texts: string[];
   scans: LineScan[];
+  /** The lines stanza by stanza, and the start of each line, when the scan began. */
+  stanzas: string[][];
+  starts: number[];
 }
 
 type Status = 'loading' | 'ready' | 'failed';
@@ -221,10 +238,18 @@ function hideChanged(editor: Editor, layer: HTMLElement, drawn: Drawn): void {
   layer.dataset.lines = String(shownCount(drawn));
 }
 
-export function CraftLabels({ editor }: { editor: Editor }) {
+export interface CraftLabelsProps {
+  editor: Editor;
+  itemId: string;
+  form: PoemForm | undefined;
+  /** The scan reads English. In another language the form check reads only the structure. */
+  english: boolean;
+}
+
+export function CraftLabels({ editor, itemId, form, english }: CraftLabelsProps) {
   const layerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>('loading');
-  const [scanned, setScanned] = useState<Scanned>({ texts: [], scans: [] });
+  const [scanned, setScanned] = useState<Scanned>({ texts: [], scans: [], stanzas: [], starts: [] });
 
   // Scans now and after each typing pause. Only the answer to the latest request counts.
   useEffect(() => {
@@ -232,13 +257,16 @@ export function CraftLabels({ editor }: { editor: Editor }) {
     let latest = 0;
     let timer: number | undefined;
     const run = () => {
-      const texts = linesOf(editor).map((l) => l.text);
+      const lines = linesOf(editor);
+      const texts = lines.map((l) => l.text);
+      const stanzas = stanzasOf(editor, texts);
+      const starts = lines.map((l) => l.pos);
       const mine = (latest += 1);
       performance.mark('vlo-craft-scan');
       scanInWorker(texts).then(
         (scans) => {
           if (!alive || mine !== latest) return;
-          setScanned({ texts, scans });
+          setScanned({ texts, scans, stanzas, starts });
           setStatus('ready');
         },
         () => {
@@ -336,6 +364,16 @@ export function CraftLabels({ editor }: { editor: Editor }) {
             ? 'Vlo could not load the pronouncing dictionary. Connect to the internet once, then turn Craft labels off and on again.'
             : 'Craft labels: the syllable count and the rhyme letter end each line, and a mark above each syllable shows its stress (˘ unstressed, / stressed).'}
       </p>
+      {status === 'ready' && (
+        <FormCheck
+          editor={editor}
+          itemId={itemId}
+          form={form}
+          stanzas={scanned.stanzas}
+          scans={english ? scanned.scans : null}
+          starts={scanned.starts}
+        />
+      )}
       {status === 'ready' && (
         <ol aria-label="Craft labels by line" className="sr-only">
           {lines.map((scan, i) => (

@@ -29,6 +29,7 @@ import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { CraftLabels } from '@/features/craft/CraftLabels';
 import { CraftSwitch } from '@/features/craft/craftSwitch';
+import type { PoemForm } from '@/features/craft/forms';
 import { proseExtensions } from './extensions/prose';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
@@ -78,6 +79,8 @@ interface EditorProps {
   itemId?: string;
   /** Shows the Craft labels over the poem. */
   craft?: boolean;
+  /** The form that the Craft labels check the poem against (F56). */
+  poemForm?: PoemForm | undefined;
 }
 
 const HELP = {
@@ -141,6 +144,7 @@ export function Editor({
   language,
   itemId,
   craft = false,
+  poemForm,
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
@@ -271,7 +275,9 @@ export function Editor({
           className={cn('relative', craft && 'vlo-craft')}
           {...(language ? { lang: language, dir: textDirection(language) } : {})}
         >
-          {craft && <CraftLabels editor={editor} />}
+          {craft && itemId !== undefined && (
+            <CraftLabels editor={editor} itemId={itemId} form={poemForm} english={english} />
+          )}
           <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
         </div>
         <FootnoteList editor={editor} />

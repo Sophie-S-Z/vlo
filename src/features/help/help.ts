@@ -42,6 +42,15 @@ export const HELP = {
       ],
     },
     {
+      title: 'Write a poem in a form',
+      steps: [
+        'In a poem, choose More tools, then Craft labels.',
+        'Pick a form above the poem: sonnet, villanelle, ghazal, haiku, pantoum or sestina.',
+        'Vlo lists each line that breaks the form: the line count, the rhyme, a refrain, an end word or the syllables. Choose a note to go to its line.',
+        'Rhyme and syllables are checked in English. The lines, stanzas, refrains and end words are checked in every language.',
+      ],
+    },
+    {
       title: 'Go back to an earlier draft',
       steps: [
         'Vlo saves a snapshot after every 10 minutes of writing.',

@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import * as Y from 'yjs';
+import { isPoemForm } from '@/features/craft/forms';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
@@ -299,6 +300,7 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     if (row.lineCount !== undefined) count(row, 'lineCount', what);
     if (row.craft !== undefined && typeof row.craft !== 'boolean')
       fail(`${DAMAGED} ${what} has a wrong Craft switch.`);
+    if (row.form !== undefined && !isPoemForm(row.form)) fail(`${DAMAGED} ${what} has a wrong poem form.`);
     optionalText(row, 'labelId', what);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);
