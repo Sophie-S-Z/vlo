@@ -93,6 +93,7 @@ describe('share links', () => {
     const prepared = await prepareShare({
       project,
       items,
+      sources: [],
       itemIds: ids,
       people: PEOPLE,
       questions: ['Is the ending clear?'],
@@ -148,6 +149,7 @@ describe('share links', () => {
     const prepared = await prepareShare({
       project,
       items,
+      sources: [],
       itemIds: [...scenes.map((s) => s.id)].reverse(),
       people: [],
       questions: [' Where did you stop reading? ', ''],
@@ -163,7 +165,7 @@ describe('share links', () => {
           return order(a) < order(b) ? -1 : 1;
         }),
     );
-    await expect(prepareShare({ project, items, itemIds: [], people: [] })).rejects.toThrow(
+    await expect(prepareShare({ project, items, itemIds: [], people: [], sources: [] })).rejects.toThrow(
       'Pick at least one item to share.',
     );
   });

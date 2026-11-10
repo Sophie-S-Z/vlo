@@ -68,6 +68,8 @@ export type Run =
       ai?: string;
       change?: TextChange;
       comment?: TextComment;
+      /** A citation (F64): the key of its source and the page. The build gives it the text of the style. */
+      cite?: { key: string; page: string };
     }
   | { type: 'break' }
   | { type: 'math'; latex: string; style: RunStyle }
@@ -82,6 +84,8 @@ export interface ParagraphBlock {
   /** A Word-style line spacing multiple: 1, 1.15, 1.5 or 2. */
   lineSpacing?: number;
   firstLineIndent?: true;
+  /** Each line after the first starts 2 em in, as in a reference list (F64). */
+  hanging?: true;
   dropCap?: true;
   /** The element of a script line (F63). The text of a capital role is in capitals already. */
   role?: ScriptRole;
@@ -155,6 +159,8 @@ export interface ExportDoc {
   book?: BookSettings;
   /** The layout of an export that holds only script scenes (F63). A PDF then uses the script layout. */
   script?: ScriptStyle;
+  /** How many citations name a source that the project no longer has (F64). */
+  missingSources?: number;
 }
 
 /**

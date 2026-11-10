@@ -2,8 +2,16 @@ import { flattenTree } from '@/features/binder/tree';
 import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
-import type { BookSettings, Item, Project } from '@/lib/db';
-import { textBlocks, type Block, type ExportDoc, type ExportReview, type ExportSection } from './model';
+import { inText, LIST_TITLES, reference, sortReferences } from '@/features/cite/styles';
+import type { BookSettings, CiteStyle, Item, Project, Source } from '@/lib/db';
+import {
+  runsOf,
+  textBlocks,
+  type Block,
+  type ExportDoc,
+  type ExportReview,
+  type ExportSection,
+} from './model';
 import { itemBlocks, noteCounter, updateToJson } from './read';
 
 /*
@@ -82,6 +90,11 @@ export interface BuildInput {
   review?: ExportReview;
   /** Book layout for a PDF or an EPUB (F51). */
   book?: BookSettings;
+  /**
+   * The project's sources (F64). With them, each citation gets the text of the project's style and the
+   * export ends with a reference list. Without them, as in a readable backup, a citation keeps its key.
+   */
+  sources?: readonly Source[];
 }
 
 /** A document of plain text with no title, such as the cover letter, bio or synopsis of a submission packet (F53). */
@@ -102,7 +115,55 @@ function isScript(sections: readonly ExportSection[]): boolean {
   );
 }
 
-export function buildExportDoc({ project, items, scope, updates, review, book }: BuildInput): ExportDoc {
+/**
+ * Gives each citation the in-text form of the style, and returns the reference list of the cited sources
+ * and the count of citations whose source is gone.
+ */
+function citeSections(
+  sections: readonly ExportSection[],
+  sources: readonly Source[],
+  style: CiteStyle,
+  language: string,
+): { list: ExportSection | null; missing: number } {
+  const byKey = new Map(sources.map((s) => [s.key, s]));
+  const cited = new Set<Source>();
+  let missing = 0;
+  for (const run of sections.flatMap((s) => runsOf(s.blocks))) {
+    if (run.type !== 'text' || !run.cite) continue;
+    const source = byKey.get(run.cite.key);
+    if (source) cited.add(source);
+    else missing += 1;
+    run.text = inText(source, run.cite.page, style);
+  }
+  if (cited.size === 0) return { list: null, missing };
+  const title = LIST_TITLES[style];
+  return {
+    missing,
+    list: {
+      id: 'references',
+      title,
+      form: 'prose',
+      blocks: [
+        { type: 'heading', level: 2, runs: [{ type: 'text', text: title, style: {} }] },
+        ...sortReferences([...cited], language).map((source): Block => ({
+          type: 'paragraph',
+          runs: reference(source, style),
+          hanging: true,
+        })),
+      ],
+    },
+  };
+}
+
+export function buildExportDoc({
+  project,
+  items,
+  scope,
+  updates,
+  review,
+  book,
+  sources,
+}: BuildInput): ExportDoc {
   const template = projectDef(project);
   const list = scopeItems(items, scope);
   const notes = noteCounter();
@@ -143,14 +204,20 @@ export function buildExportDoc({ project, items, scope, updates, review, book }:
     scope.kind === 'sequence' && scope.name !== ''
       ? `${project.title}, ${scope.name}`
       : (scoped?.title ?? project.title);
+  const language = cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE;
+  const cites = sources
+    ? citeSections(sections, sources, project.settings.citeStyle ?? 'apa', language)
+    : null;
+  if (cites?.list) sections.push(cites.list);
   return {
     title,
     ...(project.authorName ? { author: project.authorName } : {}),
     font: project.settings.font ?? DEFAULT_FONT,
     paper: project.settings.page === 'a4' ? 'a4' : 'letter',
-    language: cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE,
+    language,
     sections,
     ...(book ? { book } : {}),
     ...(isScript(sections) ? { script: project.settings.scriptStyle ?? 'screenplay' } : {}),
+    ...(cites?.missing ? { missingSources: cites.missing } : {}),
   };
 }

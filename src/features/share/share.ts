@@ -5,7 +5,7 @@ import { safeExportTree } from '@/features/export/safeTree';
 import { hasTemplate, holdsText } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { newOwnerToken, newShareKey, sealJson } from '@/lib/crypto';
-import { db, type Item, type Project, type ShareRecord } from '@/lib/db';
+import { db, type Item, type Project, type ShareRecord, type Source } from '@/lib/db';
 import type { NameCheck, PrivatePerson } from '@/lib/privacy';
 import { readItemUpdates } from '@/lib/ydocs';
 import { toBundle, type ShareBundle } from './bundle';
@@ -37,6 +37,8 @@ export interface ShareInput {
   /** The items to share. Vlo puts them in binder order. */
   itemIds: readonly string[];
   people: readonly PrivatePerson[];
+  /** The project's sources, for the citations and the reference list (F64). */
+  sources: readonly Source[];
   /** The writer's questions for the readers. Empty questions stay out. */
   questions?: readonly string[];
 }
@@ -74,6 +76,7 @@ export async function prepareShare(input: ShareInput): Promise<PreparedShare> {
     scope,
     updates: await readItemUpdates(itemIds),
     people: [...input.people],
+    sources: input.sources,
     shareSafe: hasTemplate(input.project, 'memoir'),
   });
   const questions = (input.questions ?? []).map((q) => q.trim()).filter((q) => q !== '');

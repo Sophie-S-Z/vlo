@@ -149,6 +149,13 @@ function drawnNotices(drawn: NoticeExtras['drawnStyles'], format: ExportFormat):
 export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: NoticeExtras = {}): string[] {
   const looks = scan(doc);
   const notices: string[] = [];
+  const missing = doc.missingSources ?? 0;
+  if (missing > 0)
+    notices.push(
+      missing === 1
+        ? 'A citation names a source that this project does not have now. It shows “[missing source]”.'
+        : `${String(missing)} citations name sources that this project does not have now. They show “[missing source]”.`,
+    );
   for (const swap of extras.swaps ?? []) {
     notices.push(
       `${swap.name} is not in the file. ${swap.reason} The file uses ${swap.standInName} in its place.`,

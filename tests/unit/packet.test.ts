@@ -23,6 +23,7 @@ function input(extra: Partial<PacketInput> = {}): PacketInput {
     synopsis: 'Mara comes home.',
     people: [],
     shareSafe: false,
+    sources: [],
     ...extra,
   };
 }

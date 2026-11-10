@@ -142,7 +142,10 @@ describe('In-text forms', () => {
     expect(inText(many, '7', 'apa')).toBe('(Marlow et al., 2019, p. 7)');
     expect(inText(many, '7', 'mla')).toBe('(Marlow et al. 7)');
     expect(inText(many, '7', 'chicago')).toBe('(Marlow et al. 2019, 7)');
-    expect(inText(undated, '', 'apa')).toBe('(“Ferry Timetables,” n.d.)');
+    // APA sets a web page title in italics, which the text of a citation cannot hold, and an article's
+    // title in quotation marks, with the comma inside them.
+    expect(inText(undated, '', 'apa')).toBe('(Ferry Timetables, n.d.)');
+    expect(inText({ ...undated, type: 'article' }, '', 'apa')).toBe('(“Ferry Timetables,” n.d.)');
     expect(inText(undated, '', 'mla')).toBe('(“Ferry Timetables”)');
     expect(inText(undated, '', 'chicago')).toBe('(“Ferry Timetables” n.d.)');
     expect(inText(undefined, '', 'apa')).toBe('[missing source]');

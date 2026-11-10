@@ -6,6 +6,7 @@ import { cleanLatex } from '@/features/editor/format/math';
 import { parseNote } from '@/features/editor/format/notes';
 import { resolveColor } from '@/features/editor/format/palette';
 import { personIdOf, PRIVATE_NAME } from '@/features/people/markName';
+import { CITE, citeText } from '@/features/editor/format/cite';
 import { AI_ORIGIN, aiLabelOf } from '@/features/editor/format/aiOrigin';
 import { SUGGESTION } from '@/features/editor/format/suggestion';
 import { COMMENT } from '@/features/editor/format/comment';
@@ -244,6 +245,14 @@ function inlineRuns(content: JSONContent[] | undefined, notes: NoteCounter, revi
       if (latex.trim() !== '') runs.push({ type: 'math', latex, style: styleOf(node.marks) });
     } else if (node.type === 'footnote') {
       runs.push({ type: 'footnote', number: notes.next(), note: parseNote(node.attrs?.content) });
+    } else if (node.type === CITE) {
+      const attrs = node.attrs ?? {};
+      runs.push({
+        type: 'text',
+        text: citeText(attrs),
+        style: styleOf(node.marks),
+        cite: { key: String(attrs.key ?? ''), page: String(attrs.page ?? '') },
+      });
     }
   }
   return runs;
