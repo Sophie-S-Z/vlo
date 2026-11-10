@@ -34,6 +34,9 @@ export interface ClockEntry {
   /** The time of the change, from the clock of the device that made it. */
   at: number;
   gone?: true;
+  /** For a delete, the time of the change that it removed. An edit after that time came from a device whose
+   * change the delete never saw, so the edit wins over the delete (ADR 0008). */
+  seen?: number;
   /** A change that a sync brought from another device, so this device does not send it as its own. */
   remote?: true;
 }
@@ -79,6 +82,15 @@ function stamped(table: DBCoreTable, down: DBCore): DBCoreTable {
                 })
               ).result
             : [];
+      const clockTable = down.table(CLOCK_TABLE);
+      const gone = (before as ({ id: string } | undefined)[]).flatMap((row) => (row ? [row] : []));
+      const stamps =
+        gone.length > 0
+          ? ((await clockTable.getMany({
+              trans: req.trans,
+              keys: gone.map((row) => clockKey(table.name, row.id)),
+            })) as (ClockEntry | undefined)[])
+          : [];
       const result = await table.mutate(req);
       const at = clock.now();
       const values: ClockEntry[] =
@@ -86,11 +98,9 @@ function stamped(table: DBCoreTable, down: DBCore): DBCoreTable {
           ? req.values.flatMap((row: { id: string }, i) =>
               result.failures[i] ? [] : [entry(table.name, row, at)],
             )
-          : (before as ({ id: string } | undefined)[]).flatMap((row) =>
-              row ? [{ ...entry(table.name, row, at), gone: true as const }] : [],
-            );
+          : gone.map((row, i) => ({ ...entry(table.name, row, at), gone: true, seen: stamps[i]?.at ?? 0 }));
       if (values.length > 0) {
-        await down.table(CLOCK_TABLE).mutate({ trans: req.trans, type: 'put', values });
+        await clockTable.mutate({ trans: req.trans, type: 'put', values });
         onChange?.();
       }
       return result;

@@ -30,6 +30,11 @@ export interface SyncSpace {
   blocked: boolean;
   /** The names of the other devices, by device id, from their blobs. */
   names: Record<string, string>;
+  /**
+   * The blobs that a pull changed on this device, such as `rows:<project id>` and `text:<item id>`. The next
+   * push sends them, so each device keeps a blob of what it has, and a device that leaves takes no text away.
+   */
+  resend: string[];
 }
 
 export type Pairing = Pick<SyncSpace, 'spaceId' | 'key' | 'token'>;
@@ -41,7 +46,7 @@ export async function readSpace(): Promise<SyncSpace | null> {
 /** Saves how far a sync got. Nothing changes when sync stopped or moved to another space meanwhile. */
 export async function updateSpace(
   spaceId: string,
-  changes: Partial<Pick<SyncSpace, 'cursor' | 'pushedAt' | 'syncedAt' | 'blocked' | 'names'>>,
+  changes: Partial<Pick<SyncSpace, 'cursor' | 'pushedAt' | 'syncedAt' | 'blocked' | 'names' | 'resend'>>,
 ): Promise<void> {
   await db.appMeta
     .where('key')
@@ -50,6 +55,11 @@ export async function updateSpace(
       const space = meta.value as SyncSpace;
       if (space.spaceId === spaceId) meta.value = { ...space, ...changes };
     });
+}
+
+/** Runs `fn` while no sync round runs in a tab of this device. */
+export function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
+  return 'locks' in navigator ? navigator.locks.request('vlo-sync', fn) : fn();
 }
 
 /** "Synced just now", "Synced 5 min ago", "Synced 3 h ago" or "Synced on 9 November". */

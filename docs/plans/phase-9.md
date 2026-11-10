@@ -163,7 +163,7 @@ Pull request I-A: Tasks I1 to I3 (no server). I-B: Task I4. I-C: Tasks I5 to I8.
 
 ### Task I8: Gate 9 and the release
 
-- [ ] Update STATUS, the help page, `docs/privacy.md` and `docs/licenses.md`. Add the spec change rows: the v1 non-goal "cloud sync of manuscripts" is now sealed sync (decision D1), and `DOC_SCHEMA` 7. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] Add suggestions, Word comments and a synced device to the memoir leak test (Review Focus 3).
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 9 diff against Review Focus 1 to 6. Fix each high finding.
+- [x] Update STATUS, the help page, `docs/privacy.md` and `docs/licenses.md`. Add the spec change rows: the v1 non-goal "cloud sync of manuscripts" is now sealed sync (decision D1), and `DOC_SCHEMA` 7. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
+- [x] Add suggestions, Word comments and a synced device to the memoir leak test (Review Focus 3).
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 9 diff against Review Focus 1 to 6. Fix each high finding.
 - [ ] Open pull request I-C. Ask you to run "Run workflow" for all 4 browsers, and to give the Supabase keys (decision R9) when you want sharing, beta readers and sync on.

@@ -1,7 +1,7 @@
 import { rpc, ShareError } from '@/features/share/rpc';
 import { fromBase64Url, newOwnerToken, newShareKey, toBase64Url } from '@/lib/crypto';
 import { db } from '@/lib/db';
-import { readSpace, SYNC_META, updateSpace, type Pairing, type SyncSpace } from './space';
+import { readSpace, SYNC_META, updateSpace, withSyncLock, type Pairing, type SyncSpace } from './space';
 
 /*
  * Pairing and the relay calls of the Devices screen (plan Task I7, ADR 0008). A pairing link carries the
@@ -49,6 +49,7 @@ async function saveSpace(pairing: Pairing, deviceName: string): Promise<SyncSpac
     syncedAt: 0,
     blocked: false,
     names: {},
+    resend: [],
   };
   await db.appMeta.put({ key: SYNC_META, value: space });
   return space;
@@ -96,18 +97,27 @@ async function unlessGone(call: Promise<unknown>): Promise<void> {
   }
 }
 
+/**
+ * Runs a relay call that ends sync, then forgets the space. A round that runs ends first, so it cannot put
+ * blobs back after the call.
+ */
+function endSync(call: () => Promise<unknown>): Promise<void> {
+  return withSyncLock(async () => {
+    await unlessGone(call());
+    await db.appMeta.delete(SYNC_META);
+  });
+}
+
 /** This device leaves sync: its blobs leave the relay, and every project stays on this device. */
-export async function leaveSync(space: SyncSpace): Promise<void> {
-  await unlessGone(
+export function leaveSync(space: SyncSpace): Promise<void> {
+  return endSync(() =>
     rpc('leave_sync', { p_space: space.spaceId, p_token: space.token, p_device: space.deviceId }, 'sync'),
   );
-  await db.appMeta.delete(SYNC_META);
 }
 
 /** Sync stops on every device: the relay deletes the space. Each device keeps its projects. */
-export async function stopSyncEverywhere(space: SyncSpace): Promise<void> {
-  await unlessGone(rpc('delete_sync_space', { p_space: space.spaceId, p_token: space.token }, 'sync'));
-  await db.appMeta.delete(SYNC_META);
+export function stopSyncEverywhere(space: SyncSpace): Promise<void> {
+  return endSync(() => rpc('delete_sync_space', { p_space: space.spaceId, p_token: space.token }, 'sync'));
 }
 
 /** The text for the writer of a failed sync call. */

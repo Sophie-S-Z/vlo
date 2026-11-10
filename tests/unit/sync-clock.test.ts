@@ -64,3 +64,10 @@ test('a failed transaction, a merge and a table that does not sync record nothin
   expect(await db.syncClock.count()).toBe(0);
   expect(await db.cards.count()).toBe(1);
 });
+
+test('a delete keeps the time of the change that it removed', async () => {
+  await db.cards.put(card('c1'));
+  now = 2000;
+  await db.cards.delete('c1');
+  expect(await db.syncClock.get('cards:c1')).toMatchObject({ at: 2000, gone: true, seen: 1000 });
+});

@@ -103,18 +103,24 @@ export function usePanelRequest(): PanelRequest | null {
 }
 
 /** The words that another screen asks an item's editor to select when it opens, such as a reader's quote. */
-let wordsToShow: { itemId: string; words: string } | null = null;
+interface WordsToShow {
+  words: string;
+  /** The top-level block where the words were, so the nearest place of the same words wins. */
+  block: number;
+}
 
-export function showWordsOnOpen(itemId: string, words: string): void {
-  wordsToShow = { itemId, words };
+let wordsToShow: (WordsToShow & { itemId: string }) | null = null;
+
+export function showWordsOnOpen(itemId: string, words: string, block: number): void {
+  wordsToShow = { itemId, words, block };
 }
 
 /** The words that the editor of this item must select, once. */
-export function takeWordsToShow(itemId: string): string | null {
+export function takeWordsToShow(itemId: string): WordsToShow | null {
   if (wordsToShow?.itemId !== itemId) return null;
-  const { words } = wordsToShow;
+  const { words, block } = wordsToShow;
   wordsToShow = null;
-  return words;
+  return { words, block };
 }
 
 /** Gives the text focus now. TipTap's own focus command waits a frame, and keys typed in that frame are lost. */

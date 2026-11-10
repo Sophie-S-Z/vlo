@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import * as Y from 'yjs';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
+import { writeItemText } from '@/features/editor/itemText';
 import {
   blobKey,
   MAX_SYNC_FILE,
@@ -18,7 +19,7 @@ import { clock } from '@/lib/clock';
 import { fromBase64, newShareKey, toBase64 } from '@/lib/crypto';
 import { db, type Project } from '@/lib/db';
 import { itemDocName } from '@/lib/itemDocName';
-import { docFromUpdate, encodeDoc, writeItemUpdate, YFRAGMENT } from '@/lib/ydocs';
+import { docFromUpdate, encodeDoc, readItemUpdate, writeItemUpdate, YFRAGMENT } from '@/lib/ydocs';
 import { FakeSyncRelay } from '../fixtures/syncRelay';
 import { item, project, proseUpdate, updateOf } from './export-fixtures';
 
@@ -122,6 +123,7 @@ beforeEach(async () => {
     syncedAt: 0,
     blocked: false,
     names: {},
+    resend: [],
   };
   await db.appMeta.put({ key: SYNC_META, value: record });
   await db.projects.add(novel());
@@ -186,7 +188,12 @@ describe('push', () => {
     expect((await syncOnce()).pushed).toBe(1);
     const next = (await mine('rows:p1')) as RowsBlob;
     expect(next.rows.find((v) => v.id === 'c1')).toMatchObject({ at: 3000, row: { title: 'Calm' } });
-    expect(next.rows.find((v) => v.id === 'r1')).toEqual({ table: 'research', id: 'r1', at: 3000 });
+    expect(next.rows.find((v) => v.id === 'r1')).toEqual({
+      table: 'research',
+      id: 'r1',
+      at: 3000,
+      seen: 1000,
+    });
     // The file of a deleted research row leaves the relay.
     expect(await mine('file:r1')).toBeUndefined();
   });
@@ -225,10 +232,8 @@ describe('push', () => {
     await syncOnce();
     const blobs = [...fake.spaces.values()].flatMap((s) => s.blobs);
     expect(blobs.length).toBeGreaterThan(0);
-    for (const b of blobs)
-      expect(`${b.key} ${b.payload} ${new TextDecoder().decode(fromBase64(b.payload))}`).not.toMatch(
-        /Rosa|Teo/,
-      );
+    // The bytes of each payload, since its base64 text can hold any three letters by chance.
+    for (const b of blobs) expect(new TextDecoder().decode(fromBase64(b.payload))).not.toMatch(/Rosa|Teo/);
     // The sealed blobs hold both names, so the other devices get the whole memoir.
     expect(JSON.stringify(await mine('rows:p1'))).toContain('Rosa');
     const update = new TextDecoder().decode(fromBase64(((await mine('text:m1')) as TextBlob).update));
@@ -272,8 +277,12 @@ describe('pull', () => {
     expect((await indexedDB.databases()).map((d) => d.name)).not.toContain(itemDocName('s2'));
     expect(await db.projects.get('p2')).toBeUndefined();
     expect(await mine('text:s2')).toBeUndefined();
-    // The changes keep the other device's times, and this device does not send them as its own.
+    // The changes keep the other device's times. This device sends its merged rows once, so the relay
+    // keeps them when the other device leaves, and then nothing.
     expect(await db.syncClock.get('cards:c1')).toMatchObject({ at: 2000, remote: true });
+    expect((await syncOnce()).pushed).toBe(1);
+    const sent = (await mine('rows:p1')) as RowsBlob;
+    expect(sent.rows.find((v) => v.id === 'c1')).toMatchObject({ at: 2000, row: { title: 'Theirs' } });
     expect((await syncOnce()).pushed).toBe(0);
   });
 
@@ -299,6 +308,75 @@ describe('pull', () => {
     await syncOnce();
     expect(await textOf('s3')).toBe('Late. Night. The harbour. Gulls.');
     expect(await db.snapshots.where('itemId').equals('s3').count()).toBe(1);
+
+    // This device then keeps its own blob of the merged text, so the text stays when the other device leaves.
+    await syncOnce();
+    const sent = (await mine('text:s3')) as TextBlob;
+    expect(new TextDecoder().decode(fromBase64(sent.update))).toContain('Late. ');
+  });
+
+  test('a newer row from the other device keeps the counts here and the words typed while the round ran', async () => {
+    now = 2000;
+    await syncOnce();
+    await fromOther(
+      'rows:p1',
+      rows([
+        {
+          table: 'items',
+          id: 's1',
+          at: 7000,
+          row: { ...item('s1', 'scene', 'Renamed', 'ch'), wordCount: 0 },
+        },
+      ]),
+    );
+    // The writer types while the round reads the relay.
+    const call = fake.call.bind(fake);
+    let typing = true;
+    vi.spyOn(fake, 'call').mockImplementation(async (name, args) => {
+      if (name === 'sync_list' && typing) {
+        typing = false;
+        const doc = docFromUpdate(await readItemUpdate('s1'));
+        insert(doc, 12, ' More.');
+        await writeItemUpdate('s1', encodeDoc(doc), now);
+        await writeItemText({ id: 's1', projectId: 'p1' }, 'The harbour. More.', 'prose');
+      }
+      return call(name, args);
+    });
+    now = 6000;
+    await syncOnce();
+    expect(await db.items.get('s1')).toMatchObject({ title: 'Renamed', wordCount: 3 });
+    now = 8000;
+    await syncOnce();
+    const sent = (await mine('text:s1')) as TextBlob;
+    expect(new TextDecoder().decode(fromBase64(sent.update))).toContain(' More.');
+  });
+
+  test('a delete loses to an edit here that it never saw, and the item moves out of its deleted folder', async () => {
+    now = 2000;
+    await syncOnce();
+    now = 3000;
+    await writeItemText({ id: 's1', projectId: 'p1' }, 'The harbour.', 'prose');
+    // The other device deleted the folder and its scene after it saw their rows of time 1000.
+    await fromOther(
+      'rows:p1',
+      rows([
+        { table: 'items', id: 'ch', at: 4000, seen: 1000 },
+        { table: 'items', id: 's1', at: 4000, seen: 1000 },
+      ]),
+    );
+    now = 5000;
+    await syncOnce();
+    expect(await db.items.get('ch')).toBeUndefined();
+    expect(await db.items.get('s1')).toMatchObject({ parentId: null });
+    expect(await textOf('s1')).toBe('The harbour.');
+    expect(await db.syncClock.get('items:s1')).toMatchObject({ at: 5000 });
+    expect((await db.syncClock.get('items:s1'))?.remote).toBeUndefined();
+    now = 6000;
+    await syncOnce();
+    expect(((await mine('rows:p1')) as RowsBlob).rows).toContainEqual(
+      expect.objectContaining({ table: 'items', id: 's1', at: 5000 }),
+    );
+    expect(await mine('text:s1')).toBeDefined();
   });
 
   test('a blob of a newer Vlo blocks the sync, and this device applies nothing', async () => {

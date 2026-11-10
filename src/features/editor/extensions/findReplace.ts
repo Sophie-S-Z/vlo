@@ -75,10 +75,19 @@ export function findMatches(doc: ProseMirrorNode, query: FindQuery): FindMatch[]
   return matches;
 }
 
-/** The first place of these exact words in the document, or null, such as for a reader's quote. */
-export function findWords(doc: ProseMirrorNode, words: string): FindMatch | null {
+/**
+ * The place of these exact words nearest to the top-level block `near`, or null, such as for a reader's
+ * quote in a block of a share. The first place wins a tie.
+ */
+export function findWords(doc: ProseMirrorNode, words: string, near = 0): FindMatch | null {
   if (words.trim() === '') return null;
-  return findMatches(doc, { text: words, caseSensitive: true, wholeWord: false })[0] ?? null;
+  let best: FindMatch | null = null;
+  let gap = Infinity;
+  for (const match of findMatches(doc, { text: words, caseSensitive: true, wholeWord: false })) {
+    const distance = Math.abs(doc.resolve(match.from).index(0) - near);
+    if (distance < gap) [best, gap] = [match, distance];
+  }
+  return best;
 }
 
 function decorate(doc: ProseMirrorNode, matches: readonly FindMatch[], current: number): DecorationSet {

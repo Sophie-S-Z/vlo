@@ -27,7 +27,7 @@ import {
 } from './blobs';
 import { clockKey, onLocalChange, remoteTransaction, SYNC_TABLES } from './clock';
 import { mergeRows, type Version } from './merge';
-import { readSpace, SYNC_META, updateSpace, type SyncSpace } from './space';
+import { readSpace, SYNC_META, updateSpace, withSyncLock, type SyncSpace } from './space';
 
 /*
  * Sync on the device (plan Task I6, ADR 0008). A round pushes what changed on this device, then pulls
@@ -83,7 +83,13 @@ async function localVersions(projectId: string): Promise<Map<string, Version>> {
       }
     }
     for (const e of entries)
-      if (e.gone && !out.has(e.key)) out.set(e.key, { table: e.table, id: e.id, at: e.at });
+      if (e.gone && !out.has(e.key))
+        out.set(e.key, {
+          table: e.table,
+          id: e.id,
+          at: e.at,
+          ...(e.seen === undefined ? {} : { seen: e.seen }),
+        });
     return out;
   });
 }
@@ -93,17 +99,21 @@ async function dropBlobs({ space, keys }: Sync, names: string[]): Promise<void> 
     await call('sync_drop', space, { p_device: space.deviceId, p_key: await blobKey(keys, name) });
 }
 
+/** The name of the blob of an item's text or of a research file, or null for a row with no blob. */
+const blobName = (v: Pick<Version, 'table' | 'id'>) =>
+  v.table === 'items' ? `text:${v.id}` : v.table === 'research' ? `file:${v.id}` : null;
 const blobNames = (versions: readonly Pick<Version, 'table' | 'id'>[]) =>
-  versions.flatMap((v) =>
-    v.table === 'items' ? [`text:${v.id}`] : v.table === 'research' ? [`file:${v.id}`] : [],
-  );
+  versions.flatMap((v) => blobName(v) ?? []);
 
-/** Sends the blobs of each project that changed since the last push. The first push sends every project. */
-async function push(sync: Sync): Promise<number> {
+/**
+ * Sends the blobs of each project that changed since the last push, and the blobs that the last pull
+ * changed. The first push sends every project. `started` is the time that the round started.
+ */
+async function push(sync: Sync, started: number): Promise<number> {
   const { space, keys } = sync;
   const from = space.deviceName;
-  const started = clock.now();
   const first = space.pushedAt === 0;
+  const again = new Set(first ? [] : space.resend);
   const changes = first
     ? []
     : await db.syncClock
@@ -114,7 +124,12 @@ async function push(sync: Sync): Promise<number> {
   const fresh = new Set(changes.filter((e) => !e.gone).map((e) => e.key));
   const projectIds = first
     ? await db.projects.toCollection().primaryKeys()
-    : [...new Set(changes.map((e) => e.projectId))];
+    : [
+        ...new Set([
+          ...changes.map((e) => e.projectId),
+          ...[...again].flatMap((name) => (name.startsWith('rows:') ? [name.slice('rows:'.length)] : [])),
+        ]),
+      ];
   let pushed = 0;
   const put = async (name: string, blob: RowsBlob | TextBlob) => {
     const sealed = await sealBlob(blob, keys);
@@ -138,7 +153,9 @@ async function push(sync: Sync): Promise<number> {
     const rows = versions.filter((v) => v.table !== 'research' || !v.row);
     await put(`rows:${projectId}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows });
     for (const v of versions) {
-      if (!v.row || !(first || fresh.has(clockKey(v.table, v.id)))) continue;
+      const name = blobName(v);
+      if (!v.row || !(first || fresh.has(clockKey(v.table, v.id)) || (name !== null && again.has(name))))
+        continue;
       if (v.table === 'items' && project && holdsText(project.templates, v.row.kind as ItemKind)) {
         const update = toBase64(await readItemUpdate(v.id));
         await put(`text:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, itemId: v.id, update });
@@ -148,7 +165,7 @@ async function push(sync: Sync): Promise<number> {
     }
   }
   await dropBlobs(sync, blobNames(changes.filter((e) => e.gone)));
-  await updateSpace(space.spaceId, { pushedAt: started });
+  await updateSpace(space.spaceId, { pushedAt: started, resend: [] });
   return pushed;
 }
 
@@ -183,11 +200,23 @@ async function dropProject(id: string): Promise<string[]> {
   return itemIds;
 }
 
-/** Merges the rows blobs in one transaction. Gives the changes, and the items and files that went. */
-async function applyRows(
-  blobs: RowsBlob[],
-): Promise<{ taken: number; gone: Pick<Version, 'table' | 'id'>[] }> {
-  if (blobs.length === 0) return { taken: 0, gone: [] };
+interface Applied {
+  taken: number;
+  /** The items and files that went. */
+  gone: Pick<Version, 'table' | 'id'>[];
+  /** The blobs that this device must send again. */
+  resend: string[];
+  /** This device's rows that a delete never saw. */
+  revive: Version[];
+}
+
+/**
+ * Merges the rows blobs in one transaction. An item keeps this device's counts, which match the text here.
+ * When a newer row of an item replaces a change that this device made after `since`, its text goes again.
+ */
+async function applyRows(blobs: RowsBlob[], since: number): Promise<Applied> {
+  const applied: Applied = { taken: 0, gone: [], resend: [], revive: [] };
+  if (blobs.length === 0) return applied;
   const tables = [
     db.syncClock,
     db.itemTexts,
@@ -197,14 +226,21 @@ async function applyRows(
     db.appMeta,
     ...SYNC_TABLES.map(syncTable),
   ];
-  return remoteTransaction(db, tables, async () => {
-    let taken = 0;
-    const gone: Pick<Version, 'table' | 'id'>[] = [];
+  const { gone, resend } = applied;
+  await remoteTransaction(db, tables, async () => {
     for (const blob of blobs) {
-      const plan = mergeRows(await localVersions(blob.projectId), blob.rows);
+      const local = await localVersions(blob.projectId);
+      const plan = mergeRows(local, blob.rows);
       for (const v of plan.keep) await syncTable(v.table).put(v.row as Row);
       for (const v of plan.take) {
-        if (v.row) await syncTable(v.table).put(v.row as Row);
+        const key = clockKey(v.table, v.id);
+        const mine = local.get(key)?.row;
+        if (v.row && v.table === 'items' && mine) {
+          const counts = mine.lineCount === undefined ? {} : { lineCount: mine.lineCount };
+          await syncTable(v.table).put({ ...(v.row as Row), wordCount: mine.wordCount, ...counts });
+          const stamp = await db.syncClock.get(key);
+          if (stamp && !stamp.remote && stamp.at >= since) resend.push(`text:${v.id}`);
+        } else if (v.row) await syncTable(v.table).put(v.row as Row);
         else {
           await syncTable(v.table).delete(v.id);
           gone.push(v);
@@ -212,7 +248,7 @@ async function applyRows(
             for (const id of await dropProject(v.id)) gone.push({ table: 'items', id });
         }
         await db.syncClock.put({
-          key: clockKey(v.table, v.id),
+          key,
           table: v.table,
           id: v.id,
           projectId: blob.projectId,
@@ -221,12 +257,33 @@ async function applyRows(
           remote: true,
         });
       }
-      taken += plan.take.length + plan.keep.length;
+      applied.revive.push(...plan.revive);
+      const changed = plan.take.length + plan.keep.length;
+      applied.taken += changed;
+      // A project that went needs no blob of this device.
+      if (changed > 0 && !gone.some((g) => g.table === 'projects' && g.id === blob.projectId))
+        resend.push(`rows:${blob.projectId}`);
     }
     const itemIds = gone.filter((g) => g.table === 'items').map((g) => g.id);
     await db.itemTexts.bulkDelete(itemIds);
     await db.snapshots.where('itemId').anyOf(itemIds).delete();
-    return { taken, gone };
+  });
+  return applied;
+}
+
+/**
+ * Stamps this device's rows again, so they win over the delete on the other devices. An item whose folder
+ * went moves to the top of the binder.
+ */
+async function revive(versions: readonly Version[]): Promise<void> {
+  if (versions.length === 0) return;
+  await db.transaction('rw', SYNC_TABLES.map(syncTable), async () => {
+    for (const v of versions) {
+      const row = v.row as Row;
+      const parentId = v.table === 'items' ? (row.parentId as string | null) : null;
+      const orphan = parentId !== null && !(await db.items.get(parentId));
+      await syncTable(v.table).put(orphan ? { ...row, parentId: null } : row);
+    }
   });
 }
 
@@ -280,8 +337,11 @@ async function applyText(blob: TextBlob): Promise<boolean> {
   return true;
 }
 
-/** Reads the other devices' blobs. A blob of a newer Vlo stops the read, and this device applies nothing. */
-async function pull(sync: Sync): Promise<Omit<SyncResult, 'pushed'>> {
+/**
+ * Reads the other devices' blobs. A blob of a newer Vlo stops the read, and this device applies nothing.
+ * `since` is the time that the round started.
+ */
+async function pull(sync: Sync, since: number): Promise<Omit<SyncResult, 'pushed'>> {
   const listed = await listNew(sync.space);
   const rows: RowsBlob[] = [];
   const texts: TextBlob[] = [];
@@ -293,13 +353,23 @@ async function pull(sync: Sync): Promise<Omit<SyncResult, 'pushed'>> {
     if (blob && 'rows' in blob) rows.push(blob);
     else if (blob) texts.push(blob);
   }
-  const { taken, gone } = await applyRows(rows);
+  const { taken, gone, resend, revive: mine } = await applyRows(rows, since);
   await Promise.all(gone.filter((g) => g.table === 'items').map((g) => deleteItemDoc(g.id)));
   await dropBlobs(sync, blobNames(gone));
+  await revive(mine);
   let merged = 0;
-  for (const text of texts) if (await applyText(text)) merged += 1;
+  for (const text of texts)
+    if (await applyText(text)) {
+      merged += 1;
+      resend.push(`rows:${text.projectId}`, `text:${text.itemId}`);
+    }
   const last = listed.at(-1);
-  if (last) await updateSpace(sync.space.spaceId, { cursor: last.updated_at, names });
+  // The push of this round cleared the list, so the list holds only this pull's blobs.
+  await updateSpace(sync.space.spaceId, {
+    ...(last ? { cursor: last.updated_at } : {}),
+    names,
+    resend: [...new Set(resend)],
+  });
   return { pulled: taken + merged };
 }
 
@@ -307,8 +377,9 @@ async function round(): Promise<SyncResult> {
   const space = await readSpace();
   if (!space) return { pushed: 0, pulled: 0 };
   const sync = { space, keys: await syncKeys(space.key) };
+  const started = clock.now();
   try {
-    const result = { pushed: await push(sync), ...(await pull(sync)) };
+    const result = { pushed: await push(sync, started), ...(await pull(sync, started)) };
     await updateSpace(space.spaceId, { syncedAt: clock.now(), blocked: result.blocked !== undefined });
     return result;
   } catch (error) {
@@ -327,7 +398,7 @@ let running: Promise<SyncResult> | null = null;
 
 /** One sync round. A call while a round runs gets that round. Tabs of this device take turns. */
 export function syncOnce(): Promise<SyncResult> {
-  running ??= ('locks' in navigator ? navigator.locks.request('vlo-sync', round) : round()).finally(() => {
+  running ??= withSyncLock(round).finally(() => {
     running = null;
   });
   return running;

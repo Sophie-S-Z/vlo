@@ -645,6 +645,12 @@ Last update: 2026-11-09
     name and starts sync. The list shows each device and its last sync. "Stop sync on this device" and
     "Stop sync on all devices" end it, and each device keeps its projects. The safety badge says how many
     other devices sync and when the last sync was, and asks for an update when a newer Vlo blocks sync.
+  - I8: gate 9. The memoir leak tests now cover a share with waiting changes and comments, and sync
+    blobs. The privacy page says that sync takes the People names, and that a share carries reader
+    answers and reactions. A fresh review found no high issue. Its fixes: a delete loses to an edit that
+    it never saw, each device keeps its own blob of what a pull brought, a merged item keeps this
+    device's word count, words typed during a round still go, Mark all marks sync, leaving sync waits for
+    a running round, and a reader's reply goes on the place of its words nearest to its paragraph.
 
 - Phase 8 (plan `docs/plans/phase-8.md`, the roadmap's "Match the best" features F39 to F43, F46 to F48
   and the rest of F38). The product owner approved decisions Q1 to Q9 as recommended on 2026-11-09.

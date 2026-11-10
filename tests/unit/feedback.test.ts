@@ -86,3 +86,26 @@ test('makeComment puts the reply on its words with the reader name, once', async
     await db.delete();
   }
 });
+
+test('makeComment puts a reply on the place of its words nearest to its block (code review)', async () => {
+  await db.open();
+  try {
+    const target = { item: { id: 'i-twice', projectId: 'p1' }, form: 'prose' as const };
+    await writeItemUpdate(target.item.id, proseUpdate(['The gulls slept.', 'Night.', 'The gulls slept.']), 1);
+    expect(await makeComment(target, reply('r1', 0, 1, { block: 2 }))).toBe('made');
+    const open = openItemDoc(target.item.id);
+    await open.ready;
+    const { doc } = initProseMirrorDoc(open.doc.getXmlFragment(YFRAGMENT), editorSchemas.prose);
+    await open.close();
+    const marked = doc.children.map((block) => {
+      let has = false;
+      block.descendants((node) => {
+        has ||= node.marks.some((m) => m.type.name === 'comment');
+      });
+      return has;
+    });
+    expect(marked).toEqual([false, false, true]);
+  } finally {
+    await db.delete();
+  }
+});

@@ -191,7 +191,7 @@ export function EditorPane({
       const words = next && !beside ? takeWordsToShow(id) : null;
       if (!next || words === null) return;
       const show = () => {
-        const match = findWords(next.state.doc, words);
+        const match = findWords(next.state.doc, words.words, words.block);
         if (match) next.chain().focus().setTextSelection(match).scrollIntoView().run();
         else setNotice('The words of the reply are not in this text now.');
       };

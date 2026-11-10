@@ -83,6 +83,7 @@ function isVersion(value: unknown): value is Version {
     tables.has(v.table as string) &&
     typeof v.id === 'string' &&
     typeof v.at === 'number' &&
+    (v.seen === undefined || typeof v.seen === 'number') &&
     (row === undefined || (typeof row === 'object' && row !== null && row.id === v.id))
   );
 }

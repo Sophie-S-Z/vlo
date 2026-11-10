@@ -34,6 +34,7 @@ test('the newer change wins: an edit, a delete newer than an edit, and an edit n
     card('e', 1, 'New'),
   ]);
   expect(plan.keep).toEqual([]);
+  expect(plan.revive).toEqual([]);
 });
 
 test('a project row keeps the larger count of each day, whichever row wins', () => {
@@ -52,5 +53,22 @@ test('a project row keeps the larger count of each day, whichever row wins', () 
   const taken = mergeRows(side(mine), [project(8, 'Salt and iron', { '2026-11-09': 120, '2026-11-07': 90 })]);
   expect(taken.take[0]?.row).toMatchObject({ title: 'Salt and iron', settings: { wordsByDay: days } });
   // Nothing to take when this device has every day already.
-  expect(mergeRows(side(mine), [project(2, 'Salt', { '2026-11-08': 10 })])).toEqual({ take: [], keep: [] });
+  expect(mergeRows(side(mine), [project(2, 'Salt', { '2026-11-08': 10 })])).toEqual({
+    take: [],
+    keep: [],
+    revive: [],
+  });
+});
+
+test('a delete loses to an edit that it never saw, and the row keeps its project', () => {
+  const edited = card('a', 7, 'Mine');
+  const mine = project(6, 'Salt', {});
+  const plan = mergeRows(side(edited, card('b', 5, 'Mine'), mine), [
+    { ...card('a', 9), seen: 5 },
+    { ...card('b', 9), seen: 5 },
+    { table: 'projects', id: 'p', at: 9, seen: 6 },
+  ]);
+  // The delete saw the change of "b" at 5, so it wins there.
+  expect(plan.take).toEqual([{ ...card('b', 9), seen: 5 }]);
+  expect(plan.revive).toEqual([edited, mine]);
 });
