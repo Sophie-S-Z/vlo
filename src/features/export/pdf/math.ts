@@ -1,5 +1,6 @@
 import { parseMathml, type MathNode } from '../mathml';
-import type { Drawer, Rgb } from './draw';
+import type { Rgb } from './draw';
+import type { Sink } from './sink';
 import type { Face } from './fonts';
 
 /*
@@ -20,7 +21,7 @@ export interface MathBox {
   ascent: number;
   /** Depth below the baseline. */
   depth: number;
-  draw: (drawer: Drawer, x: number, baseline: number, color: Rgb) => void;
+  draw: (drawer: Sink, x: number, baseline: number, color: Rgb) => void;
 }
 
 const INVISIBLE = /[\u2061-\u2064]/g;
@@ -151,7 +152,7 @@ export class MathLayout {
         width: stretched.width,
         ascent: axis + half,
         depth: half - axis,
-        draw: (d: Drawer, x: number, y: number, color: Rgb) => {
+        draw: (d: Sink, x: number, y: number, color: Rgb) => {
           stretched.draw(d, x, y + shift, color);
         },
       };

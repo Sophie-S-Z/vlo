@@ -34,6 +34,14 @@ export interface FontMetrics {
   capHeight: number;
   xHeight: number;
   hasGlyphForCodePoint: (codePoint: number) => boolean;
+  /** The glyphs that draw some text, as pdf-lib encodes them: no kerning, so each glyph moves by its advance. */
+  layout: (text: string) => { glyphs: readonly Glyph[] };
+}
+
+export interface Glyph {
+  id: number;
+  advanceWidth: number;
+  path: { toSVG: () => string };
 }
 
 /** One embedded face, and how to draw the styles the face lacks. */

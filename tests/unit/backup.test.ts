@@ -5,6 +5,7 @@ import { backUpProject, collectBackup, importBackup, readBackup } from '@/featur
 import { BACKUP_VERSION, BackupError, backupFileName, writeBackup } from '@/features/backup/file';
 import { backupDue, backupLabel, daysBetween } from '@/features/backup/reminder';
 import { safariDevice } from '@/features/backup/safari';
+import { DEFAULT_BOOK } from '@/features/book/book';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
 import { updateToJson } from '@/features/export/read';
 import { createProject } from '@/features/library/projects';
@@ -165,9 +166,13 @@ describe('Backup file', () => {
 describe('Backup round trip', () => {
   test('a backup imported after a delete gives identical text and identical rows', async () => {
     const { project, scenes } = await novelWithText();
-    // The packet's letter and bio (F53) go with the project.
+    // The packet's letter and bio (F53) and the book settings (F51) go with the project.
     await db.projects.update(project.id, {
-      settings: { ...project.settings, packet: { letter: 'Dear editors,', bio: 'I write by the sea.' } },
+      settings: {
+        ...project.settings,
+        packet: { letter: 'Dear editors,', bio: 'I write by the sea.' },
+        book: { ...DEFAULT_BOOK, trim: '6x9', chapter: 'modern', dedication: 'For Ada.' },
+      },
     });
     // A poem form (F56) is an item field, so it goes with the item.
     await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet' });
@@ -458,6 +463,14 @@ describe('Reading a backup', () => {
         (m) => {
           const project = m.project as { settings: Record<string, unknown> };
           project.settings.packet = { letter: 42, bio: '' };
+        },
+        /The project settings are wrong/,
+      ],
+      [
+        'a book with a trim that Vlo does not know',
+        (m) => {
+          const project = m.project as { settings: Record<string, unknown> };
+          project.settings.book = { ...DEFAULT_BOOK, trim: '4x6' };
         },
         /The project settings are wrong/,
       ],

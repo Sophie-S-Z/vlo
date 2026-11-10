@@ -494,6 +494,14 @@ export function ProjectPage() {
       },
     },
     {
+      id: 'book',
+      label: 'Open Book',
+      keywords: ['book', 'print', 'trim', 'paperback', 'chapter style', 'dedication', 'contents', 'preview'],
+      run: () => {
+        void navigate(`/p/${project.id}/book`);
+      },
+    },
+    {
       id: 'submissions',
       label: 'Open Submissions',
       keywords: ['submissions', 'venues', 'journals', 'sent', 'follow up', 'tracker'],
