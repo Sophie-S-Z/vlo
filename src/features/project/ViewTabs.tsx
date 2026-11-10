@@ -58,7 +58,9 @@ function tabsFor(project: Project, full: boolean, path: string): Tab[] {
     { label: 'Submissions', to: '/submissions', active: (path) => path.endsWith('/submissions') },
     { label: 'Progress', to: '/progress', active: (path) => path.endsWith('/progress') },
   ];
-  const tools = [outline, codex, feedback, book].filter((tab) => full || tab.active(path, new URLSearchParams()));
+  const tools = [outline, codex, feedback, book].filter(
+    (tab) => full || tab.active(path, new URLSearchParams()),
+  );
   return [write, ...viewsOf(project), ...tools, ...shared];
 }
 

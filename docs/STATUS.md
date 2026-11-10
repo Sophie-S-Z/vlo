@@ -1,6 +1,6 @@
 # Vlo status
 
-Last update: 2026-11-09
+Last update: 2026-11-10
 
 ## Done
 
@@ -632,6 +632,19 @@ Last update: 2026-11-09
     for novel prose with saved details), and a cover letter, bio and synopsis when they have text. Vlo
     logs a "Sent" row for today and keeps the letter and the bio in `Project.settings.packet`. A memoir
     packet starts share-safe, and the name check reads every file.
+
+  Pull request J-C holds Tasks J4 to J7:
+  - J4: "Book layout" in the Export dialog makes a print-ready PDF in 5 trim sizes. The inside margin
+    follows the KDP table for the page count. Lines are justified, chapters open on a right-hand page,
+    and running heads and page numbers stay off the openings. No chapter leaves one line alone at the
+    top or bottom of a page (checked on the 100,000-word novel). The front and back matter, the chapter
+    styles Classic, Modern and Plain, drop caps and three scene breaks come from the Book screen.
+  - J5: the Book screen (`/p/:id/book`) shows the settings beside a live preview. The export worker lays
+    out the book one second after a change and draws each page as SVG with the PDF's own glyphs, so the
+    preview and the exported PDF have the same page count.
+  - J6: the book EPUB holds each front and back matter page as a file with its `epub:type`. CI checks
+    EPUBCheck 5.3.0 by its SHA-256 and runs it on a novel, a memoir and a poetry book: 0 errors. The
+    Book screen shows the EPUB text in an e-reader frame and a phone frame with no script.
 
 - Phase 9 (plan `docs/plans/phase-9.md`, the roadmap's "Devices and feedback" features F44, F45, F49 and
   F50). The product owner approved decisions R1 to R9 as recommended on 2026-11-09. Pull request I-A holds

@@ -113,7 +113,11 @@ export function checkFonts(
 }
 
 /** What a PDF needs besides its tree: the font files, the font swaps and standard manuscript format. */
-export function pdfOptions(prepared: PreparedExport, fonts: FontCheck, loadFile: LoadFile = appFile): PdfOptions {
+export function pdfOptions(
+  prepared: PreparedExport,
+  fonts: FontCheck,
+  loadFile: LoadFile = appFile,
+): PdfOptions {
   return {
     loadFile,
     own: fonts.own,
