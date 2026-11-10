@@ -194,7 +194,7 @@ function AiResult({
             {report.signals.slice(0, 5).map((signal) => (
               <li key={signal.group} className="flex items-baseline justify-between gap-3">
                 <span>{SIGNAL_LABEL[signal.group]}</span>
-                <span className="font-mono text-muted">
+                <span className="tabular-nums text-muted">
                   {Math.abs(signal.weight) < 0.25
                     ? 'little effect'
                     : signal.weight > 0
@@ -255,7 +255,7 @@ function AiResult({
                 <li key={group} className="grid gap-1 rounded-md border border-rule p-3">
                   <p className="flex justify-between gap-2">
                     <span className="font-medium">{TELL_INFO[group].label}</span>
-                    <span className="font-mono">{String(tells.length)}</span>
+                    <span className="tabular-nums">{String(tells.length)}</span>
                   </p>
                   <p className="font-manuscript [overflow-wrap:anywhere]">
                     {examples.map((e) => `"${e}"`).join(', ')}
@@ -292,7 +292,7 @@ function AiResult({
                 <li key={kind} className="grid gap-1 rounded-md border border-accent p-3">
                   <p className="flex justify-between gap-2">
                     <span className="font-medium">{FLAG_INFO[kind].label}</span>
-                    <span className="font-mono">{String(flags.length)}</span>
+                    <span className="tabular-nums">{String(flags.length)}</span>
                   </p>
                   <p className="text-muted">{FLAG_INFO[kind].advice}</p>
                   {first && (

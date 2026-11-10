@@ -103,7 +103,7 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
               <label htmlFor={rateId} className="text-xs text-muted">
                 Speed
               </label>
-              <span aria-hidden="true" className="font-mono text-xs text-muted">
+              <span aria-hidden="true" className="tabular-nums text-xs text-muted">
                 {settings.rate.toFixed(1)}×
               </span>
             </div>

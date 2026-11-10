@@ -424,7 +424,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
           }}
         />
         <p className="text-sm">
-          Angle <span className="font-mono text-muted">{fill.angle}°</span>
+          Angle <span className="tabular-nums text-muted">{fill.angle}°</span>
         </p>
       </section>
 
@@ -483,7 +483,7 @@ export function GradientPanel({ editor }: { editor: Editor }) {
             }}
             className="accent-[var(--accent)] disabled:opacity-40"
           />
-          <span className="font-mono text-xs text-muted">{fill.speed} s</span>
+          <span className="tabular-nums text-xs text-muted">{fill.speed} s</span>
         </div>
       </section>
 

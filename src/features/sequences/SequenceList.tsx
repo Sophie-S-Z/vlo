@@ -27,16 +27,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 /*
  * The poems of one order as cards (spec 8.3, plan Task C6), and the index cards of the Outline (F40). A drag,
- * the keyboard (Space, the arrow keys, Space) or a card's menu moves a card. A drop settles with a small
- * spring, and Calm mode drops at once.
+ * the keyboard (Space, the arrow keys, Space) or a card's menu moves a card. The cards that make room move
+ * with ease-in-out and no overshoot (plan Part J0), and Calm mode drops at once.
  */
 
 const MOUSE_OPTIONS = { activationConstraint: { distance: 4 } };
 const TOUCH_OPTIONS = { activationConstraint: { delay: 250, tolerance: 5 } };
 const KEYBOARD_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
 
-/** A spring: the card passes its place a little and comes back. */
-const SPRING = { duration: 360, easing: 'cubic-bezier(0.2, 1.25, 0.35, 1)' };
+/** Movement on the screen eases in and out, with no overshoot. */
+const SETTLE = { duration: 300, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' };
 
 const INSTRUCTIONS =
   'To pick up a card, press Space or Enter. Use the arrow keys to move it. Press Space or Enter again to drop it, or Escape to cancel. The card menu also has Move earlier and Move later.';
@@ -69,7 +69,7 @@ const PoemCard = memo(function PoemCard({
   unit,
 }: CardProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: poem.id, transition: motion ? SPRING : null });
+    useSortable({ id: poem.id, transition: motion ? SETTLE : null });
   const [open, setOpen] = useState(false);
   const touchPress = useRef(false);
   const items: [string, number][] = [
@@ -102,7 +102,7 @@ const PoemCard = memo(function PoemCard({
           <GripVertical aria-hidden="true" className="size-4" />
         </button>
         <div className="min-w-0 flex-1 py-1.5">
-          <p className="font-mono text-xs text-muted" aria-hidden="true">
+          <p className="tabular-nums text-xs text-muted" aria-hidden="true">
             {String(index + 1).padStart(2, '0')}
           </p>
           <button

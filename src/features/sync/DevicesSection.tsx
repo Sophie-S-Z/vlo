@@ -214,7 +214,8 @@ export function DevicesSection() {
   const space = useLiveQuery(readSpace);
   const [pairing, setPairing] = useState(false);
   const [message, setMessage] = useState('');
-  if (!sharingReady()) return <p>Sync is not set up in this build, so Vlo sends nothing.</p>;
+  if (!sharingReady())
+    return <p className="text-sm text-muted">Sync is not set up in this build, so Vlo sends nothing.</p>;
   if (space === undefined) return null;
   return (
     <div className="grid gap-3">

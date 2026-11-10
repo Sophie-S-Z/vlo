@@ -42,7 +42,7 @@ export function PageControl({ page, onPage, zoom, onZoom, pages, language, onLan
         <Button variant="ghost" aria-label={`Page: ${label}, zoom ${String(zoom)} percent`}>
           <FileText aria-hidden="true" className="size-4" />
           <span className="max-sm:sr-only">{label}</span>
-          {zoom !== 100 && <span className="font-mono text-xs text-muted">{zoom}%</span>}
+          {zoom !== 100 && <span className="tabular-nums text-xs text-muted">{zoom}%</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" aria-label="Page" className="grid w-[min(20rem,calc(100vw-1.5rem))] gap-4">
@@ -114,7 +114,7 @@ export function PageControl({ page, onPage, zoom, onZoom, pages, language, onLan
 
         <div className="grid gap-2">
           <label htmlFor={zoomId} className="text-sm font-medium">
-            Zoom: <span className="font-mono">{zoom}%</span>
+            Zoom: <span className="tabular-nums">{zoom}%</span>
           </label>
           <div className="flex items-center gap-2">
             <Button

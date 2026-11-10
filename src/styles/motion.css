@@ -40,10 +40,10 @@ html[data-focus-mode='true'] [data-chrome] {
   display: none;
 }
 
-/* Library cards rise into place one after another. */
+/* Library cards rise into place one after another, 30 ms apart. */
 .vlo-stagger > * {
-  animation: vlo-rise 0.6s var(--ease-reveal) both;
-  animation-delay: calc(min(var(--i, 0), 8) * 60ms);
+  animation: vlo-rise 0.5s var(--ease-reveal) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 30ms);
 }
 
 @keyframes vlo-rise {
@@ -154,4 +154,54 @@ html.vlo-theme-reveal::view-transition-new(root) {
 .vlo-goal-fill {
   transform-origin: left;
   transition: transform 0.6s var(--ease-reveal);
+}
+
+/* An icon swap (SwapIcon): the old icon blurs and shrinks out as the new one comes in. */
+.vlo-swap {
+  display: grid;
+  transition:
+    opacity 0.2s var(--ease-out),
+    scale 0.2s var(--ease-out),
+    filter 0.2s var(--ease-out);
+}
+
+.vlo-swap-out {
+  opacity: 0;
+  scale: 0.5;
+  filter: blur(4px);
+}
+
+/* One ring that spreads from a control to confirm a success, such as a copy. */
+.vlo-pulse {
+  animation: vlo-pulse 0.6s var(--ease-out);
+}
+
+@keyframes vlo-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+/* The line at the top while a screen loads. It waits 150 ms, so a quick load shows nothing, then grows
+   toward the end and slows down, because the time left is not known. With motion off it shows in full. */
+.vlo-route-loading {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: vlo-route-loading 3s var(--ease-out) 150ms both;
+}
+
+@keyframes vlo-route-loading {
+  from {
+    scale: 0 1;
+  }
+  to {
+    scale: 0.9 1;
+  }
 }

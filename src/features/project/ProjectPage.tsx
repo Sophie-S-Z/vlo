@@ -580,7 +580,7 @@ export function ProjectPage() {
           tools={
             <>
               <Button
-                variant="outline"
+                variant="ghost"
                 className="max-sm:min-w-11 max-sm:px-0"
                 aria-keyshortcuts="Control+K Meta+K"
                 onClick={() => {
@@ -591,7 +591,7 @@ export function ProjectPage() {
                 <span className="max-sm:sr-only">Search</span>
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 className="max-sm:min-w-11 max-sm:px-0"
                 onClick={() => {
                   setExportOpen(true);
@@ -601,7 +601,7 @@ export function ProjectPage() {
                 <span className="max-sm:sr-only">Export</span>
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 className="max-sm:min-w-11 max-sm:px-0"
                 onClick={() => {
                   setShareOpen(true);
@@ -649,7 +649,7 @@ export function ProjectPage() {
               <dl className="grid gap-3 text-sm">
                 <div>
                   <dt className="text-muted">Project</dt>
-                  <dd className="font-mono">
+                  <dd className="tabular-nums">
                     {formatWords(totalWords, countUnit(project.settings.language))}
                   </dd>
                 </div>
@@ -770,7 +770,7 @@ export function ProjectPage() {
               Enter.
             </DialogDescription>
             {menuOpen && (
-              <Suspense fallback={<p className="p-3 text-muted">Loading.</p>}>
+              <Suspense fallback={<p className="p-3 text-sm text-muted">Loading the command menu.</p>}>
                 <CommandMenu
                   project={project}
                   items={items}

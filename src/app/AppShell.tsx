@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Link, NavLink, Outlet, useLocation, useMatch } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useMatch, useNavigation } from 'react-router';
 import { SafetyBadge } from '@/features/backup/SafetyBadge';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
@@ -18,6 +18,8 @@ export function AppShell() {
   const width = wide ? 'max-w-[110rem]' : 'max-w-5xl';
   const { pathname } = useLocation();
   const firstPath = useRef(true);
+  // A screen's code loads on its first visit. While it loads, a line at the top shows that Vlo is working.
+  const loading = useNavigation().state === 'loading';
 
   // After moving to another screen, focus goes to its heading, so a screen reader starts there. When the
   // new screen already put focus inside the page, such as the editor, it stays.
@@ -52,6 +54,7 @@ export function AppShell() {
       >
         Skip to content
       </a>
+      {loading && <div aria-hidden="true" className="vlo-route-loading" />}
       <header data-chrome className="border-b border-rule">
         <div className={cn('mx-auto flex items-center justify-between gap-4 px-4 py-2', width)}>
           <NavLink
@@ -83,6 +86,7 @@ export function AppShell() {
         id="main"
         ref={mainRef}
         tabIndex={-1}
+        aria-busy={loading || undefined}
         className={cn('mx-auto w-full flex-1 px-4 py-8 outline-none', width)}
       >
         <Outlet />

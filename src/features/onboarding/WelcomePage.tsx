@@ -74,7 +74,7 @@ export function WelcomePage() {
           </Button>
         </header>
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-8">
-          <p className="font-mono text-sm text-muted">Step {step + 1} of 3</p>
+          <p className="tabular-nums text-sm text-muted">Step {step + 1} of 3</p>
           <h1
             ref={headingRef}
             tabIndex={-1}

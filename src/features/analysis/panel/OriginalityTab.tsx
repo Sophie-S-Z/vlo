@@ -354,7 +354,7 @@ function OriginalityResult({
                   )}{' '}
                   <span className="text-muted">({ORIGIN_LABEL[result.source.origin]})</span>
                 </span>
-                <span className="font-mono">{pct(result.share)}</span>
+                <span className="tabular-nums">{pct(result.share)}</span>
               </li>
             ))}
           </ol>

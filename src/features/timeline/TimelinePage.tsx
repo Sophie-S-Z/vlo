@@ -60,7 +60,7 @@ function Segmented<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div role="group" aria-label={label} className="flex rounded-md border border-rule p-0.5">
+    <div role="group" aria-label={label} className="flex rounded-lg border border-rule p-0.5">
       {options.map((option) => (
         <button
           key={option.value}
@@ -70,7 +70,7 @@ function Segmented<T extends string>({
             onChange(option.value);
           }}
           className={cn(
-            'flex min-h-10 items-center rounded-[5px] px-3 text-sm font-medium',
+            'flex min-h-10 items-center rounded-md px-3 text-sm font-medium',
             value === option.value ? 'bg-text text-bg' : 'text-muted hover:text-text',
           )}
         >

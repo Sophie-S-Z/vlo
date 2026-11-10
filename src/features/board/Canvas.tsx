@@ -389,7 +389,7 @@ export function Canvas({
             The board is empty. Add a card, or make one card for each scene with Cards from scenes.
           </p>
         )}
-        <div className="absolute right-3 bottom-3 flex items-center gap-1 rounded-md border border-rule bg-surface p-1 shadow-sm">
+        <div className="absolute right-3 bottom-3 flex items-center gap-1 rounded-[var(--radius-card)] border border-rule bg-surface p-1 shadow-sm">
           <Button
             type="button"
             variant="ghost"
@@ -401,7 +401,7 @@ export function Canvas({
           >
             <Minus aria-hidden="true" className="size-4" />
           </Button>
-          <output aria-live="polite" aria-label="Zoom" className="w-14 text-center font-mono text-sm">
+          <output aria-live="polite" aria-label="Zoom" className="w-14 text-center tabular-nums text-sm">
             {Math.round(current.scale * 100)} %
           </output>
           <Button

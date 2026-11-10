@@ -11,14 +11,6 @@ const ICONS: Record<Template, LucideIcon> = {
   open: NotebookPen,
 };
 
-/* The cards lean apart like loose cards on a desk on wider screens. Calm mode and reduced motion keep them flat. */
-const FAN: Record<Template, string> = {
-  novel: 'sm:-rotate-1',
-  memoir: 'sm:rotate-1 sm:translate-y-1',
-  poetry: 'sm:rotate-1',
-  open: 'sm:-rotate-1 sm:translate-y-1',
-};
-
 /** The template that a new project starts with. */
 export const SUGGESTED_TEMPLATE: Template = 'novel';
 
@@ -69,7 +61,7 @@ export function TemplatePicker({ pick, onToggle, label = 'Template' }: TemplateP
       <p id={`${id}-hint`} className="mb-3 text-sm text-muted">
         Pick one or more. A project with more than one gets the tools of each.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 sm:px-2 sm:pt-1 sm:pb-2">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
         {TEMPLATE_ORDER.map((template) => {
           const def = TEMPLATES[template];
           const Icon = ICONS[template];
@@ -86,20 +78,18 @@ export function TemplatePicker({ pick, onToggle, label = 'Template' }: TemplateP
                 onToggle(template);
               }}
               className={cn(
-                'relative flex flex-col items-start gap-2 rounded-[var(--radius-card)] border border-rule bg-bg p-4 text-left transition-[transform,border-color,box-shadow] duration-500 ease-[var(--ease-reveal)]',
-                'hover:shadow-[var(--shadow-hover)] data-[state=checked]:border-accent data-[state=checked]:shadow-[inset_0_0_0_1px_var(--accent)]',
-                FAN[template],
-                'sm:hover:translate-y-0 sm:hover:rotate-0 motion-reduce:transform-none in-[[data-calm=true]]:transform-none',
+                'relative flex flex-col items-start gap-2 rounded-[var(--radius-card)] border border-rule bg-bg p-4 text-left transition-[border-color,box-shadow,scale] duration-200 ease-out active:scale-[0.98]',
+                'hover:border-muted data-[state=checked]:border-accent data-[state=checked]:shadow-[inset_0_0_0_1px_var(--accent)]',
               )}
             >
               <span
                 aria-hidden="true"
                 className={cn(
-                  'absolute top-3 right-3 flex size-5 items-center justify-center rounded-full border',
-                  checked ? 'border-accent bg-accent text-on-accent' : 'border-rule',
+                  'absolute top-3 right-3 flex size-5 items-center justify-center rounded-full border transition-colors duration-200 ease-out',
+                  checked ? 'border-accent bg-accent text-on-accent' : 'border-muted',
                 )}
               >
-                {checked && <Check className="size-3.5" strokeWidth={3} />}
+                <Check className={cn('vlo-swap size-3.5', !checked && 'vlo-swap-out')} strokeWidth={3} />
               </span>
               <Icon aria-hidden="true" className="size-6 text-accent-text" />
               <span className="font-display text-lg font-semibold">{def.label}</span>

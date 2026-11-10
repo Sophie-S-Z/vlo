@@ -58,12 +58,12 @@ export function UsageSettings() {
 
   return (
     <div className="grid gap-3">
-      <p className="text-muted">
+      <p className="text-sm text-muted">
         Weekly totals help make Vlo better: which templates and features people use, and which errors happen.
         A report never holds your text, titles or names.
       </p>
       {!ready ? (
-        <p className="text-sm">Usage counts are not set up in this build, so Vlo sends nothing.</p>
+        <p className="text-sm text-muted">Usage counts are not set up in this build, so Vlo sends nothing.</p>
       ) : (
         <div className="flex items-start gap-3">
           <Switch

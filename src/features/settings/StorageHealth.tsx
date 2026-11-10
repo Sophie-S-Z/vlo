@@ -58,9 +58,9 @@ export function StorageHealth() {
   return (
     <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
       <dt className="text-muted">Used</dt>
-      <dd className="font-mono">{show(state.usage, formatBytes)}</dd>
+      <dd className="tabular-nums">{show(state.usage, formatBytes)}</dd>
       <dt className="text-muted">Limit for Vlo</dt>
-      <dd className="font-mono">{show(state.quota, formatBytes)}</dd>
+      <dd className="tabular-nums">{show(state.quota, formatBytes)}</dd>
       <dt className="text-muted">Protected from clean-up</dt>
       <dd>
         {show(state.persisted, (persisted) => {

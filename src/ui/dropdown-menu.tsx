@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react';
 import { cn } from './cn';
 
 /*
- * Opening fades in. Closing is at once, with no fade-out: Radix keeps a closing layer until its
+ * Opening grows from the trigger at scale 0.95 in 200 ms, ease-out. Closing is at once, with no fade-out: Radix keeps a closing layer until its
  * animationend event, and WebKit did not send that event while a scene moved, so the layer stayed.
  */
 
@@ -21,7 +21,7 @@ export function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          'z-50 min-w-40 rounded-md border border-rule bg-surface p-1 text-text shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0',
+          'z-50 min-w-40 origin-(--radix-dropdown-menu-content-transform-origin) rounded-[var(--radius-card)] border border-rule bg-surface p-1 text-text shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:duration-200 data-[state=open]:ease-out',
           className,
         )}
         {...props}
@@ -34,7 +34,7 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        'flex min-h-11 cursor-default items-center gap-2 rounded-sm px-3 text-sm outline-none select-none data-[highlighted]:bg-bg data-[disabled]:opacity-50',
+        'flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 text-sm outline-none select-none data-[highlighted]:bg-bg data-[disabled]:opacity-50',
         className,
       )}
       {...props}
@@ -60,7 +60,7 @@ export function DropdownMenuSubTrigger({
   return (
     <DropdownMenuPrimitive.SubTrigger
       className={cn(
-        'flex min-h-11 cursor-default items-center justify-between gap-2 rounded-sm px-3 text-sm outline-none select-none data-[highlighted]:bg-bg data-[state=open]:bg-bg',
+        'flex min-h-11 cursor-default items-center justify-between gap-2 rounded-md px-3 text-sm outline-none select-none data-[highlighted]:bg-bg data-[state=open]:bg-bg',
         className,
       )}
       {...props}
@@ -79,7 +79,7 @@ export function DropdownMenuSubContent({
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.SubContent
         className={cn(
-          'z-50 min-w-36 rounded-md border border-rule bg-surface p-1 text-text shadow-md',
+          'z-50 min-w-36 origin-(--radix-dropdown-menu-content-transform-origin) rounded-[var(--radius-card)] border border-rule bg-surface p-1 text-text shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:duration-200 data-[state=open]:ease-out',
           className,
         )}
         {...props}
@@ -96,7 +96,7 @@ export function DropdownMenuRadioItem({
   return (
     <DropdownMenuPrimitive.RadioItem
       className={cn(
-        'flex min-h-11 cursor-default items-center gap-2 rounded-sm px-3 text-sm outline-none select-none data-[highlighted]:bg-bg',
+        'flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 text-sm outline-none select-none data-[highlighted]:bg-bg',
         className,
       )}
       {...props}
@@ -119,7 +119,7 @@ export function DropdownMenuCheckboxItem({
   return (
     <DropdownMenuPrimitive.CheckboxItem
       className={cn(
-        'flex min-h-11 cursor-default items-center gap-2 rounded-sm px-3 text-sm outline-none select-none data-[highlighted]:bg-bg',
+        'flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 text-sm outline-none select-none data-[highlighted]:bg-bg',
         className,
       )}
       {...props}

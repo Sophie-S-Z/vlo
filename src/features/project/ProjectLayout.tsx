@@ -78,78 +78,77 @@ export function ProjectLayout({
 
   return (
     <div className="grid gap-4">
-      <div className={cn('flex flex-wrap items-end gap-3', focusMode ? 'justify-end' : 'justify-between')}>
-        {!focusMode && title}
-        <div className="flex flex-wrap items-center gap-2">
-          {timer}
-          {focusMode ? (
-            <Button variant="ghost" aria-keyshortcuts="Escape" onClick={onLeaveFocus}>
-              <Minimize2 aria-hidden="true" className="size-4" />
-              Leave focus mode
-            </Button>
-          ) : (
-            tools
-          )}
-          {focusMode ? null : small ? (
-            <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="max-sm:min-w-11 max-sm:px-0">
-                  <PanelLeft aria-hidden="true" className="size-4" />
-                  <span className="max-sm:sr-only">Binder</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="top-0 left-0 h-dvh max-h-dvh w-[min(22rem,calc(100vw-2rem))] translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0">
-                <DialogTitle className="sr-only">Binder</DialogTitle>
-                <DialogDescription className="sr-only">
-                  Pick an item to open, or reorder items.
-                </DialogDescription>
-                {binder}
-              </DialogContent>
-            </Dialog>
-          ) : (
-            <Button
-              variant="outline"
-              aria-expanded={showBinder}
-              aria-controls={binderId}
-              onClick={() => {
-                setShowBinder(!showBinder);
-              }}
-            >
-              <PanelLeft aria-hidden="true" className="size-4" />
-              {showBinder ? 'Hide binder' : 'Show binder'}
-            </Button>
-          )}
-          {!focusMode && assistant !== undefined && (
-            <Button
-              variant="outline"
-              className="max-sm:min-w-11 max-sm:px-0"
-              aria-expanded={assistantOpen}
-              aria-controls={small ? undefined : assistantId}
-              onClick={() => {
-                if (!assistantOpen) setShowDetails(false);
-                onAssistantOpen?.(!assistantOpen);
-              }}
-            >
-              <Bot aria-hidden="true" className="size-4" />
-              <span className="max-sm:sr-only">{assistantOpen ? 'Hide the Assistant' : 'Assistant'}</span>
-            </Button>
-          )}
-          {!focusMode && (
-            <Button
-              variant="outline"
-              className="max-sm:min-w-11 max-sm:px-0"
-              aria-expanded={showDetails}
-              aria-controls={detailsId}
-              onClick={() => {
-                if (!showDetails) onAssistantOpen?.(false);
-                setShowDetails(!showDetails);
-              }}
-            >
-              <PanelRight aria-hidden="true" className="size-4" />
-              <span className="max-sm:sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
-            </Button>
-          )}
-        </div>
+      {/* The title and its tabs take the whole row, as on every other project screen, so no tab hides. */}
+      {!focusMode && title}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {timer}
+        {focusMode ? (
+          <Button variant="ghost" aria-keyshortcuts="Escape" onClick={onLeaveFocus}>
+            <Minimize2 aria-hidden="true" className="size-4" />
+            Leave focus mode
+          </Button>
+        ) : (
+          tools
+        )}
+        {focusMode ? null : small ? (
+          <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" className="max-sm:min-w-11 max-sm:px-0">
+                <PanelLeft aria-hidden="true" className="size-4" />
+                <span className="max-sm:sr-only">Binder</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="top-0 left-0 h-dvh max-h-dvh w-[min(22rem,calc(100vw-2rem))] translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0">
+              <DialogTitle className="sr-only">Binder</DialogTitle>
+              <DialogDescription className="sr-only">
+                Pick an item to open, or reorder items.
+              </DialogDescription>
+              {binder}
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <Button
+            variant="ghost"
+            aria-expanded={showBinder}
+            aria-controls={binderId}
+            onClick={() => {
+              setShowBinder(!showBinder);
+            }}
+          >
+            <PanelLeft aria-hidden="true" className="size-4" />
+            {showBinder ? 'Hide binder' : 'Show binder'}
+          </Button>
+        )}
+        {!focusMode && assistant !== undefined && (
+          <Button
+            variant="ghost"
+            className="max-sm:min-w-11 max-sm:px-0"
+            aria-expanded={assistantOpen}
+            aria-controls={small ? undefined : assistantId}
+            onClick={() => {
+              if (!assistantOpen) setShowDetails(false);
+              onAssistantOpen?.(!assistantOpen);
+            }}
+          >
+            <Bot aria-hidden="true" className="size-4" />
+            <span className="max-sm:sr-only">{assistantOpen ? 'Hide the Assistant' : 'Assistant'}</span>
+          </Button>
+        )}
+        {!focusMode && (
+          <Button
+            variant="ghost"
+            className="max-sm:min-w-11 max-sm:px-0"
+            aria-expanded={showDetails}
+            aria-controls={detailsId}
+            onClick={() => {
+              if (!showDetails) onAssistantOpen?.(false);
+              setShowDetails(!showDetails);
+            }}
+          >
+            <PanelRight aria-hidden="true" className="size-4" />
+            <span className="max-sm:sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
+          </Button>
+        )}
       </div>
 
       <div
@@ -177,7 +176,7 @@ export function ProjectLayout({
             {details}
             <div className="grid gap-2">
               <label htmlFor={widthId} className="text-sm font-medium">
-                Page width: <span className="font-mono">{width} ch</span>
+                Page width: <span className="tabular-nums">{width} ch</span>
               </label>
               <input
                 id={widthId}
