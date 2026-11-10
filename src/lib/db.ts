@@ -53,8 +53,37 @@ export interface Project {
     tracking?: Tracking;
     /** The cover letter and bio of the last submission packet, for the next one (F53). */
     packet?: PacketText;
+    /** The book layout of a PDF or EPUB with book layout: trim, chapter style and matter (F51). */
+    book?: BookSettings;
   };
 }
+
+export const TRIMS = ['5x8', '5.25x8', '5.5x8.5', '6x9', 'a5'] as const;
+/** A print trim size: inches, or A5. */
+export type Trim = (typeof TRIMS)[number];
+export const CHAPTER_STYLES = ['classic', 'modern', 'plain'] as const;
+export const SCENE_BREAKS = ['stars', 'fleuron', 'space'] as const;
+
+/** The most characters of each matter text of a book, such as the dedication (F51). */
+export const MAX_BOOK_TEXT = 4000;
+
+export interface BookSettings {
+  trim: Trim;
+  chapter: (typeof CHAPTER_STYLES)[number];
+  sceneBreak: (typeof SCENE_BREAKS)[number];
+  /** A drop cap on the first paragraph of each chapter. */
+  dropCaps: boolean;
+  /** A contents page in the front matter. */
+  contents: boolean;
+  copyright: string;
+  dedication: string;
+  epigraph: string;
+  acknowledgments: string;
+  about: string;
+}
+
+/** The matter texts of `BookSettings`, in the order of the book. */
+export const BOOK_TEXTS = ['copyright', 'dedication', 'epigraph', 'acknowledgments', 'about'] as const;
 
 /** The most characters of a packet's cover letter, bio or synopsis (F53). */
 export const MAX_PACKET_TEXT = 6000;

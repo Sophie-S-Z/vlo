@@ -29,6 +29,7 @@ import {
 } from 'pdf-lib';
 import type { TextFill } from '@/features/editor/format/fill';
 import type { Face } from './fonts';
+import type { Sink } from './sink';
 
 /*
  * Low-level drawing on one PDF page: text in any face with a drawn bold or italic, rules, boxes, gradient
@@ -60,7 +61,7 @@ export interface TextOptions {
   scaleY?: number;
 }
 
-export class Drawer {
+export class Drawer implements Sink {
   private readonly fontKeys = new Map<PDFFont, PDFName>();
   private shadings = 0;
   private glowKey: PDFName | null = null;

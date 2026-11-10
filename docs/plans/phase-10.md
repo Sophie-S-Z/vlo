@@ -108,8 +108,8 @@ Pull request J-A: Task J1. J-B: Tasks J2 and J3. J-C: Tasks J4 to J7. Each one m
 - Produces: `gutterFor(pages: number): number` in points, by the KDP table.
 - Produces: a `Sink` interface with the drawing calls of `Drawer`. `Drawer` writes pdf-lib pages. `SvgSink` records each page as SVG for the preview.
 
-- [ ] Tests first: each trim gives its page size; the inside margin is on the right of even pages and the left of odd pages; the gutter follows the page count; a chapter starts on a right-hand page with a blank page before it when needed; no widow and no orphan on any page of the 100,000-word fixture; front matter comes in the order half title, title, copyright, dedication, epigraph, contents; contents page numbers match the chapter pages; back matter comes after the last chapter; a plain PDF with no book settings does not change.
-- [ ] Commit.
+- [x] Tests first: each trim gives its page size; the inside margin is on the right of even pages and the left of odd pages; the gutter follows the page count; a chapter starts on a right-hand page with a blank page before it when needed; no widow and no orphan on any page of the 100,000-word fixture; front matter comes in the order half title, title, copyright, dedication, epigraph, contents; contents page numbers match the chapter pages; back matter comes after the last chapter; a plain PDF with no book settings does not change.
+- [x] Commit.
 
 ### Task J5: The Book screen and live preview (F51)
 

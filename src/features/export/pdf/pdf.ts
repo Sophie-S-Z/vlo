@@ -1,26 +1,35 @@
 import { PDFDocument } from 'pdf-lib';
+import { bookMargins, gutterFor, TRIM_POINTS } from '@/features/book/book';
 import type { TextFill } from '@/features/editor/format/fill';
 import { fontLabel } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
 import { mathmlFor, type LatexToMathml } from '../latex';
 import { headerText, roundedWords, type ManuscriptSetup } from '../manuscript';
+import type { BookSettings } from '@/lib/db';
 import {
   footnotesOf,
   repeatsTitle,
+  runsText,
+  textBlocks,
   type Align,
   type Block,
   type ExportDoc,
+  type HeadingBlock,
   type Run,
   type RunStyle,
 } from '../model';
 import { Drawer, INK, rgbOf, type Rgb } from './draw';
 import { FontSet, type Face, type LoadFile } from './fonts';
 import { MathLayout, type MathBox } from './math';
+import { shifted, type Sink } from './sink';
 
 /*
  * PDF export (spec section 9). Vlo lays out the text itself: each line is measured with the embedded font,
  * long lines wrap (a poem line wraps under its hanging indent), and leading and inner spaces stay. Notes sit
  * at the foot of the page that refers to them, and every page after the title has its number.
+ *
+ * Book layout (F51, plan Task J4) adds a trim size, mirrored margins with a gutter, front and back matter,
+ * chapter openings on right-hand pages, running heads, and widow and orphan control.
  */
 
 export interface PdfOptions {
@@ -51,7 +60,7 @@ export interface PdfResult {
 const POINTS = { letter: [612, 792], a4: [595.28, 841.89] } as const;
 const MARGIN = 72;
 const TEXT_SIZE = 12;
-const NOTE_SIZE = 10;
+const BOOK_TEXT_SIZE = 11;
 const LINK_BLUE = rgbOf('#2f5d8a');
 const MUTED = rgbOf('#5c5751');
 
@@ -106,8 +115,16 @@ interface Row {
   breakBefore?: boolean;
   /** Start this row this far down an empty page, as a share of the text height. */
   dropTo?: number;
+  /** Start this row on a new right-hand page, after a blank page when needed. */
+  recto?: boolean;
+  /** The id of the section that starts with this row, for the contents page. */
+  mark?: string;
+  /** The place of a body line in its paragraph, for widow and orphan control. */
+  para?: { line: number; lines: number };
+  /** The distance from the row's top to its baseline. */
+  baseline?: number;
   notes: number[];
-  draw: (d: Drawer, top: number) => void;
+  draw: (d: Sink, top: number) => void;
 }
 
 interface Base {
@@ -117,13 +134,36 @@ interface Base {
   italic?: boolean;
 }
 
+/** Rows draw from the left edge of the text, and each page moves them right by its left margin. */
 interface Settings {
   textWidth: number;
-  left: number;
+  textSize: number;
   /** Line spacing for body text, as a multiple of the font's single spacing. */
   spacing: number;
   paragraphGap: number;
+  /** The space before a quote, a list, an equation or a scene break. */
+  blockGap: number;
   manuscript: boolean;
+  book?: BookSettings;
+}
+
+/** A chapter title that names itself, such as "Chapter One" or "IV", gets no number above it. */
+const UNNUMBERED = /^(chapter|part|prologue|epilogue|interlude)\b/i;
+const NUMERAL = /^(\d+|[IVXLC]+)\.?$/;
+const FLEURON = '\u2766';
+
+/** Keeps the first two and the last two lines of a paragraph together, so no page has a widow or an orphan. */
+function keepLines(rows: readonly Row[]): void {
+  rows.forEach((row, line) => {
+    row.para = { line, lines: rows.length };
+  });
+  const [first] = rows;
+  const beforeLast = rows[rows.length - 2];
+  if (first && beforeLast) first.keepWithNext = beforeLast.keepWithNext = true;
+}
+
+function heightOf(rows: readonly Row[]): number {
+  return rows.reduce((sum, row, i) => sum + (i > 0 ? row.spaceBefore : 0) + row.height, 0);
 }
 
 const SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
@@ -136,6 +176,11 @@ class Layout {
   private readonly notes = new Map<number, NoteContent>();
   private math: MathLayout | null = null;
   private readonly drawn = new Map<string, DrawnStyle>();
+  /** The last block laid out, for the first-line indent of a book. */
+  private last: Block['type'] | null = null;
+  /** True until the first block after a chapter opening, for its drop cap. */
+  private afterOpening = false;
+  private chapters = 0;
 
   constructor(
     private readonly fonts: FontSet,
@@ -373,6 +418,7 @@ class Layout {
     return {
       height: ascent + depth,
       spaceBefore: 0,
+      baseline: ascent,
       notes,
       draw: (d, top) => {
         drawLine(d, line, x0, top - ascent, avail, align);
@@ -395,7 +441,7 @@ class Layout {
   ): Promise<Row[]> {
     const { base } = options;
     const avail = this.settings.textWidth - options.left - options.right;
-    const x0 = this.settings.left + options.left;
+    const x0 = options.left;
     let atoms = await this.atoms(runs, base);
     let cap: { atom: TextAtom; width: number; lines: number } | null = null;
     if (options.dropCap) {
@@ -430,6 +476,8 @@ class Layout {
       return hanging;
     };
     const lines = this.breakLines(atoms, indentOf, avail);
+    // A drop cap needs the three lines beside it.
+    if (cap && lines.length < cap.lines) return this.paragraph(runs, { ...options, dropCap: false });
     const rows = lines.map((line) =>
       this.lineRow(line, x0, avail, options.align, options.spacing, base.size),
     );
@@ -452,8 +500,22 @@ class Layout {
   }
 
   async block(block: Block, place: { left: number; right: number }, folder: boolean): Promise<Row[]> {
-    const { spacing, paragraphGap, manuscript } = this.settings;
-    const body: Base = { font: this.bodyFont, size: TEXT_SIZE };
+    const opening = this.afterOpening;
+    this.afterOpening = false;
+    const rows = await this.blockRows(block, place, folder, opening);
+    this.last = block.type;
+    return rows;
+  }
+
+  private async blockRows(
+    block: Block,
+    place: { left: number; right: number },
+    folder: boolean,
+    opening: boolean,
+  ): Promise<Row[]> {
+    const { spacing, paragraphGap, blockGap, manuscript, book, textSize } = this.settings;
+    const body: Base = { font: this.bodyFont, size: textSize };
+    const scale = textSize / TEXT_SIZE;
     const withGap = (rows: Row[], gap: number) => {
       const [first] = rows;
       if (first) first.spaceBefore = Math.max(first.spaceBefore, gap);
@@ -461,20 +523,35 @@ class Layout {
     };
     switch (block.type) {
       case 'paragraph': {
+        // A book indents each paragraph that follows a paragraph, and justifies its lines.
+        const indent = book
+          ? this.last === 'paragraph'
+            ? 1.5 * textSize
+            : 0
+          : manuscript
+            ? 36
+            : block.firstLineIndent
+              ? 2 * textSize
+              : 0;
         const rows = await this.paragraph(block.runs, {
           left: place.left,
           right: place.right,
-          align: manuscript ? undefined : block.align,
+          align: manuscript ? undefined : (block.align ?? (book ? 'justify' : undefined)),
           spacing: manuscript ? spacing : (block.lineSpacing ?? spacing),
-          firstIndent: manuscript ? 36 : block.firstLineIndent ? 2 * TEXT_SIZE : 0,
-          dropCap: !manuscript && block.dropCap === true,
+          firstIndent: indent,
+          dropCap: !manuscript && (block.dropCap === true || (opening && book?.dropCaps === true)),
           base: body,
         });
+        if (book) keepLines(rows);
         return withGap(rows, paragraphGap);
       }
       case 'heading': {
+        if (book && folder) {
+          const title = runsText(block.runs).trim();
+          return this.opening(block, block.level === 2 && !UNNUMBERED.test(title) && !NUMERAL.test(title));
+        }
         const sizes = manuscript ? [12, 12, 12, 12] : [22, 17, 14, 12];
-        const size = sizes[block.level - 1] ?? 12;
+        const size = (sizes[block.level - 1] ?? 12) * scale;
         const rows = await this.paragraph(block.runs, {
           left: place.left,
           right: place.right,
@@ -493,8 +570,8 @@ class Layout {
         const first = rows[0];
         if (first) {
           first.spaceBefore = manuscript
-            ? leading(TEXT_SIZE, spacing)
-            : ([30, 24, 16, 12][block.level - 1] ?? 12);
+            ? leading(textSize, spacing)
+            : ([30, 24, 16, 12][block.level - 1] ?? 12) * scale;
           if (folder) {
             first.breakBefore = true;
             if (manuscript) first.dropTo = 1 / 3;
@@ -503,48 +580,47 @@ class Layout {
         const last = rows[rows.length - 1];
         if (last && manuscript && folder) {
           // A blank line between the chapter title and its first paragraph.
-          last.height += leading(TEXT_SIZE, spacing);
+          last.height += leading(textSize, spacing);
         }
         return rows;
       }
       case 'sceneBreak': {
+        if (book) return this.ornament(book.sceneBreak);
         const face = await this.face(this.bodyFont, false, false);
-        const lead = leading(TEXT_SIZE, spacing);
-        const width = face.font.widthOfTextAtSize('#', TEXT_SIZE);
+        const lead = leading(textSize, spacing);
+        const width = face.font.widthOfTextAtSize('#', textSize);
         return [
           {
             height: lead * 1.5,
-            spaceBefore: manuscript ? 0 : paragraphGap,
+            spaceBefore: blockGap,
             notes: [],
             draw: (d, top) => {
-              const x =
-                this.settings.left +
-                place.left +
-                (this.settings.textWidth - place.left - place.right - width) / 2;
-              d.text('#', x, top - lead * 0.95, { face, size: TEXT_SIZE, color: INK });
+              const x = place.left + (this.settings.textWidth - place.left - place.right - width) / 2;
+              d.text('#', x, top - lead * 0.95, { face, size: textSize, color: INK });
             },
           },
         ];
       }
       case 'math': {
         const layout = await this.mathLayout();
-        const box = layout.equation(this.toMathml(block.latex), block.latex, TEXT_SIZE * 1.1, true);
+        const box = layout.equation(this.toMathml(block.latex), block.latex, textSize * 1.1, true);
         const avail = this.settings.textWidth - place.left - place.right;
         return [
           {
-            height: box.ascent + box.depth + TEXT_SIZE * 0.6,
-            spaceBefore: paragraphGap,
+            height: box.ascent + box.depth + textSize * 0.6,
+            spaceBefore: blockGap,
             notes: [],
             draw: (d, top) => {
-              const x = this.settings.left + place.left + Math.max(0, (avail - box.width) / 2);
-              box.draw(d, x, top - TEXT_SIZE * 0.3 - box.ascent, INK);
+              const x = place.left + Math.max(0, (avail - box.width) / 2);
+              box.draw(d, x, top - textSize * 0.3 - box.ascent, INK);
             },
           },
         ];
       }
       case 'quote': {
         const inner = { left: place.left + 24, right: place.right + 24 };
-        return withGap(await this.blocks(block.blocks, inner, false), paragraphGap);
+        this.last = 'quote';
+        return withGap(await this.blocks(block.blocks, inner, false), blockGap);
       }
       case 'list': {
         const out: Row[] = [];
@@ -555,18 +631,19 @@ class Layout {
           // A text font with no hollow or square bullet draws it from the symbol font.
           const markerFace = (await this.pieces(marker, face))[0]?.face ?? face;
           const inner = { left: place.left + 22, right: place.right };
+          this.last = 'list';
           const rows = await this.blocks(item, inner, false);
           const first = rows[0];
           if (first) {
-            first.spaceBefore = i === 0 ? paragraphGap : paragraphGap / 2;
+            first.spaceBefore = i === 0 ? blockGap : blockGap / 2;
             const draw = first.draw;
-            const markerWidth = markerFace.font.widthOfTextAtSize(marker, TEXT_SIZE);
+            const markerWidth = markerFace.font.widthOfTextAtSize(marker, textSize);
             first.draw = (d, top) => {
               draw(d, top);
-              const lead = leading(TEXT_SIZE, spacing);
-              d.text(marker, this.settings.left + inner.left - 6 - markerWidth, top - lead * 0.78, {
+              const lead = leading(textSize, spacing);
+              d.text(marker, inner.left - 6 - markerWidth, top - lead * 0.78, {
                 face: markerFace,
-                size: TEXT_SIZE,
+                size: textSize,
                 color: INK,
               });
             };
@@ -588,13 +665,101 @@ class Layout {
           // An empty poem line keeps its height.
           out.push(...(rows.length > 0 ? rows : [this.blankRow(spacing)]));
         }
-        return withGap(out, leading(TEXT_SIZE, manuscript ? spacing : 1.15));
+        return withGap(out, leading(textSize, manuscript ? spacing : 1.15));
       }
     }
   }
 
   private blankRow(spacing: number): Row {
-    return { height: leading(TEXT_SIZE, spacing), spaceBefore: 0, notes: [], draw: () => undefined };
+    return {
+      height: leading(this.settings.textSize, spacing),
+      spaceBefore: 0,
+      notes: [],
+      draw: () => undefined,
+    };
+  }
+
+  /**
+   * A chapter, part or matter opening of a book: a new right-hand page, with the title sunk down the page
+   * in the book's chapter style. A numbered chapter gets its number above the title.
+   */
+  async opening(block: HeadingBlock, numbered: boolean): Promise<Row[]> {
+    const { textSize: size, spacing } = this.settings;
+    const style = this.settings.book?.chapter ?? 'plain';
+    const part = block.level === 1;
+    const align: Align = part || style !== 'modern' ? 'center' : 'left';
+    const rows: Row[] = [];
+    if (numbered) {
+      this.chapters += 1;
+      if (style !== 'plain') {
+        const number: Run = { type: 'text', text: String(this.chapters), style: {} };
+        rows.push(
+          ...(await this.paragraph([number], {
+            left: 0,
+            right: 0,
+            align,
+            spacing: 1,
+            base: { font: this.bodyFont, size: (style === 'modern' ? 3.2 : 1.25) * size },
+          })),
+        );
+      }
+    }
+    const titleRows = await this.paragraph(block.runs, {
+      left: 0,
+      right: 0,
+      align,
+      spacing: 1.1,
+      base: {
+        font: this.bodyFont,
+        size: (part ? 2 : style === 'classic' ? 1.7 : 1.45) * size,
+        bold: !part && style !== 'classic',
+      },
+    });
+    const [firstTitle] = titleRows;
+    if (firstTitle && rows.length > 0) firstTitle.spaceBefore = 0.6 * size;
+    rows.push(...titleRows);
+    const [first] = rows;
+    const last = rows[rows.length - 1];
+    if (first) {
+      first.recto = true;
+      first.dropTo = part ? 1 / 3 : style === 'plain' ? 1 / 8 : 1 / 5;
+    }
+    // A part stands alone on its page. A chapter keeps its title with its first lines.
+    if (!part) {
+      for (const row of rows) row.keepWithNext = true;
+      if (last) last.height += 2 * leading(size, spacing);
+      this.afterOpening = true;
+    }
+    this.last = 'heading';
+    return rows;
+  }
+
+  /** A book's scene break: three stars, a fleuron or a blank line. */
+  private async ornament(kind: BookSettings['sceneBreak']): Promise<Row[]> {
+    const { textSize: size, spacing } = this.settings;
+    const lead = leading(size, spacing);
+    if (kind === 'space') return [{ height: lead, spaceBefore: 0, notes: [], draw: () => undefined }];
+    const text = kind === 'stars' ? '*' : FLEURON;
+    let face = await this.face(this.bodyFont, false, false);
+    // Few text fonts have a fleuron. EB Garamond has one.
+    if (!face.metrics.hasGlyphForCodePoint(0x2766) && kind === 'fleuron')
+      face = await this.face('eb-garamond', false, false);
+    const glyphSize = kind === 'stars' ? size : 1.4 * size;
+    const width = face.font.widthOfTextAtSize(text, glyphSize);
+    const count = kind === 'stars' ? 3 : 1;
+    const total = count * width + (count - 1) * size;
+    return [
+      {
+        height: 2 * lead,
+        spaceBefore: 0,
+        notes: [],
+        draw: (d, top) => {
+          const x = (this.settings.textWidth - total) / 2;
+          for (let i = 0; i < count; i += 1)
+            d.text(text, x + i * (width + size), top - 1.3 * lead, { face, size: glyphSize, color: INK });
+        },
+      },
+    ];
   }
 
   async blocks(
@@ -631,7 +796,7 @@ class Layout {
       right: 0,
       spacing: 1,
       hanging: 1.2,
-      base: { font: this.bodyFont, size: NOTE_SIZE },
+      base: { font: this.bodyFont, size: this.settings.textSize - 2 },
     });
     const first = rows[0];
     if (first) first.spaceBefore = 3;
@@ -658,7 +823,7 @@ function measure(atoms: InlineAtom[]): { atoms: InlineAtom[]; width: number; asc
 }
 
 function drawText(
-  d: Drawer,
+  d: Sink,
   atom: TextAtom,
   x: number,
   baseline: number,
@@ -695,7 +860,7 @@ function drawText(
 }
 
 function drawLine(
-  d: Drawer,
+  d: Sink,
   line: Line,
   x0: number,
   baseline: number,
@@ -743,49 +908,185 @@ interface PageRows {
   notesHeight: number;
 }
 
-/** The PDF file of an export. */
-export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfResult> {
-  const pdf = await PDFDocument.create();
-  const [pageWidth, pageHeight] = POINTS[doc.paper];
-  const manuscript = options.manuscript;
-  const bodyFont = manuscript?.typewriter ? 'courier-prime' : doc.font;
-  const fonts = new FontSet(
-    pdf,
-    options.loadFile,
-    options.own ?? new Map(),
-    options.swaps ?? new Map(),
-    'newsreader',
-  );
-  const settings: Settings = {
-    textWidth: pageWidth - 2 * MARGIN,
-    left: MARGIN,
-    spacing: manuscript ? 2 : 1.15,
-    paragraphGap: manuscript ? 0 : 8,
-    manuscript: manuscript !== undefined,
-  };
-  const toMathml = options.toMathml ?? (await mathmlFor(doc));
-  const layout = new Layout(fonts, doc, settings, toMathml, bodyFont);
-  const textTop = pageHeight - MARGIN;
-  const textBottom = MARGIN;
-  const textHeight = textTop - textBottom;
+/** The pages of an export, laid out once for the PDF file and for the book preview. */
+export interface LaidOutPdf {
+  /** The width and height of every page. */
+  size: readonly [number, number];
+  pages: readonly PageRows[];
+  /** Draws one page, with its page number and running head. */
+  drawPage: (index: number, sink: Sink) => void;
+  drawnStyles: DrawnStyle[];
+}
 
-  // The opening: a title page for a whole book, a title on the first page for one item.
+interface ContentsEntry {
+  id: string;
+  title: string;
+  part: boolean;
+}
+
+/** The sections that a book's contents lists: its parts and chapters, or else each titled item. */
+function contentsEntries(doc: ExportDoc): ContentsEntry[] {
+  const folders = doc.sections.filter((s) => s.form === null);
+  const titled = doc.sections.filter((s) => s.title.trim() !== '' && s.blocks[0]?.type === 'heading');
+  return (folders.length > 0 ? folders : titled).map((s) => {
+    const first = s.blocks[0];
+    return { id: s.id, title: s.title, part: first?.type === 'heading' && first.level === 1 };
+  });
+}
+
+function matterHeading(text: string): HeadingBlock {
+  return { type: 'heading', level: 2, runs: [{ type: 'text', text, style: {} }] };
+}
+
+/**
+ * A book's front matter: the half title, the title page, the copyright page on its back, the dedication,
+ * the epigraph and the contents. Each one that has text starts a right-hand page.
+ */
+async function frontMatter(
+  layout: Layout,
+  doc: ExportDoc,
+  book: BookSettings,
+  settings: Settings,
+  textHeight: number,
+  bodyFont: string,
+  folios: ReadonlyMap<string, number>,
+): Promise<Row[]> {
+  const size = settings.textSize;
   const rows: Row[] = [];
-  const titlePage = manuscript !== undefined || doc.sections.length > 1;
+  const page = (part: Row[], dropTo: number, recto = true) => {
+    const [first] = part;
+    if (!first) return;
+    first.breakBefore = true;
+    first.recto = recto;
+    first.dropTo = Math.max(0, dropTo);
+    rows.push(...part);
+  };
+  const lines = (text: string, base: Base, align: Align = 'center') =>
+    layout.paragraph([{ type: 'text', text, style: {} }], { left: 0, right: 0, align, spacing: 1.1, base });
+  const matter = async (body: string, base: Base, align: Align) => {
+    const out: Row[] = [];
+    for (const block of textBlocks(body)) {
+      const part = await layout.paragraph(block.runs, { left: 0, right: 0, align, spacing: 1.2, base });
+      const [first] = part;
+      if (first && out.length > 0) first.spaceBefore = 0.8 * base.size;
+      out.push(...part);
+    }
+    return out;
+  };
+
+  page(await lines(doc.title, { font: bodyFont, size: 1.4 * size }), 1 / 4);
+  const title = await lines(doc.title, { font: bodyFont, size: 2.2 * size, bold: true });
+  if (doc.author) {
+    const author = await lines(doc.author, { font: bodyFont, size: 1.3 * size, italic: true });
+    const [first] = author;
+    if (first) first.spaceBefore = 1.5 * size;
+    title.push(...author);
+  }
+  page(title, 1 / 4);
+  // The copyright page is the back of the title page, with its text at the foot.
+  const copyright = await matter(book.copyright, { font: bodyFont, size: 0.8 * size }, 'left');
+  page(copyright, 1 - heightOf(copyright) / textHeight, false);
+  page(await matter(book.dedication, { font: bodyFont, size, italic: true }, 'center'), 1 / 3);
+  page(await matter(book.epigraph, { font: bodyFont, size, italic: true }, 'center'), 1 / 4);
+
+  const entries = contentsEntries(doc);
+  if (book.contents && entries.length > 1) {
+    rows.push(...(await layout.opening(matterHeading('Contents'), false)));
+    const parts = entries.some((e) => e.part);
+    const face = await layout.face(bodyFont, false, false);
+    for (const entry of entries) {
+      const entryRows = await layout.paragraph([{ type: 'text', text: entry.title, style: {} }], {
+        left: parts && !entry.part ? size : 0,
+        right: 3 * size,
+        spacing: 1.2,
+        hanging: 1,
+        base: { font: bodyFont, size, bold: entry.part },
+      });
+      const [first] = entryRows;
+      const last = entryRows[entryRows.length - 1];
+      if (first) first.spaceBefore = entry.part ? 0.8 * size : 0.3 * size;
+      if (last) {
+        const draw = last.draw;
+        const baseline = last.baseline ?? 0;
+        // The page number comes after pagination, so the row reads it when it draws.
+        last.draw = (d, top) => {
+          draw(d, top);
+          const folio = folios.get(entry.id);
+          if (folio === undefined) return;
+          const text = String(folio);
+          const width = face.font.widthOfTextAtSize(text, size);
+          d.text(text, settings.textWidth - width, top - baseline, { face, size, color: INK });
+        };
+      }
+      rows.push(...entryRows);
+    }
+  }
+  return rows;
+}
+
+/** A book's back matter: the acknowledgments and "About the author", each on a right-hand page. */
+async function backMatter(layout: Layout, book: BookSettings): Promise<Row[]> {
+  const rows: Row[] = [];
+  for (const [name, body] of [
+    ['Acknowledgments', book.acknowledgments],
+    ['About the author', book.about],
+  ] as const) {
+    if (body.trim() === '') continue;
+    rows.push(...(await layout.opening(matterHeading(name), false)));
+    rows.push(...(await layout.blocks(textBlocks(body), { left: 0, right: 0 }, false)));
+  }
+  return rows;
+}
+
+/** One layout of every page. A book lays out again when its page count needs a wider gutter. */
+async function layOutOnce(
+  doc: ExportDoc,
+  options: PdfOptions,
+  fonts: FontSet,
+  toMathml: LatexToMathml,
+  pagesGuess: number,
+): Promise<LaidOutPdf & { gutter: number }> {
+  const book = doc.book;
+  const manuscript = book ? undefined : options.manuscript;
+  const [pageWidth, pageHeight] = book ? TRIM_POINTS[book.trim] : POINTS[doc.paper];
+  const margins = book
+    ? bookMargins(pagesGuess)
+    : { inside: MARGIN, outside: MARGIN, top: MARGIN, bottom: MARGIN };
+  const bodyFont = manuscript?.typewriter ? 'courier-prime' : doc.font;
+  const textSize = book ? BOOK_TEXT_SIZE : TEXT_SIZE;
+  const spacing = manuscript ? 2 : book ? 1.2 : 1.15;
+  const gap = manuscript ? 0 : 8;
+  const settings: Settings = {
+    textWidth: pageWidth - margins.inside - margins.outside,
+    textSize,
+    spacing,
+    paragraphGap: book ? 0 : gap,
+    blockGap: book ? leading(textSize, spacing) / 2 : gap,
+    manuscript: manuscript !== undefined,
+    ...(book ? { book } : {}),
+  };
+  const layout = new Layout(fonts, doc, settings, toMathml, bodyFont);
+  const textTop = pageHeight - margins.top;
+  const textBottom = margins.bottom;
+  const textHeight = textTop - textBottom;
+  /** The page number of each marked section, filled in after pagination. */
+  const folios = new Map<string, number>();
+
+  // The opening: the front matter of a book, a title page for a whole export, a title for one item.
+  const rows: Row[] = [];
+  const titlePage = book !== undefined || manuscript !== undefined || doc.sections.length > 1;
   const center = (text: string, face: Face, size: number, baselineFromTop: number): Row => ({
     height: 0,
     spaceBefore: 0,
     notes: [],
     draw: (d, top) => {
       const width = face.font.widthOfTextAtSize(text, size);
-      d.text(text, MARGIN + (settings.textWidth - width) / 2, top - baselineFromTop, {
-        face,
-        size,
-        color: INK,
-      });
+      d.text(text, (settings.textWidth - width) / 2, top - baselineFromTop, { face, size, color: INK });
     },
   });
-  if (manuscript) {
+  if (book) {
+    rows.push(...(await frontMatter(layout, doc, book, settings, textHeight, bodyFont, folios)));
+  } else if (manuscript) {
     const plain = await layout.face(bodyFont, false, false);
     const line = TEXT_SIZE * 1.2;
     const left = [
@@ -802,10 +1103,10 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
       notes: [],
       draw: (d, top) => {
         left.forEach((text, i) => {
-          d.text(text, MARGIN, top - TEXT_SIZE - i * line, { face: plain, size: TEXT_SIZE, color: INK });
+          d.text(text, 0, top - TEXT_SIZE - i * line, { face: plain, size: TEXT_SIZE, color: INK });
         });
         const width = plain.font.widthOfTextAtSize(count, TEXT_SIZE);
-        d.text(count, MARGIN + settings.textWidth - width, top - TEXT_SIZE, {
+        d.text(count, settings.textWidth - width, top - TEXT_SIZE, {
           face: plain,
           size: TEXT_SIZE,
           color: INK,
@@ -851,20 +1152,29 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
     if (last) last.height += 18;
   }
 
+  const bodyFirst = rows.length;
   let firstContent = true;
   for (const section of doc.sections) {
     const blocks = section.blocks.filter((block) => !repeatsTitle(doc, section, block));
     const sectionRows = await layout.blocks(blocks, { left: 0, right: 0 }, section.form === null);
     const first = sectionRows[0];
-    if (first && firstContent && titlePage) first.breakBefore = true;
+    if (first && book) {
+      first.mark = section.id;
+      // The text starts on a right-hand page, and each poem on a page of its own.
+      if (firstContent) first.recto = true;
+      else if (section.form === 'poem') first.breakBefore = true;
+    } else if (first && firstContent && titlePage) first.breakBefore = true;
     if (first && firstContent && !titlePage) first.spaceBefore = 0;
     if (first) firstContent = false;
     rows.push(...sectionRows);
   }
+  if (book) rows.push(...(await backMatter(layout, book)));
 
   // Pages: rows from the top, notes from the foot. A row moves on when it and its notes do not fit.
   const pages: PageRows[] = [{ rows: [], notes: [], notesHeight: 0 }];
   let y = textTop;
+  let bodyPage = -1;
+  const markPages = new Map<string, number>();
   const noteCache = new Map<number, Row[]>();
   const notesOf = async (numbers: readonly number[]) => {
     const out: { row: Row; number: number }[] = [];
@@ -879,6 +1189,14 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
     return out;
   };
   const separator = 14;
+  const current = (): PageRows => {
+    const last = pages[pages.length - 1];
+    if (last) return last;
+    const page = { rows: [], notes: [], notesHeight: 0 };
+    pages.push(page);
+    return page;
+  };
+  const empty = () => current().rows.length === 0;
   const newPage = () => {
     pages.push({ rows: [], notes: [], notesHeight: 0 });
     y = textTop;
@@ -886,26 +1204,21 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
   for (let i = 0; i < rows.length; i += 1) {
     const row = rows[i];
     if (!row) continue;
-    let page = pages[pages.length - 1] ?? { rows: [], notes: [], notesHeight: 0 };
-    const empty = () => (pages[pages.length - 1]?.rows.length ?? 0) === 0;
-    if (row.breakBefore && !empty()) {
-      newPage();
-      page = pages[pages.length - 1] ?? page;
-    }
+    if ((row.breakBefore || row.recto) && !empty()) newPage();
+    // The first page is a right-hand page, so each right-hand page has an even index.
+    if (row.recto && (pages.length - 1) % 2 === 1) newPage();
     // Keep a row with the rows it must not be split from, such as a heading and its first line.
     let need = row.height;
     for (let j = i; rows[j]?.keepWithNext && rows[j + 1]; j += 1)
       need += (rows[j + 1]?.spaceBefore ?? 0) + (rows[j + 1]?.height ?? 0);
     const noteRows = await notesOf(row.notes);
     const notesExtra = noteRows.reduce((sum, n) => sum + n.row.spaceBefore + n.row.height, 0);
-    const separatorExtra = noteRows.length > 0 && page.notes.length === 0 ? separator : 0;
+    const separatorExtra = noteRows.length > 0 && current().notes.length === 0 ? separator : 0;
     const space = empty() ? 0 : row.spaceBefore;
-    const bottom = textBottom + page.notesHeight + notesExtra + separatorExtra;
+    const bottom = textBottom + current().notesHeight + notesExtra + separatorExtra;
     // A group taller than half a page may split, but the row itself must fit.
-    if (!empty() && y - space - Math.max(row.height, Math.min(need, textHeight / 2)) < bottom) {
-      newPage();
-      page = pages[pages.length - 1] ?? page;
-    }
+    if (!empty() && y - space - Math.max(row.height, Math.min(need, textHeight / 2)) < bottom) newPage();
+    const page = current();
     if (empty() && row.dropTo !== undefined) y = textTop - textHeight * row.dropTo;
     const top = y - (empty() ? 0 : row.spaceBefore);
     page.rows.push({ row, top });
@@ -915,19 +1228,27 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
       page.notes.push(...noteRows);
       page.notesHeight += notesExtra;
     }
+    if (i === bodyFirst) bodyPage = pages.length - 1;
+    if (row.mark !== undefined) markPages.set(row.mark, pages.length - 1);
   }
+  if (bodyPage < 0) bodyPage = pages.length;
+  // A printed book has an even number of pages. Other exports drop an empty page.
+  if (book && pages.length % 2 === 1) pages.push({ rows: [], notes: [], notesHeight: 0 });
+  const kept = book ? pages : pages.filter((page, index) => index === 0 || page.rows.length > 0);
+  for (const [id, index] of markPages) folios.set(id, index - bodyPage + 1);
 
-  // Draw every page.
   const plain = await layout.face(bodyFont, false, false);
+  const italic = await layout.face(bodyFont, false, true);
   const header = manuscript ? headerText(manuscript.name, doc.title) : '';
-  for (const [index, content] of pages.entries()) {
-    if (content.rows.length === 0 && index > 0) continue;
-    const page = pdf.addPage([pageWidth, pageHeight]);
-    const d = new Drawer(pdf, page);
+  const drawPage = (index: number, sink: Sink) => {
+    const content = kept[index];
+    if (!content) return;
+    const left = book && index % 2 === 1 ? margins.outside : margins.inside;
+    const d = shifted(sink, left);
     for (const { row, top } of content.rows) row.draw(d, top);
     if (content.notes.length > 0) {
       let top = textBottom + content.notesHeight;
-      d.rect(MARGIN, top - 4, settings.textWidth / 3, 0.5, MUTED);
+      d.rect(0, top - 4, settings.textWidth / 3, 0.5, MUTED);
       top -= separator;
       for (const { row } of content.notes) {
         top -= row.spaceBefore;
@@ -935,26 +1256,77 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
         top -= row.height;
       }
     }
-    if (index === 0 && titlePage) continue;
+    if (book) {
+      // Blank pages and the front matter have no number. A chapter's first page has no running head.
+      if (content.rows.length === 0 || index < bodyPage) return;
+      const size = 0.8 * textSize;
+      const centered = (text: string, face: Face, baseline: number) => {
+        const width = face.font.widthOfTextAtSize(text, size);
+        d.text(text, (settings.textWidth - width) / 2, baseline, { face, size, color: MUTED });
+      };
+      centered(String(index - bodyPage + 1), plain, textBottom / 2);
+      if (!content.rows[0]?.row.recto) {
+        const head = index % 2 === 1 ? (doc.author ?? doc.title) : doc.title;
+        centered(head, italic, textTop + margins.top / 2);
+      }
+      return;
+    }
+    if (index === 0 && titlePage) return;
     const number = String(titlePage ? index : index + 1);
     if (manuscript) {
       const text = `${header}${number}`;
       const width = plain.font.widthOfTextAtSize(text, TEXT_SIZE);
-      d.text(text, pageWidth - MARGIN - width, pageHeight - MARGIN / 2, {
+      sink.text(text, pageWidth - MARGIN - width, pageHeight - MARGIN / 2, {
         face: plain,
         size: TEXT_SIZE,
         color: INK,
       });
     } else {
       const width = plain.font.widthOfTextAtSize(number, 10);
-      d.text(number, (pageWidth - width) / 2, MARGIN / 2, { face: plain, size: 10, color: MUTED });
+      sink.text(number, (pageWidth - width) / 2, MARGIN / 2, { face: plain, size: 10, color: MUTED });
     }
-  }
+  };
+  return {
+    size: [pageWidth, pageHeight],
+    pages: kept,
+    drawPage,
+    drawnStyles: layout.drawnStyles,
+    gutter: book ? gutterFor(pagesGuess) : 0,
+  };
+}
 
+/** Lays out every page of an export. A book's gutter follows its page count. */
+export async function layOutPdf(doc: ExportDoc, options: PdfOptions, pdf: PDFDocument): Promise<LaidOutPdf> {
+  const fonts = new FontSet(
+    pdf,
+    options.loadFile,
+    options.own ?? new Map(),
+    options.swaps ?? new Map(),
+    'newsreader',
+  );
+  const toMathml = options.toMathml ?? (await mathmlFor(doc));
+  let laid = await layOutOnce(doc, options, fonts, toMathml, 0);
+  // A wider gutter can add pages, so a book lays out again until its gutter fits its page count.
+  for (let tries = 0; doc.book && tries < 4; tries += 1) {
+    const pages = laid.pages.length;
+    if (gutterFor(pages) <= laid.gutter) break;
+    laid = await layOutOnce(doc, options, fonts, toMathml, pages);
+  }
+  return laid;
+}
+
+/** The PDF file of an export. */
+export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfResult> {
+  const pdf = await PDFDocument.create();
+  const laid = await layOutPdf(doc, options, pdf);
+  laid.pages.forEach((_, index) => {
+    laid.drawPage(index, new Drawer(pdf, pdf.addPage([...laid.size])));
+  });
+  const manuscript = doc.book ? undefined : options.manuscript;
   pdf.setTitle(doc.title);
   pdf.setLanguage(doc.language);
   if (manuscript?.name || doc.author) pdf.setAuthor(manuscript?.name ?? doc.author ?? '');
   pdf.setCreator('Vlo');
   pdf.setProducer('Vlo');
-  return { bytes: await pdf.save(), drawnStyles: layout.drawnStyles };
+  return { bytes: await pdf.save(), drawnStyles: laid.drawnStyles };
 }

@@ -2,8 +2,8 @@ import { flattenTree } from '@/features/binder/tree';
 import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
-import type { Item, Project } from '@/lib/db';
-import type { Block, ExportDoc, ExportReview, ExportSection, Run } from './model';
+import type { BookSettings, Item, Project } from '@/lib/db';
+import { textBlocks, type Block, type ExportDoc, type ExportReview, type ExportSection } from './model';
 import { itemBlocks, noteCounter, updateToJson } from './read';
 
 /*
@@ -80,37 +80,22 @@ export interface BuildInput {
   updates: ReadonlyMap<string, Uint8Array>;
   /** The tracked changes and comments that a Word export keeps for an editor (F45). None when absent. */
   review?: ExportReview;
+  /** Book layout for a PDF or an EPUB (F51). */
+  book?: BookSettings;
 }
 
-/**
- * A document of plain text with no title, such as the cover letter, bio or synopsis of a submission
- * packet (F53). A blank line starts a new paragraph, and a single line break stays a break.
- */
+/** A document of plain text with no title, such as the cover letter, bio or synopsis of a submission packet (F53). */
 export function textDoc(project: BuildInput['project'], body: string): ExportDoc {
-  const blocks: Block[] = body
-    .replace(/\r\n?/g, '\n')
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter((paragraph) => paragraph !== '')
-    .map((paragraph) => ({
-      type: 'paragraph',
-      runs: paragraph
-        .split('\n')
-        .flatMap((line, i): Run[] => [
-          ...(i > 0 ? [{ type: 'break' } as const] : []),
-          { type: 'text', text: line, style: {} },
-        ]),
-    }));
   return {
     title: '',
     font: project.settings.font ?? DEFAULT_FONT,
     paper: project.settings.page === 'a4' ? 'a4' : 'letter',
     language: cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE,
-    sections: [{ id: 'text', title: '', form: 'prose', blocks }],
+    sections: [{ id: 'text', title: '', form: 'prose', blocks: textBlocks(body) }],
   };
 }
 
-export function buildExportDoc({ project, items, scope, updates, review }: BuildInput): ExportDoc {
+export function buildExportDoc({ project, items, scope, updates, review, book }: BuildInput): ExportDoc {
   const template = projectDef(project);
   const list = scopeItems(items, scope);
   const notes = noteCounter();
@@ -157,5 +142,6 @@ export function buildExportDoc({ project, items, scope, updates, review }: Build
     paper: project.settings.page === 'a4' ? 'a4' : 'letter',
     language: cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE,
     sections,
+    ...(book ? { book } : {}),
   };
 }
