@@ -10,6 +10,7 @@ import { openItemDoc, YFRAGMENT } from '@/lib/ydocs';
 import { DOC_SCHEMA, docSchema, stampDocSchema } from './docSchema';
 import { docBody, docText, writeItemText } from './itemText';
 import { sendToTabs } from './tabSync';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * A change to an item's stored text with no editor open, such as an editor's Word changes (F45) or a
@@ -19,7 +20,7 @@ import { sendToTabs } from './tabSync';
 
 export interface StoredTarget {
   item: Pick<Item, 'id' | 'projectId'>;
-  form: 'prose' | 'poem';
+  form: EditorForm;
   language?: string;
 }
 

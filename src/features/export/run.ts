@@ -53,6 +53,8 @@ export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; typ
   epub: { extension: 'epub', type: 'application/epub+zip' },
   markdown: { extension: 'md', type: 'text/markdown;charset=utf-8' },
   web: { extension: 'html', type: 'text/html;charset=utf-8' },
+  fountain: { extension: 'fountain', type: 'text/plain;charset=utf-8' },
+  fdx: { extension: 'fdx', type: 'application/xml' },
 };
 
 /** True for the formats that embed fonts, so the writer's own fonts need a check. */
@@ -152,6 +154,9 @@ export async function makeExport(
     const { toWebHtml, toWebText } = await import('./web');
     bytes = new TextEncoder().encode(toWebHtml(doc));
     text = toWebText(doc);
+  } else if (format === 'fountain' || format === 'fdx') {
+    const { toFdx, toFountain } = await import('./fountain');
+    bytes = new TextEncoder().encode(format === 'fdx' ? toFdx(doc) : toFountain(doc));
   } else {
     const { toMarkdown } = await import('./markdown');
     bytes = new TextEncoder().encode(toMarkdown(doc));

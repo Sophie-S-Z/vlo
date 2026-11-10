@@ -17,6 +17,7 @@ import {
   type RunStyle,
 } from './model';
 import { fontPaths, PDF_FONTS, type FontStyle, type LoadFile } from './pdf/fonts';
+import { xmlText } from './xml';
 
 /*
  * EPUB 3 export (spec section 9). The `mimetype` file comes first and is stored without compression. Each
@@ -52,19 +53,6 @@ const XHTML_NS = 'http://www.w3.org/1999/xhtml';
 const EPUB_NS = 'http://www.idpf.org/2007/ops';
 const MATHML_NS = 'http://www.w3.org/1998/Math/MathML';
 const NBSP = '\u00a0';
-
-/** Escapes text for XML. Characters that XML 1.0 forbids are left out. */
-export function xmlText(text: string): string {
-  return (
-    text
-      // eslint-disable-next-line no-control-regex -- XML 1.0 has no place for these control characters.
-      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-  );
-}
 
 /** A font as it is used: its stored value, resolved for swaps, and its style. */
 interface FaceUse {

@@ -21,6 +21,7 @@ import {
   versionDoc,
   versionsOf,
 } from './versions';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The Versions part of History (roadmap F55, plan Task K2). The writer keeps named versions of the item,
@@ -29,7 +30,7 @@ import {
 
 interface VersionsPanelProps {
   item: Item;
-  kind: 'prose' | 'poem';
+  kind: EditorForm;
   editor: Editor;
   doc: Y.Doc;
   /** Called after a switch, with a sentence for the writer. */

@@ -4,9 +4,12 @@ import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 import { poemExtensions } from '@/features/editor/extensions/poem';
 import { proseExtensions } from '@/features/editor/extensions/prose';
+import { scriptExtensions } from '@/features/editor/extensions/script';
+import type { ScriptRole } from '@/features/editor/scriptRoles';
 import { parsePoemText, poemDataToJSON } from '@/features/editor/poemText';
 import { buildExportDoc, type ExportScope } from '@/features/export/build';
 import type { ExportDoc } from '@/features/export/model';
+import type { EditorForm } from '@/features/library/templates';
 import type { Item, ItemKind, Project, Template } from '@/lib/db';
 import { YFRAGMENT } from '@/lib/ydocs';
 
@@ -14,9 +17,11 @@ import { YFRAGMENT } from '@/lib/ydocs';
 
 export const proseSchema = getSchema(proseExtensions(new Y.Doc()));
 export const poemSchema = getSchema(poemExtensions(new Y.Doc(), { tabSpaces: 4 }));
+export const scriptSchema = getSchema(scriptExtensions(new Y.Doc()));
+const SCHEMAS = { prose: proseSchema, poem: poemSchema, script: scriptSchema };
 
-export function updateOf(json: JSONContent, form: 'prose' | 'poem'): Uint8Array {
-  const doc = prosemirrorJSONToYDoc(form === 'poem' ? poemSchema : proseSchema, json, YFRAGMENT);
+export function updateOf(json: JSONContent, form: EditorForm): Uint8Array {
+  const doc = prosemirrorJSONToYDoc(SCHEMAS[form], json, YFRAGMENT);
   const update = Y.encodeStateAsUpdate(doc);
   doc.destroy();
   return update;
@@ -39,6 +44,21 @@ export function proseUpdate(paragraphs: readonly string[]): Uint8Array {
       })),
     },
     'prose',
+  );
+}
+
+/** A script of [role, text] lines. */
+export function scriptUpdate(lines: readonly (readonly [ScriptRole, string])[]): Uint8Array {
+  return updateOf(
+    {
+      type: 'doc',
+      content: lines.map(([role, text]) => ({
+        type: 'scriptLine',
+        attrs: { role },
+        ...(text === '' ? {} : { content: [{ type: 'text', text }] }),
+      })),
+    },
+    'script',
   );
 }
 

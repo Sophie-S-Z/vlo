@@ -8,12 +8,13 @@ import { notesBlock, parseNote, type NoteContent } from './format/notes';
 import { acceptedDoc } from './format/suggestion';
 import { leafText } from './leafText';
 import { poemDataFromDoc, poemDataToText } from './poemText';
+import type { EditorForm } from '@/features/library/templates';
 
 /**
  * Plain text of the writing itself. Prose blocks are separated by a blank line; a scene break is "#", and
  * an equation is its LaTeX between $ signs.
  */
-export function docBody(source: ProseMirrorNode, kind: 'prose' | 'poem'): string {
+export function docBody(source: ProseMirrorNode, kind: EditorForm): string {
   // Waiting suggestions count as accepted (decision R2), so a deleted word is not in the text.
   const doc = acceptedDoc(source);
   if (kind === 'poem') return poemDataToText(poemDataFromDoc(doc));
@@ -34,7 +35,7 @@ export function docNotes(doc: ProseMirrorNode): NoteContent[] {
  * Plain text of an editor document: the writing, then its notes under a "Notes" line, so search finds
  * a note and a readable backup keeps it.
  */
-export function docText(doc: ProseMirrorNode, kind: 'prose' | 'poem'): string {
+export function docText(doc: ProseMirrorNode, kind: EditorForm): string {
   const body = docBody(doc, kind);
   const notes = notesBlock(docNotes(doc));
   if (notes === '') return body;
@@ -50,7 +51,7 @@ export function docText(doc: ProseMirrorNode, kind: 'prose' | 'poem'): string {
 export async function writeItemText(
   item: Pick<Item, 'id' | 'projectId'>,
   text: string,
-  kind: 'prose' | 'poem',
+  kind: EditorForm,
   counted: string = text,
   language?: string,
 ): Promise<void> {

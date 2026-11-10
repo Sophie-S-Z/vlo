@@ -1,10 +1,11 @@
 import type { Editor } from '@tiptap/core';
 import { Pause, Play, Square } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import { codexMatcher } from '@/features/codex/codex';
 import { useCodexState } from '@/features/codex/codexStore';
 import { Button } from '@/ui/button';
 import { getCast, setCast, voiceFor, type CastSettings } from '../../readAloud/cast';
+import { cueSpeaker } from '../../readAloud/dialogue';
 import {
   dismissReadMessage,
   getReadSettings,
@@ -73,10 +74,16 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
   const match = useMemo(() => codexMatcher(characters), [characters]);
   const { doc } = editor.state;
   // Only the characters that the text names get a voice choice.
-  const named = useMemo(
-    () => new Set(match(doc.textBetween(0, doc.content.size, '\n')).map((m) => m.entryId)),
-    [match, doc],
-  );
+  const cue = useCallback((text: string) => cueSpeaker(text, characters), [characters]);
+  const named = useMemo(() => {
+    const ids = new Set(match(doc.textBetween(0, doc.content.size, '\n')).map((m) => m.entryId));
+    // A script names each speaker on a character line, in capitals.
+    doc.descendants((node) => {
+      if (node.attrs.role === 'character') ids.add(cue(node.textContent) ?? '');
+      return !node.isTextblock;
+    });
+    return ids;
+  }, [match, cue, doc]);
   const mine = read.editor === editor;
   const status = mine ? read.status : 'idle';
 
@@ -107,7 +114,7 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
     chosen?.uri ?? null,
   );
   const startRead = () => {
-    startReading(editor, tableRead && cast.on ? { match, voiceOf } : undefined);
+    startReading(editor, tableRead && cast.on ? { match, voiceOf, cue } : undefined);
   };
   let summary = '';
   if (status === 'reading') summary = `Reading sentence ${String(read.index + 1)} of ${String(read.count)}.`;

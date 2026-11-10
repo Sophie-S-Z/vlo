@@ -7,8 +7,11 @@ import type { Block, ExportDoc, Run } from './model';
  * plain words, so the writer knows what the file holds before they share it.
  */
 
-/** `web` is a copy for a web editor (F52), which goes to the clipboard and not to a file. */
-export type ExportFormat = 'docx' | 'pdf' | 'epub' | 'markdown' | 'web';
+/**
+ * `web` is a copy for a web editor (F52), which goes to the clipboard and not to a file. `fountain` and
+ * `fdx` are script files (F63).
+ */
+export type ExportFormat = 'docx' | 'pdf' | 'epub' | 'markdown' | 'web' | 'fountain' | 'fdx';
 
 export interface NoticeExtras {
   /** Own fonts that the file swaps for a Vlo font. */
@@ -62,7 +65,13 @@ function scan(doc: ExportDoc): Looks {
     for (const block of list) {
       switch (block.type) {
         case 'paragraph':
-          if (block.align || block.lineSpacing !== undefined || block.dropCap || block.firstLineIndent) {
+          // A script line's place comes from its role, so it is not the writer's layout.
+          if (
+            (block.align && !block.role) ||
+            block.lineSpacing !== undefined ||
+            block.dropCap ||
+            block.firstLineIndent
+          ) {
             looks.layout = true;
           }
           runs(block.runs);
@@ -174,6 +183,12 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
       notices.push('Metallic and prismatic words keep their colors as a gradient, without the sheen.');
     }
     notices.push(...fontNameNotice([...looks.fonts]));
+  } else if (format === 'pdf' && doc.script) {
+    if (looks.color || looks.highlight || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {
+      notices.push(
+        'A script PDF sets every word in Courier Prime 12 pt, in black. Colors, highlights, fonts and sizes stay in Vlo.',
+      );
+    }
   } else if (format === 'pdf') {
     if (looks.fills.has('metallic') || looks.fills.has('prismatic')) {
       notices.push('Metallic and prismatic words keep their colors as a gradient, without the sheen.');
@@ -200,6 +215,15 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
     }
     if (looks.hanging)
       notices.push('Web editors have no hanging indents. Poem lines keep their leading spaces.');
+    if (looks.math) notices.push('Equations stay as LaTeX between $ signs.');
+  } else if (format === 'fountain' || format === 'fdx') {
+    if (looks.color || looks.highlight || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {
+      notices.push(
+        `${format === 'fdx' ? 'A Final Draft file' : 'Fountain'} keeps bold, italic and underline. Words with other formats keep only their text.`,
+      );
+    }
+    if (doc.sections.some((s) => s.form !== null && s.form !== 'script'))
+      notices.push('Text that is not a script, such as a page of prose, goes in as action.');
     if (looks.math) notices.push('Equations stay as LaTeX between $ signs.');
   } else {
     if (looks.color || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {

@@ -9,6 +9,7 @@ import { clock } from '@/lib/clock';
 import { db, type Item, type Snapshot } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { YFRAGMENT, docFromUpdate } from '@/lib/ydocs';
+import type { EditorForm } from '@/features/library/templates';
 
 export const BEFORE_RESTORE = 'Before restore';
 
@@ -60,7 +61,7 @@ export async function restoreSnapshot(
   editor: Editor,
   doc: Y.Doc,
   snapshotId: string,
-  kind: 'prose' | 'poem',
+  kind: EditorForm,
 ): Promise<void> {
   const snapshot = await db.snapshots.get(snapshotId);
   if (snapshot?.itemId !== item.id) throw new Error('Vlo could not find that snapshot.');

@@ -23,11 +23,15 @@ export interface TemplateDef {
   childKinds: Partial<Record<ItemKind | 'root', ItemKind[]>>;
   starter: StarterItem[];
   /** The editor an item opens in, or null for a folder such as a part or chapter. */
-  editorKind: (kind: ItemKind) => 'prose' | 'poem' | null;
+  editorKind: (kind: ItemKind) => EditorForm | null;
 }
 
-const proseOrFolder = (kind: ItemKind): 'prose' | 'poem' | null =>
-  kind === 'part' || kind === 'chapter' ? null : kind === 'poem' ? 'poem' : 'prose';
+/** The editor of an item: prose, a poem's lines or a script's lines. */
+export type EditorForm = 'prose' | 'poem' | 'script';
+
+/** The kind of an item gives its editor in every template, so a project can mix templates. */
+const editorFor = (kind: ItemKind): EditorForm | null =>
+  kind === 'part' || kind === 'chapter' ? null : kind === 'poem' || kind === 'script' ? kind : 'prose';
 
 /** True when an item of `kind` has its own text. A part or a chapter is a folder and has none. */
 export function holdsText(templates: readonly Template[], kind: ItemKind): boolean {
@@ -49,7 +53,7 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
       chapter: ['scene', 'note'],
     },
     starter: [{ kind: 'chapter', title: 'Chapter 1', children: [{ kind: 'scene', title: 'Scene 1' }] }],
-    editorKind: proseOrFolder,
+    editorKind: editorFor,
   },
   memoir: {
     id: 'memoir',
@@ -64,7 +68,7 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
       part: ['memory', 'note'],
     },
     starter: [{ kind: 'memory', title: 'Memory 1' }],
-    editorKind: proseOrFolder,
+    editorKind: editorFor,
   },
   poetry: {
     id: 'poetry',
@@ -79,14 +83,13 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
       part: ['poem', 'note'],
     },
     starter: [{ kind: 'poem', title: 'Poem 1' }],
-    editorKind: proseOrFolder,
+    editorKind: editorFor,
   },
   open: {
     id: 'open',
     label: 'Open writing',
     shortLabel: 'Open',
-    description:
-      'A blank page for any writing: essays, letters, scripts, journals and more. Put pages in folders.',
+    description: 'A blank page for any writing: essays, letters, journals and more. Put pages in folders.',
     untitled: 'Untitled writing',
     kinds: ['part', 'page', 'note'],
     kindLabel: { part: 'Folder', page: 'Page', note: 'Note' },
@@ -96,11 +99,27 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
       part: ['part', 'page', 'note'],
     },
     starter: [{ kind: 'page', title: 'Page 1' }],
-    editorKind: proseOrFolder,
+    editorKind: editorFor,
+  },
+  script: {
+    id: 'script',
+    label: 'Script',
+    shortLabel: 'Script',
+    description: 'A screenplay or a stage play in industry format, in acts, sequences and scenes.',
+    untitled: 'Untitled script',
+    kinds: ['part', 'chapter', 'script', 'note'],
+    kindLabel: { part: 'Act', chapter: 'Sequence', script: 'Scene', note: 'Note' },
+    childKinds: {
+      root: ['part', 'chapter', 'script', 'note'],
+      part: ['chapter', 'script', 'note'],
+      chapter: ['script', 'note'],
+    },
+    starter: [{ kind: 'script', title: 'Scene 1' }],
+    editorKind: editorFor,
   },
 };
 
-export const TEMPLATE_ORDER: readonly Template[] = ['novel', 'memoir', 'poetry', 'open'];
+export const TEMPLATE_ORDER: readonly Template[] = ['novel', 'memoir', 'poetry', 'open', 'script'];
 
 /** The templates in `TEMPLATE_ORDER`, each one time. An empty or unknown list gives a novel. */
 export function cleanTemplates(templates: readonly string[]): Template[] {
@@ -143,7 +162,7 @@ function mergeTemplates(templates: readonly Template[]): TemplateDef {
     kindLabel,
     childKinds,
     starter: defs.flatMap((d) => d.starter),
-    editorKind: proseOrFolder,
+    editorKind: editorFor,
   };
 }
 

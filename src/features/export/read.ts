@@ -9,6 +9,7 @@ import { personIdOf, PRIVATE_NAME } from '@/features/people/markName';
 import { AI_ORIGIN, aiLabelOf } from '@/features/editor/format/aiOrigin';
 import { SUGGESTION } from '@/features/editor/format/suggestion';
 import { COMMENT } from '@/features/editor/format/comment';
+import { CAPITAL_ROLES, SCRIPT_LINE, scriptRole, type ScriptRole } from '@/features/editor/scriptRoles';
 import { YFRAGMENT } from '@/lib/ydocs';
 import {
   NO_REVIEW,
@@ -253,6 +254,13 @@ function lineSpacing(value: unknown): number | undefined {
   return [1, 1.15, 1.5, 2].includes(n) ? n : undefined;
 }
 
+/** Where a script line sits in an export with no script layout, such as a Word file. */
+const ROLE_ALIGN: Partial<Record<ScriptRole, Align>> = {
+  character: 'center',
+  parenthetical: 'center',
+  transition: 'right',
+};
+
 function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, review: ExportReview): Block[] {
   const blocks: Block[] = [];
   for (const node of content ?? []) {
@@ -297,6 +305,15 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, rev
       case 'sceneBreak':
         blocks.push({ type: 'sceneBreak' });
         break;
+      case SCRIPT_LINE: {
+        const role = scriptRole(attrs?.role);
+        let runs = inlineRuns(node.content, notes, review);
+        if (CAPITAL_ROLES.has(role))
+          runs = runs.map((run) => (run.type === 'text' ? { ...run, text: run.text.toUpperCase() } : run));
+        const a = ROLE_ALIGN[role];
+        blocks.push({ type: 'paragraph', runs, role, ...(a ? { align: a } : {}) });
+        break;
+      }
       case 'mathBlock': {
         const latex = cleanLatex(attrs?.latex);
         if (latex.trim() !== '') blocks.push({ type: 'math', latex });

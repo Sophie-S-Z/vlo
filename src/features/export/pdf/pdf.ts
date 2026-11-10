@@ -21,6 +21,7 @@ import {
 import { Drawer, INK, rgbOf, type Rgb } from './draw';
 import { FontSet, type Face, type LoadFile } from './fonts';
 import { MathLayout, type MathBox } from './math';
+import { toScriptPdf } from './script';
 import { shifted, type Sink } from './sink';
 
 /*
@@ -1325,6 +1326,7 @@ export async function layOutPdf(doc: ExportDoc, options: PdfOptions, pdf: PDFDoc
 
 /** The PDF file of an export. */
 export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfResult> {
+  if (doc.script) return toScriptPdf(doc, doc.script, options);
   const pdf = await PDFDocument.create();
   const laid = await layOutPdf(doc, options, pdf);
   laid.pages.forEach((_, index) => {

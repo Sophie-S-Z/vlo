@@ -120,7 +120,7 @@ describe('New project', () => {
     const router = renderLibrary();
     fireEvent.click(await screen.findByRole('button', { name: 'New project' }));
     const dialog = await screen.findByRole('dialog', { name: 'New project' });
-    expect(within(dialog).getAllByRole('checkbox')).toHaveLength(4);
+    expect(within(dialog).getAllByRole('checkbox')).toHaveLength(5);
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /Poetry collection/ }));
     const title = within(dialog).getByLabelText('Title');
     expect((title as HTMLInputElement).value).toBe('Untitled collection');

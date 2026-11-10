@@ -1,4 +1,12 @@
-import { BookOpen, Check, Feather, Hourglass, NotebookPen, type LucideIcon } from 'lucide-react';
+import {
+  BookOpen,
+  Check,
+  Clapperboard,
+  Feather,
+  Hourglass,
+  NotebookPen,
+  type LucideIcon,
+} from 'lucide-react';
 import { useCallback, useId, useState } from 'react';
 import type { Template } from '@/lib/db';
 import { cn } from '@/ui/cn';
@@ -9,6 +17,7 @@ const ICONS: Record<Template, LucideIcon> = {
   memoir: Hourglass,
   poetry: Feather,
   open: NotebookPen,
+  script: Clapperboard,
 };
 
 /** The template that a new project starts with. */

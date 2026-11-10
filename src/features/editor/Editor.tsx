@@ -1,3 +1,4 @@
+import type { AnyExtension } from '@tiptap/core';
 import { EditorContent, useEditor, type Editor as TiptapEditor } from '@tiptap/react';
 import { useEffect, useId, useRef, type CSSProperties } from 'react';
 import { AliasPreview } from '@/features/people/aliasPreview';
@@ -32,6 +33,7 @@ import { CraftLabels } from '@/features/craft/CraftLabels';
 import { CraftSwitch } from '@/features/craft/craftSwitch';
 import type { PoemForm } from '@/features/craft/forms';
 import { proseExtensions } from './extensions/prose';
+import { scriptExtensions } from './extensions/script';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
 import { StyleCheck } from './extensions/styleCheck';
@@ -51,13 +53,14 @@ import { Toolbar } from './toolbar/Toolbar';
 import { useWritingPrefs } from './writingPrefs';
 import '@/styles/editor.css';
 import '@/styles/fonts.css';
+import type { EditorForm } from '@/features/library/templates';
 
 // The theme colors behind each palette swatch. The editor chunk adds them once.
 ensurePaletteStyles();
 
 interface EditorProps {
   doc: Y.Doc;
-  kind: 'prose' | 'poem';
+  kind: EditorForm;
   /** The accessible name, such as the item's title. */
   label: string;
   /** Puts the cursor at the end of the text when the editor opens. */
@@ -89,7 +92,15 @@ interface EditorProps {
 const HELP = {
   prose: 'Type / for tools. Press Escape, then Tab, to leave the text.',
   poem: 'Type / for tools. Tab adds four spaces and Shift-Tab removes them. Enter on an empty line starts a new stanza. Press Escape, then Tab, to leave the poem.',
-};
+  script:
+    'Type / for tools. Tab changes the element of the line, and Enter starts the element that usually follows. Press Escape, then Tab, to leave the script.',
+} satisfies Record<EditorForm, string>;
+
+const EXTENSIONS = {
+  prose: proseExtensions,
+  poem: (doc: Y.Doc) => poemExtensions(doc, { tabSpaces: 4 }),
+  script: scriptExtensions,
+} satisfies Record<EditorForm, (doc: Y.Doc) => AnyExtension[]>;
 
 /** The editor element's attributes. A rename passes a new label. */
 function editorAttributes(
@@ -104,7 +115,7 @@ function editorAttributes(
     'aria-describedby': helpId,
     role: 'textbox',
     spellcheck: 'true',
-    class: kind === 'poem' ? 'vlo-manuscript vlo-poem' : 'vlo-manuscript vlo-prose',
+    class: `vlo-manuscript vlo-${kind}`,
     // "Show AI text" draws the aiOrigin mark. The mark stays in the text when it is hidden.
     ...(showAi ? { 'data-show-ai': '' } : {}),
   };
@@ -159,7 +170,7 @@ export function Editor({
   const editor = useEditor(
     {
       extensions: [
-        ...(kind === 'poem' ? poemExtensions(doc, { tabSpaces: 4 }) : proseExtensions(doc)),
+        ...EXTENSIONS[kind](doc),
         ...(smart ? [SmartPunctuation] : []),
         FocusTools,
         ClickBelow,

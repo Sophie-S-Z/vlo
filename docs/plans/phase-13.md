@@ -60,22 +60,25 @@
 - Produces: `ScriptRole = 'heading' | 'action' | 'character' | 'parenthetical' | 'dialogue' | 'transition' | 'lyric'` and the node `scriptLine` with `attrs.role: ScriptRole`.
 - Produces: `nextRole(role: ScriptRole, key: 'Enter' | 'Tab'): ScriptRole`.
 
-- [ ] Tests first: Tab and Enter give the expected next role; a role survives save, reload, backup, import, sync and a version switch; an older build refuses a document with schema 8.
-- [ ] A role menu on the toolbar and in the / menu. Character names complete from the Codex. Commit.
+- [x] Tests first: Tab and Enter give the expected next role; a role survives save, reload, backup, import, sync and a version switch; an older build refuses a document with schema 8.
+- [x] A role menu on the toolbar and in the / menu. Character names complete from the Codex. Commit.
+- Built: a script scene is a new item kind, `script`, so a project can mix Script with other templates. Acts and sequences reuse the `part` and `chapter` folders. The roles live in `src/features/editor/scriptRoles.ts`, with no editor code, so the export worker reads them. Backup version 8. The Script layout (screenplay or stage play) is in the page menu of a script scene. The text keeps what the writer typed, and the editor and each export show a scene heading, a character and a transition in capitals.
 
 ### Task M3: Fountain in and out (F63)
 
 **Files:** Create `src/features/export/fountain.ts`, `src/features/import/fountain.ts`, `tests/unit/fountain.test.ts`, `tests/fixtures/scripts/*`. Modify `src/features/export/notices.ts` (`ExportFormat` gets `'fountain'` and `'fdx'`), `src/features/export/run.ts`, `src/features/import/ImportWriting.tsx`.
 
-- [ ] Tests first: a Fountain fixture imports with each role and each scene in the binder, and exports to the same text; forced elements (`!`, `@`, `>`, `.`) keep their role; FDX opens as XML with one `Paragraph` for each line and the right `Type`.
-- [ ] Table read (F58) reads a script by its character lines with no speaker guess. Commit.
+- [x] Tests first: a Fountain fixture imports with each role and each scene in the binder, and exports to the same text; forced elements (`!`, `@`, `>`, `.`) keep their role; FDX opens as XML with one `Paragraph` for each line and the right `Type`.
+- [x] Table read (F58) reads a script by its character lines with no speaker guess. Commit.
+- Built: `src/features/export/fountain.ts` writes both files from the export tree. A Fountain section (`#`, `##`) is an act or a sequence, a `=` synopsis goes on its scene, and notes and boneyard stay in the text. Final Draft has no lyric element, so a lyric is italic dialogue. A Script project offers the two formats in the export dialog. The import dialog says "pick Script" when a file is a script and the pick is not. `xmlText` moved to `src/features/export/xml.ts` for the EPUB and FDX writers.
 
 ### Task M4: The script PDF (F63)
 
 **Files:** Create `src/features/export/pdf/script.ts`, `tests/unit/script-pdf.test.ts`. Modify `src/features/export/pdf/pdf.ts`.
 
-- [ ] Tests first: each role's left margin and width; 55 lines per page; "(MORE)" and "(CONT'D)" when dialogue breaks across a page; scene headings never end a page; the stage play style puts character names in the center.
+- [x] Tests first: each role's left margin and width; 55 lines per page; "(MORE)" and "(CONT'D)" when dialogue breaks across a page; scene headings never end a page; the stage play style puts character names in the center.
 - [ ] Check the PDF of the public-domain fixture by hand against its original. Commit.
+- Built: `buildExportDoc` sets `script` on an export that holds only script scenes, and `toPdf` then uses `pdf/script.ts`. The layout is a pure function of lines and places, so the tests read it with no PDF. A title page names the title and the author, and the pages from page 2 have numbers. A script project offers no book layout. The fixture is Vlo's own short script (`tests/fixtures/scripts/night-ferry.fountain`). The check by hand against a public-domain screenplay PDF waits for the product owner.
 
 ### Task M5: Sources (F64)
 

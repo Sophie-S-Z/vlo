@@ -2,6 +2,7 @@ import { INTENSIFIERS, phrasePattern } from './ai/tells';
 import { LONG_SENTENCE, STOP_WORDS } from './stats';
 import type { StyleRule } from '@/lib/db';
 import { plainChars, sentencesOf, wordsOf, type Span } from './text';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The style check (roadmap F47, plan Task H4). It finds repeated words, filler words, cliches and long
@@ -103,7 +104,7 @@ function matches(pattern: RegExp, text: string, kind: StyleKind): StyleNote[] {
  * The style notes of one paragraph or poem line, in text order. A stop word, a word under 3 letters and a
  * word with a capital letter, such as a name, never count as a repeat. A poem line has no long sentence.
  */
-export function styleNotes(text: string, form: 'prose' | 'poem', sheet?: SheetMatcher): StyleNote[] {
+export function styleNotes(text: string, form: EditorForm, sheet?: SheetMatcher): StyleNote[] {
   const plain = plainChars(text);
   const notes = [
     ...matches(FILLER, plain, 'filler'),

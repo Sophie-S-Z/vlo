@@ -2,6 +2,7 @@ import type { AiReport } from './ai/detect';
 import type { AnalysisRequest, AnalysisResponse, AnalysisResult } from './analysis.worker';
 import type { MatchOptions, OriginalityReport, Source } from './originality/match';
 import type { FullStats } from './stats';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * One analysis worker for the tab. It starts with the first request, so a writer who never looks at the
@@ -46,7 +47,7 @@ function ask(body: Body): Promise<AnalysisResult> {
   });
 }
 
-export function statsInWorker(text: string, kind: 'prose' | 'poem', language?: string): Promise<FullStats> {
+export function statsInWorker(text: string, kind: EditorForm, language?: string): Promise<FullStats> {
   return ask({ type: 'stats', text, kind, language }) as Promise<FullStats>;
 }
 

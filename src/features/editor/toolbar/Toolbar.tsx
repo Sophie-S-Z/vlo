@@ -17,6 +17,7 @@ import { focusText, getPanelRequest, runCommand, type PanelAnchor } from '../com
 import type { Template } from '@/lib/db';
 import { command, commandsFor, type EditorCommand, type EditorForm } from '../commands/registry';
 import { MAX_HANGING_EM } from '../extensions/poem';
+import { SCRIPT_ROLES } from '../scriptRoles';
 import { setWritingPrefs, useWritingPrefs } from '../writingPrefs';
 import { ToolButton, toolClass } from './ToolButton';
 import { NO_STATE, useCommandState, type CommandState } from './useCommandState';
@@ -95,6 +96,28 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'superscript',
       'subscript',
       'size',
+      'find',
+      'replace',
+      'read-aloud',
+      'speak',
+      'show-ai-text',
+      'show-codex-names',
+      'style-check',
+      'clear',
+      'shortcuts',
+    ],
+  },
+  script: {
+    blockMenu: SCRIPT_ROLES.map((role) => `role-${role}`),
+    alignMenu: [],
+    segments: [
+      { tools: ['undo', 'redo'] },
+      { tools: ['bold', 'italic'] },
+      { tools: ['underline', 'characters'], wide: true },
+    ],
+    more: [
+      'comment',
+      'track-changes',
       'find',
       'replace',
       'read-aloud',

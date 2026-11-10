@@ -352,6 +352,7 @@ describe('table read (F58)', () => {
       { id: 'mara', projectId: 'p', kind: 'character', name: 'Mara', aliases: [], order: 'a0' },
     ]),
     voiceOf: (speaker: string | null) => (speaker === 'mara' ? 'local-2' : 'local-1'),
+    cue: () => null,
   };
 
   test('reads each quote in its speaker’s voice and the narration in the main voice', () => {

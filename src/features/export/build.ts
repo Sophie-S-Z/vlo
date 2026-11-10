@@ -9,8 +9,8 @@ import { itemBlocks, noteCounter, updateToJson } from './read';
 /*
  * Puts the items of an export in reading order with their titles. Notes are research, so no export
  * holds them. A folder (part or chapter) gives a heading. In a novel, scenes give no heading of their
- * own: a scene break separates the scenes of a chapter, as in a printed book. Memories and poems keep
- * their titles.
+ * own: a scene break separates the scenes of a chapter, as in a printed book. A script scene has its own
+ * scene heading line, so it gives no heading either. Memories and poems keep their titles.
  */
 
 export type ExportScope =
@@ -95,6 +95,13 @@ export function textDoc(project: BuildInput['project'], body: string): ExportDoc
   };
 }
 
+/** True when the sections hold script scenes and no other text, so a PDF uses the script layout. */
+function isScript(sections: readonly ExportSection[]): boolean {
+  return (
+    sections.some((s) => s.form === 'script') && sections.every((s) => s.form === null || s.form === 'script')
+  );
+}
+
 export function buildExportDoc({ project, items, scope, updates, review, book }: BuildInput): ExportDoc {
   const template = projectDef(project);
   const list = scopeItems(items, scope);
@@ -124,7 +131,8 @@ export function buildExportDoc({ project, items, scope, updates, review, book }:
     } else {
       lastWasScene = false;
       // A single memory or poem is the whole export, and the title names it.
-      blocks.push({ type: 'heading', level: 2, runs: [{ type: 'text', text: item.title, style: {} }] });
+      if (form !== 'script')
+        blocks.push({ type: 'heading', level: 2, runs: [{ type: 'text', text: item.title, style: {} }] });
     }
     blocks.push(...body);
     sections.push({ id: item.id, title: item.title, form, blocks });
@@ -143,5 +151,6 @@ export function buildExportDoc({ project, items, scope, updates, review, book }:
     language: cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE,
     sections,
     ...(book ? { book } : {}),
+    ...(isScript(sections) ? { script: project.settings.scriptStyle ?? 'screenplay' } : {}),
   };
 }

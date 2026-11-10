@@ -758,6 +758,7 @@ export function ProjectPage() {
                         page={project.settings.page}
                         scene={project.settings.scene}
                         language={project.settings.language}
+                        scriptStyle={project.settings.scriptStyle}
                         onSettings={changeSettings}
                         templates={templateList(project.templates)}
                       />
@@ -789,6 +790,7 @@ export function ProjectPage() {
                         font={project.settings.font}
                         page={project.settings.page}
                         language={project.settings.language}
+                        scriptStyle={project.settings.scriptStyle}
                         onSettings={changeSettings}
                         templates={templateList(project.templates)}
                       />

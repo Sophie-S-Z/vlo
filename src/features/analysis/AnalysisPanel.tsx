@@ -8,6 +8,7 @@ import { aiOriginWords, mappedText } from './editorText';
 import { AiTab } from './panel/AiTab';
 import { OriginalityTab } from './panel/OriginalityTab';
 import { KeywordTable, StatsTab, useItemStats } from './panel/StatsTab';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * Insights: the full statistics, keyword density, the AI check and the originality check of the open item.
@@ -17,7 +18,7 @@ import { KeywordTable, StatsTab, useItemStats } from './panel/StatsTab';
 
 interface AnalysisPanelProps {
   editor: TiptapEditor;
-  kind: 'prose' | 'poem';
+  kind: EditorForm;
   itemId: string;
   projectId: string;
   /** Closes Insights and selects the words from `from` to `to` of the analysed text. */

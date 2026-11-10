@@ -1,4 +1,4 @@
-import { BookOpen, FileText, FileType, Globe, Printer } from 'lucide-react';
+import { BookOpen, Clapperboard, FileText, FileType, Globe, Printer } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { bookOf } from '@/features/book/book';
@@ -35,7 +35,14 @@ import { recordError, recordFeature } from '@/features/usage/usage';
  * clipboard from a Copy button, because a browser copies only on the writer's own press.
  */
 
-const FORMATS: { id: ExportFormat; label: string; detail: string; icon: typeof FileText }[] = [
+const FORMATS: {
+  id: ExportFormat;
+  label: string;
+  detail: string;
+  icon: typeof FileText;
+  /** Only a Script project offers it. */
+  script?: true;
+}[] = [
   {
     id: 'docx',
     label: 'Word',
@@ -65,6 +72,20 @@ const FORMATS: { id: ExportFormat; label: string; detail: string; icon: typeof F
     label: 'Web copy',
     detail: 'Copy it for Substack, Medium, a blog or AO3. Each line break and indent stays.',
     icon: Globe,
+  },
+  {
+    id: 'fountain',
+    label: 'Fountain',
+    detail: 'A plain text script that Highland, WriterSolo, Fade In and most script apps open.',
+    icon: Clapperboard,
+    script: true,
+  },
+  {
+    id: 'fdx',
+    label: 'Final Draft',
+    detail: 'An .fdx file for Final Draft, with each element in its place.',
+    icon: Clapperboard,
+    script: true,
   },
 ];
 
@@ -177,7 +198,9 @@ export function ExportDialog({
   );
 
   // Book layout (F51) is for a PDF or an EPUB of the whole project, in place of manuscript format.
-  const offersBook = (format === 'pdf' || format === 'epub') && scope === 'project';
+  // A script has its own page layout, so it has no book layout.
+  const offersBook =
+    (format === 'pdf' || format === 'epub') && scope === 'project' && !hasTemplate(project, 'script');
   const usesBook = offersBook && bookLayout;
   const offersManuscript =
     hasTemplate(project, 'novel') && (format === 'docx' || format === 'pdf') && !usesBook;
@@ -507,7 +530,7 @@ export function ExportDialog({
                   }}
                   className="grid gap-2 sm:grid-cols-2"
                 >
-                  {FORMATS.map((f) => (
+                  {FORMATS.filter((f) => !f.script || hasTemplate(project, 'script')).map((f) => (
                     <OptionCard key={f.id} value={f.id}>
                       <f.icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-accent-text" />
                       <span className="grid gap-1">

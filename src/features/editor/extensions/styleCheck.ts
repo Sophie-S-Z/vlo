@@ -4,6 +4,7 @@ import { styleNotes, type SheetMatcher, type StyleKind } from '@/features/analys
 import { getCodex, subscribeCodex } from '@/features/codex/codexStore';
 import { getWritingPrefs, subscribeWritingPrefs } from '../writingPrefs';
 import { blockScanPlugin, scanMarksAt, type ScanState } from './blockScan';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The style check in the text (roadmap F47, plan Task H4). The word lists are English, so only an English
@@ -25,7 +26,7 @@ export function styleNoteAt(state: EditorState): { kind: StyleKind; text: string
   return { ...spec, text: state.doc.textBetween(found.from, found.to, ' ', ' ') };
 }
 
-export const StyleCheck = Extension.create<{ form: 'prose' | 'poem'; english: boolean }>({
+export const StyleCheck = Extension.create<{ form: EditorForm; english: boolean }>({
   name: 'styleCheck',
 
   addOptions() {

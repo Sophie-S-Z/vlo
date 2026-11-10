@@ -12,6 +12,7 @@ import { restoreSnapshot, snapshotsOf, takeSnapshot } from './snapshots';
 import { useWordDiff } from './useWordDiff';
 import type { DiffPart } from './wordDiff';
 import { recordFeature } from '@/features/usage/usage';
+import type { EditorForm } from '@/features/library/templates';
 
 const CURRENT = 'current';
 const MANUAL = 'Saved by you';
@@ -27,7 +28,7 @@ export function snapshotName(snapshot: Snapshot): string {
 
 interface HistoryPanelProps {
   item: Item;
-  kind: 'prose' | 'poem';
+  kind: EditorForm;
   editor: Editor;
   doc: Y.Doc;
   /** The item's text now. Read in the same step as the document state, so the two always match. */

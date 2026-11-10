@@ -38,6 +38,7 @@ import { buildAiRequest, isCowriterAction, type ActionId } from './request';
 import { SendDrawer } from './SendDrawer';
 import { DEFAULT_ENGINE, drawerOff, loadEngineChoice, setDrawerOff, type EngineChoice } from './settings';
 import { recordAiRequest } from '@/features/usage/usage';
+import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The Assistant panel (spec section 10, plan decision P5). It loads only outside Pen mode. Every answer
@@ -53,7 +54,7 @@ export interface AssistantPanelProps {
   items: readonly Item[];
   /** The open item, if it has an editor. */
   item: Item | undefined;
-  kind: 'prose' | 'poem' | null;
+  kind: EditorForm | null;
   /** Runs after an Insert, so a phone can close the sheet and show the text. */
   onInserted?: () => void;
 }

@@ -18,14 +18,14 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 10,
+  version: 11,
   date: '2026-11-10',
   guide: [
     {
       title: 'Start a project',
       steps: [
         'In the Library, choose New project.',
-        'Pick one or more shapes: Novel, Memoir, Poetry collection or Open writing.',
+        'Pick one or more shapes: Novel, Memoir, Poetry collection, Open writing or Script.',
         'Choose Create project. The first item opens, ready for your words.',
         'For a fast note, choose Quick note in the Library. The note goes into the Inbox folder at the top of the project.',
       ],
@@ -192,6 +192,17 @@ export const HELP = {
         'In a memoir, open People and choose Add person. Give each real name an alias.',
         'Select a name in the text and choose Mark as person, or use Mark all names before an export.',
         'A share-safe export, a share link and an AI request use the aliases in place of the real names.',
+      ],
+    },
+    {
+      title: 'Write a script',
+      steps: [
+        'Pick Script for a screenplay or a stage play. The binder has acts, sequences and scenes.',
+        'Each line is one element: scene heading, action, character, parenthetical, dialogue, transition or lyric. The style menu on the toolbar and the / menu change it.',
+        'Tab changes the element of the line. Enter starts the element that usually follows, so dialogue follows a character.',
+        'On a character line, Vlo shows the rest of a Codex character name in grey. Enter takes the name.',
+        'To change to a stage play, choose the page button above the text, then Script layout.',
+        'Export gives a script PDF in Courier Prime on US Letter, a Fountain file or a Final Draft file. Import writing reads a Fountain file.',
       ],
     },
     {
