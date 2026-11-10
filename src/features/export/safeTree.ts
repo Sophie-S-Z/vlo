@@ -1,5 +1,5 @@
 import { nameCheck, shareSafe, type NameCheck } from '@/lib/privacy';
-import { buildExportDoc } from './build';
+import { buildExportDoc, textDoc } from './build';
 import { exportWords } from './manuscript';
 import type { ExportDoc } from './model';
 import { provenanceSection } from './provenance';
@@ -13,7 +13,7 @@ import type { ExportRequest } from './run';
 /** What leaves the device as an export file or a share link: the writer's text and the privacy switches. */
 export type SafeTreeInput = Pick<
   ExportRequest,
-  'project' | 'items' | 'scope' | 'updates' | 'people' | 'shareSafe' | 'provenance' | 'review'
+  'project' | 'items' | 'scope' | 'updates' | 'people' | 'shareSafe' | 'provenance' | 'review' | 'text'
 >;
 
 export interface SafeTree {
@@ -31,7 +31,9 @@ export interface SafeTree {
  * the aliased text, so the page holds no real name.
  */
 export function safeExportTree(input: SafeTreeInput): SafeTree {
-  const built = buildExportDoc({ ...input, updates: new Map(input.updates) });
+  const built = input.text
+    ? textDoc(input.project, input.text.body)
+    : buildExportDoc({ ...input, updates: new Map(input.updates) });
   const names = input.shareSafe ? nameCheck(built, input.people) : { unmarked: [], changed: [] };
   const safe = shareSafe(built, input.people, input.shareSafe);
   const words = exportWords(safe);

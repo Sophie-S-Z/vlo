@@ -100,6 +100,7 @@ export const HELP = {
         'A memoir has the Memory Timeline, by time or by theme, and the People screen.',
         'A poetry collection has Sequences, with as many named orders of the poems as you need.',
         'Every project has Submissions and Progress.',
+        'In Submissions, Make a packet saves your pieces, cover letter, bio and synopsis in one zip and logs it as sent.',
       ],
     },
     {

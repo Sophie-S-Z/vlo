@@ -51,7 +51,17 @@ export interface Project {
     labels?: Label[];
     /** Track changes and the revision pass that new changes take (F44). Off when absent. */
     tracking?: Tracking;
+    /** The cover letter and bio of the last submission packet, for the next one (F53). */
+    packet?: PacketText;
   };
+}
+
+/** The most characters of a packet's cover letter, bio or synopsis (F53). */
+export const MAX_PACKET_TEXT = 6000;
+
+export interface PacketText {
+  letter: string;
+  bio: string;
 }
 
 /** A revision pass of Track changes. Each pass has its own color (F44). */

@@ -91,11 +91,11 @@ Pull request J-A: Task J1. J-B: Tasks J2 and J3. J-C: Tasks J4 to J7. Each one m
 **Interfaces:**
 
 - Produces: `Project.settings.packet?: { letter: string; bio: string }`, each at most 6,000 characters.
-- Produces: `makePacket(input: PacketInput): Promise<ExportFile>`, one zip named after the venue with a file for each piece, `Cover letter`, `Bio` and `Synopsis` (each only when it has text), in Word or PDF.
+- Produces: `packetRequests(input: PacketInput)`, one export request for each piece and for `Cover letter`, `Bio` and `Synopsis` (each only when it has text), in Word or PDF. `ExportRequest.text?` exports plain text with no title line. `startPacket(input)` prepares each file in an export worker and gives the name check of all files. `zipPacket(venue, files)` makes `Packet for <venue>.zip`.
 
-- [ ] Tests first: the zip holds the right files in the right format; prose pieces use standard manuscript format when the details exist; an empty part makes no file; a memoir packet with an unmarked real name in the letter stops at the name check; the settings round trip through backup and import.
-- [ ] "Make a packet" in Submissions opens the dialog: venue, pieces, letter, bio, synopsis (from the pieces' synopses at first) and format. "Save the packet" saves the zip, keeps the letter and bio, and logs a "Sent" row for today. The row opens for a change at once.
-- [ ] `packet.spec.ts`: make a packet, check the zip's file names, see the new row, reload, and the letter is still there; axe passes in each theme. Commit, then open pull request J-B.
+- [x] Tests first: the zip holds the right files in the right format; prose pieces use standard manuscript format when the details exist; an empty part makes no file; a memoir packet with an unmarked real name in the letter stops at the name check; the settings round trip through backup and import.
+- [x] "Make a packet" in Submissions opens the dialog: venue, pieces, letter, bio, synopsis (from the pieces' synopses at first) and format. "Save the packet" saves the zip, keeps the letter and bio, and logs a "Sent" row for today. A memoir packet starts share-safe, and the name check runs over every file.
+- [x] `packet.spec.ts`: make a packet, check the zip's file names, see the new row, reload, and the letter is still there; axe passes in each theme. Commit, then open pull request J-B.
 
 ### Task J4: Book layout in the PDF (F51)
 

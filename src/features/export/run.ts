@@ -26,6 +26,11 @@ export interface ExportRequest extends Omit<BuildInput, 'updates'> {
   manuscript?: ManuscriptDetails;
   /** Adds the AI provenance page (F26) as the last section, dated at this time in milliseconds. */
   provenance?: { at: number };
+  /**
+   * Plain text in place of the items, with no title, such as a packet's cover letter (F53). `name` names
+   * the file.
+   */
+  text?: { name: string; body: string };
 }
 
 export interface ExportFile {
@@ -65,6 +70,8 @@ export function usesManuscript(request: Pick<ExportRequest, 'project' | 'format'
 
 export interface PreparedExport {
   format: ExportFormat;
+  /** The file name without its extension. */
+  name: string;
   doc: ExportDoc;
   manuscript: ManuscriptSetup | undefined;
   /** The writer's own fonts that the file would embed, by stored value. */
@@ -92,7 +99,8 @@ export function prepareExport(request: ExportRequest): PreparedExport {
         : ownFontsOf(doc).filter((v) => v === doc.font)
       : ownFontsOf(doc);
   }
-  return { format: request.format, doc, manuscript, ownFonts, names };
+  const name = exportFileName(request.text?.name ?? doc.title);
+  return { format: request.format, name, doc, manuscript, ownFonts, names };
 }
 
 /** Sorts the own fonts by whether they may go in the file. Bytes are null for a font Vlo cannot read. */
@@ -113,7 +121,7 @@ export async function makeExport(
   fonts: FontCheck = { own: new Map(), swaps: [] },
   options: MakeOptions = {},
 ): Promise<ExportFile> {
-  const { doc, format, manuscript } = prepared;
+  const { doc, format, manuscript, name } = prepared;
   const loadFile = options.loadFile ?? appFile;
   const swaps = new Map(fonts.swaps.map((s) => [s.value, s.standIn]));
   const file = FORMAT_FILE[format];
@@ -148,7 +156,7 @@ export async function makeExport(
   }
   return {
     bytes,
-    name: `${exportFileName(doc.title)}.${file.extension}`,
+    name: `${name}.${file.extension}`,
     type: file.type,
     notices: exportNotices(doc, format, {
       swaps: fonts.swaps,

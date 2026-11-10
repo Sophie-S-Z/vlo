@@ -621,7 +621,8 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
   const children: Paragraph[] = [];
   if (setup) {
     children.push(...manuscriptOpening(doc, setup, textWidth, textHeight));
-  } else {
+  } else if (doc.title !== '') {
+    // A text with no title, such as a cover letter, starts with its first paragraph.
     children.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(doc.title)] }));
     if (doc.author) {
       const authorRun: IRunOptions = { text: doc.author, italics: true };

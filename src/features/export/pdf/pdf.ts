@@ -822,7 +822,8 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
       const italicFace = await layout.face(bodyFont, false, true);
       rows.push(center(doc.author, italicFace, 14, -textHeight * (2 / 3) + 40));
     }
-  } else {
+  } else if (doc.title !== '') {
+    // A text with no title, such as a cover letter, starts with its first paragraph.
     const titleRows = await layout.paragraph([{ type: 'text', text: doc.title, style: {} }], {
       left: 0,
       right: 0,

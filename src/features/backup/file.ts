@@ -20,7 +20,7 @@ import {
   type Json,
 } from './check';
 import { checkViews } from './views';
-import { MAX_LABELS } from '@/lib/db';
+import { MAX_LABELS, MAX_PACKET_TEXT } from '@/lib/db';
 import type {
   AudioFile,
   ResearchFile,
@@ -254,6 +254,15 @@ function checkProject(value: unknown): Project {
       isObject(tracking) &&
       typeof tracking.on === 'boolean' &&
       [1, 2, 3, 4, 5].includes(tracking.pass as number)
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
+  const packet = settings.packet;
+  if (
+    packet !== undefined &&
+    !(
+      isObject(packet) &&
+      [packet.letter, packet.bio].every((t) => typeof t === 'string' && t.length <= MAX_PACKET_TEXT)
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);
