@@ -626,6 +626,9 @@ Last update: 2026-11-10
     the source key and a page (doc schema 9). Vlo's own formatter gives the in-text form and the reference
     list of APA 7, MLA 9 or Chicago author-date. Each export ends with the list, with a hanging indent in
     Word, PDF and EPUB. A citation of a deleted source shows "[missing source]" and gets a notice.
+  - Gate 13 review fixes: a Fountain speech line keeps its role in a round trip, a scene heading keeps
+    room for the speech after it on the PDF page, a backup with two sources of one key restores, the
+    Sources panel moves focus to the form and back, and the Speak to write timer is not read out.
 - Phase 12 (plan `docs/plans/phase-12.md`): the five findings that the Phase 6 architecture review left
   for a later release (`docs/architecture-review-phase-6.md`, findings 4 to 8).
   - L1: Replace import keeps the device copy in memory, and puts it back when a write of the backup fails.
