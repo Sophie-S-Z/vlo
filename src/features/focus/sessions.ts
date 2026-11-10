@@ -11,8 +11,11 @@ export async function projectTotals(projectId: string): Promise<{ words: number;
   };
 }
 
-/** Starts a writing session. `endedAt` holds the planned end until the writer closes the session. */
-export async function startSession(projectId: string, minutes: number): Promise<Session> {
+/**
+ * Starts a writing session, or a sprint when it has a word target. `endedAt` holds the planned end until
+ * the writer closes the session.
+ */
+export async function startSession(projectId: string, minutes: number, target?: number): Promise<Session> {
   const startedAt = clock.now();
   const session: Session = {
     id: newId(),
@@ -21,6 +24,7 @@ export async function startSession(projectId: string, minutes: number): Promise<
     endedAt: startedAt + minutes * 60_000,
     wordsAdded: 0,
     poemsAdded: 0,
+    ...(target === undefined ? {} : { target }),
   };
   await db.sessions.add(session);
   return session;
@@ -33,4 +37,19 @@ export async function endSession(id: string, wordsAdded: number, poemsAdded: num
     wordsAdded: Math.max(0, wordsAdded),
     poemsAdded: Math.max(0, poemsAdded),
   });
+}
+
+/**
+ * Closes a session with what the project gained since `start`, the totals when it started. So a sprint
+ * counts only the words of its own time. Returns the words added.
+ */
+export async function closeSession(
+  projectId: string,
+  sessionId: string,
+  start: { words: number; poems: number },
+): Promise<number> {
+  const totals = await projectTotals(projectId);
+  const words = Math.max(0, totals.words - start.words);
+  await endSession(sessionId, words, totals.poems - start.poems);
+  return words;
 }

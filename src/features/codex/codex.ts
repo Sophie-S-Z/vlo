@@ -7,7 +7,8 @@ import { orderAfterLast, sortByOrder } from '@/lib/order';
 /*
  * The Codex of a project (roadmap F42, plan Task H5): characters, places, things and lore, each with
  * other names and a note. It lives in its own table, so no export or share reads it. Only the reader panel
- * (F61) sends the notes of the names in its text. People stays the memoir's private-names tool (decision Q3).
+ * (F61) sends the notes of the names in its text. The books of a series share some entries (F59). People
+ * stays the memoir's private-names tool (decision Q3).
  */
 
 export const CODEX_KINDS: readonly { id: CodexKind; label: string; heading: string }[] = [
@@ -21,12 +22,21 @@ export const MAX_CODEX_NAME = 80;
 export const MAX_CODEX_NOTE = 5000;
 export const MAX_ALIASES = 20;
 
-/** The entries of a project in the order the writer added them, live. Undefined while they load. */
+/**
+ * The Codex of a project: its own entries and the shared entries of its series (F59), in the order the
+ * writer added them. A shared entry has the series id as its `projectId`.
+ */
+export async function codexFor(projectId: string): Promise<CodexEntry[]> {
+  return db.transaction('r', db.series, db.codex, async () => {
+    const series = await db.series.where('projectIds').equals(projectId).first();
+    const scopes = series ? [projectId, series.id] : [projectId];
+    return sortByOrder(await db.codex.where('projectId').anyOf(scopes).toArray());
+  });
+}
+
+/** The Codex of a project, live. Undefined while it loads. */
 export function useCodex(projectId: string): CodexEntry[] | undefined {
-  return useLiveQuery(
-    async () => sortByOrder(await db.codex.where('projectId').equals(projectId).toArray()),
-    [projectId],
-  );
+  return useLiveQuery(() => codexFor(projectId), [projectId]);
 }
 
 function cleanName(name: string): string {

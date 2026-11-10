@@ -18,15 +18,12 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, MoreHorizontal } from 'lucide-react';
 import { memo, useRef, useState, type ReactNode } from 'react';
-import { STATUS_LABEL } from '@/features/binder/BinderItem';
-import { formatWords } from '@/features/library/format';
-import type { CountUnit } from '@/lib/wordcount';
-import type { Item } from '@/lib/db';
 import { cn } from '@/ui/cn';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 
 /*
- * The poems of one order as cards (spec 8.3, plan Task C6), and the index cards of the Outline (F40). A drag,
+ * The poems of one order as cards (spec 8.3, plan Task C6), the index cards of the Outline (F40) and the
+ * books of a series (F59). A drag,
  * the keyboard (Space, the arrow keys, Space) or a card's menu moves a card. The cards that make room move
  * with ease-in-out and no overshoot (plan Part J0), and Calm mode drops at once.
  */
@@ -41,33 +38,30 @@ const SETTLE = { duration: 300, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' };
 const INSTRUCTIONS =
   'To pick up a card, press Space or Enter. Use the arrow keys to move it. Press Space or Enter again to drop it, or Escape to cancel. The card menu also has Move earlier and Move later.';
 
-export interface SequenceActions {
-  /** Moves the poem at `from` to `to`. */
+/** A card of the list: a poem, an index card or a book. */
+interface Card {
+  id: string;
+  title: string;
+}
+
+export interface SequenceActions<T extends Card> {
+  /** Moves the card at `from` to `to`. */
   move: (from: number, to: number) => void;
-  open: (poem: Item) => void;
+  open: (card: T) => void;
 }
 
 interface CardProps {
-  poem: Item;
+  poem: Card;
   index: number;
   count: number;
   motion: boolean;
-  actions: SequenceActions;
+  actions: SequenceActions<Card>;
   noun: string;
-  details: ((item: Item) => ReactNode) | undefined;
-  unit: CountUnit;
+  /** The line under the card's title. */
+  details: (card: Card) => ReactNode;
 }
 
-const PoemCard = memo(function PoemCard({
-  poem,
-  index,
-  count,
-  motion,
-  actions,
-  noun,
-  details,
-  unit,
-}: CardProps) {
+const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions, noun, details }: CardProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: poem.id, transition: motion ? SETTLE : null });
   const [open, setOpen] = useState(false);
@@ -114,13 +108,7 @@ const PoemCard = memo(function PoemCard({
           >
             {poem.title}
           </button>
-          {details ? (
-            details(poem)
-          ) : (
-            <p className="mt-0.5 text-xs text-muted">
-              {formatWords(poem.wordCount, unit)}, {STATUS_LABEL[poem.status].toLowerCase()}
-            </p>
-          )}
+          {details(poem)}
         </div>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger
@@ -165,25 +153,22 @@ const PoemCard = memo(function PoemCard({
   );
 });
 
-export function SequenceList({
+export function SequenceList<T extends Card>({
   name,
   poems,
   motion,
   actions,
-  noun = 'poem',
+  noun,
   details,
-  unit = 'words',
 }: {
   name: string;
-  poems: readonly Item[];
+  poems: readonly T[];
   motion: boolean;
-  actions: SequenceActions;
+  actions: SequenceActions<T>;
   /** What a card holds, such as "poem", for the menu and the list name. */
-  noun?: string;
-  /** The line under a card's title. A poem shows its words and status. */
-  details?: (item: Item) => ReactNode;
-  /** The count unit of the project's language (F38). */
-  unit?: CountUnit;
+  noun: string;
+  /** The line under a card's title. Keep it the same between renders, as `actions`. */
+  details: (card: T) => ReactNode;
 }) {
   const sensors = useSensors(
     useSensor(MouseSensor, MOUSE_OPTIONS),
@@ -229,10 +214,10 @@ export function SequenceList({
               index={index}
               count={poems.length}
               motion={motion}
-              actions={actions}
+              // Each card gets back the object that it came from, so these hold for `T`.
+              actions={actions as SequenceActions<Card>}
               noun={noun}
-              details={details}
-              unit={unit}
+              details={details as (card: Card) => ReactNode}
             />
           ))}
         </ol>

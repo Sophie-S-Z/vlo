@@ -1,9 +1,9 @@
 import { supabaseUrl, vloFetch } from '@/lib/net';
 
 /*
- * The Supabase calls of share links, usage counts and sync (spec section 11, plan decision S2). Each call is a
- * PostgREST RPC through the network module, so it goes in the network log. Vlo calls functions only and
- * reads no table. The anon key is public by design: row level security with no policies keeps every
+ * The Supabase calls of share links, usage counts, sync and sprint rooms (spec section 11, plan decision
+ * S2). Each call is a PostgREST RPC through the network module, so it goes in the network log. Vlo calls
+ * functions only and reads no table. The anon key is public by design: row level security with no policies keeps every
  * table closed, and each function checks its own input.
  */
 
@@ -22,7 +22,11 @@ export type RpcName =
   | 'sync_devices'
   | 'sync_drop'
   | 'leave_sync'
-  | 'delete_sync_space';
+  | 'delete_sync_space'
+  // Sprint rooms (F60, migration 0006).
+  | 'room_create'
+  | 'room_join'
+  | 'room_post';
 
 export type ShareErrorKind =
   'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'busy' | 'server';
@@ -66,6 +70,9 @@ function kindOf(message: string): ShareErrorKind {
   // Sync (migration 0005): a wrong space or token, and a space at its limits.
   if (message.includes('unknown space')) return 'unavailable';
   if (message.includes('device limit') || message.includes('space full')) return 'limit';
+  // Sprint rooms (migration 0006): an old or wrong code, and a full room.
+  if (message.includes('unknown room')) return 'unavailable';
+  if (message.includes('room full')) return 'limit';
   return 'server';
 }
 
@@ -73,7 +80,7 @@ function kindOf(message: string): ShareErrorKind {
 export async function rpc<T>(
   name: RpcName,
   args: Record<string, unknown>,
-  purpose: 'share' | 'usage' | 'sync',
+  purpose: 'share' | 'usage' | 'sync' | 'room',
 ): Promise<T> {
   if (!sharingReady()) throw new ShareError('not-set-up');
   const key = anonKey();

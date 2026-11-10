@@ -1,7 +1,7 @@
 import { CircleAlert, Ellipsis } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router';
-import type { Project } from '@/lib/db';
+import type { Project, Series } from '@/lib/db';
 import { cn } from '@/ui/cn';
 import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
@@ -20,9 +20,12 @@ interface ProjectCardProps {
   index: number;
   /** The time the Library was drawn, for the backup date. */
   now: number;
+  /** The series of the project (F59), if any. */
+  series: Series | undefined;
   onBackUp: () => void;
   onRename: () => void;
   onTemplates: () => void;
+  onSeries: () => void;
   onDelete: () => void;
 }
 
@@ -36,9 +39,11 @@ export function ProjectCard({
   layout,
   index,
   now,
+  series,
   onBackUp,
   onRename,
   onTemplates,
+  onSeries,
   onDelete,
 }: ProjectCardProps) {
   const list = layout === 'list';
@@ -95,6 +100,13 @@ export function ProjectCard({
             <DropdownMenuItem onSelect={onBackUp}>Back up</DropdownMenuItem>
             <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
             <DropdownMenuItem onSelect={onTemplates}>Change templates</DropdownMenuItem>
+            {series ? (
+              <DropdownMenuItem asChild>
+                <Link to={`/series/${series.id}`}>Open {series.title}</Link>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={onSeries}>Add to a series</DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={onDelete} className="text-accent-text">
               Delete
             </DropdownMenuItem>

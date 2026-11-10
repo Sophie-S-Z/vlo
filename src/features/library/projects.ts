@@ -6,6 +6,7 @@ import { orderBetween } from '@/lib/order';
 import { requestPersistence } from '@/lib/storage';
 import { recountItems } from '@/lib/wordcount';
 import { deleteItemDoc } from '@/lib/itemDocName';
+import { dropBook } from '@/features/series/series';
 import { cleanTemplates, misfits, projectDef, type StarterItem } from './templates';
 
 export interface NewProjectInput {
@@ -162,11 +163,15 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       db.appMeta,
       db.shares,
       db.research,
+      db.series,
       ...viewTables(),
     ],
     async () => {
       // Read the ids in the same transaction, so an item added from another tab cannot be left behind.
       const ids = await db.items.where('projectId').equals(id).primaryKeys();
+      // The book leaves its series (F59). The last book takes the series and its shared entries with it.
+      const series = await db.series.where('projectIds').equals(id).first();
+      if (series) await dropBook(series, id);
       await db.items.where('projectId').equals(id).delete();
       for (const table of viewTables()) await table.where('projectId').equals(id).delete();
       await db.snapshots.where('projectId').equals(id).delete();

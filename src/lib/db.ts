@@ -42,6 +42,8 @@ export interface Project {
     followUpDays?: Record<string, number>;
     /** A date to finish by and the project's word target then, which sets the daily goal (F46). */
     deadline?: Deadline;
+    /** The month challenge (F60). */
+    challenge?: Challenge;
     /** Net words added on each local day, by the date as YYYY-MM-DD, for goals and streaks (F21). */
     wordsByDay?: Record<string, number>;
     /** The time of the first Co-writer insert, so each export offers the AI provenance page (F26). */
@@ -97,6 +99,12 @@ export type Pass = 1 | 2 | 3 | 4 | 5;
 export interface Tracking {
   on: boolean;
   pass: Pass;
+}
+
+/** The words to write in one month, as YYYY-MM: the month challenge (F60). */
+export interface Challenge {
+  month: string;
+  words: number;
 }
 
 /** A date as YYYY-MM-DD and the project's total words to reach by the end of that day (F46). */
@@ -234,6 +242,8 @@ export interface Session {
   endedAt: number;
   wordsAdded: number;
   poemsAdded: number;
+  /** The word target of a sprint (F60). A session with none is a plain writing session. */
+  target?: number;
 }
 
 /* Phase 3 tables (spec section 5, plan Task C1). Each belongs to one project. */
@@ -326,6 +336,25 @@ export interface CodexEntry {
   order: string;
 }
 
+/** A rule of a series style sheet (F59): the form to use, and the forms that the style check marks. */
+export interface StyleRule {
+  use: string;
+  avoid: string[];
+  note?: string;
+}
+
+/**
+ * Books in an order that share Codex entries and a style sheet (F59). A shared Codex entry belongs to
+ * the series: its `projectId` is the series id. A project is in at most one series.
+ */
+export interface Series {
+  id: string;
+  title: string;
+  projectIds: string[];
+  styleSheet: StyleRule[];
+  updatedAt: number;
+}
+
 /**
  * A research file of a project (F41): an image, a PDF, an audio file, or a clipping of text that the
  * writer pastes with its link. It stays on this device. Vlo never fetches a clipping's link.
@@ -370,7 +399,7 @@ export interface AudioFile {
 }
 
 /** Why a request left the app (spec section 5). */
-export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality' | 'sync';
+export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality' | 'sync' | 'room';
 
 /** One request that left the app's origin (spec section 5, F25). It never holds a key, a header or a body. */
 export interface NetworkLogEntry {
@@ -455,6 +484,7 @@ export class VloDb extends Dexie {
   syncClock!: Table<ClockEntry, string>;
   itemVersions!: Table<ItemVersion, string>;
   authorship!: Table<AuthorshipEntry, string>;
+  series!: Table<Series, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -516,6 +546,8 @@ export class VloDb extends Dexie {
     this.version(10).stores({ itemVersions: 'id, projectId, itemId' });
     // Version 11 (Phase 11, Task K5): the authorship record. A new table only.
     this.version(11).stores({ authorship: 'id, projectId' });
+    // Version 12 (Phase 11, Task K8): series of books. A new table only.
+    this.version(12).stores({ series: 'id, *projectIds' });
     this.use(syncClockMiddleware);
   }
 }

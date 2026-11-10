@@ -851,6 +851,16 @@ Last update: 2026-11-10
     and the page names the entry. `docs/authorship-record.md` gives the format and a Python and OpenSSL
     script that checks a record with no Vlo code.
   - Known limits: the device clock gives the times. One sync blob holds about 8,000 entries of a project.
+  - Pull request K-C holds Tasks K7 and K8. K7: a sprint is a timer session with a word target, and its
+    result card counts only the words of its time. Progress has a month challenge with a calendar. With a
+    Supabase project, friends sprint in a room (migration 0006): the room gets a six-letter code, a random
+    member id, a nickname and a count, never text. Privacy page version 5 says so.
+  - K8: a series of books shares Codex entries and a style sheet (database version 12, backup version 7).
+    The Library has Add to a series, and the Series page orders the books, counts their words, shows the
+    mentions of each shared entry in each book and edits the style sheet. In an English book, the style
+    check marks each form that the sheet avoids.
+  - Known limits: the style sheet check runs only in English books, as the style check does. A remote
+    delete of a book leaves its series when the series row syncs.
 
 ## Blocked
 

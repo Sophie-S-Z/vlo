@@ -10,13 +10,15 @@ import { countUnit } from '@/lib/wordcount';
 import { cn } from '@/ui/cn';
 import { CountUp } from './CountUp';
 import { Goals } from './Goals';
+import { MonthCalendar } from './MonthCalendar';
 import { useSessionCount } from './progress';
 import { STATUSES, TILE_TONE, Tiles } from './Tiles';
 import { ProjectMissing } from '@/features/project/ViewNotices';
 
 /*
  * Progress (spec 8.4, plan Task C9, F21). Every template has it: the total words and sessions as counting
- * numbers, a map of tiles by status, and the daily goal and streak, which are off by default.
+ * numbers, a map of tiles by status, the daily goal and streak, which are off by default, and the month
+ * challenge (F60).
  */
 
 export function ProgressPage() {
@@ -94,6 +96,7 @@ export function ProgressPage() {
       </section>
 
       <Goals project={project} total={words} />
+      <MonthCalendar project={project} />
     </section>
   );
 }

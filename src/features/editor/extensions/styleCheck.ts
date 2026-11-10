@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { PluginKey, type EditorState } from '@tiptap/pm/state';
-import { styleNotes, type StyleKind } from '@/features/analysis/style';
+import { styleNotes, type SheetMatcher, type StyleKind } from '@/features/analysis/style';
+import { getCodex, subscribeCodex } from '@/features/codex/codexStore';
 import { getWritingPrefs, subscribeWritingPrefs } from '../writingPrefs';
 import { blockScanPlugin, scanMarksAt, type ScanState } from './blockScan';
 
@@ -17,13 +18,11 @@ export function canStyleCheck(state: EditorState): boolean {
 }
 
 /** The style note at the cursor, with its words, or null. A word's note wins over its sentence's note. */
-export function styleNoteAt(state: EditorState): { kind: StyleKind; text: string } | null {
+export function styleNoteAt(state: EditorState): { kind: StyleKind; text: string; use?: string } | null {
   const found = scanMarksAt(styleCheckKey, state)[0];
   if (!found) return null;
-  return {
-    kind: (found.spec as { kind: StyleKind }).kind,
-    text: state.doc.textBetween(found.from, found.to, ' ', ' '),
-  };
+  const spec = found.spec as { kind: StyleKind; use?: string };
+  return { ...spec, text: state.doc.textBetween(found.from, found.to, ' ', ' ') };
 }
 
 export const StyleCheck = Extension.create<{ form: 'prose' | 'poem'; english: boolean }>({
@@ -37,16 +36,24 @@ export const StyleCheck = Extension.create<{ form: 'prose' | 'poem'; english: bo
     const { form, english } = this.options;
     if (!english) return [];
     return [
-      blockScanPlugin({
+      blockScanPlugin<SheetMatcher>({
         key: styleCheckKey,
-        inputs: () => (getWritingPrefs().styleCheck ? form : null),
-        subscribe: subscribeWritingPrefs,
-        marksOf: (text) =>
-          styleNotes(text, form).map((note) => ({
+        // The style sheet of the series (F59) is an input, so a new rule checks the text again.
+        inputs: () => (getWritingPrefs().styleCheck ? getCodex().sheet : null),
+        subscribe: (listener) => {
+          const stopPrefs = subscribeWritingPrefs(listener);
+          const stopCodex = subscribeCodex(listener);
+          return () => {
+            stopPrefs();
+            stopCodex();
+          };
+        },
+        marksOf: (text, sheet) =>
+          styleNotes(text, form, sheet).map((note) => ({
             from: note.from,
             to: note.to,
             attrs: { class: `vlo-style vlo-style-${note.kind}` },
-            spec: { kind: note.kind },
+            spec: { kind: note.kind, ...(note.use === undefined ? {} : { use: note.use }) },
           })),
       }),
     ];

@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 7,
+  version: 8,
   date: '2026-11-10',
   guide: [
     {
@@ -129,6 +129,23 @@ export const HELP = {
       ],
     },
     {
+      title: 'Sprint and take a month challenge',
+      steps: [
+        'Choose Timer, then Start a sprint. Pick the minutes and a word target. Only the words that you write in the sprint count.',
+        'At the end, the result shows your words and the target.',
+        'In Progress, type the words for this month and choose Start a month challenge. The calendar shows the words of each day.',
+      ],
+    },
+    {
+      title: 'Sprint with friends',
+      needsSharing: true,
+      steps: [
+        'In Start a sprint, turn on Sprint with friends and type a nickname.',
+        'Leave the room code empty to make a room, then give its six-letter code to your friends. They type it in the same place.',
+        'Choose Room next to the timer to see the words of each writer. The room gets only your nickname and your count, never your text.',
+      ],
+    },
+    {
       title: 'Plan with the views',
       steps: [
         'The tabs above the text show the views of your project.',
@@ -157,6 +174,16 @@ export const HELP = {
         'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
         'Exports and shares leave the Codex out. Only the Reader panel of the Assistant sends the notes of the names in its text.',
         'At the Simple tool level, open the Outline and the Codex from the command menu.',
+      ],
+    },
+    {
+      title: 'Write a series',
+      steps: [
+        'In the Library, open the menu of a book and choose Add to a series. Make a new series or add the book to one.',
+        'In the Codex of a book, open an entry and turn on Share with the series. Each book of the series then shows it.',
+        'The Series page shows the books in order, their words, the mentions of each shared entry and the style sheet.',
+        'A style sheet rule names a form to use and the forms to avoid. In an English book, the style check marks each form to avoid.',
+        'A book that leaves the series keeps a copy of each shared entry whose names its text holds.',
       ],
     },
     {

@@ -15,7 +15,7 @@ export function CursorNote({ editor }: { editor: Editor }) {
     editor,
     selector: ({ editor: e }) => {
       const style = styleNoteAt(e.state);
-      if (style) return styleReason(style.kind, style.text);
+      if (style) return styleReason(style.kind, style.text, style.use);
       const entry = codexEntryAt(e.state);
       if (!entry) return '';
       const kind = CODEX_KINDS.find((k) => k.id === entry.kind)?.label ?? '';

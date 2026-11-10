@@ -31,8 +31,9 @@ test('Privacy lists what stays and each purpose that can leave, with its hosts',
     'Weekly usage counts',
     'The web originality check',
     'Sync between your devices',
+    'Sprint rooms',
   ]);
   await expect(page.getByText('en.wikipedia.org, api.openalex.org')).toBeVisible();
   // The test build has a fake Supabase project.
-  await expect(page.getByText('vlo-test.supabase.co')).toHaveCount(3);
+  await expect(page.getByText('vlo-test.supabase.co')).toHaveCount(4);
 });

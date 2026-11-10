@@ -1,26 +1,29 @@
-import type { CodexEntry, Item } from '@/lib/db';
+import type { CodexEntry } from '@/lib/db';
 
 /**
  * Where each entry comes in the text (F42): a row for each entry and a column for each text item, in
- * binder order. A cell shows how many times the entry's names come in that item. The table scrolls
- * sideways inside its box, so a long project never widens the page.
+ * binder order, or for each book of a series (F59). A cell shows how many times the entry's names come in
+ * that column. The table scrolls sideways inside its box, so a long project never widens the page.
  */
 export function CodexMatrix({
   entries,
-  items,
+  columns,
+  noun,
   matrix,
 }: {
   entries: readonly CodexEntry[];
-  items: readonly Item[];
+  columns: readonly { id: string; title: string }[];
+  /** What a column is, such as "item". */
+  noun: string;
   matrix: Map<string, Map<string, number>>;
 }) {
-  if (entries.length === 0 || items.length === 0) return null;
+  if (entries.length === 0 || columns.length === 0) return null;
   return (
     <section aria-labelledby="codex-matrix" className="grid gap-2">
       <h3 id="codex-matrix" className="text-base font-semibold">
         Mentions
       </h3>
-      <p className="text-sm text-muted">How many times each name comes in each item.</p>
+      <p className="text-sm text-muted">How many times each name comes in each {noun}.</p>
       <div
         // The box takes focus, so a keyboard can scroll a wide table.
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
@@ -35,14 +38,14 @@ export function CodexMatrix({
               <th scope="col" className="sticky left-0 bg-bg px-3 py-2 text-left font-medium">
                 Entry
               </th>
-              {items.map((item) => (
+              {columns.map((column) => (
                 <th
-                  key={item.id}
+                  key={column.id}
                   scope="col"
                   className="max-w-32 truncate px-3 py-2 text-left font-medium text-muted"
-                  title={item.title}
+                  title={column.title}
                 >
-                  {item.title}
+                  {column.title}
                 </th>
               ))}
             </tr>
@@ -55,9 +58,9 @@ export function CodexMatrix({
                   <th scope="row" className="sticky left-0 bg-bg px-3 py-2 text-left font-medium">
                     {entry.name}
                   </th>
-                  {items.map((item) => (
-                    <td key={item.id} className="px-3 py-2 text-center tabular-nums">
-                      {row?.get(item.id) ?? <span className="sr-only">0</span>}
+                  {columns.map((column) => (
+                    <td key={column.id} className="px-3 py-2 text-center tabular-nums">
+                      {row?.get(column.id) ?? <span className="sr-only">0</span>}
                     </td>
                   ))}
                 </tr>

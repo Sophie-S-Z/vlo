@@ -66,7 +66,10 @@ const call = <T>(name: RpcName, space: SyncSpace, args: Record<string, unknown> 
 type Row = Record<string, unknown> & { id: string; projectId: string };
 const syncTable = (name: string) => db.table<Row, string>(name);
 
-/** Every row of a project in the synced tables, and each delete that the clock knows, by clock key. */
+/**
+ * Every row of a project or a series in the synced tables, and each delete that the clock knows, by clock
+ * key.
+ */
 async function localVersions(projectId: string): Promise<Map<string, Version>> {
   return db.transaction('r', [db.syncClock, ...SYNC_TABLES.map(syncTable)], async () => {
     const entries = await db.syncClock.where('projectId').equals(projectId).toArray();
@@ -74,7 +77,7 @@ async function localVersions(projectId: string): Promise<Map<string, Version>> {
     const out = new Map<string, Version>();
     for (const table of SYNC_TABLES) {
       const rows = await syncTable(table)
-        .where(table === 'projects' ? 'id' : 'projectId')
+        .where(table === 'projects' || table === 'series' ? 'id' : 'projectId')
         .equals(projectId)
         .toArray();
       for (const row of rows) {
@@ -132,7 +135,7 @@ async function push(sync: Sync, started: number): Promise<number> {
         .toArray();
   const fresh = new Set(changes.filter((e) => !e.gone).map((e) => e.key));
   const projectIds = first
-    ? await db.projects.toCollection().primaryKeys()
+    ? [...(await db.projects.toCollection().primaryKeys()), ...(await db.series.toCollection().primaryKeys())]
     : [
         ...new Set([
           ...changes.map((e) => e.projectId),
@@ -197,7 +200,8 @@ async function listNew(space: SyncSpace): Promise<Listed[]> {
 
 /**
  * Removes the rest of a project that another device deleted, as `deleteProject` does. Gives its items and
- * the rows with a blob of their own, so this device drops their blobs.
+ * the rows with a blob of their own, so this device drops their blobs. The series row comes in its own
+ * blob, with the book out of it.
  */
 async function dropProject(id: string): Promise<Pick<Version, 'table' | 'id'>[]> {
   const gone: Pick<Version, 'table' | 'id'>[] = [];
@@ -205,7 +209,7 @@ async function dropProject(id: string): Promise<Pick<Version, 'table' | 'id'>[]>
     for (const rowId of await syncTable(table).where('projectId').equals(id).primaryKeys())
       gone.push({ table, id: rowId });
   for (const name of [
-    ...SYNC_TABLES.filter((t) => t !== 'projects'),
+    ...SYNC_TABLES.filter((t) => t !== 'projects' && t !== 'series'),
     'snapshots',
     'sessions',
     'itemTexts',

@@ -1,4 +1,4 @@
-import type { CodexKind, SubmissionStatus, ViewRows } from '@/lib/db';
+import type { CodexEntry, CodexKind, SubmissionStatus, ViewRows } from '@/lib/db';
 import { emptyViewRows } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import {
@@ -37,7 +37,7 @@ function coordinate(row: Json, key: string, what: string): void {
   if (typeof value !== 'number' || !Number.isFinite(value)) fail(`${DAMAGED} ${what} has a wrong ${key}.`);
 }
 
-function ids(row: Json, key: string, what: string): string[] {
+export function ids(row: Json, key: string, what: string): string[] {
   const value = row[key];
   if (!Array.isArray(value) || !value.every((v): v is string => typeof v === 'string' && ID.test(v)))
     fail(`${DAMAGED} ${what} has a wrong ${key}.`);
@@ -138,9 +138,15 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
     optionalText(row, 'notes', 'A submission');
   });
 
-  const codexRows = rowsOf(manifest, 'codex');
-  unique(codexRows, 'the Codex entries');
-  views.codex = checkRows(codexRows, projectId, 'A Codex entry', (row) => {
+  views.codex = checkCodex(rowsOf(manifest, 'codex'), projectId);
+
+  return views;
+}
+
+/** Codex entries of a project, or the shared entries of a series (F59) when `scopeId` is the series id. */
+export function checkCodex(rows: Json[], scopeId: string): CodexEntry[] {
+  unique(rows, 'the Codex entries');
+  return checkRows(rows, scopeId, 'A Codex entry', (row) => {
     if (!CODEX_KINDS.includes(text(row, 'kind', 'A Codex entry') as CodexKind))
       fail(`${DAMAGED} A Codex entry has a wrong kind.`);
     if (text(row, 'name', 'A Codex entry').trim() === '') fail(`${DAMAGED} A Codex entry has no name.`);
@@ -150,8 +156,6 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
     optionalText(row, 'note', 'A Codex entry');
     checkOrder(text(row, 'order', 'A Codex entry'), 'A Codex entry');
   });
-
-  return views;
 }
 
 /**

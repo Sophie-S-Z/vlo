@@ -80,6 +80,11 @@ export const routes: RouteObject[] = [
         path: 'p/:projectId/progress',
         lazy: async () => ({ Component: (await import('@/features/progress/ProgressPage')).ProgressPage }),
       },
+      // A series of books (F59): its books, shared Codex and style sheet.
+      {
+        path: 'series/:seriesId',
+        lazy: async () => ({ Component: (await import('@/features/series/SeriesPage')).SeriesPage }),
+      },
       { path: 'settings', element: <SettingsPage /> },
       // A pairing link for sync (F49). The fragment holds the space, so the page takes it once.
       {

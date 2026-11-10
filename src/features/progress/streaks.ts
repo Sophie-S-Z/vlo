@@ -29,6 +29,11 @@ export interface DayEntry {
   state: DayState;
 }
 
+/** Monday first, as weekday numbers (0 is Sunday). */
+export const WEEK = [1, 2, 3, 4, 5, 6, 0];
+export const DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 86_400_000;
 const formats = new Map<string, Intl.DateTimeFormat>();

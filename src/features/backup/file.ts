@@ -21,7 +21,7 @@ import {
   text,
   type Json,
 } from './check';
-import { checkViews } from './views';
+import { checkCodex, checkViews, ids } from './views';
 import {
   CHAPTER_STYLES,
   MAX_BOOK_TEXT,
@@ -34,15 +34,18 @@ import {
 import type {
   AudioFile,
   AuthorshipEntry,
+  CodexEntry,
   ResearchFile,
   Item,
   ItemKind,
   ItemText,
   ItemVersion,
   Project,
+  Series,
   Session,
   Snapshot,
   Status,
+  StyleRule,
   Template,
   ViewRows,
 } from '@/lib/db';
@@ -59,13 +62,14 @@ import type {
  * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Version 3 gives the project a
  * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows and
  * the research files, so an older build refuses the file and never drops them. Version 5 (Phase 11) adds the
- * named versions of items. Version 6 adds the authorship record. Vlo still reads versions 1 to 5.
+ * named versions of items. Version 6 adds the authorship record. Version 7 adds the book's series (F59): its
+ * row (`series`) and its shared Codex entries (`seriesCodex`). Vlo still reads versions 1 to 6.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 6;
+export const BACKUP_VERSION = 7;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -101,6 +105,8 @@ export interface Backup {
   research: BackupResearch[];
   /** Board cards, threads, life stages, poem orders, people and submissions (Phase 3), and the Codex. */
   views: ViewRows;
+  /** The series of the book and its shared Codex entries (F59), when the book is in one. */
+  series?: { row: Series; codex: CodexEntry[] };
 }
 
 const KINDS: readonly ItemKind[] = ['part', 'chapter', 'scene', 'memory', 'poem', 'page', 'note'];
@@ -150,6 +156,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     music: backup.music.map((m) => m.info),
     research: backup.research.map((r) => r.info),
     ...backup.views,
+    ...(backup.series ? { series: backup.series.row, seriesCodex: backup.series.codex } : {}),
   };
   zip.file('project.json', JSON.stringify(manifest, null, 2));
   for (const item of backup.items) {
@@ -265,6 +272,19 @@ function checkProject(value: unknown): Project {
       typeof deadline.words === 'number' &&
       Number.isInteger(deadline.words) &&
       deadline.words >= 1
+    )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
+  const challenge = settings.challenge;
+  if (
+    challenge !== undefined &&
+    !(
+      isObject(challenge) &&
+      typeof challenge.month === 'string' &&
+      /^\d{4}-\d{2}$/.test(challenge.month) &&
+      typeof challenge.words === 'number' &&
+      Number.isInteger(challenge.words) &&
+      challenge.words >= 1
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);
@@ -440,6 +460,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     id(row, 'id', 'A writing session');
     for (const key of ['startedAt', 'endedAt', 'wordsAdded', 'poemsAdded'])
       count(row, key, 'A writing session');
+    if (row.target !== undefined) count(row, 'target', 'A writing session');
   });
   const authorship = checkRows<AuthorshipEntry>(
     manifest.authorship === undefined ? [] : list(manifest, 'authorship'),
@@ -553,5 +574,34 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     music,
     research,
     views,
+    ...(manifest.series === undefined ? {} : { series: checkSeries(manifest, project.id) }),
   };
+}
+
+function checkRule(rule: unknown): rule is StyleRule {
+  return (
+    isObject(rule) &&
+    typeof rule.use === 'string' &&
+    rule.use.trim() !== '' &&
+    Array.isArray(rule.avoid) &&
+    rule.avoid.every((a) => typeof a === 'string' && a.trim() !== '') &&
+    (rule.note === undefined || typeof rule.note === 'string')
+  );
+}
+
+/** The series of the book and its shared Codex entries (F59). */
+function checkSeries(manifest: Json, projectId: string): { row: Series; codex: CodexEntry[] } {
+  const row = manifest.series;
+  const what = 'The series';
+  if (!isObject(row)) fail(`${DAMAGED} ${what} is wrong.`);
+  const seriesId = id(row, 'id', what);
+  if (text(row, 'title', what).trim() === '') fail(`${DAMAGED} ${what} has no title.`);
+  const books = ids(row, 'projectIds', what);
+  if (!books.includes(projectId) || new Set(books).size !== books.length)
+    fail(`${DAMAGED} ${what} has a wrong list of books.`);
+  if (!Array.isArray(row.styleSheet) || !row.styleSheet.every(checkRule))
+    fail(`${DAMAGED} ${what} has a wrong style sheet.`);
+  count(row, 'updatedAt', what);
+  const codex = checkCodex(manifest.seriesCodex === undefined ? [] : list(manifest, 'seriesCodex'), seriesId);
+  return { row: row as unknown as Series, codex };
 }

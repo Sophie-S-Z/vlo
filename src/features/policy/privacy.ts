@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 4,
+  version: 5,
   date: '2026-11-10',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -55,6 +55,12 @@ export const PRIVACY = {
       when: 'Only after you turn on sync in Settings, and only between the devices that you pair.',
       sends:
         'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
+    },
+    room: {
+      title: 'Sprint rooms',
+      when: 'Only when you sprint with friends, from the start of the sprint to its end.',
+      sends:
+        'The room code, the nickname that you type, the count of the sprint and a random id for this sprint. Never a title or a word of text. A room ends 24 hours after someone makes it.',
     },
   } satisfies Record<NetPurpose, { title: string; when: string; sends: string }>,
   contact: {

@@ -10,7 +10,17 @@ import { cn } from '@/ui/cn';
 import { CountUp } from './CountUp';
 import { Button } from '@/ui/button';
 import { goalsOf, MAX_GOAL, MAX_TARGET, setGoals } from './progress';
-import { dayKey, deadlineGoal, lastDays, streakOf, weekdayOf, type DayState } from './streaks';
+import {
+  DAY_NAME,
+  DAY_SHORT,
+  dayKey,
+  deadlineGoal,
+  lastDays,
+  streakOf,
+  WEEK,
+  weekdayOf,
+  type DayState,
+} from './streaks';
 
 /*
  * The daily goal and the streak (spec 8.4, plan Task C9, F21). Both are off by default. A rest day keeps
@@ -18,10 +28,6 @@ import { dayKey, deadlineGoal, lastDays, streakOf, weekdayOf, type DayState } fr
  * words left and the writing days left.
  */
 
-/** Monday first, as weekday numbers (0 is Sunday). */
-const WEEK = [1, 2, 3, 4, 5, 6, 0];
-const DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKS_SHOWN = 4;
 
 const CELL: Record<DayState, string> = {

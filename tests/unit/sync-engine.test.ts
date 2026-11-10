@@ -279,6 +279,40 @@ describe('the authorship record (F54)', () => {
   });
 });
 
+describe('series (F59)', () => {
+  test('a series and its shared entries go in a rows blob of their own, and come back from the other device', async () => {
+    const series = { id: 's-tides', title: 'Tides', projectIds: ['p1'], styleSheet: [], updatedAt: 1 };
+    const shared = {
+      id: 'c-mira',
+      projectId: 's-tides',
+      kind: 'character' as const,
+      name: 'Mira',
+      aliases: [],
+      order: 'a0',
+    };
+    await db.series.add(series);
+    await db.codex.add(shared);
+    now = 2000;
+    await syncOnce();
+    const blob = (await mine('rows:s-tides')) as RowsBlob;
+    expect(blob.rows.map((v) => [v.table, v.row])).toEqual([
+      ['codex', shared],
+      ['series', series],
+    ]);
+    expect(((await mine('rows:p1')) as RowsBlob).rows.some((v) => v.id === 'c-mira')).toBe(false);
+
+    const sheet = [{ use: 'gray', avoid: ['grey'] }];
+    await fromOther(
+      'rows:s-tides',
+      rows([{ table: 'series', id: 's-tides', at: 5000, row: { ...series, styleSheet: sheet } }], 's-tides'),
+    );
+    now = 6000;
+    await syncOnce();
+    expect((await db.series.get('s-tides'))?.styleSheet).toEqual(sheet);
+    expect(await db.codex.get('c-mira')).toEqual(shared);
+  });
+});
+
 describe('item versions (F55)', () => {
   test('each version goes in a blob of its own, and comes back as the same row', async () => {
     const version = {
