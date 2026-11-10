@@ -129,6 +129,6 @@ Pull request J-A: Task J1. J-B: Tasks J2 and J3. J-C: Tasks J4 to J7. Each one m
 
 ### Task J7: Gate 10 and the release
 
-- [ ] Update STATUS, the help page and `docs/privacy.md` if needed. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 10 diff against Review Focus 1 to 5. Fix each high finding.
+- [x] Update STATUS, the help page and `docs/privacy.md` if needed. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 10 diff against Review Focus 1 to 5. Fix each high finding.
 - [ ] Open pull request J-C. Ask the product owner to run "Run workflow" for all 4 browsers.

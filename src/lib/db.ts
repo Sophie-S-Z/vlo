@@ -82,9 +82,6 @@ export interface BookSettings {
   about: string;
 }
 
-/** The matter texts of `BookSettings`, in the order of the book. */
-export const BOOK_TEXTS = ['copyright', 'dedication', 'epigraph', 'acknowledgments', 'about'] as const;
-
 /** The most characters of a packet's cover letter, bio or synopsis (F53). */
 export const MAX_PACKET_TEXT = 6000;
 

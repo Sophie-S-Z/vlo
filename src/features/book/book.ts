@@ -5,6 +5,9 @@ import type { BookSettings, Project, Trim } from '@/lib/db';
  * PDF points, 72 to the inch.
  */
 
+/** The matter texts of `BookSettings`, in the order of the book. */
+export const BOOK_TEXTS = ['copyright', 'dedication', 'epigraph', 'acknowledgments', 'about'] as const;
+
 export const DEFAULT_BOOK: BookSettings = {
   trim: '5.5x8.5',
   chapter: 'classic',

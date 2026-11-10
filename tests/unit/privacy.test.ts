@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import type { JSONContent } from '@tiptap/core';
+import { DEFAULT_BOOK } from '@/features/book/book';
 import { buildExportDoc } from '@/features/export/build';
 import { footnotesOf, runsText, type ExportDoc, type ExportReview, type Run } from '@/features/export/model';
 import { aliasesOf, aliasText, nameCheck, shareSafe, type PrivatePerson } from '@/lib/privacy';
@@ -47,6 +48,21 @@ describe('share-safe export', () => {
     for (const name of ['Rosa', 'Teo']) expect(out).not.toContain(name);
     expect(safe.title).toBe('Mae at the coast');
     expect(safe.sections[0]?.title).toBe('Mae at the coast');
+  });
+
+  test("a book's front and back matter gets the aliases, and the name check counts its names", () => {
+    const doc: ExportDoc = {
+      ...memoirDoc(),
+      book: { ...DEFAULT_BOOK, dedication: 'For Aunt Rosa.', about: 'Thanks to Teo and Rosa.' },
+    };
+    const safe = shareSafe(doc, PEOPLE, true);
+    expect(safe.book?.dedication).toBe('For Aunt Mae.');
+    expect(safe.book?.about).toBe('Thanks to Sol and Mae.');
+    const before = nameCheck(memoirDoc(), PEOPLE).unmarked;
+    const after = nameCheck(doc, PEOPLE).unmarked;
+    const count = (list: typeof after, name: string) => list.find((n) => n.name === name)?.count ?? 0;
+    expect(count(after, 'Aunt Rosa')).toBe(count(before, 'Aunt Rosa') + 1);
+    expect(count(after, 'Teo')).toBe(count(before, 'Teo') + 1);
   });
 
   test('keeps the text as written when the switch is off or the list is empty', () => {

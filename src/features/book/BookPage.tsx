@@ -1,5 +1,5 @@
 import { Printer } from 'lucide-react';
-import { lazy, Suspense, useId, useState } from 'react';
+import { lazy, Suspense, useId, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { updateProjectSettings } from '@/features/library/projects';
@@ -78,8 +78,10 @@ function BookScreen({ project, items }: { project: Project; items: Item[] }) {
   );
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
+  const typing = useRef<number | undefined>(undefined);
 
   const save = (next: BookSettings) => {
+    window.clearTimeout(typing.current);
     updateProjectSettings(project.id, { book: next }).then(
       () => {
         setError('');
@@ -89,7 +91,7 @@ function BookScreen({ project, items }: { project: Project; items: Item[] }) {
       },
     );
   };
-  /** A choice saves at once. A text saves when the writer leaves its field, and the preview follows each key. */
+  /** A choice saves at once. A text saves one second after the last key, and the preview follows each key. */
   const choose = (change: Partial<BookSettings>) => {
     const next = { ...book, ...change };
     setBook(next);
@@ -232,7 +234,12 @@ function BookScreen({ project, items }: { project: Project; items: Item[] }) {
                 rows={key === 'copyright' ? 3 : 2}
                 maxLength={MAX_BOOK_TEXT}
                 onChange={(event) => {
-                  setBook((now) => ({ ...now, [key]: event.target.value }));
+                  const next = { ...book, [key]: event.target.value };
+                  setBook(next);
+                  window.clearTimeout(typing.current);
+                  typing.current = window.setTimeout(() => {
+                    save(next);
+                  }, 1000);
                 }}
                 onBlur={() => {
                   save(book);

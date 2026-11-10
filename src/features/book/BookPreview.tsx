@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { readOwnFonts, ExportJob } from '@/features/export/startExport';
 import { hasTemplate } from '@/features/library/templates';
 import { privatePeople } from '@/features/people/people';
+import { clock } from '@/lib/clock';
 import type { BookSettings, Item, Project } from '@/lib/db';
 import { cn } from '@/ui/cn';
 import { TRIM_POINTS } from './book';
@@ -94,10 +95,16 @@ export function BookPreview({
         scope: { kind: 'project' },
         format: 'pdf',
         people: await privatePeople(project.id),
-        // As the Export dialog starts: a memoir gets its aliases.
+        // As the Export dialog starts: a memoir gets its aliases, and AI text gets the provenance page.
         shareSafe: hasTemplate(project, 'memoir'),
+        ...(project.settings.aiInsertedAt !== undefined ? { provenance: { at: clock.now() } } : {}),
       });
-      await job.check(await readOwnFonts(ownFonts));
+      try {
+        await job.check(await readOwnFonts(ownFonts));
+      } catch (error) {
+        job.close();
+        throw error;
+      }
       return job;
     })();
     job.current = started;
@@ -121,6 +128,7 @@ export function BookPreview({
         run((ready) => ready.lay(book)).then(
           (result) => {
             if (stale) return;
+            setFailed(false);
             setShown({ key, laid: result });
             setSpread((s) => Math.min(s, Math.floor(result.pages / 2)));
           },
@@ -144,18 +152,13 @@ export function BookPreview({
   useEffect(() => {
     if (!laid) return;
     let stale = false;
-    const made: string[] = [];
     const [left, right] = spreadPages(spread, laid.pages);
     const from = left ?? right ?? 0;
     run((ready) => ready.draw(from, right ?? from)).then(
       (svgs) => {
         if (stale) return;
-        const url = (svg: string | undefined) => {
-          if (svg === undefined) return null;
-          const made1 = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-          made.push(made1);
-          return made1;
-        };
+        const url = (svg: string | undefined) =>
+          svg === undefined ? null : URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
         setUrls({
           spread,
           left: left === null ? null : url(svgs[0]),
@@ -168,9 +171,16 @@ export function BookPreview({
     );
     return () => {
       stale = true;
-      for (const u of made) URL.revokeObjectURL(u);
     };
   }, [laid, spread]);
+
+  // A drawn page stays until the next one replaces it, so a page on show never loses its image.
+  useEffect(
+    () => () => {
+      for (const u of [urls?.left, urls?.right]) if (u) URL.revokeObjectURL(u);
+    },
+    [urls],
+  );
 
   // The e-reader and phone text, one second after a change, while one of them is on show.
   const pageKey = page?.key;
@@ -182,7 +192,9 @@ export function BookPreview({
       () => {
         run((ready) => ready.epub(book, fontBase)).then(
           (html) => {
-            if (!stale) setPage({ key, html });
+            if (stale) return;
+            setFailed(false);
+            setPage({ key, html });
           },
           () => {
             if (!stale) setFailed(true);

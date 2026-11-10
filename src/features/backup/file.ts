@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
+import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
 import { holdsText as templateHoldsText, TEMPLATE_ORDER } from '@/features/library/templates';
@@ -20,15 +21,7 @@ import {
   type Json,
 } from './check';
 import { checkViews } from './views';
-import {
-  BOOK_TEXTS,
-  CHAPTER_STYLES,
-  MAX_BOOK_TEXT,
-  MAX_LABELS,
-  MAX_PACKET_TEXT,
-  SCENE_BREAKS,
-  TRIMS,
-} from '@/lib/db';
+import { CHAPTER_STYLES, MAX_BOOK_TEXT, MAX_LABELS, MAX_PACKET_TEXT, SCENE_BREAKS, TRIMS } from '@/lib/db';
 import type {
   AudioFile,
   ResearchFile,

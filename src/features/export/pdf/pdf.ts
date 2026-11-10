@@ -1206,15 +1206,26 @@ async function layOutOnce(
     if (row.recto && (pages.length - 1) % 2 === 1) newPage();
     // Keep a row with the rows it must not be split from, such as a heading and its first line.
     let need = row.height;
-    for (let j = i; rows[j]?.keepWithNext && rows[j + 1]; j += 1)
-      need += (rows[j + 1]?.spaceBefore ?? 0) + (rows[j + 1]?.height ?? 0);
+    let end = i;
+    for (; rows[end]?.keepWithNext && rows[end + 1]; end += 1)
+      need += (rows[end + 1]?.spaceBefore ?? 0) + (rows[end + 1]?.height ?? 0);
     const noteRows = await notesOf(row.notes);
-    const notesExtra = noteRows.reduce((sum, n) => sum + n.row.spaceBefore + n.row.height, 0);
-    const separatorExtra = noteRows.length > 0 && current().notes.length === 0 ? separator : 0;
+    // The group's notes go on the same page, so a note on a paragraph's last line keeps the line company.
+    const groupNotes = end === i ? noteRows : await notesOf(rows.slice(i, end + 1).flatMap((r) => r.notes));
+    const height = (notes: typeof noteRows) =>
+      notes.reduce((sum, n) => sum + n.row.spaceBefore + n.row.height, 0);
+    const notesExtra = height(noteRows);
+    const separatorExtra = groupNotes.length > 0 && current().notes.length === 0 ? separator : 0;
     const space = empty() ? 0 : row.spaceBefore;
-    const bottom = textBottom + current().notesHeight + notesExtra + separatorExtra;
+    const fits = (rowsHeight: number, notesHeight: number) =>
+      y - space - rowsHeight >= textBottom + current().notesHeight + separatorExtra + notesHeight;
     // A group taller than half a page may split, but the row itself must fit.
-    if (!empty() && y - space - Math.max(row.height, Math.min(need, textHeight / 2)) < bottom) newPage();
+    if (
+      !empty() &&
+      !(fits(row.height, notesExtra) && fits(Math.min(need, textHeight / 2), height(groupNotes)))
+    ) {
+      newPage();
+    }
     const page = current();
     if (empty() && row.dropTo !== undefined) y = textTop - textHeight * row.dropTo;
     const top = y - (empty() ? 0 : row.spaceBefore);

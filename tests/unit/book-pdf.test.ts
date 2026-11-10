@@ -255,6 +255,56 @@ describe.runIf(hasPoppler)('book PDF', () => {
   });
 });
 
+function widowsAndOrphans(laid: LaidOutPdf): string[] {
+  const problems: string[] = [];
+  laid.pages.forEach((page, index) => {
+    const first = page.rows[0]?.row.para;
+    const last = page.rows[page.rows.length - 1]?.row.para;
+    if (first && first.lines > 1 && first.line === first.lines - 1)
+      problems.push(`widow on ${String(index)}`);
+    if (last && last.lines > 1 && last.line === 0) problems.push(`orphan on ${String(index)}`);
+  });
+  return problems;
+}
+
+test('a footnote on the last line of a paragraph keeps that line with the one before it', async () => {
+  const text = (t: string) => ({ type: 'text', text: t, style: {} }) as const;
+  const long =
+    'The harbor lights came on one by one while the boats came in, and the gulls argued over the nets until the last of the light went out of the sky.';
+  const problems: string[] = [];
+  // Each count of short paragraphs moves the noted paragraph to another place on the page.
+  for (let n = 18; n < 30; n += 1) {
+    const doc: ExportDoc = {
+      title: 'Notes',
+      font: 'newsreader',
+      paper: 'letter',
+      language: 'en',
+      book: { ...BOOK, contents: false, dropCaps: false },
+      sections: [
+        {
+          id: 's',
+          title: '',
+          form: 'prose',
+          blocks: [
+            ...Array.from({ length: n }, () => ({ type: 'paragraph' as const, runs: [text('Short line.')] })),
+            {
+              type: 'paragraph',
+              runs: [
+                text(`${long} ${long}`),
+                { type: 'footnote', number: 1, note: [text(`${long} ${long} ${long}`)] },
+              ],
+            },
+            ...Array.from({ length: 10 }, () => ({ type: 'paragraph' as const, runs: [text(long)] })),
+          ],
+        },
+      ],
+    };
+    const laid = await layOutPdf(doc, options, await PDFDocument.create());
+    problems.push(...widowsAndOrphans(laid).map((p) => `${p} with ${String(n)} short lines`));
+  }
+  expect(problems).toEqual([]);
+}, 60_000);
+
 describe.runIf(hasPoppler)('a 100,000-word book', () => {
   let laid: LaidOutPdf;
   let path = '';
@@ -283,15 +333,7 @@ describe.runIf(hasPoppler)('a 100,000-word book', () => {
   }, 240_000);
 
   test('no page starts with the last line of a paragraph or ends with its first line', () => {
-    const problems: string[] = [];
-    laid.pages.forEach((page, index) => {
-      const first = page.rows[0]?.row.para;
-      const last = page.rows[page.rows.length - 1]?.row.para;
-      if (first && first.lines > 1 && first.line === first.lines - 1)
-        problems.push(`widow on ${String(index)}`);
-      if (last && last.lines > 1 && last.line === 0) problems.push(`orphan on ${String(index)}`);
-    });
-    expect(problems).toEqual([]);
+    expect(widowsAndOrphans(laid)).toEqual([]);
     expect(laid.pages.length).toBeGreaterThan(300);
   });
 
