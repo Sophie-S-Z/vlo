@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, Package, Pencil, Plus, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { flattenTree, openTargets } from '@/features/binder/tree';
@@ -31,6 +31,9 @@ import {
   type SubmissionDraft,
 } from './submissions';
 import { ProjectMissing } from '@/features/project/ViewNotices';
+
+// The packet dialog and the export code load when the writer opens it (F53).
+const PacketDialog = lazy(async () => ({ default: (await import('./PacketDialog')).PacketDialog }));
 
 /*
  * The Submissions tracker (spec 8.4, plan Task C8, F20, E4). Every template has it. A sortable table
@@ -148,6 +151,7 @@ export function SubmissionsPage() {
   const [form, setForm] = useState<{ editing: Submission | null } | null>(null);
   const [message, setMessage] = useState('');
   const [deleted, setDeleted] = useState<Submission | null>(null);
+  const [packetOpen, setPacketOpen] = useState(false);
   const undoRef = useRef<HTMLButtonElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   // The control that takes focus after the next render, as a data-focus value. A closed form or an Undo
@@ -265,17 +269,44 @@ export function SubmissionsPage() {
           </p>
         </div>
         {!form && (
-          <Button
-            data-focus="add"
-            onClick={() => {
-              setForm({ editing: null });
-            }}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Log a submission
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPacketOpen(true);
+              }}
+            >
+              <Package aria-hidden="true" className="size-4" />
+              Make a packet
+            </Button>
+            <Button
+              data-focus="add"
+              onClick={() => {
+                setForm({ editing: null });
+              }}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Log a submission
+            </Button>
+          </div>
         )}
       </div>
+
+      {packetOpen && (
+        <Suspense fallback={null}>
+          <PacketDialog
+            open
+            onOpenChange={setPacketOpen}
+            project={project}
+            items={items}
+            pieces={pieces}
+            venues={venues}
+            onLogged={(venue) => {
+              announce(`Made the packet and logged the submission to ${venue}.`);
+            }}
+          />
+        </Suspense>
+      )}
 
       {form && (
         <SubmissionForm

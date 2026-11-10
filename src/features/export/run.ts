@@ -26,6 +26,11 @@ export interface ExportRequest extends Omit<BuildInput, 'updates'> {
   manuscript?: ManuscriptDetails;
   /** Adds the AI provenance page (F26) as the last section, dated at this time in milliseconds. */
   provenance?: { at: number };
+  /**
+   * Plain text in place of the items, with no title, such as a packet's cover letter (F53). `name` names
+   * the file.
+   */
+  text?: { name: string; body: string };
 }
 
 export interface ExportFile {
@@ -34,6 +39,8 @@ export interface ExportFile {
   name: string;
   type: string;
   notices: string[];
+  /** The plain text beside the HTML of a web copy, for an app that takes no rich text (F52). */
+  text?: string;
 }
 
 export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; type: string }>> = {
@@ -44,6 +51,7 @@ export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; typ
   pdf: { extension: 'pdf', type: 'application/pdf' },
   epub: { extension: 'epub', type: 'application/epub+zip' },
   markdown: { extension: 'md', type: 'text/markdown;charset=utf-8' },
+  web: { extension: 'html', type: 'text/html;charset=utf-8' },
 };
 
 /** True for the formats that embed fonts, so the writer's own fonts need a check. */
@@ -62,6 +70,8 @@ export function usesManuscript(request: Pick<ExportRequest, 'project' | 'format'
 
 export interface PreparedExport {
   format: ExportFormat;
+  /** The file name without its extension. */
+  name: string;
   doc: ExportDoc;
   manuscript: ManuscriptSetup | undefined;
   /** The writer's own fonts that the file would embed, by stored value. */
@@ -89,7 +99,8 @@ export function prepareExport(request: ExportRequest): PreparedExport {
         : ownFontsOf(doc).filter((v) => v === doc.font)
       : ownFontsOf(doc);
   }
-  return { format: request.format, doc, manuscript, ownFonts, names };
+  const name = exportFileName(request.text?.name ?? doc.title);
+  return { format: request.format, name, doc, manuscript, ownFonts, names };
 }
 
 /** Sorts the own fonts by whether they may go in the file. Bytes are null for a font Vlo cannot read. */
@@ -110,12 +121,13 @@ export async function makeExport(
   fonts: FontCheck = { own: new Map(), swaps: [] },
   options: MakeOptions = {},
 ): Promise<ExportFile> {
-  const { doc, format, manuscript } = prepared;
+  const { doc, format, manuscript, name } = prepared;
   const loadFile = options.loadFile ?? appFile;
   const swaps = new Map(fonts.swaps.map((s) => [s.value, s.standIn]));
   const file = FORMAT_FILE[format];
   let bytes: Uint8Array;
   let drawnStyles: { font: string; style: 'bold' | 'italic' }[] = [];
+  let text: string | undefined;
   if (format === 'docx') {
     const { toDocx } = await import('./docx');
     bytes = await toDocx(doc, manuscript ? { manuscript } : {});
@@ -134,19 +146,24 @@ export async function makeExport(
     const result = await toEpub(doc, { loadFile, own: fonts.own, swaps });
     bytes = result.bytes;
     drawnStyles = result.drawnStyles;
+  } else if (format === 'web') {
+    const { toWebHtml, toWebText } = await import('./web');
+    bytes = new TextEncoder().encode(toWebHtml(doc));
+    text = toWebText(doc);
   } else {
     const { toMarkdown } = await import('./markdown');
     bytes = new TextEncoder().encode(toMarkdown(doc));
   }
   return {
     bytes,
-    name: `${exportFileName(doc.title)}.${file.extension}`,
+    name: `${name}.${file.extension}`,
     type: file.type,
     notices: exportNotices(doc, format, {
       swaps: fonts.swaps,
       drawnStyles,
       ...(manuscript ? { manuscriptFont: manuscript.typewriter ? 'courier-prime' : doc.font } : {}),
     }),
+    ...(text === undefined ? {} : { text }),
   };
 }
 

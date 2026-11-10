@@ -154,6 +154,10 @@ describe('Backup file', () => {
 describe('Backup round trip', () => {
   test('a backup imported after a delete gives identical text and identical rows', async () => {
     const { project, scenes } = await novelWithText();
+    // The packet's letter and bio (F53) go with the project.
+    await db.projects.update(project.id, {
+      settings: { ...project.settings, packet: { letter: 'Dear editors,', bio: 'I write by the sea.' } },
+    });
     const before = await rowsOf(project.id);
     const texts = await Promise.all(scenes.map((s) => textOf(s.id)));
     const { bytes } = await backUpProject(project.id, { music: false });
@@ -427,6 +431,14 @@ describe('Reading a backup', () => {
         (m) => {
           const project = m.project as { settings: Record<string, unknown> };
           project.settings.wordsByDay = { '5 November': 300 };
+        },
+        /The project settings are wrong/,
+      ],
+      [
+        'a packet letter that is not text',
+        (m) => {
+          const project = m.project as { settings: Record<string, unknown> };
+          project.settings.packet = { letter: 42, bio: '' };
         },
         /The project settings are wrong/,
       ],

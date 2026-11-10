@@ -89,6 +89,7 @@ export const HELP = {
         'Pick Word, PDF, EPUB or Markdown, and this item or the whole project.',
         'A novel can use standard manuscript format. Poems keep every space and indent in each format.',
         'For Google Docs, export to Word, then open the file in Google Drive.',
+        'To post on Substack, Medium, a blog or AO3, pick Web copy, then Copy. Each line break and indent stays.',
       ],
     },
     {
@@ -99,6 +100,7 @@ export const HELP = {
         'A memoir has the Memory Timeline, by time or by theme, and the People screen.',
         'A poetry collection has Sequences, with as many named orders of the poems as you need.',
         'Every project has Submissions and Progress.',
+        'In Submissions, Make a packet saves your pieces, cover letter, bio and synopsis in one zip and logs it as sent.',
       ],
     },
     {

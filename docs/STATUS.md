@@ -624,6 +624,15 @@ Last update: 2026-11-09
   - Removed: the tilt of the template cards, the sparkle icons, a heading that repeated its switch, and
     a size change in the Backups text.
 
+  Pull request J-B holds Tasks J2 and J3:
+  - J2: "Web copy" in the Export dialog copies a project for Substack, Medium, a blog or AO3. Poem lines
+    keep each leading space and line break as no-break spaces. The HTML has only the tags that AO3 keeps.
+    A blog gets rich text with plain text beside it, and AO3 gets the HTML as text.
+  - J3: "Make a packet" in Submissions saves one zip with each chosen piece (standard manuscript format
+    for novel prose with saved details), and a cover letter, bio and synopsis when they have text. Vlo
+    logs a "Sent" row for today and keeps the letter and the bio in `Project.settings.packet`. A memoir
+    packet starts share-safe, and the name check reads every file.
+
 - Phase 9 (plan `docs/plans/phase-9.md`, the roadmap's "Devices and feedback" features F44, F45, F49 and
   F50). The product owner approved decisions R1 to R9 as recommended on 2026-11-09. Pull request I-A holds
   Tasks I1 to I3:

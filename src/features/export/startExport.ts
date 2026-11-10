@@ -15,6 +15,8 @@ import type { ExportFile, ExportRequest } from './run';
 
 /** The stored update of each item that the export holds. */
 export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Promise<[string, Uint8Array][]> {
+  // A plain text, such as a packet's cover letter, reads no item.
+  if (request.text) return [];
   const ids = scopeItems(request.items, request.scope)
     .map((n) => n.item)
     .filter((item) => holdsText(request.project.templates, item.kind))

@@ -4,11 +4,30 @@ import { Button } from './button';
 import { cn } from './cn';
 import { SwapIcon } from './swap-icon';
 
-/** How long "Copied" shows before the button reads "Copy link" again. */
+/** How long "Copied" shows before the button reads as it did. */
 const SHOW_COPIED_MS = 2000;
 
-/** A button that copies a link, and says in a status whether the browser copied it. */
-export function CopyButton({ text, label }: { text: string; label: string }) {
+interface CopyButtonProps {
+  /** The button's name for screen readers. */
+  label: string;
+  /** The text to copy. */
+  text: string;
+  /** Rich text to copy beside `text`, for an editor that takes HTML (F52). */
+  html?: string;
+  /** What the button says. "Copy link" by default. */
+  children?: string;
+  /** What the status says after a copy. "Link copied." by default. */
+  copied?: string;
+}
+
+/** A button that copies text, and says in a status whether the browser copied it. A copy pulses once. */
+export function CopyButton({
+  label,
+  text,
+  html,
+  children = 'Copy link',
+  copied = 'Link copied.',
+}: CopyButtonProps) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
   useEffect(() => {
     if (state !== 'copied') return;
@@ -21,7 +40,14 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
   }, [state]);
   async function copy() {
     try {
-      await navigator.clipboard.writeText(text);
+      if (html === undefined) await navigator.clipboard.writeText(text);
+      else
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/plain': new Blob([text], { type: 'text/plain' }),
+          }),
+        ]);
       setState('copied');
     } catch {
       setState('failed');
@@ -43,14 +69,10 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
           off={<Copy className="size-4" />}
           onIcon={<Check className="size-4" />}
         />
-        {state === 'copied' ? 'Copied' : 'Copy link'}
+        {state === 'copied' ? 'Copied' : children}
       </Button>
       <span role="status" className="sr-only">
-        {state === 'copied'
-          ? 'Link copied.'
-          : state === 'failed'
-            ? 'This browser did not copy the link.'
-            : ''}
+        {state === 'copied' ? copied : state === 'failed' ? 'This browser did not copy it.' : ''}
       </span>
     </>
   );
