@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { safetyState } from '@/features/backup/safety';
+import type { SyncSpace } from '@/features/sync/space';
 import type { Project } from '@/lib/db';
 
 /* The safety badge (roadmap F31, plan Task G1). */
@@ -25,14 +26,16 @@ const stale = project('Stale', NOW - 10 * DAY);
 
 describe('safetyState', () => {
   test('projects with recent backups are safe', () => {
-    expect(safetyState({ projects: [fresh], safari: false, folder: null, now: NOW })).toEqual({
+    expect(safetyState({ projects: [fresh], safari: false, folder: null, sync: null, now: NOW })).toEqual({
       level: 'safe',
       reasons: [],
     });
   });
 
   test('a backup that is due needs a check and names the project', () => {
-    expect(safetyState({ projects: [fresh, stale], safari: false, folder: null, now: NOW })).toEqual({
+    expect(
+      safetyState({ projects: [fresh, stale], safari: false, folder: null, sync: null, now: NOW }),
+    ).toEqual({
       level: 'check',
       reasons: [{ kind: 'backup', project: stale }],
     });
@@ -40,7 +43,7 @@ describe('safetyState', () => {
 
   test('a failed folder save needs a check and names the project', () => {
     const folder = { at: NOW, ok: false, title: 'Fresh' };
-    expect(safetyState({ projects: [fresh], safari: false, folder, now: NOW })).toEqual({
+    expect(safetyState({ projects: [fresh], safari: false, folder, sync: null, now: NOW })).toEqual({
       level: 'check',
       reasons: [{ kind: 'folder', title: 'Fresh' }],
     });
@@ -48,13 +51,23 @@ describe('safetyState', () => {
 
   test('a good folder save adds no reason', () => {
     const folder = { at: NOW, ok: true, title: 'Fresh' };
-    expect(safetyState({ projects: [fresh], safari: false, folder, now: NOW }).level).toBe('safe');
+    expect(safetyState({ projects: [fresh], safari: false, folder, sync: null, now: NOW }).level).toBe(
+      'safe',
+    );
   });
 
   test('Safari outside an installed app is a risk, with the other reasons after it', () => {
-    expect(safetyState({ projects: [stale], safari: true, folder: null, now: NOW })).toEqual({
+    expect(safetyState({ projects: [stale], safari: true, folder: null, sync: null, now: NOW })).toEqual({
       level: 'risk',
       reasons: [{ kind: 'safari' }, { kind: 'backup', project: stale }],
+    });
+  });
+
+  test('a sync that needs a newer Vlo needs a check', () => {
+    const sync = { blocked: true } as SyncSpace;
+    expect(safetyState({ projects: [fresh], safari: false, folder: null, sync, now: NOW })).toEqual({
+      level: 'check',
+      reasons: [{ kind: 'sync' }],
     });
   });
 });

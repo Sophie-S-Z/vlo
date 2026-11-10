@@ -1,3 +1,4 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { readSpace } from '@/features/sync/space';
@@ -8,22 +9,20 @@ import { UpdateProvider } from './UpdateProvider';
 
 export function App() {
   const [router] = useState(() => createBrowserRouter(routes));
-  // The sync engine loads only on a device that syncs (F49).
+  // The sync engine loads only on a device that syncs (F49), and stops when sync stops.
+  const syncing = useLiveQuery(async () => (await readSpace().catch(() => null))?.spaceId ?? null);
   useEffect(() => {
+    if (!syncing) return;
     let stop: (() => void) | undefined;
     let ended = false;
-    void readSpace()
-      .then(async (space) => {
-        if (!space) return;
-        const { startSync } = await import('@/features/sync/engine');
-        if (!ended) stop = startSync();
-      })
-      .catch(() => undefined);
+    void import('@/features/sync/engine').then(({ startSync }) => {
+      if (!ended) stop = startSync();
+    });
     return () => {
       ended = true;
       stop?.();
     };
-  }, []);
+  }, [syncing]);
   return (
     <RootErrorBoundary>
       <UpdateProvider>

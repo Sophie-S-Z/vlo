@@ -67,6 +67,16 @@ export class FakeSyncRelay {
         }
         return out;
       }
+      case 'sync_devices': {
+        const devices = new Map<string, { device: string; updated_at: string; size: number }>();
+        for (const b of space.blobs) {
+          const d = devices.get(b.device) ?? { device: b.device, updated_at: b.updated_at, size: 0 };
+          if (b.updated_at > d.updated_at) d.updated_at = b.updated_at;
+          d.size += b.payload.length;
+          devices.set(b.device, d);
+        }
+        return [...devices.values()];
+      }
       case 'sync_drop':
         space.blobs = space.blobs.filter((b) => !(mine(b) && b.key === args.p_key));
         return true;

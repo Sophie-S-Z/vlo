@@ -74,12 +74,14 @@ async function fromOther(name: string, blob: RowsBlob | TextBlob) {
 const rows = (versions: Version[], projectId = 'p1', schema = DOC_SCHEMA): RowsBlob => ({
   v: 1,
   schema,
+  from: 'Phone',
   projectId,
   rows: versions,
 });
 const text = (itemId: string, doc: Y.Doc): TextBlob => ({
   v: 1,
   schema: DOC_SCHEMA,
+  from: 'Phone',
   projectId: 'p1',
   itemId,
   update: toBase64(encodeDoc(doc)),
@@ -117,6 +119,9 @@ beforeEach(async () => {
     deviceName: 'Laptop',
     cursor: '',
     pushedAt: 0,
+    syncedAt: 0,
+    blocked: false,
+    names: {},
   };
   await db.appMeta.put({ key: SYNC_META, value: record });
   await db.projects.add(novel());

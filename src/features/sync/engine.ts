@@ -27,7 +27,7 @@ import {
 } from './blobs';
 import { clockKey, onLocalChange, remoteTransaction, SYNC_TABLES } from './clock';
 import { mergeRows, type Version } from './merge';
-import { readSpace, updateSpace, type SyncSpace } from './space';
+import { readSpace, SYNC_META, updateSpace, type SyncSpace } from './space';
 
 /*
  * Sync on the device (plan Task I6, ADR 0008). A round pushes what changed on this device, then pulls
@@ -101,6 +101,7 @@ const blobNames = (versions: readonly Pick<Version, 'table' | 'id'>[]) =>
 /** Sends the blobs of each project that changed since the last push. The first push sends every project. */
 async function push(sync: Sync): Promise<number> {
   const { space, keys } = sync;
+  const from = space.deviceName;
   const started = clock.now();
   const first = space.pushedAt === 0;
   const changes = first
@@ -135,15 +136,15 @@ async function push(sync: Sync): Promise<number> {
     const project = versions.find((v) => v.table === 'projects')?.row as Project | undefined;
     // Research files go in their own blobs, so a few large files cannot pass the relay's blob limit.
     const rows = versions.filter((v) => v.table !== 'research' || !v.row);
-    await put(`rows:${projectId}`, { v: 1, schema: DOC_SCHEMA, projectId, rows });
+    await put(`rows:${projectId}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows });
     for (const v of versions) {
       if (!v.row || !(first || fresh.has(clockKey(v.table, v.id)))) continue;
       if (v.table === 'items' && project && holdsText(project.templates, v.row.kind as ItemKind)) {
         const update = toBase64(await readItemUpdate(v.id));
-        await put(`text:${v.id}`, { v: 1, schema: DOC_SCHEMA, projectId, itemId: v.id, update });
+        await put(`text:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, itemId: v.id, update });
       }
       if (v.table === 'research' && Number(v.row.size) <= MAX_SYNC_FILE)
-        await put(`file:${v.id}`, { v: 1, schema: DOC_SCHEMA, projectId, rows: [v] });
+        await put(`file:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] });
     }
   }
   await dropBlobs(sync, blobNames(changes.filter((e) => e.gone)));
@@ -284,9 +285,11 @@ async function pull(sync: Sync): Promise<Omit<SyncResult, 'pushed'>> {
   const listed = await listNew(sync.space);
   const rows: RowsBlob[] = [];
   const texts: TextBlob[] = [];
+  const names = { ...sync.space.names };
   for (const sealed of listed) {
     const blob = await openBlob(sealed, sync.keys);
     if (blob === 'newer') return { pulled: 0, blocked: 'newer-schema' };
+    if (blob) names[sealed.device] = blob.from;
     if (blob && 'rows' in blob) rows.push(blob);
     else if (blob) texts.push(blob);
   }
@@ -296,7 +299,7 @@ async function pull(sync: Sync): Promise<Omit<SyncResult, 'pushed'>> {
   let merged = 0;
   for (const text of texts) if (await applyText(text)) merged += 1;
   const last = listed.at(-1);
-  if (last) await updateSpace(sync.space.spaceId, { cursor: last.updated_at });
+  if (last) await updateSpace(sync.space.spaceId, { cursor: last.updated_at, names });
   return { pulled: taken + merged };
 }
 
@@ -304,8 +307,20 @@ async function round(): Promise<SyncResult> {
   const space = await readSpace();
   if (!space) return { pushed: 0, pulled: 0 };
   const sync = { space, keys: await syncKeys(space.key) };
-  const pushed = await push(sync);
-  return { pushed, ...(await pull(sync)) };
+  try {
+    const result = { pushed: await push(sync), ...(await pull(sync)) };
+    await updateSpace(space.spaceId, { syncedAt: clock.now(), blocked: result.blocked !== undefined });
+    return result;
+  } catch (error) {
+    // "Stop sync on all devices" on another device deleted the space, so sync ends here too.
+    if (error instanceof ShareError && error.kind === 'unavailable')
+      await db.appMeta
+        .where('key')
+        .equals(SYNC_META)
+        .filter((m) => (m.value as SyncSpace).spaceId === space.spaceId)
+        .delete();
+    throw error;
+  }
 }
 
 let running: Promise<SyncResult> | null = null;

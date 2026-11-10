@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Check, Copy, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { markAllInProject } from '@/features/people/markAll';
@@ -7,6 +7,7 @@ import { FAILED, NameCheckLists } from '@/features/people/NameCheckLists';
 import { privatePeople } from '@/features/people/people';
 import { type Item, type Project, type ShareRecord } from '@/lib/db';
 import { Button } from '@/ui/button';
+import { CopyButton } from '@/ui/copy-button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
@@ -69,49 +70,6 @@ function stateText(record: ShareRecord): string {
     case 'revoked':
       return 'Stopped';
   }
-}
-
-/** Copies the text. When the browser refuses, the field's text is selected for the writer to copy. */
-async function copyText(text: string, field: HTMLInputElement | null): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    field?.select();
-    return false;
-  }
-}
-
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
-  return (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        aria-label={label}
-        onClick={() => {
-          void copyText(text, null).then((ok) => {
-            setState(ok ? 'copied' : 'failed');
-          });
-        }}
-      >
-        {state === 'copied' ? (
-          <Check aria-hidden="true" className="size-4" />
-        ) : (
-          <Copy aria-hidden="true" className="size-4" />
-        )}
-        {state === 'copied' ? 'Copied' : 'Copy link'}
-      </Button>
-      <span role="status" className="sr-only">
-        {state === 'copied'
-          ? 'Link copied.'
-          : state === 'failed'
-            ? 'This browser did not copy the link.'
-            : ''}
-      </span>
-    </>
-  );
 }
 
 function LinkRow({ record, itemTitles }: { record: ShareRecord; itemTitles: ReadonlyMap<string, string> }) {

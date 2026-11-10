@@ -63,6 +63,9 @@ function kindOf(message: string): ShareErrorKind {
   if (message.includes('share unavailable')) return 'unavailable';
   if (message.includes('comment limit reached')) return 'limit';
   if (message.includes('server busy') || message.includes('server full')) return 'busy';
+  // Sync (migration 0005): a wrong space or token, and a space at its limits.
+  if (message.includes('unknown space')) return 'unavailable';
+  if (message.includes('device limit') || message.includes('space full')) return 'limit';
   return 'server';
 }
 

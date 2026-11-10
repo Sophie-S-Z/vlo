@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { lazy, Suspense, useId, useRef, useState } from 'react';
 import { useMotionAllowed, usePreferences } from '@/app/PreferencesProvider';
 import type { ThemeChoice } from '@/app/preferences';
 import { withViewTransition } from '@/ui/motion';
@@ -12,6 +12,11 @@ import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { UsageSettings } from '@/features/usage/UsageSettings';
+
+// Sync loads with Settings only when it opens, so the first screen stays small.
+const DevicesSection = lazy(async () => ({
+  default: (await import('@/features/sync/DevicesSection')).DevicesSection,
+}));
 
 const THEME_LABELS: Record<ThemeChoice, string> = {
   system: 'System',
@@ -204,6 +209,12 @@ export function SettingsPage() {
           <FolderSave />
           <WalkawayExport />
           <SafariSteps closable={false} className="mt-4" />
+        </Section>
+
+        <Section title="Devices">
+          <Suspense fallback={null}>
+            <DevicesSection />
+          </Suspense>
         </Section>
 
         <Section title="Usage counts">

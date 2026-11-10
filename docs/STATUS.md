@@ -640,6 +640,11 @@ Last update: 2026-11-09
     and research file up to 2 MB, then pulls the other devices' blobs from 30 seconds before its cursor.
     Rows merge by time in one transaction, texts merge by Yjs after a "Before sync" snapshot, and a blob
     of a newer Vlo stops the round. The engine loads only on a device with a sync record.
+  - I7: Settings has Devices. "Sync my writing" makes the space and shows a QR code (`uqr`, loaded only
+    in the dialog) and the pairing link. The pair page takes the link's fragment once, asks for a device
+    name and starts sync. The list shows each device and its last sync. "Stop sync on this device" and
+    "Stop sync on all devices" end it, and each device keeps its projects. The safety badge says how many
+    other devices sync and when the last sync was, and asks for an update when a newer Vlo blocks sync.
 
 - Phase 8 (plan `docs/plans/phase-8.md`, the roadmap's "Match the best" features F39 to F43, F46 to F48
   and the rest of F38). The product owner approved decisions Q1 to Q9 as recommended on 2026-11-09.

@@ -46,7 +46,7 @@
 
 ## Review Focus
 
-1. **A sync merge that loses words.** Expected: two devices edit the same scene offline, sync, and both texts are in the scene, with a "Before sync" snapshot on each device. Pinned in Task I6.
+1. **A sync merge that loses words.** Expected: two devices edit the same scene offline, sync, and both texts are in the scene on both devices, with a "Before sync" snapshot on the device whose merge joins the two texts. Pinned in Task I6.
 2. **A device with an older Vlo.** Expected: it does not apply a blob with a newer schema, it shows "Update Vlo on this device to sync", and it keeps its own text. Pinned in Task I6.
 3. **A memoir real name that leaves through a deleted word or a comment.** Expected: a Word export with tracked changes or comments runs the name check on deleted text and comment text too, and a share holds neither. Pinned in Task I2.
 4. **An editor's file that does not match.** Expected: a change on a paragraph that the writer changed after the export is listed, not placed, and the rest of the item gets its changes. Pinned in Task I3.
@@ -152,13 +152,14 @@ Pull request I-A: Tasks I1 to I3 (no server). I-B: Task I4. I-C: Tasks I5 to I8.
 
 **Interfaces:**
 
-- Produces: `SyncSpace = { spaceId: string; key: string; token: string; deviceId: string; deviceName: string; cursor: string; pushedAt: number }` in `appMeta` under `sync`. Backups and exports leave it out.
+- Produces: `SyncSpace = { spaceId: string; key: string; token: string; deviceId: string; deviceName: string; cursor: string; pushedAt: number; syncedAt: number; blocked: boolean; names: Record<string, string> }` in `appMeta` under `sync`. Backups and exports leave it out. Each blob carries its device's name as `from`, so the Devices list names the other devices.
+- Produces: `startSpace(name)`, `joinSpace(pairing, name)`, `leaveSync(space)`, `stopSyncEverywhere(space)`, `listDevices(space)`, `pairingLink(space)`, `readPairing(hash)` and `syncErrorText(error)` in `space.ts`. A round that finds the space deleted ends sync on that device.
 - Produces: the pairing link `/pair#p=<base64url of space id, key and token>`. The pair page takes the fragment once and removes it from the address bar, as the reader view does.
 
-- [ ] Tests first: a pairing link round trip gives the same space; a damaged link gives "This pairing link is not complete."; `leaveSync` keeps every project on the device.
-- [ ] Settings gets "Devices": "Sync my writing" explains what goes to the relay, makes the space and shows the QR code and the link. The pair page asks for a device name and starts sync. The list shows each device and when it last synced. "Stop sync on this device" and "Stop sync on all devices" (with confirm) end it. With no Supabase keys the section says "Sync is not set up in this build." and sends nothing.
-- [ ] The safety badge counts the devices and shows the last sync.
-- [ ] `sync.spec.ts` with a fake relay in the test support: two browser contexts pair, both edit the same scene offline, go online, and both edits are in both; each device has a "Before sync" snapshot; the network log shows only `sync` requests with sealed bodies; axe passes in each theme. Commit.
+- [x] Tests first: a pairing link round trip gives the same space; a damaged link gives "This pairing link is not complete."; `leaveSync` keeps every project on the device.
+- [x] Settings gets "Devices": "Sync my writing" explains what goes to the relay, makes the space and shows the QR code and the link. The pair page asks for a device name and starts sync. The list shows each device and when it last synced. "Stop sync on this device" and "Stop sync on all devices" (with confirm) end it. With no Supabase keys the section says "Sync is not set up in this build." and sends nothing.
+- [x] The safety badge counts the devices and shows the last sync.
+- [x] `sync.spec.ts` with a fake relay in the test support: two browser contexts pair, both edit the same scene offline, go online, and both edits are in both; the device that joins the texts has a "Before sync" snapshot; the network log shows only `sync` requests with sealed bodies; axe passes in each theme. Commit.
 
 ### Task I8: Gate 9 and the release
 

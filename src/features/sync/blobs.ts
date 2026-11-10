@@ -22,6 +22,8 @@ import type { Version } from './merge';
 export interface RowsBlob {
   v: 1;
   schema: number;
+  /** The name of the device that made the blob, for the Devices list of the other devices. */
+  from: string;
   projectId: string;
   rows: Version[];
 }
@@ -29,6 +31,7 @@ export interface RowsBlob {
 export interface TextBlob {
   v: 1;
   schema: number;
+  from: string;
   projectId: string;
   itemId: string;
   /** Base64 of the item's Yjs state. */
@@ -101,15 +104,15 @@ export async function openBlob(
   if (typeof value !== 'object' || value === null) return null;
   if (typeof value.schema === 'number' && value.schema > DOC_SCHEMA) return 'newer';
   if (value.v !== 1 || typeof value.schema !== 'number' || typeof value.projectId !== 'string') return null;
+  const head = {
+    v: 1 as const,
+    schema: value.schema,
+    from: typeof value.from === 'string' ? value.from.slice(0, 80) : '',
+    projectId: value.projectId,
+  };
   if (Array.isArray(value.rows) && value.rows.every(isVersion))
-    return { v: 1, schema: value.schema, projectId: value.projectId, rows: value.rows.map(unpackRow) };
+    return { ...head, rows: value.rows.map(unpackRow) };
   if (typeof value.itemId === 'string' && typeof value.update === 'string')
-    return {
-      v: 1,
-      schema: value.schema,
-      projectId: value.projectId,
-      itemId: value.itemId,
-      update: value.update,
-    };
+    return { ...head, itemId: value.itemId, update: value.update };
   return null;
 }

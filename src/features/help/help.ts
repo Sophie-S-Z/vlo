@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 3,
-  date: '2026-11-09',
+  version: 4,
+  date: '2026-11-10',
   guide: [
     {
       title: 'Start a project',
@@ -68,6 +68,18 @@ export const HELP = {
         'Keep the file somewhere safe. The safety badge at the top of each screen shows when a project needs a backup.',
         'On the new computer, open Vlo and choose Import backup in the Library.',
         'For a copy that opens without Vlo, choose Download all my writing in Settings.',
+      ],
+    },
+    {
+      title: 'Sync your devices',
+      needsSharing: true,
+      steps: [
+        'In Settings, under Devices, name this device and choose Sync my writing.',
+        'On your phone, scan the code with the camera. On a computer, open the pairing link.',
+        'Name the new device and choose Start sync. Your projects come to it.',
+        'Vlo syncs when it opens, every minute while it shows, and when you leave it. Words that two devices write offline both stay.',
+        'The sync server keeps only sealed copies, and it cannot read them.',
+        'To stop, choose Stop sync on this device or Stop sync on all devices in Settings.',
       ],
     },
     {
