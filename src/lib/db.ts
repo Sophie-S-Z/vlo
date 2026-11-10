@@ -248,7 +248,8 @@ export type CodexKind = 'character' | 'place' | 'thing' | 'lore';
 
 /**
  * An entry of a project's Codex (F42): a character, place, thing or piece of lore, with its other names and
- * a note. No export, share or AI request reads the Codex.
+ * a note. No export or share reads the Codex. Only the reader panel (F61) sends the notes of the names in its
+ * text.
  */
 export interface CodexEntry {
   id: string;

@@ -5,6 +5,7 @@ import { leafText } from '@/features/editor/leafText';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { privatePeople } from '@/features/people/people';
 import { db, type Item, type Project } from '@/lib/db';
+import { sortByOrder } from '@/lib/order';
 import type { PrivatePerson } from '@/lib/privacy';
 import type { Target } from './assistantStore';
 import { COWRITER_ACTIONS, cowriterRequest, type CowriterAction } from './cowriter';
@@ -102,6 +103,10 @@ export async function buildAiRequest(input: RequestInput): Promise<BuiltRequest>
         ...(context ? { item: context } : {}),
         question: input.question,
         passages: needsAll ? await passages(project, items, context) : [],
+        // Only the reader panel reads the Codex (plan decision K8).
+        ...(action === 'panel'
+          ? { codex: sortByOrder(await db.codex.where('projectId').equals(project.id).toArray()) }
+          : {}),
         budget,
         ...(input.inBrowser ? { passageBudget: WEBLLM_PASSAGES } : {}),
       });

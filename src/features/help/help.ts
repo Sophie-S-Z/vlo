@@ -145,7 +145,7 @@ export const HELP = {
         'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels.',
         'Every project has the Codex: its characters, places, things and lore, with other names and a note.',
         'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
-        'Exports, shares and AI requests leave the Codex out.',
+        'Exports and shares leave the Codex out. Only the Reader panel of the Assistant sends the notes of the names in its text.',
         'At the Simple tool level, open the Outline and the Codex from the command menu.',
       ],
     },

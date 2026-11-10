@@ -67,7 +67,7 @@ test('F58: a table read reads each quote in its character’s voice, and keeps t
     .first()
     .click({ position: { x: 1, y: 5 } });
   await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitem', { name: 'Read aloud' }).click();
+  await page.getByRole('menuitem', { name: /Read aloud/ }).click();
   await panel(page).getByRole('checkbox', { name: 'Table read: a voice for each character' }).check();
   await expect(panel(page).getByLabel('Voice of the narrator')).toHaveValue('v-moira');
   await expect(panel(page).getByLabel('Voice of Mira')).toHaveValue('v-ava');
@@ -81,6 +81,6 @@ test('F58: a table read reads each quote in its character’s voice, and keeps t
   await page.reload();
   await scene(page).click();
   await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitem', { name: 'Read aloud' }).click();
+  await page.getByRole('menuitem', { name: /Read aloud/ }).click();
   await expect(panel(page).getByRole('checkbox', { name: /Table read/ })).toBeChecked();
 });
