@@ -23,6 +23,8 @@ test('the style check is off at first, marks the words, shows why, and goes when
     .click();
   await expect(scene(page)).toBeFocused();
   await page.keyboard.type('It was very cold.');
+  // The word count rolls after the save, so the axe check below never meets a half-faded count.
+  await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
   await page.getByRole('button', { name: 'More tools' }).click();
   await expect(page.getByRole('menuitemcheckbox', { name: 'Style check' })).not.toBeChecked();
   await page.keyboard.press('Escape');

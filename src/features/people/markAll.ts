@@ -201,7 +201,7 @@ export async function markAllInProject(
   people: readonly PrivatePerson[],
 ): Promise<{ names: number; items: number }> {
   let names = 0;
-  let items = 0;
+  const changed: string[] = [];
   await eachDoc(await textItems(projectId), (id, doc) => {
     const updates: Uint8Array[] = [];
     const keep = (update: Uint8Array) => {
@@ -212,13 +212,20 @@ export async function markAllInProject(
     doc.off('update', keep);
     if (count > 0) {
       names += count;
-      items += 1;
+      changed.push(id);
       sendToTabs(id, Y.mergeUpdates(updates));
     }
     return Promise.resolve();
   });
-  if (names > 0) await db.projects.update(projectId, { updatedAt: clock.now() });
-  return { names, items };
+  if (names > 0) {
+    const now = clock.now();
+    // The change time of each item tells sync to send its text with the new marks.
+    await db.transaction('rw', db.items, db.projects, async () => {
+      await db.items.where('id').anyOf(changed).modify({ updatedAt: now });
+      await db.projects.update(projectId, { updatedAt: now });
+    });
+  }
+  return { names, items: changed.length };
 }
 
 /** Counts the marked and unmarked names in the whole project. */

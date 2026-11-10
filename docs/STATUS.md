@@ -632,6 +632,26 @@ Last update: 2026-11-09
     by reaction, shows a reply's words in the text, and makes a reply a comment with the reader's name.
     The server and the migrations do not change.
 
+  Pull request I-C holds Tasks I5 to I8:
+  - I5: migration 0005 adds the sync relay: spaces, sealed blobs and the functions that check the space
+    token on each call, with the limits of decision R8 and a daily cleanup. ADR 0008 holds the design.
+  - I6: sync on the device. Database version 9 adds `syncClock`, which a Dexie middleware fills with the
+    time of each change to a synced table. A round pushes a sealed blob for each changed project, text
+    and research file up to 2 MB, then pulls the other devices' blobs from 30 seconds before its cursor.
+    Rows merge by time in one transaction, texts merge by Yjs after a "Before sync" snapshot, and a blob
+    of a newer Vlo stops the round. The engine loads only on a device with a sync record.
+  - I7: Settings has Devices. "Sync my writing" makes the space and shows a QR code (`uqr`, loaded only
+    in the dialog) and the pairing link. The pair page takes the link's fragment once, asks for a device
+    name and starts sync. The list shows each device and its last sync. "Stop sync on this device" and
+    "Stop sync on all devices" end it, and each device keeps its projects. The safety badge says how many
+    other devices sync and when the last sync was, and asks for an update when a newer Vlo blocks sync.
+  - I8: gate 9. The memoir leak tests now cover a share with waiting changes and comments, and sync
+    blobs. The privacy page says that sync takes the People names, and that a share carries reader
+    answers and reactions. A fresh review found no high issue. Its fixes: a delete loses to an edit that
+    it never saw, each device keeps its own blob of what a pull brought, a merged item keeps this
+    device's word count, words typed during a round still go, Mark all marks sync, leaving sync waits for
+    a running round, and a reader's reply goes on the place of its words nearest to its paragraph.
+
 - Phase 8 (plan `docs/plans/phase-8.md`, the roadmap's "Match the best" features F39 to F43, F46 to F48
   and the rest of F38). The product owner approved decisions Q1 to Q9 as recommended on 2026-11-09.
   Pull request #22 merged with Tasks H1 to H6: the Outline with labels, deadline goals, comments in the
@@ -805,6 +825,8 @@ Last update: 2026-11-09
 
 | Date       | Change                                                                                                                                                                                                                                                                         | Reason                                                                                                                                                                                                              |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-10 | The version 1 non-goal "cloud sync of manuscripts" is now sealed sync (F49). The relay keeps sealed blobs only, and the key stays on the writer's devices.                                                                                                                     | Roadmap decision D1. ADR 0008 holds the design.                                                                                                                                                                     |
+| 2026-11-10 | `DOC_SCHEMA` is 7.                                                                                                                                                                                                                                                             | Track changes adds suggestion marks (F44), so an older build must not open such a document.                                                                                                                         |
 | 2026-11-08 | AI policy statement 3 (version 2): Pen mode loads no AI code and sends nothing unless you press "Check the web too". The deep AI check needs Reader or Co-writer mode.                                                                                                         | The web originality check sends up to 6 phrases on a press in any mode, and the old words said Pen mode sends nothing (product owner decision).                                                                     |
 | 2026-11-02 | `vercel.json` replaces `public/_headers`.                                                                                                                                                                                                                                      | Hosting moved to Vercel.                                                                                                                                                                                            |
 | 2026-11-02 | The CSP has no Supabase host until Phase 5.                                                                                                                                                                                                                                    | The spec value is a placeholder.                                                                                                                                                                                    |

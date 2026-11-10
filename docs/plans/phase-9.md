@@ -46,7 +46,7 @@
 
 ## Review Focus
 
-1. **A sync merge that loses words.** Expected: two devices edit the same scene offline, sync, and both texts are in the scene, with a "Before sync" snapshot on each device. Pinned in Task I6.
+1. **A sync merge that loses words.** Expected: two devices edit the same scene offline, sync, and both texts are in the scene on both devices, with a "Before sync" snapshot on the device whose merge joins the two texts. Pinned in Task I6.
 2. **A device with an older Vlo.** Expected: it does not apply a blob with a newer schema, it shows "Update Vlo on this device to sync", and it keeps its own text. Pinned in Task I6.
 3. **A memoir real name that leaves through a deleted word or a comment.** Expected: a Word export with tracked changes or comments runs the name check on deleted text and comment text too, and a share holds neither. Pinned in Task I2.
 4. **An editor's file that does not match.** Expected: a change on a paragraph that the writer changed after the export is listed, not placed, and the rest of the item gets its changes. Pinned in Task I3.
@@ -125,25 +125,26 @@ Pull request I-A: Tasks I1 to I3 (no server). I-B: Task I4. I-C: Tasks I5 to I8.
 
 **Interfaces:**
 
-- Produces: tables `sync_spaces (id uuid, token_hash bytea, created_at, used_at)` and `sync_blobs (space_id, device text, key text, payload text, iv text, size int, updated_at timestamptz, primary key (space_id, device, key))`, closed by row level security with no policies.
-- Produces: functions `create_sync_space(p_token text) → uuid`, `sync_put(p_space uuid, p_token text, p_device text, p_key text, p_payload text, p_iv text) → timestamptz`, `sync_list(p_space, p_token, p_since timestamptz) → setof (device, key, payload, iv, updated_at)` ordered by `updated_at` and cut at 8 MB, `sync_drop(p_space, p_token, p_device, p_key)`, `leave_sync(p_space, p_token, p_device)`, `delete_sync_space(p_space, p_token)`.
-- Produces: limits (decision R8): a blob of at most 2.8 MB of base64, 100 MB for each space, 5 devices, 20 new spaces an hour for the project, and a daily cleanup of spaces with no use for 90 days.
+- Produces: tables `sync_spaces (id uuid, token_hash text, created_at, used_at)` and `sync_blobs (space_id, device text, key text, payload text, iv text, size int, updated_at timestamptz, primary key (space_id, device, key))`, closed by row level security with no policies.
+- Produces: functions `create_sync_space(p_token text) → uuid`, `sync_put(p_space uuid, p_token text, p_device text, p_key text, p_payload text, p_iv text) → timestamptz`, `sync_list(p_space, p_token, p_device, p_since timestamptz) → setof (device, key, payload, iv, updated_at)` with the blobs of the other devices at or after `p_since`, ordered by `updated_at` and cut after 8 MB, `sync_devices(p_space, p_token) → setof (device, updated_at, size)`, `sync_drop(p_space, p_token, p_device, p_key)`, `leave_sync(p_space, p_token, p_device)`, `delete_sync_space(p_space, p_token)`.
+- Produces: limits (decision R8): a blob of at most 2.8 MB of base64, 100 MB for each space, 5 devices, 20 new spaces an hour for the project, 150 MB of sync for the whole project so share links keep their room, and a daily cleanup `cleanup_sync()` of spaces with no use for 90 days. A wrong token raises `unknown space`.
 
-- [ ] Tests first in PGlite: a wrong token gets no rows and changes nothing; a put replaces the device's blob for that key; `sync_list` gives the blobs after `p_since` and stops at 8 MB; a sixth device, a blob over the limit and a space over 100 MB fail with their own error codes; `leave_sync` deletes only that device's blobs; the cleanup deletes an old space.
-- [ ] ADR 0008: the design, the seal purpose `vlo:sync:v1`, HMAC keys, newest-wins rows, Yjs text, the 30-second read overlap that makes the cursor safe, and what stays on the device. Commit.
+- [x] Tests first in PGlite: a wrong token gets no rows and changes nothing; a put replaces the device's blob for that key; `sync_list` gives the blobs after `p_since` and stops at 8 MB; a sixth device, a blob over the limit and a space over 100 MB fail with their own error codes; `leave_sync` deletes only that device's blobs; the cleanup deletes an old space.
+- [x] ADR 0008: the design, the seal purpose `vlo:sync:v1`, HMAC keys, newest-wins rows, Yjs text, the 30-second read overlap that makes the cursor safe, and what stays on the device. Commit.
 
 ### Task I6: Sync on the device (F49)
 
-**Files:** Create `src/features/sync/clock.ts`, `src/features/sync/blobs.ts`, `src/features/sync/engine.ts`, `src/features/sync/merge.ts`, `tests/unit/sync-clock.test.ts`, `tests/unit/sync-merge.test.ts`, `tests/unit/sync-engine.test.ts`. Modify `src/lib/db.ts` (version 9: `syncClock`, the middleware), `src/lib/crypto.ts` (purpose `sync`, HMAC key), `src/app/App.tsx` (load the engine only when a sync space exists).
+**Files:** Create `src/features/sync/clock.ts`, `src/features/sync/blobs.ts`, `src/features/sync/engine.ts`, `src/features/sync/merge.ts`, `src/features/sync/space.ts`, `tests/fixtures/syncRelay.ts`, `tests/unit/sync-clock.test.ts`, `tests/unit/sync-merge.test.ts`, `tests/unit/sync-engine.test.ts`. Modify `src/lib/db.ts` (version 9: `syncClock`, the middleware), `src/lib/crypto.ts` (purpose `sync`, HMAC key), `src/app/App.tsx` (load the engine only when a sync space exists).
 
 **Interfaces:**
 
 - Produces: `SYNC_TABLES`, the tables of decision R5. A Dexie DBCore middleware adds `syncClock` to each read-write transaction on them and records `{ key: '<table>:<id>'; table; id; at; gone?: true }` for each put and delete. A range delete reads its keys first.
-- Produces: `RowsBlob = { v: 1; schema: number; projectId: string; rows: Record<string, { row: unknown; at: number }[]>; gone: { table: string; id: string; at: number }[] }` and `TextBlob = { v: 1; schema: number; projectId: string; itemId: string; update: string }`, sealed with purpose `sync`, keyed by `blobKey(space, 'rows:' + projectId | 'text:' + itemId)` (HMAC-SHA256, base64url).
-- Produces: `mergeRows(local, remote): Plan` (pure: the newest `at` wins, `wordsByDay` keeps the larger count of each day), `syncOnce(): Promise<SyncResult>` with `SyncResult = { pushed: number; pulled: number; blocked?: 'newer-schema' }`.
+- Produces: `Version = { table; id; at; row? }` (no `row` is a delete), `RowsBlob = { v: 1; schema: number; projectId: string; rows: Version[] }` and `TextBlob = { v: 1; schema: number; projectId: string; itemId: string; update: string }`, sealed with purpose `sync`, keyed by `blobKey(keys, 'rows:' + projectId | 'text:' + itemId | 'file:' + researchId)` (HMAC-SHA256, base64url). A research file goes in a rows blob of its own, so a few large files cannot pass the relay's 2.8 MB limit of one blob.
+- Produces: `mergeRows(local, remote): Plan` with `Plan = { take: Version[]; keep: Version[] }` (pure: the newest `at` wins, `wordsByDay` keeps the larger count of each day), `syncOnce(): Promise<SyncResult>` with `SyncResult = { pushed: number; pulled: number; blocked?: 'newer-schema' }`, and `startSync(): () => void`.
+- Produces: `SyncSpace` in `src/features/sync/space.ts` (the shape of Task I7), `readSpace()` and `updateSpace(spaceId, changes)`. `tests/fixtures/syncRelay.ts` is a fake relay in memory for the unit tests and `sync.spec.ts`.
 
-- [ ] Tests first: the middleware records a put, a bulk put and a range delete in the same transaction, and a failed transaction records nothing; `mergeRows` takes the newer row, keeps a delete that is newer than the edit, and keeps an edit that is newer than the delete; two Yjs texts edited apart merge with both edits; a remote text that meets local changes takes a "Before sync" snapshot first; a blob with `schema` 8 sets `blocked` and applies nothing; a research file over 2 MB stays out of the rows blob.
-- [ ] `syncOnce` pushes the blobs changed since the last push, then pulls with the cursor 30 seconds back, skips its own device, merges rows in one Dexie transaction that records the remote `at`, writes texts with `writeItemUpdate`, sends them to open tabs with `sendToTabs`, and recounts the changed items. It runs on start, on focus, 30 seconds after a change, every 60 seconds while visible, and when the page hides. Commit.
+- [x] Tests first: the middleware records a put, a bulk put and a range delete in the same transaction, and a failed transaction records nothing; `mergeRows` takes the newer row, keeps a delete that is newer than the edit, and keeps an edit that is newer than the delete; two Yjs texts edited apart merge with both edits; a remote text that meets local changes takes a "Before sync" snapshot first; a blob with `schema` 8 sets `blocked` and applies nothing; a research file over 2 MB stays out of the rows blob.
+- [x] `syncOnce` pushes the blobs changed since the last push, then pulls with the cursor 30 seconds back, skips its own device, merges rows in one Dexie transaction that records the remote `at`, writes texts with `writeItemUpdate`, sends them to open tabs with `sendToTabs`, and recounts the changed items. It runs on start, on focus, 30 seconds after a change, every 60 seconds while visible, and when the page hides. Commit.
 
 ### Task I7: Pairing and the Devices screen (F49)
 
@@ -151,17 +152,18 @@ Pull request I-A: Tasks I1 to I3 (no server). I-B: Task I4. I-C: Tasks I5 to I8.
 
 **Interfaces:**
 
-- Produces: `SyncSpace = { spaceId: string; key: string; token: string; deviceId: string; deviceName: string; cursor: string; pushedAt: number }` in `appMeta` under `sync`. Backups and exports leave it out.
+- Produces: `SyncSpace = { spaceId: string; key: string; token: string; deviceId: string; deviceName: string; cursor: string; pushedAt: number; syncedAt: number; blocked: boolean; names: Record<string, string> }` in `appMeta` under `sync`. Backups and exports leave it out. Each blob carries its device's name as `from`, so the Devices list names the other devices.
+- Produces: `startSpace(name)`, `joinSpace(pairing, name)`, `leaveSync(space)`, `stopSyncEverywhere(space)`, `listDevices(space)`, `pairingLink(space)`, `readPairing(hash)` and `syncErrorText(error)` in `space.ts`. A round that finds the space deleted ends sync on that device.
 - Produces: the pairing link `/pair#p=<base64url of space id, key and token>`. The pair page takes the fragment once and removes it from the address bar, as the reader view does.
 
-- [ ] Tests first: a pairing link round trip gives the same space; a damaged link gives "This pairing link is not complete."; `leaveSync` keeps every project on the device.
-- [ ] Settings gets "Devices": "Sync my writing" explains what goes to the relay, makes the space and shows the QR code and the link. The pair page asks for a device name and starts sync. The list shows each device and when it last synced. "Stop sync on this device" and "Stop sync on all devices" (with confirm) end it. With no Supabase keys the section says "Sync is not set up in this build." and sends nothing.
-- [ ] The safety badge counts the devices and shows the last sync.
-- [ ] `sync.spec.ts` with a fake relay in the test support: two browser contexts pair, both edit the same scene offline, go online, and both edits are in both; each device has a "Before sync" snapshot; the network log shows only `sync` requests with sealed bodies; axe passes in each theme. Commit.
+- [x] Tests first: a pairing link round trip gives the same space; a damaged link gives "This pairing link is not complete."; `leaveSync` keeps every project on the device.
+- [x] Settings gets "Devices": "Sync my writing" explains what goes to the relay, makes the space and shows the QR code and the link. The pair page asks for a device name and starts sync. The list shows each device and when it last synced. "Stop sync on this device" and "Stop sync on all devices" (with confirm) end it. With no Supabase keys the section says "Sync is not set up in this build." and sends nothing.
+- [x] The safety badge counts the devices and shows the last sync.
+- [x] `sync.spec.ts` with a fake relay in the test support: two browser contexts pair, both edit the same scene offline, go online, and both edits are in both; the device that joins the texts has a "Before sync" snapshot; the network log shows only `sync` requests with sealed bodies; axe passes in each theme. Commit.
 
 ### Task I8: Gate 9 and the release
 
-- [ ] Update STATUS, the help page, `docs/privacy.md` and `docs/licenses.md`. Add the spec change rows: the v1 non-goal "cloud sync of manuscripts" is now sealed sync (decision D1), and `DOC_SCHEMA` 7. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
-- [ ] Add suggestions, Word comments and a synced device to the memoir leak test (Review Focus 3).
-- [ ] A fresh review agent that has not seen the implementation reviews the Phase 9 diff against Review Focus 1 to 6. Fix each high finding.
+- [x] Update STATUS, the help page, `docs/privacy.md` and `docs/licenses.md`. Add the spec change rows: the v1 non-goal "cloud sync of manuscripts" is now sealed sync (decision D1), and `DOC_SCHEMA` 7. Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. Expected: PASS.
+- [x] Add suggestions, Word comments and a synced device to the memoir leak test (Review Focus 3).
+- [x] A fresh review agent that has not seen the implementation reviews the Phase 9 diff against Review Focus 1 to 6. Fix each high finding.
 - [ ] Open pull request I-C. Ask you to run "Run workflow" for all 4 browsers, and to give the Supabase keys (decision R9) when you want sharing, beta readers and sync on.

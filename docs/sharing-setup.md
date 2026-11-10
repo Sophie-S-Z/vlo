@@ -1,6 +1,6 @@
-# Set up share links and usage counts
+# Set up share links, sync and usage counts
 
-Vlo uses one free Supabase project for two features: read-and-comment share links (F27, F28) and opt-in usage counts (F30). Until the project exists, Vlo says "Sharing is not set up in this build." and sends nothing. This guide is plan decision S1. ADR 0004 gives the design.
+Vlo uses one free Supabase project for three features: read-and-comment share links (F27, F28, F50), sync between a writer's devices (F49) and opt-in usage counts (F30). Until the project exists, Vlo says "Sharing is not set up in this build." and "Sync is not set up in this build.", and sends nothing. This guide is plan decision S1. ADR 0004 and ADR 0008 give the design.
 
 The product owner does steps 1 to 4. Claude does step 5 when it has the URL and the anon key. Never give Claude, or commit, the service key.
 
@@ -17,17 +17,17 @@ The product owner does steps 1 to 4. Claude does step 5 when it has the URL and 
 1. Open Database, then Extensions.
 2. Find pg_cron and turn it on.
 
-Migration 0003 then schedules the daily cleanup, which deletes each share 30 days after it expires. Without pg_cron the migration still runs, but no cleanup runs. Turn pg_cron on and run 0003 again to fix that.
+Migrations 0003 and 0005 then schedule the daily cleanups. One deletes each share 30 days after it expires. The other deletes each sync space with no use for 90 days. Without pg_cron the migrations still run, but no cleanup runs. Turn pg_cron on and run 0003 and 0005 again to fix that.
 
 ## 3. Apply the migrations
 
-Run the 4 files in order. Each one runs once.
+Run the 5 files in order. Each one runs once.
 
 Option A, in the dashboard:
 
 1. Open SQL Editor and choose New query.
 2. Paste all of `supabase/migrations/0001_shares.sql`, then choose Run.
-3. Do the same for `0002_usage.sql`, `0003_cleanup.sql` and `0004_limits.sql`.
+3. Do the same for `0002_usage.sql`, `0003_cleanup.sql`, `0004_limits.sql` and `0005_sync.sql`.
 
 Option B, with the Supabase CLI on your computer:
 
@@ -86,6 +86,8 @@ While the project is paused, readers see "Vlo could not reach the share server."
 - `shares`: the sealed bundle, its IV, a SHA-256 hash of the owner token, the dates and the revoked flag. The key is never on the server: it is in the link fragment, which browsers do not send.
 - `share_comments`: sealed comments, sealed with the link's key.
 - `usage_reports`: the weekly reports that writers chose to send. Each holds bands and fixed names only.
+- `sync_spaces`: one row for each writer who turned on sync, with a SHA-256 hash of the space token and the dates.
+- `sync_blobs`: for each device of a space, the newest sealed blob of each key. A key is an HMAC that only the writer's devices can make, so the server sees no project or item id.
 
 ## The limits
 
@@ -94,6 +96,7 @@ Anyone can read the anon key from the app, so migration 0004 puts limits on the 
 - At most 120 new links in an hour, and at most 300 MB of sealed text in all.
 - At most 600 new comments in an hour, and 500 comments on one link.
 - At most 2,000 usage reports in 7 days.
+- Sync (migration 0005): at most 20 new sync spaces in an hour, 5 devices and 100 MB for each space, 2.8 MB for each blob, and 150 MB of sync in all, so share links keep their room.
 - Each function checks the length and the characters of the IV and the owner token.
 
 When a limit stops a request, the writer or reader sees "The share server is at its limit for now. Try again in an hour." To change a limit, write a new migration with the new number. The daily cleanup frees space 30 days after each link expires.

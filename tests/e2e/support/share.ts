@@ -1,6 +1,7 @@
 import { randomBytes, webcrypto } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import type { BrowserContext, Route } from '@playwright/test';
+import { FakeSyncRelay } from '../../fixtures/syncRelay';
 
 /* A fake Supabase project and sealed share bundles for the reader view tests (spec section 11). */
 
@@ -22,13 +23,15 @@ interface Share {
 
 interface Fake {
   shares: Map<string, Share>;
+  /** The sync relay of migration 0005 (F49). */
+  sync: FakeSyncRelay;
   calls: { name: string; body: Record<string, unknown> }[];
 }
 
 /** A fake Supabase project for every page of the context. Two contexts can share one project. */
 export async function fakeSupabase(
   context: BrowserContext,
-  fake: Fake = { shares: new Map(), calls: [] },
+  fake: Fake = { shares: new Map(), sync: new FakeSyncRelay(), calls: [] },
 ): Promise<Fake> {
   await context.route(`${RPC}*`, async (route: Route) => {
     const request = route.request();
@@ -97,8 +100,20 @@ export async function fakeSupabase(
         await reply(200, share && !share.revoked ? share.comments : []);
         return;
       }
-      default:
-        await reply(404, { message: 'unknown' });
+      default: {
+        if (!name.includes('sync')) {
+          await reply(404, { message: 'unknown' });
+          return;
+        }
+        let value: unknown;
+        try {
+          value = fake.sync.call(name, body);
+        } catch (error) {
+          await reply(400, { code: 'P0001', message: (error as Error).message });
+          return;
+        }
+        await reply(200, value);
+      }
     }
   });
   return fake;

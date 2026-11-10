@@ -75,7 +75,7 @@ function Reply({ reply, project, item }: { reply: FeedbackReply; project: Projec
             type="button"
             variant="outline"
             onClick={() => {
-              showWordsOnOpen(item.id, comment.quote);
+              showWordsOnOpen(item.id, comment.quote, comment.block);
               void navigate(`/p/${project.id}?${new URLSearchParams({ item: item.id }).toString()}`);
             }}
           >

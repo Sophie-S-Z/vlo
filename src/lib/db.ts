@@ -1,4 +1,5 @@
 import { Dexie, type Table } from 'dexie';
+import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
 import { countUnit, recountItems } from './wordcount';
 
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
@@ -267,7 +268,7 @@ export interface AudioFile {
 }
 
 /** Why a request left the app (spec section 5). */
-export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality';
+export type NetPurpose = 'ai' | 'model-download' | 'share' | 'usage' | 'originality' | 'sync';
 
 /** One request that left the app's origin (spec section 5, F25). It never holds a key, a header or a body. */
 export interface NetworkLogEntry {
@@ -349,6 +350,7 @@ export class VloDb extends Dexie {
   shares!: Table<ShareRecord, string>;
   codex!: Table<CodexEntry, string>;
   research!: Table<ResearchFile, string>;
+  syncClock!: Table<ClockEntry, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -404,6 +406,9 @@ export class VloDb extends Dexie {
           await tx.table('items').bulkPut(recountItems(items, texts, language));
         }
       });
+    // Version 9 (Phase 9, Task I6): the sync clock. A new table only; the middleware fills it.
+    this.version(9).stores({ [CLOCK_TABLE]: 'key, projectId, at' });
+    this.use(syncClockMiddleware);
   }
 }
 

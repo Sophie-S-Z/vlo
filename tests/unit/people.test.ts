@@ -194,6 +194,7 @@ describe('people in the database', () => {
         resolve(event.data.update);
       };
     });
+    await db.syncClock.update(`items:${memory.id}`, { at: 0 });
     expect(await markAllInProject(project.id, PEOPLE)).toEqual({ names: 4, items: 1 });
     const stored = docFromUpdate(await readItemUpdate(memory.id));
     expect(marked(stored)).toEqual([
@@ -207,6 +208,8 @@ describe('people in the database', () => {
     Y.applyUpdate(open, await sent);
     channel.close();
     expect(marked(open)).toHaveLength(4);
+    // The item's sync stamp moves too, so sync sends the text with its marks (code review).
+    expect((await db.syncClock.get(`items:${memory.id}`))?.at).toBeGreaterThan(0);
     expect(await markAllInProject(project.id, PEOPLE)).toEqual({ names: 0, items: 0 });
   });
 });

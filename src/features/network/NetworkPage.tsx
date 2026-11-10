@@ -16,6 +16,7 @@ const PURPOSE_LABEL: Record<NetPurpose, string> = {
   share: 'Share link',
   usage: 'Usage count',
   originality: 'Originality check',
+  sync: 'Sync',
 };
 
 const MODE_LABEL: Record<AiMode, string> = { pen: 'Pen', reader: 'Reader', cowriter: 'Co-writer' };

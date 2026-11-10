@@ -77,6 +77,11 @@ export const routes: RouteObject[] = [
         lazy: async () => ({ Component: (await import('@/features/progress/ProgressPage')).ProgressPage }),
       },
       { path: 'settings', element: <SettingsPage /> },
+      // A pairing link for sync (F49). The fragment holds the space, so the page takes it once.
+      {
+        path: 'pair',
+        lazy: async () => ({ Component: (await import('@/features/sync/PairPage')).PairPage }),
+      },
       // Quick capture (F48): the share sheet and the app shortcut open it.
       {
         path: 'capture',

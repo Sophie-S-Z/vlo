@@ -66,7 +66,7 @@ export async function makeComment(target: StoredTarget, reply: StoredComment): P
   const made = await changeStoredDoc(target, (doc) => {
     const tr = new Transform(doc);
     const mark = doc.type.schema.marks[COMMENT];
-    const at = findWords(doc, reply.quote);
+    const at = findWords(doc, reply.quote, reply.block);
     result = 'missing';
     if (!mark || !at) return tr;
     result = 'taken';
