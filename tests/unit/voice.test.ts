@@ -194,6 +194,10 @@ test('dictated text goes in at the cursor with a space, and counts as dictated',
   editor.commands.insertContent('It began.');
   await flushEntry('p1');
   await db.authorship.clear();
+  // A focused editor takes the words at once. An editor with no focus focuses in the next frame and
+  // scrolls to the caret, which jsdom cannot measure.
+  editor.view.focus();
+  expect(editor.view.hasFocus()).toBe(true);
   expect(insertDictation(editor, '  We left at dawn. ')).toBe(true);
   expect(insertDictation(editor, '   ')).toBe(false);
   expect(editor.getText()).toBe('It began. We left at dawn.');
