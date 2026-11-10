@@ -34,6 +34,8 @@ export interface ExportFile {
   name: string;
   type: string;
   notices: string[];
+  /** The plain text beside the HTML of a web copy, for an app that takes no rich text (F52). */
+  text?: string;
 }
 
 export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; type: string }>> = {
@@ -44,6 +46,7 @@ export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; typ
   pdf: { extension: 'pdf', type: 'application/pdf' },
   epub: { extension: 'epub', type: 'application/epub+zip' },
   markdown: { extension: 'md', type: 'text/markdown;charset=utf-8' },
+  web: { extension: 'html', type: 'text/html;charset=utf-8' },
 };
 
 /** True for the formats that embed fonts, so the writer's own fonts need a check. */
@@ -116,6 +119,7 @@ export async function makeExport(
   const file = FORMAT_FILE[format];
   let bytes: Uint8Array;
   let drawnStyles: { font: string; style: 'bold' | 'italic' }[] = [];
+  let text: string | undefined;
   if (format === 'docx') {
     const { toDocx } = await import('./docx');
     bytes = await toDocx(doc, manuscript ? { manuscript } : {});
@@ -134,6 +138,10 @@ export async function makeExport(
     const result = await toEpub(doc, { loadFile, own: fonts.own, swaps });
     bytes = result.bytes;
     drawnStyles = result.drawnStyles;
+  } else if (format === 'web') {
+    const { toWebHtml, toWebText } = await import('./web');
+    bytes = new TextEncoder().encode(toWebHtml(doc));
+    text = toWebText(doc);
   } else {
     const { toMarkdown } = await import('./markdown');
     bytes = new TextEncoder().encode(toMarkdown(doc));
@@ -147,6 +155,7 @@ export async function makeExport(
       drawnStyles,
       ...(manuscript ? { manuscriptFont: manuscript.typewriter ? 'courier-prime' : doc.font } : {}),
     }),
+    ...(text === undefined ? {} : { text }),
   };
 }
 

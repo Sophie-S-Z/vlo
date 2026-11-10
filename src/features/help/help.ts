@@ -89,6 +89,7 @@ export const HELP = {
         'Pick Word, PDF, EPUB or Markdown, and this item or the whole project.',
         'A novel can use standard manuscript format. Poems keep every space and indent in each format.',
         'For Google Docs, export to Word, then open the file in Google Drive.',
+        'To post on Substack, Medium, a blog or AO3, pick Web copy, then Copy. Each line break and indent stays.',
       ],
     },
     {

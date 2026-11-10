@@ -220,3 +220,57 @@ test('the command menu opens the export dialog', async ({ page }) => {
   await expect(menu).toBeHidden();
   await expect(page.getByRole('dialog', { name: 'Export' })).toBeVisible();
 });
+
+test('F52: a web copy of a poem keeps its indents for a blog and for AO3', async ({ page }) => {
+  // The test reads what Vlo puts on the clipboard, in each browser, with no clipboard permission.
+  await page.addInitScript(() => {
+    const copies: { html?: string; text: string }[] = [];
+    Object.assign(window, { vloCopies: copies });
+    const read = (item: ClipboardItem, type: string) =>
+      item.types.includes(type) ? item.getType(type).then((blob) => blob.text()) : Promise.resolve('');
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: (text: string) => {
+          copies.push({ text });
+          return Promise.resolve();
+        },
+        write: async ([item]: ClipboardItem[]) => {
+          if (item)
+            copies.push({ html: await read(item, 'text/html'), text: await read(item, 'text/plain') });
+        },
+      },
+    });
+  });
+  await newProject(page, 'poetry');
+  await page.keyboard.type('Salt on the sill.');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('    The tide goes out');
+  await saved(page);
+
+  await page.getByRole('button', { name: 'Export' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Export' });
+  await dialog.getByRole('radio', { name: /Web copy/ }).click();
+  await expect(dialog.getByRole('radio', { name: 'Substack, Medium or a blog' })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Make the copy' }).click();
+
+  const done = page.getByRole('dialog', { name: 'Your web copy is ready' });
+  await done.getByRole('button', { name: 'Copy the text' }).click();
+  await expect(done.getByRole('status').filter({ hasText: 'Text copied.' })).toBeAttached();
+  expect(await seriousIssues(page)).toEqual([]);
+  const indent = '\u00a0'.repeat(4);
+  const blog = await page.evaluate(
+    () => (window as unknown as { vloCopies: { html?: string; text: string }[] }).vloCopies,
+  );
+  expect(blog[0]?.html).toBe(`<p>Salt on the sill.<br>${indent}The tide goes out</p>`);
+  expect(blog[0]?.text).toBe(`Salt on the sill.\n${indent}The tide goes out`);
+  await done.getByRole('button', { name: 'Done' }).click();
+
+  await page.getByRole('button', { name: 'Export' }).click();
+  await dialog.getByRole('radio', { name: /Web copy/ }).click();
+  await dialog.getByRole('radio', { name: /^AO3/ }).click();
+  await dialog.getByRole('button', { name: 'Make the copy' }).click();
+  await done.getByRole('button', { name: 'Copy the HTML' }).click();
+  await expect(done.getByRole('status').filter({ hasText: 'HTML copied.' })).toBeAttached();
+  const ao3 = await page.evaluate(() => (window as unknown as { vloCopies: { text: string }[] }).vloCopies);
+  expect(ao3[1]?.text).toBe(`<p>Salt on the sill.<br>${indent}The tide goes out</p>`);
+});

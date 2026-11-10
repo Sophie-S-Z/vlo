@@ -78,10 +78,11 @@ Pull request J-A: Task J1. J-B: Tasks J2 and J3. J-C: Tasks J4 to J7. Each one m
 
 **Interfaces:**
 
-- Produces: `toWebHtml(doc: ExportDoc, target: 'blog' | 'ao3'): string` and `toWebText(doc): string`. A poem line is one line with `<br>`. Leading spaces and runs of spaces become U+00A0. A stanza is a `<p>`. AO3 HTML uses only the tags that AO3 keeps: `p`, `br`, `em`, `strong`, `u`, `s`, `sup`, `sub`, `h2`, `h3`, `blockquote`, `ol`, `ul`, `li`, `hr` and `a`.
+- Produces: `toWebHtml(doc: ExportDoc): string` and `toWebText(doc): string`. A stanza is a `<p>`, and each poem line ends with `<br>`. A space at a line start or after another space becomes U+00A0. The HTML uses only the tags that AO3 keeps: `p`, `br`, `em`, `strong`, `u`, `s`, `sup`, `sub`, `h2` to `h4`, `blockquote`, `ol`, `ul`, `li`, `hr` and `a`. One HTML serves both targets: the blog target copies it as rich text with `toWebText` beside it, and the AO3 target copies it as text.
+- Produces: the export format `web` and `ExportFile.text?`.
 
-- [ ] Tests first: the poetry fixture keeps each leading space and each line break in both targets; a hanging indent becomes a no-break space indent on each wrapped line's start; AO3 HTML holds no `style`, `class` or `span`; a footnote becomes a numbered note at the end; share-safe aliases apply.
-- [ ] "Copy for the web" in the Export dialog with the two targets. The blog target writes `text/html` and `text/plain` to the clipboard. The AO3 target writes the HTML as text. A pulse confirms the copy. Commit.
+- [x] Tests first: the poetry fixture keeps each leading space and each line break in the HTML and the text; the HTML holds no `style`, `class` or `span`; a footnote becomes a numbered note at the end. Web editors have no hanging indent, so the notice says that poem lines keep their leading spaces.
+- [x] "Web copy" in the Export dialog with the two targets. The done screen has the Copy button, because a browser copies only on the writer's own press. The blog target writes `text/html` and `text/plain`. The AO3 target writes the HTML as text. A pulse confirms the copy. Commit.
 
 ### Task J3: Submission packets (F53)
 

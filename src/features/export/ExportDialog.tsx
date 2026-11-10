@@ -1,4 +1,4 @@
-import { BookOpen, FileText, FileType, Printer } from 'lucide-react';
+import { BookOpen, FileText, FileType, Globe, Printer } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { hasTemplate, projectDef } from '@/features/library/templates';
@@ -13,6 +13,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { CopyButton } from '@/ui/copy-button';
 import { Switch } from '@/ui/switch';
 import { FAILED, NameCheckLists } from '@/features/people/NameCheckLists';
 import { privatePeople } from '@/features/people/people';
@@ -28,7 +29,8 @@ import { recordError, recordFeature } from '@/features/usage/usage';
  * The export dialog (plan Task B2): the format, what the file holds, standard manuscript format for a
  * novel, and the share-safe switch. Before a PDF or EPUB that must swap one of the writer's own fonts,
  * the dialog names each swap and asks to continue (plan decision 7). After the file is saved, the dialog
- * lists what the format changes and, for Word, the two steps to Google Docs.
+ * lists what the format changes and, for Word, the two steps to Google Docs. A web copy goes to the
+ * clipboard from a Copy button, because a browser copies only on the writer's own press.
  */
 
 const FORMATS: { id: ExportFormat; label: string; detail: string; icon: typeof FileText }[] = [
@@ -56,6 +58,20 @@ const FORMATS: { id: ExportFormat; label: string; detail: string; icon: typeof F
     detail: 'A .md text file with its marks. It opens in any notes app.',
     icon: FileText,
   },
+  {
+    id: 'web',
+    label: 'Web copy',
+    detail: 'Copy it for Substack, Medium, a blog or AO3. Each line break and indent stays.',
+    icon: Globe,
+  },
+];
+
+/** Where a web copy goes (F52). A blog editor takes rich text, and AO3's HTML field takes the HTML. */
+type WebTarget = 'blog' | 'ao3';
+
+const WEB_TARGETS: { id: WebTarget; label: string }[] = [
+  { id: 'blog', label: 'Substack, Medium or a blog' },
+  { id: 'ao3', label: "AO3, in the work's HTML field" },
 ];
 
 type ScopeChoice = 'item' | 'folder' | 'project' | 'sequence';
@@ -128,6 +144,7 @@ export function ExportDialog({
   const current = items.find((i) => i.id === currentItemId && template.editorKind(i.kind) !== null) ?? null;
   const folder = current ? folderOf(items, current.id) : null;
   const [format, setFormat] = useState<ExportFormat>('docx');
+  const [webTarget, setWebTarget] = useState<WebTarget>('blog');
   const [scope, setScope] = useState<ScopeChoice>(sequence ? 'sequence' : current ? 'item' : 'project');
   const [safe, setSafe] = useState(hasTemplate(project, 'memoir'));
   // A project with AI text, or in Co-writer mode, can add the AI provenance page (F26).
@@ -181,7 +198,7 @@ export function ExportDialog({
     setStatus({ step: 'working' });
     try {
       const file = await job.make();
-      saveFile(file);
+      if (chosen !== 'web') saveFile(file);
       recordFeature(`export-${chosen}`);
       setStatus({ step: 'done', file, format: chosen });
     } catch {
@@ -378,10 +395,24 @@ export function ExportDialog({
       <DialogContent className="max-w-xl" aria-busy={status.step === 'working'}>
         {status.step === 'done' ? (
           <>
-            <DialogTitle>Your file is ready</DialogTitle>
-            <DialogDescription>
-              Vlo saved <span className="font-medium text-text">{status.file.name}</span> to your downloads.
-            </DialogDescription>
+            {status.format === 'web' ? (
+              <>
+                <DialogTitle>Your web copy is ready</DialogTitle>
+                <DialogDescription>
+                  {webTarget === 'ao3'
+                    ? 'Copy it, then in AO3 choose HTML above the work text and paste.'
+                    : 'Copy it, then paste it into the Substack, Medium or blog editor.'}
+                </DialogDescription>
+              </>
+            ) : (
+              <>
+                <DialogTitle>Your file is ready</DialogTitle>
+                <DialogDescription>
+                  Vlo saved <span className="font-medium text-text">{status.file.name}</span> to your
+                  downloads.
+                </DialogDescription>
+              </>
+            )}
             {status.file.notices.length > 0 && (
               <section aria-labelledby={`${ids}-notices`} className="grid gap-2">
                 <h3 id={`${ids}-notices`} className="text-sm font-semibold">
@@ -424,15 +455,19 @@ export function ExportDialog({
               </p>
             )}
             <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  saveFile(status.file);
-                }}
-              >
-                Download again
-              </Button>
+              {status.format === 'web' ? (
+                <WebCopy file={status.file} target={webTarget} />
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    saveFile(status.file);
+                  }}
+                >
+                  Download again
+                </Button>
+              )}
               <DialogClose asChild>
                 <Button type="button">Done</Button>
               </DialogClose>
@@ -470,6 +505,26 @@ export function ExportDialog({
                   ))}
                 </RadioGroupPrimitive.Root>
               </fieldset>
+
+              {format === 'web' && (
+                <fieldset className="grid gap-2">
+                  <legend className="mb-2 text-sm font-semibold">Where it goes</legend>
+                  <RadioGroup
+                    aria-label="Where it goes"
+                    value={webTarget}
+                    onValueChange={(next) => {
+                      setWebTarget(next as WebTarget);
+                    }}
+                  >
+                    {WEB_TARGETS.map((target) => (
+                      <label key={target.id} className="flex min-h-11 items-center gap-3 text-sm">
+                        <RadioGroupItem value={target.id} />
+                        {target.label}
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </fieldset>
+              )}
 
               <fieldset className="grid gap-2">
                 <legend className="mb-2 text-sm font-semibold">What to export</legend>
@@ -668,7 +723,13 @@ export function ExportDialog({
                   </Button>
                 </DialogClose>
                 <Button type="submit" disabled={status.step === 'working'}>
-                  {status.step === 'working' ? 'Making the file' : 'Export'}
+                  {status.step === 'working'
+                    ? format === 'web'
+                      ? 'Making the copy'
+                      : 'Making the file'
+                    : format === 'web'
+                      ? 'Make the copy'
+                      : 'Export'}
                 </Button>
               </div>
               <p aria-live="polite" className="sr-only">
@@ -679,5 +740,19 @@ export function ExportDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The Copy button of a web copy: rich text for a blog editor, or the HTML as text for AO3. */
+function WebCopy({ file, target }: { file: ExportFile; target: WebTarget }) {
+  const html = new TextDecoder().decode(file.bytes);
+  return target === 'ao3' ? (
+    <CopyButton label="Copy the HTML" text={html} copied="HTML copied.">
+      Copy the HTML
+    </CopyButton>
+  ) : (
+    <CopyButton label="Copy the text" text={file.text ?? ''} html={html} copied="Text copied.">
+      Copy the text
+    </CopyButton>
   );
 }

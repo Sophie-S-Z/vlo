@@ -15,6 +15,7 @@ export const FEATURES = [
   'export-pdf',
   'export-epub',
   'export-markdown',
+  'export-web',
   'backup',
   'backup-import',
   'snapshot-restore',

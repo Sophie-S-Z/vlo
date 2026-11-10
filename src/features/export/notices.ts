@@ -7,7 +7,8 @@ import type { Block, ExportDoc, Run } from './model';
  * plain words, so the writer knows what the file holds before they share it.
  */
 
-export type ExportFormat = 'docx' | 'pdf' | 'epub' | 'markdown';
+/** `web` is a copy for a web editor (F52), which goes to the clipboard and not to a file. */
+export type ExportFormat = 'docx' | 'pdf' | 'epub' | 'markdown' | 'web';
 
 export interface NoticeExtras {
   /** Own fonts that the file swaps for a Vlo font. */
@@ -193,6 +194,13 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
     if (looks.math)
       notices.push('Equations are MathML. An e-reader without MathML shows their symbols in one line.');
     notices.push(...drawnNotices(extras.drawnStyles, format));
+  } else if (format === 'web') {
+    if (looks.color || looks.highlight || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {
+      notices.push('Web editors set their own colors, fonts and sizes. Those words keep only their text.');
+    }
+    if (looks.hanging)
+      notices.push('Web editors have no hanging indents. Poem lines keep their leading spaces.');
+    if (looks.math) notices.push('Equations stay as LaTeX between $ signs.');
   } else {
     if (looks.color || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {
       notices.push('Markdown has no colors, fonts or text sizes. Those words keep only their text.');
