@@ -371,6 +371,8 @@ export interface ResearchFile {
   /** The file itself. A clipping has no file. */
   data?: Blob;
   clip?: { text: string; url?: string };
+  /** The memory whose recording this is (F57). */
+  itemId?: string;
 }
 
 /** A plain-text copy of each item, for search and readable backups (ADR 0003). */

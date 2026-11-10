@@ -12,6 +12,7 @@ import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { UsageSettings } from '@/features/usage/UsageSettings';
+import { SpeechSettings } from '@/features/voice/SpeechSettings';
 
 // Sync loads with Settings only when it opens, so the first screen stays small.
 const DevicesSection = lazy(async () => ({
@@ -194,6 +195,10 @@ export function SettingsPage() {
               }}
             />
           </div>
+        </Section>
+
+        <Section title="Speech to text">
+          <SpeechSettings onAnnounce={setAnnouncement} />
         </Section>
 
         <Section title="Storage">

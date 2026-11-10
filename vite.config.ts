@@ -88,7 +88,14 @@ export default defineConfig({
         // The pronouncing dictionary of the Craft labels (about 1 MB gzip) is not in the install cache
         // either (plan decision D2). It is cached the first time a poet turns the labels on. The in-browser
         // AI engine (about 2 MB gzip, Phase 4 plan decision P3) is cached the first time a writer picks it.
-        globIgnores: ['assets/fonts/**', 'assets/craft/**', 'assets/ai-model/**'],
+        // The speech-to-text worker and its ONNX Runtime file (about 7 MB gzip, Phase 11 plan Task K9) are
+        // cached the first time a writer turns a recording into text.
+        globIgnores: [
+          'assets/fonts/**',
+          'assets/craft/**',
+          'assets/ai-model/**',
+          'assets/transcribe.worker-*',
+        ],
         runtimeCaching: [
           {
             urlPattern: /\/assets\/craft\/[^/]+\.js$/,
@@ -106,6 +113,16 @@ export default defineConfig({
             options: {
               cacheName: 'vlo-ai-engine',
               // The file name carries a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            urlPattern: /\/assets\/(transcribe\.worker-[^/]+\.js|ort-wasm-[^/]+\.wasm)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-speech-engine',
+              // The file names carry a content hash, so a cached file never goes stale.
               expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [200] },
             },

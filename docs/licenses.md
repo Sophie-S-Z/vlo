@@ -4,6 +4,8 @@ This file lists every direct dependency and its license. `npm run licenses` writ
 
 Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License 1.1.
 
+Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. Model files download only when the writer asks, and each keeps its own license: Qwen2.5 1.5B and SmolLM2 1.7B (Apache-2.0), and Whisper base by OpenAI (MIT) in the ONNX form of onnx-community (Apache-2.0).
+
 | Package | Version | License | Used at |
 | --- | --- | --- | --- |
 | @axe-core/playwright | 4.14.0 | MPL-2.0 | build and test |
@@ -33,6 +35,7 @@ Vlo itself uses the MIT license. Self-hosted fonts use the SIL Open Font License
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/kalam | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/spectral | 5.3.0 | OFL-1.1 | runtime |
+| @huggingface/transformers | 4.3.1 | Apache-2.0 | runtime |
 | @mlc-ai/web-llm | 0.2.87 | Apache-2.0 | runtime |
 | @pdf-lib/fontkit | 1.1.1 | MIT | runtime |
 | @playwright/test | 1.63.0 | Apache-2.0 | build and test |

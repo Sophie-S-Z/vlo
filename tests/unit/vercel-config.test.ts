@@ -62,7 +62,7 @@ describe('vercel.json', () => {
     expect(headersFor('/(.*)')).toMatchObject({
       'Referrer-Policy': 'no-referrer',
       'X-Content-Type-Options': 'nosniff',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
       'Cross-Origin-Opener-Policy': 'same-origin',
     });
   });

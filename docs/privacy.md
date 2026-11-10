@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 5, 10 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 6, 10 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -8,6 +8,7 @@ Version 5, 10 November 2026. The app shows these words at `/privacy` (`src/featu
 - The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.
 - Snapshots stay in this browser. A backup or a folder save goes only to the place that you pick.
 - The authorship record of each project stays in this browser. It holds counts and times, never text. It leaves only in a file that you download, or encrypted in sync.
+- The recordings of a memory stay in this browser, with the research files of the project. Turn into text runs the speech model on this device, so the audio never leaves it.
 - A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.
 - The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.
 - The network log stays in this browser.
@@ -23,9 +24,9 @@ The text of the request, which Vlo shows you before it goes unless you turned th
 
 ### In-browser model files
 
-Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check.
+Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check. In any mode, when you download the speech model for Turn into text.
 
-Requests for the model files. No text goes with them.
+Requests for the model files. No text or audio goes with them.
 
 ### Share links and comments
 
