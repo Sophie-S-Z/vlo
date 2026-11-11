@@ -40,6 +40,7 @@ import {
   Sigma,
   Speech,
   SpellCheck2,
+  ScanSearch,
   TextSearch,
   Blend,
   SquareSigma,
@@ -900,6 +901,20 @@ export const COMMANDS: readonly EditorCommand[] = [
     isActive: () => getWritingPrefs().styleCheck,
     // The word lists are English, so other projects cannot turn it on.
     isEnabled: (e) => canStyleCheck(e.state),
+  },
+  {
+    kind: 'run',
+    id: 'continuity-check',
+    label: 'Continuity check',
+    icon: ScanSearch,
+    group: 'review',
+    forms: ALL,
+    keywords: ['continuity', 'consistency', 'names', 'typo in a name', 'codex', 'story bible', 'series'],
+    run: () => {
+      setWritingPrefs({ continuityCheck: !getWritingPrefs().continuityCheck });
+      return true;
+    },
+    isActive: () => getWritingPrefs().continuityCheck,
   },
   {
     kind: 'run',

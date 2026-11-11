@@ -615,6 +615,11 @@ Last update: 2026-11-10
     version 10), so sync and the series share carry them. A change holds from its scene on, in reading
     order: the books of the series in their order, then the binder order. The cursor line and the reader
     panel show the entry as it is at the open scene. A change of a deleted scene holds nowhere.
+  - N3 (F66): the continuity check in More tools and the command menu, off by default. In an English
+    project, rule 1 marks a capital word in the middle of a sentence that is one letter away from a Codex
+    name. In every project, rule 2 marks a mention of an entry after its "Leaves the story" scene. The
+    cursor line gives the reason, and "Not a problem" keeps the word or the scene in
+    `settings.continuity` (backup version 11). The check never changes the text.
 - Phase 13 (plan `docs/plans/phase-13.md`, roadmap 2 "Every form", F62 to F64). The product owner
   approved roadmap 2 decisions R1 to R6 as recommended on 2026-11-10.
   - M1 (F62): Speak to write in More tools, the / menu and the command menu of every prose and poem item.

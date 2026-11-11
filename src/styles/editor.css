@@ -732,6 +732,13 @@ html[data-calm='true'] .vlo-fill-shimmer {
   box-decoration-break: clone;
 }
 
+/* The continuity check (F66): a double underline, so it differs from the wavy style check mark by shape. */
+.vlo-manuscript .vlo-continuity {
+  text-decoration: underline double var(--accent);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0.25em;
+}
+
 /* Show aliases: the alias stands in front of the real name, which hides. The text itself does not change. */
 .vlo-manuscript .vlo-alias-real {
   display: none;

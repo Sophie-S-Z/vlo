@@ -179,6 +179,8 @@ describe('Backup round trip', () => {
         ...project.settings,
         packet: { letter: 'Dear editors,', bio: 'I write by the sea.' },
         book: { ...DEFAULT_BOOK, trim: '6x9', chapter: 'modern', dedication: 'For Ada.' },
+        // The continuity marks that the writer kept (F66) go with the project too.
+        continuity: { words: ['Marla'], scenes: ['entry:item'] },
       },
     });
     // A poem form (F56) is an item field, so it goes with the item.
@@ -509,6 +511,15 @@ describe('Reading a backup', () => {
       [
         'a citation style that Vlo does not know',
         (m) => ((m.project as { settings: Record<string, unknown> }).settings.citeStyle = 'harvard'),
+        /The project settings are wrong/,
+      ],
+      [
+        'kept continuity marks that are not lists of words',
+        (m) =>
+          ((m.project as { settings: Record<string, unknown> }).settings.continuity = {
+            words: [1],
+            scenes: [],
+          }),
         /The project settings are wrong/,
       ],
       [

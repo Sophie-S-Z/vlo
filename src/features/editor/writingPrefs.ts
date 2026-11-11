@@ -27,6 +27,8 @@ export interface WritingPrefs {
   lineHeight: number;
   /** The style check (F47) marks repeats, filler words, cliches and long sentences. Off until the writer asks. */
   styleCheck: boolean;
+  /** The continuity check (F66) marks a name near a Codex name and a mention after "Leaves the story". */
+  continuityCheck: boolean;
 }
 
 export type ToolLevel = 'simple' | 'full';
@@ -54,6 +56,7 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   wordSpacing: 0,
   lineHeight: 1.7,
   styleCheck: false,
+  continuityCheck: false,
 };
 const listeners = new Set<() => void>();
 
@@ -82,6 +85,7 @@ function load(): WritingPrefs {
     wordSpacing: oneOf(WORD_SPACINGS, value.wordSpacing),
     lineHeight: oneOf(LINE_HEIGHTS, value.lineHeight),
     styleCheck: value.styleCheck === true,
+    continuityCheck: value.continuityCheck === true,
   };
 }
 

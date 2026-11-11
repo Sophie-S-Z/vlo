@@ -63,7 +63,15 @@ export interface Project {
     scriptStyle?: ScriptStyle;
     /** The style of the citations and the bibliography in an export (F64). APA when absent. */
     citeStyle?: CiteStyle;
+    /** The continuity marks that the writer kept with "Not a problem" (F66). None when absent. */
+    continuity?: ContinuityKept;
   };
+}
+
+/** Rule 1 keeps a word, such as "Marla". Rule 2 keeps an entry in a scene, as "entryId:itemId". */
+export interface ContinuityKept {
+  words: string[];
+  scenes: string[];
 }
 
 export const SCRIPT_STYLES = ['screenplay', 'stage'] as const;
