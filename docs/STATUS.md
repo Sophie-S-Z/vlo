@@ -613,6 +613,12 @@ Last update: 2026-11-10
   - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in
     all, with the 200,000-word book. The Gate 1 test runs on the 100,000-word and the 200,000-word
     project, with the same budgets.
+  - O2 and O3 (F68): "Add a public timestamp" in Export, off by default. Vlo sends one 32-byte hash to
+    the two free OpenTimestamps pools, and the record gets the proof as its last field, `timestamp`. The
+    record stays version 1, and a record with no timestamp is the same file as before. `/verify` checks
+    the proof only when the reader asks: it finishes a pending proof at its calendar, and shows the date
+    only when the Bitcoin block header from mempool.space holds the hash. `ots.ts` is Vlo's own reader and
+    writer of the `.ots` format.
 - Design pass of 2026-11-11 (the product owner's design notes, checked against Part J0 of
   `docs/plans/phase-10.md`). Headings balance their lines and other text avoids a widow, outside the
   editor. On a phone the welcome actions stay in view at the bottom. An empty item's stats line shows only

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Status:** the product owner approved roadmap 2 decisions R1 to R6 as recommended on 2026-11-10. Decision R1 puts this phase after Phase 14. Decision R4 makes the public timestamp opt-in OpenTimestamps, and decision R5 makes Spanish the second app language. Decisions O1 to O8 below wait for the product owner.
+> **Status:** the product owner approved roadmap 2 decisions R1 to R6 as recommended on 2026-11-10. Decision R1 puts this phase after Phase 14. Decision R4 makes the public timestamp opt-in OpenTimestamps, and decision R5 makes Spanish the second app language. The product owner approved decisions O1 to O8 as recommended on 2026-11-11.
 
 **Goal:** A writer can prove to anyone when their authorship record existed, with no account and no cost. A Spanish reader uses Vlo in Spanish. Each release passes EPUBCheck on every EPUB that Vlo makes, and a 200,000-word book types and opens inside the budgets. This phase builds roadmap 2's F68, F69 and F70.
 
@@ -58,21 +58,23 @@
 
 ### Task O2: Get a public timestamp (F68), pull request O-B
 
-**Files:** Create `src/features/authorship/ots.ts`, `tests/unit/ots.test.ts`. Modify `src/lib/net.ts` (purpose `timestamp`), `src/lib/db.ts` (`NetPurpose`), `vercel.json` (CSP), `src/features/authorship/record.ts` (record version 2), `src/features/authorship/RecordDownload.tsx`, `src/features/help/help.ts`, `docs/authorship-record.md`, `docs/privacy.md`.
+**Files:** Create `src/features/authorship/ots.ts`, `tests/unit/ots.test.ts`. Modify `src/lib/net.ts` (purpose `timestamp`), `src/lib/db.ts` (`NetPurpose`), `vercel.json` (CSP), `src/features/authorship/record.ts`, `src/features/authorship/RecordDownload.tsx`, `src/features/help/help.ts`, `docs/authorship-record.md`, `docs/privacy.md`.
 
 **Interfaces:**
 
 - Produces: `recordDigest(entries): Promise<Uint8Array>`, `stamp(digest): Promise<Uint8Array>` (the `.ots` bytes from the calendars), `readProof(bytes)` and `writeProof(proof)`.
 
-- [ ] Tests first: a proof that a calendar server gave reads and writes back to the same bytes; the request body is the 32-byte hash; a failed request still downloads the record with no proof; a version 1 record still checks.
-- [ ] "Add a public timestamp" in Export, off by default, with a line that says what leaves the device. Commit.
+- [x] Tests first: a proof that a calendar server gave reads and writes back to the same bytes; the request body is the 32-byte hash; a failed request still downloads the record with no proof; a version 1 record still checks.
+- [x] "Add a public timestamp" in Export, off by default, with a line that says what leaves the device. Commit.
+- Built: the record stays version 1 with an optional last field, `timestamp`, so a record with no timestamp is the same file as before and needs no new version. The proof starts from the SHA-256 of the record with no timestamp. Each pool gets the SHA-256 of that hash and 16 random bytes, so no server can match it to a record. The two pool answers in `tests/fixtures/ots/` are real answers.
 
 ### Task O3: Check the timestamp in `/verify` (F68), pull request O-B
 
 **Files:** Modify `src/features/authorship/verify.ts`, `src/features/authorship/VerifyPage.tsx`, `src/lib/net.ts`, `vercel.json`. Extend `tests/unit/ots.test.ts`, `tests/e2e/verify.spec.ts`.
 
-- [ ] Tests first: a Bitcoin proof gives the block time when the header agrees; a changed entry, a changed proof or a wrong header gives no date; a pending proof says that Bitcoin has not confirmed it yet.
-- [ ] `/verify` asks before each request, and offers the finished record as a download. A browser test with routed servers, with axe. Commit.
+- [x] Tests first: a Bitcoin proof gives the block time when the header agrees; a changed entry, a changed proof or a wrong header gives no date; a pending proof says that Bitcoin has not confirmed it yet.
+- [x] `/verify` asks before each request, and offers the finished record as a download. A browser test with routed servers, with axe. Commit.
+- Built: one "Check the timestamp" button covers the calendar and the block server requests. The page explains both before the reader chooses it. A pending proof asks only the two calendars that finish the pools' proofs (alice and bob), so a proof cannot make the page send a request to another server.
 
 ### Task O4: The catalog (F69), pull request O-C
 

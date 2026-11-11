@@ -1,6 +1,6 @@
 # The authorship record file
 
-Version 1, 10 November 2026. Vlo makes this file in Export, with Download the record. The check page at `/verify` runs these steps in the browser (`src/features/authorship/verify.ts`). With this page and the script below, anyone can check a record with no Vlo code.
+Version 1, 11 November 2026. Vlo makes this file in Export, with Download the record. The check page at `/verify` runs these steps in the browser (`src/features/authorship/verify.ts`). With this page and the script below, anyone can check a record with no Vlo code.
 
 ## What the file holds
 
@@ -83,6 +83,14 @@ print("The record passes the check.")
 
 This script checks steps 1 to 4 only. It does not refuse extra fields or spaces, as the Vlo page does.
 
+## The public timestamp
+
+A record can end with one more field, `timestamp`, when the writer turns on "Add a public timestamp": `{"format":...,"version":1,"entries":[...],"timestamp":"<base64>"}`. The value is a standard [OpenTimestamps](https://opentimestamps.org) proof (an `.ots` file) in base64. The proof starts from the SHA-256 of the record with no `timestamp` field, that is, the same file with `,"timestamp":"..."` removed. A record with no timestamp is the same file as before.
+
+To make the proof, Vlo adds 16 random bytes to that SHA-256 and sends the SHA-256 of the two to `a.pool.opentimestamps.org` and `b.pool.opentimestamps.org`. The servers get 32 bytes and nothing else. Each server puts the hash in a Bitcoin transaction in a few hours. Until then, the proof is pending: it names the calendar server that will finish it.
+
+To check the proof with no Vlo code, save the record with no `timestamp` field as `record.json`. Save the base64 value as bytes in `record.json.ots`. Then run `ots verify record.json.ots` with the OpenTimestamps client, or drop both files on opentimestamps.org. The `/verify` page does the same steps. It asks the calendar server for the rest of a pending proof, gets the Bitcoin block header from `mempool.space`, and shows a date only when the Merkle root of that header comes from the hash of the record. It sends nothing until the reader chooses "Check the timestamp". When it finishes a pending proof, it offers the finished record as a download, so a later check needs no calendar server.
+
 ## What the check proves and does not prove
 
-The check proves that no one changed, removed or moved an entry after a device signed it, and it shows which keys signed. It does not show who sat at the device, or where typed words came from. The times come from each device's own clock. A writer can also write in another app, so the record can be incomplete.
+The check proves that no one changed, removed or moved an entry after a device signed it, and it shows which keys signed. It does not show who sat at the device, or where typed words came from. The times of the entries come from each device's own clock. A public timestamp proves only the date by which the whole record existed. A writer can also write in another app, so the record can be incomplete.

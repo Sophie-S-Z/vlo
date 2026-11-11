@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 15,
+  version: 16,
   date: '2026-11-11',
   guide: [
     {
@@ -126,6 +126,7 @@ export const HELP = {
         'In Export, choose Download the record. Each device signs its part of the record with a key that stays on it.',
         'Give the file to a teacher, an editor or a contest. They open the verify page at /verify and drop the file there. The check runs in their browser and sends nothing.',
         'The check shows if someone changed the file. It cannot show who sat at the device.',
+        'To prove when the record existed, turn on Add a public timestamp before you download it. Vlo sends one hash of the record to two free OpenTimestamps servers, and Bitcoin confirms it in a few hours. On the verify page, choose Check the timestamp to see the date.',
       ],
     },
     {

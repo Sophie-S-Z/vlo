@@ -1,8 +1,11 @@
+import { fromBase64, toBase64 } from '@/lib/crypto';
 import type { AuthorshipEntry, DeviceKey } from '@/lib/db';
+import { readProof, sha256 } from './ots';
 
 /*
  * The authorship record file and its check (roadmap F54, plan Tasks K5 and K6, decision K1). The check
- * runs in the browser with no network. `docs/authorship-record.md` gives the same steps, so anyone can
+ * runs in the browser with no network. A record can hold a public timestamp (roadmap 2 F68): an
+ * OpenTimestamps proof of the SHA-256 of the record with no timestamp, in base64, as its last field. `docs/authorship-record.md` gives the same steps, so anyone can
  * check a record with no Vlo code.
  */
 
@@ -70,15 +73,28 @@ export const importKey = (key: DeviceKey, usage: 'verify'): Promise<CryptoKey> =
   crypto.subtle.importKey('jwk', { ...key, ext: true }, CURVE, true, [usage]);
 
 /** The file of a record: its entries in a fixed form, with no space, so each byte counts. */
-export function recordFile(entries: readonly RecordEntry[]): string {
+export function recordFile(entries: readonly RecordEntry[], timestamp?: string): string {
   const out = entries.map((e) => {
     const row: Record<string, unknown> = {};
     for (const field of FIELDS) row[field] = e[field];
     if (e.key) row.key = { crv: e.key.crv, kty: e.key.kty, x: e.key.x, y: e.key.y };
     return row;
   });
-  return JSON.stringify({ format: RECORD_FORMAT, version: RECORD_VERSION, entries: out });
+  return JSON.stringify({
+    format: RECORD_FORMAT,
+    version: RECORD_VERSION,
+    entries: out,
+    ...(timestamp === undefined ? {} : { timestamp }),
+  });
 }
+
+/** What the public timestamp of a record covers: the SHA-256 of the record with no timestamp. */
+export const recordDigest = (entries: readonly RecordEntry[]): Promise<Uint8Array> =>
+  sha256(new TextEncoder().encode(recordFile(entries)));
+
+/** A record file with `proof` as its public timestamp, in place of any timestamp that it had. */
+export const withTimestamp = (file: string, proof: Uint8Array): string =>
+  recordFile((JSON.parse(file) as { entries: RecordEntry[] }).entries, toBase64(proof));
 
 export interface DeviceSummary {
   /** The first 16 hex digits of the device id. */
@@ -96,6 +112,8 @@ export type VerifyResult =
       last: number;
       /** The words of the project in the last entry. */
       words: number;
+      /** The public timestamp, still to check with the servers, or null when the record has none. */
+      timestamp: { proof: Uint8Array; digest: Uint8Array } | null;
     }
   | {
       ok: false;
@@ -172,7 +190,10 @@ async function check(json: string): Promise<VerifyResult> {
   }
   if (
     !isObject(file) ||
-    !sameKeys(file, ['format', 'version', 'entries']) ||
+    !sameKeys(
+      file,
+      'timestamp' in file ? ['format', 'version', 'entries', 'timestamp'] : ['format', 'version', 'entries'],
+    ) ||
     file.format !== RECORD_FORMAT ||
     !Array.isArray(file.entries)
   )
@@ -222,8 +243,23 @@ async function check(json: string): Promise<VerifyResult> {
     }
   }
   // A space, a number such as -0 or a key out of order keeps each value, so the bytes must match too.
-  if (recordFile(read) !== json)
+  const stamped = typeof file.timestamp === 'string' ? file.timestamp : undefined;
+  if (recordFile(read, stamped) !== json)
     throw new Bad('This file is not in the exact form that Vlo writes, so a byte changed.', null);
+  let timestamp: { proof: Uint8Array; digest: Uint8Array } | null = null;
+  if (stamped !== undefined) {
+    const digest = await recordDigest(read);
+    let proof: Uint8Array;
+    try {
+      proof = fromBase64(stamped);
+      if (!readProof(proof).digest.every((b, i) => b === digest[i]))
+        throw new Bad('The public timestamp of this record is for another file.', null);
+    } catch (problem) {
+      if (problem instanceof Bad) throw problem;
+      throw new Bad('The public timestamp of this record is not a proof that Vlo can read.', null);
+    }
+    timestamp = { proof, digest };
+  }
   return {
     ok: true,
     devices: [...chains].map(([device, chain]) => ({
@@ -234,6 +270,7 @@ async function check(json: string): Promise<VerifyResult> {
     first,
     last,
     words,
+    timestamp,
   };
 }
 
