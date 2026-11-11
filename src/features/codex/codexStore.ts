@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { sheetMatcher, type SheetMatcher } from '@/features/analysis/style';
-import type { CodexEntry, StyleRule } from '@/lib/db';
-import { codexMatcher, type CodexMatch } from './codex';
+import type { CodexEntry, ContinuityKept, StyleRule } from '@/lib/db';
+import { codexMatcher, placesOf, type CodexMatch, type ReadingItem } from './codex';
 
 /*
  * The Codex of the open project and the "Show Codex names" switch, shared by the project screen and the
@@ -19,9 +19,14 @@ export interface CodexState {
   /** The rules of the series style sheet. */
   rules: readonly StyleRule[];
   sheet: SheetMatcher;
-  /** The place of each item in reading order, for the changes at a scene (F65). */
+  /** The place of each item in reading order, for the changes at a scene (F65), and its title. */
   places: ReadonlyMap<string, number>;
+  titles: ReadonlyMap<string, string>;
+  /** The continuity marks that the writer kept (F66). */
+  kept: ContinuityKept;
 }
+
+const NONE_KEPT: ContinuityKept = { words: [], scenes: [] };
 
 const EMPTY: CodexState = {
   projectId: null,
@@ -31,6 +36,8 @@ const EMPTY: CodexState = {
   rules: [],
   sheet: () => [],
   places: new Map(),
+  titles: new Map(),
+  kept: NONE_KEPT,
 };
 let state = EMPTY;
 const listeners = new Set<() => void>();
@@ -53,8 +60,18 @@ export function setStyleSheetRules(rules: readonly StyleRule[]): void {
   if (rules !== state.rules) set({ ...state, rules, sheet: sheetMatcher(rules) });
 }
 
-export function setReadingPlaces(places: ReadonlyMap<string, number>): void {
-  if (places !== state.places) set({ ...state, places });
+let orderKey = '';
+
+/** The reading order changes with each save of an item, so only a new order or a new title sets it. */
+export function setReadingOrder(order: readonly ReadingItem[]): void {
+  const key = order.map(({ item }) => `${item.id}\u0000${item.title}`).join('\u0001');
+  if (key === orderKey) return;
+  orderKey = key;
+  set({ ...state, places: placesOf(order), titles: new Map(order.map(({ item }) => [item.id, item.title])) });
+}
+
+export function setContinuityKept(kept: ContinuityKept | undefined): void {
+  if ((kept ?? NONE_KEPT) !== state.kept) set({ ...state, kept: kept ?? NONE_KEPT });
 }
 
 export function setShowCodexNames(show: boolean): void {
@@ -63,6 +80,7 @@ export function setShowCodexNames(show: boolean): void {
 
 /** Clears the list when the writer leaves the project. */
 export function resetCodex(): void {
+  orderKey = '';
   set(EMPTY);
 }
 

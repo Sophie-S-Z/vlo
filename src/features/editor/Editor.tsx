@@ -38,6 +38,7 @@ import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
 import { StyleCheck } from './extensions/styleCheck';
 import { CodexNames } from './extensions/codexNames';
+import { ContinuityCheck } from './extensions/continuityCheck';
 import { TypingState } from './extensions/textFill';
 import { BASE_STACK, COMFORT_FONT, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
@@ -182,6 +183,7 @@ export function Editor({
         CraftSwitch,
         StyleCheck.configure({ form: kind, english }),
         CodexNames,
+        ContinuityCheck.configure({ itemId, english }),
         AuthorshipCount.configure({ projectId: projectId ?? null }),
         SlashMenu.configure({
           items: slashItems(kind, templates),

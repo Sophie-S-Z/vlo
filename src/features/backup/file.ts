@@ -70,13 +70,14 @@ import type {
  * row (`series`) and its shared Codex entries (`seriesCodex`). Version 8 adds the Script template, its
  * `script` items and their script lines (F63). Version 9 adds the sources (`sources`), the citations in the
  * text and the citation style (F64). Version 10 adds the changes of Codex entries at scenes (`changes`,
- * F65). Vlo still reads versions 1 to 9.
+ * F65). Version 11 adds the continuity marks that the writer kept (`settings.continuity`, F66). Vlo still
+ * reads versions 1 to 10.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 10;
+export const BACKUP_VERSION = 11;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -293,6 +294,16 @@ function checkProject(value: unknown): Project {
   if (settings.scriptStyle !== undefined && !SCRIPT_STYLES.includes(settings.scriptStyle as ScriptStyle))
     fail(`${DAMAGED} The project settings are wrong.`);
   if (settings.citeStyle !== undefined && !CITE_STYLES.includes(settings.citeStyle as CiteStyle))
+    fail(`${DAMAGED} The project settings are wrong.`);
+  const continuity: unknown = settings.continuity;
+  const texts = (value: unknown) => Array.isArray(value) && value.every((v) => typeof v === 'string');
+  if (
+    continuity !== undefined &&
+    (typeof continuity !== 'object' ||
+      continuity === null ||
+      !texts((continuity as Json).words) ||
+      !texts((continuity as Json).scenes))
+  )
     fail(`${DAMAGED} The project settings are wrong.`);
   const tracking = settings.tracking;
   if (
