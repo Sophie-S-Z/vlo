@@ -2,7 +2,8 @@
 :root {
   --radius-card: 10px;
   --rule-width: 1px;
-  --shadow-hover: 0 6px 24px rgb(0 0 0 / 0.12);
+  /* Shadows take the Ink hue, not plain black, and stack a tight contact shadow over a soft lift. */
+  --shadow-hover: 0 1px 2px rgb(11 14 20 / 0.06), 0 8px 24px -6px rgb(11 14 20 / 0.16);
   --ease-reveal: cubic-bezier(0.215, 0.61, 0.355, 1); /* GSAP power3.out */
   --duration-reveal: 0.6s;
   --gutter: 16px;

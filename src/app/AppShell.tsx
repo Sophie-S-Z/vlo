@@ -11,6 +11,9 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-surface text-text' : 'text-muted hover:text-text',
   );
 
+// Footer links are chrome, so they stay quiet next to the page's own links.
+const FOOTER_LINK = 'text-muted underline hover:text-text';
+
 export function AppShell() {
   const mainRef = useRef<HTMLElement>(null);
   // The project screen has up to three columns, so it uses the full window width.
@@ -100,22 +103,22 @@ export function AppShell() {
         >
           <p>
             Your writing stays on this device.{' '}
-            <Link to="/network" className="underline">
+            <Link to="/network" className={FOOTER_LINK}>
               See the network log
             </Link>
           </p>
           <UpdatePrompt />
           <p className="flex flex-wrap gap-x-4 gap-y-2">
-            <Link to="/help" className="underline">
+            <Link to="/help" className={FOOTER_LINK}>
               Help
             </Link>
-            <Link to="/privacy" className="underline">
+            <Link to="/privacy" className={FOOTER_LINK}>
               Privacy
             </Link>
-            <Link to="/ai-policy" className="underline">
+            <Link to="/ai-policy" className={FOOTER_LINK}>
               AI policy
             </Link>
-            <a href={MARKETING_URL} rel="noreferrer">
+            <a href={MARKETING_URL} rel="noreferrer" className={FOOTER_LINK}>
               About Vlo
             </a>
           </p>

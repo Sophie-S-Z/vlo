@@ -10,7 +10,9 @@ const buttonVariants = cva(
       variant: {
         primary: 'bg-accent text-on-accent hover:shadow-[var(--shadow-hover)]',
         outline: 'border border-rule bg-surface text-text hover:border-muted',
-        ghost: 'text-text hover:bg-surface',
+        // Quiet until used, so screen tools step back from the writing and the primary action leads.
+        ghost:
+          'text-muted hover:bg-surface hover:text-text aria-pressed:text-text data-[state=open]:bg-surface data-[state=open]:text-text',
       },
     },
     defaultVariants: { variant: 'primary' },

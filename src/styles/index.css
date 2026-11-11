@@ -14,6 +14,10 @@
 @theme static {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* Menus, popovers and dialogs cast Ink-tinted shadows, the same as --shadow-hover (tokens.css). */
+  --shadow-sm: 0 1px 2px rgb(11 14 20 / 0.06);
+  --shadow-md: 0 1px 2px rgb(11 14 20 / 0.06), 0 4px 12px -2px rgb(11 14 20 / 0.12);
+  --shadow-lg: 0 1px 2px rgb(11 14 20 / 0.08), 0 12px 32px -8px rgb(11 14 20 / 0.24);
 }
 
 @custom-variant dark (&:where([data-theme='ink'], [data-theme='ink'] *));
@@ -50,6 +54,11 @@
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+  /* A new screen moves focus to its heading for screen readers (AppShell). The heading is not a control,
+     so it shows no ring. */
+  h1[tabindex='-1']:focus {
+    outline: none;
   }
   a {
     color: var(--accent-text);

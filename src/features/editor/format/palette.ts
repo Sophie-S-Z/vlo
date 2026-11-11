@@ -141,8 +141,8 @@ export function ensurePaletteStyles(): void {
 
 /** Each theme's page colors, the same values as themes.css (tests/unit/palette.test.ts checks them). */
 export const PAGE_COLORS: Readonly<Record<ResolvedTheme, { bg: string; surface: string; text: string }>> = {
-  ink: { bg: '#0e0d0c', surface: '#171513', text: '#efe8dc' },
-  paper: { bg: '#f5f1e8', surface: '#fbf8f2', text: '#1c1a17' },
+  ink: { bg: '#0b0e14', surface: '#14171e', text: '#ebe9e5' },
+  paper: { bg: '#f5f4f1', surface: '#fcfcf9', text: '#141a23' },
   sepia: { bg: '#efe3cc', surface: '#f6ecd9', text: '#3a2e22' },
   contrast: { bg: '#ffffff', surface: '#f4f4f4', text: '#000000' },
 };

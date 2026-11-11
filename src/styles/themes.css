@@ -1,27 +1,29 @@
-/* Theme colors. Spec section 13. Extra values are recorded in docs/STATUS.md. */
+/* Theme colors. Spec section 13. Extra values are recorded in docs/STATUS.md.
+   Two base colors and one accent: Ink (a blue-black, like fountain pen ink), Paper (a neutral stone white)
+   and Celadon (the pale green glaze of old pottery). Ink and Paper swap roles between the dark and the light theme. */
 
 [data-theme='ink'] {
   color-scheme: dark;
-  --bg: #0e0d0c;
-  --surface: #171513;
-  --text: #efe8dc;
-  --muted: #8c857a;
-  --rule: #2a2724;
-  --accent: #e0664b;
-  --accent-text: #e0664b;
-  --on-accent: #0e0d0c;
+  --bg: #0b0e14;
+  --surface: #14171e;
+  --text: #ebe9e5;
+  --muted: #979ba3;
+  --rule: #282b32;
+  --accent: #a9d4b3;
+  --accent-text: #a9d4b3;
+  --on-accent: #0b0e14;
 }
 
 [data-theme='paper'] {
   color-scheme: light;
-  --bg: #f5f1e8;
-  --surface: #fbf8f2;
-  --text: #1c1a17;
-  --muted: #6b655c;
-  --rule: #e2dccf;
-  --accent: #c8452d;
-  --accent-text: #b83e28;
-  --on-accent: #ffffff;
+  --bg: #f5f4f1;
+  --surface: #fcfcf9;
+  --text: #141a23;
+  --muted: #5b616a;
+  --rule: #dfded9;
+  --accent: #689373;
+  --accent-text: #4d7758;
+  --on-accent: #141a23;
 }
 
 [data-theme='sepia'] {
@@ -31,8 +33,8 @@
   --text: #3a2e22;
   --muted: #6e5d48;
   --rule: #dccbaa;
-  --accent: #a8432a;
-  --accent-text: #a8432a;
+  --accent: #325e3f;
+  --accent-text: #325e3f;
   --on-accent: #ffffff;
 }
 
@@ -44,7 +46,7 @@
   --text: #000000;
   --muted: #3b3b3b;
   --rule: #595959;
-  --accent: #9b1c0c;
-  --accent-text: #9b1c0c;
+  --accent: #20432b;
+  --accent-text: #20432b;
   --on-accent: #ffffff;
 }
