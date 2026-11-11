@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 18,
+  version: 19,
   date: '2026-11-11',
   guide: [
     {
@@ -145,6 +145,7 @@ export const HELP = {
         'A deadline takes a date and the words that the project must have by then. Vlo divides the words left by the writing days left, and the bar shows how far you are.',
         'To cut a draft down, type a target under the words that the project has now. Each day then counts the words that you remove.',
         'While goals are on, a ring next to the timer shows the goal of today. Choose it to open Progress.',
+        'Vlo counts words as Word and Scrivener do. "Well-known", "and/or", a web address and a time such as 10:30 are one word each. A dash between two words keeps them two words.',
       ],
     },
     {

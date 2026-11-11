@@ -628,6 +628,19 @@ export class VloDb extends Dexie {
     this.version(12).stores({ series: 'id, *projectIds' });
     // Version 13 (Phase 13, Task M5): the sources that a writer cites. A new table only.
     this.version(13).stores({ sources: 'id, projectId' });
+    // Version 14 (count rule 2, the Ellipsus comparison): "well-known", "and/or", a web address and a time
+    // count as one word each, so every item counts again from its text copy.
+    this.version(14)
+      .stores({})
+      .upgrade(async (tx) => {
+        for (const project of (await tx.table('projects').toArray()) as Project[]) {
+          const [items, texts] = await Promise.all([
+            tx.table('items').where('projectId').equals(project.id).toArray() as Promise<Item[]>,
+            tx.table('itemTexts').where('projectId').equals(project.id).toArray() as Promise<ItemText[]>,
+          ]);
+          await tx.table('items').bulkPut(recountItems(items, texts, project.settings.language));
+        }
+      });
     this.use(syncClockMiddleware);
   }
 }

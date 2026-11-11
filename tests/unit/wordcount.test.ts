@@ -32,6 +32,36 @@ describe('countWords', () => {
   });
 });
 
+describe('count rule 2 (Ellipsus comparison, October 2026)', () => {
+  // Word and Scrivener count a hyphenated word, a slash pair, an address and a time as one word.
+  test.each([
+    ['a well-known state-of-the-art lab', 4],
+    ['Jean-Luc read the x-ray', 4],
+    ['and/or', 1],
+    ['at 10:30 sharp', 3],
+    ['see https://vlo.app/a-b?x=1 now', 3],
+    ['write to mira.ledger@example.org today', 4],
+    ['non\u2011breaking and soft\u2010hyphen', 3],
+  ])('%j has %i words', (text, words) => {
+    expect(countWords(text)).toBe(words);
+  });
+
+  // A dash stands between two words, so they stay two words.
+  test.each([
+    ['She—no, he—ran', 4],
+    ['pre--war', 2],
+    ['wait - what', 2],
+    ['- a list item', 3],
+  ])('%j has %i words', (text, words) => {
+    expect(countWords(text)).toBe(words);
+  });
+
+  test('a joined word in a Chinese or Japanese project still counts its characters', () => {
+    expect(countWords('東京-大阪', 'ja')).toBe(4);
+    expect(countWords('e-mail 我爱', 'zh')).toBe(3);
+  });
+});
+
 describe('countUnit', () => {
   test('Chinese and Japanese count characters, and other languages count words', () => {
     expect([

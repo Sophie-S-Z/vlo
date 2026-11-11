@@ -630,6 +630,13 @@ Last update: 2026-11-10
     split pane hides too. The choice stays on the device, so a reload never shows the words. Checks: unit
     tests for the stored choices and the key; browser tests for the blur, the bars, the clear paragraph, a
     reload, the command and the Library, with axe.
+  - Word count (count rule 2, `COUNT_RULE` in `src/lib/wordcount.ts`): a hyphen or a slash between two
+    letters or digits joins them ("state-of-the-art", "and/or"), and a web address, an email address and
+    a time such as 10:30 are one word each, as in Word and Scrivener. A double hyphen or a dash still
+    splits. Database version 14 counts every item again from its text copy, and a backup import always
+    counts its items again, so an older backup gets the new rule. The Insights word count now uses the
+    same rule as the counter. Checks: unit tests for the rule, the dashes, Chinese and Japanese, and the
+    upgrade from version 13; a browser test of the title count and the stats line.
   - Not built, with the reason: a native iOS app (spec non-goal; Vlo installs as a PWA and works offline),
     free trials (Vlo is free), reader links (Vlo has them since Phase 9), a toggle of all headings (the binder
     holds each scene as its own item), input lag (the Gate 1 budgets hold at 200,000 words), and folder

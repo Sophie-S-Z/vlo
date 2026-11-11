@@ -1,4 +1,4 @@
-import { countUnit, countWords } from '@/lib/wordcount';
+import { countWords } from '@/lib/wordcount';
 import { deviation, mean, sentencesOf, wordsOf, type Sentence } from './text';
 import type { EditorForm } from '@/features/library/templates';
 
@@ -305,8 +305,9 @@ export function fullStats(
   }
   const minutes = (wpm: number) => (n === 0 ? 0 : n / wpm);
   return {
-    // Chinese and Japanese writing counts characters (F38). The other statistics read words.
-    words: countUnit(language) === 'characters' ? countWords(text, language) : n,
+    // The count is the one of the word counter, so the two always agree: characters in Chinese and Japanese
+    // (F38), and count rule 2 elsewhere. The other statistics read the words one by one.
+    words: countWords(text, language),
     characters,
     charactersNoSpaces,
     letters,
