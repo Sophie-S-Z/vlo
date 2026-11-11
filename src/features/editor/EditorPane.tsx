@@ -30,7 +30,7 @@ import { Editor } from './Editor';
 import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
 import { cleanPageFormat, PAGE_SIZES } from './format/page';
-import { docBody, docText, writeItemText } from './itemText';
+import { docBody, docText, refreshItemText, writeItemText } from './itemText';
 import { ManuscriptContext, type ManuscriptSettings } from './manuscript';
 import { PageControl } from './PageControl';
 import { SaveStatus } from './SaveStatus';
@@ -160,6 +160,12 @@ export function EditorPane({
   useEffect(() => {
     languageNow.current = language;
   }, [language]);
+
+  // The last tab may have closed in the save pause, so the open item brings its text copy and counts up to date.
+  useEffect(() => {
+    if (editor)
+      void refreshItemText(target, editor.state.doc, kind, languageNow.current).catch(() => undefined);
+  }, [editor, target, kind]);
 
   const open = state.open;
   useEffect(() => {
