@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 16,
+  version: 17,
   date: '2026-11-11',
   guide: [
     {
@@ -142,7 +142,9 @@ export const HELP = {
       title: 'Sprint and take a month challenge',
       steps: [
         'Choose Timer, then Start a sprint. Pick the minutes and a word target. Only the words that you write in the sprint count.',
-        'At the end, the result shows your words and the target.',
+        'Pick No limit to write until you reach the target. Vlo asks if you want to end the sprint when you reach it.',
+        'While a sprint runs, the timer shows your words so far. At the end, the result shows your words and the target.',
+        'To time a session with no limit, choose Timer, then Stopwatch, no time limit. It counts up and shows the words that you add.',
         'In Progress, type the words for this month and choose Start a month challenge. The calendar shows the words of each day.',
       ],
     },

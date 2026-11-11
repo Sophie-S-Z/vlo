@@ -1,3 +1,4 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Timer } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushEntry } from '@/features/authorship/record';
@@ -35,12 +36,15 @@ export const SESSION_LENGTHS = [10, 15, 25, 45, 60] as const;
 
 interface Running {
   session: Session;
-  /** Planned end time in ms. */
-  endsAt: number;
-  minutes: number;
+  /** Planned end time in ms, or null for a stopwatch, which has no time limit. */
+  endsAt: number | null;
+  /** The planned minutes, or null for a stopwatch. */
+  minutes: number | null;
   start: { words: number; poems: number };
   /** True once the time is up and the writer chose to keep writing. */
   overtime: boolean;
+  /** True once a sprint reached its target and the writer chose to keep writing. */
+  targetSeen: boolean;
   /** The sprint room, when the writer sprints with friends (F60). */
   room?: Room;
 }
@@ -48,12 +52,19 @@ interface Running {
 const RADIUS = 9;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-function clockText(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  const minutes = Math.floor(total / 60);
-  const seconds = total % 60;
-  return `${String(minutes)}:${String(seconds).padStart(2, '0')}`;
+/** A time as 9:05, or 1:02:05 from one hour. Left time rounds up, so 0:00 shows only at the end. */
+export function clockText(ms: number, round: 'up' | 'down' = 'up'): string {
+  const total = Math.max(0, round === 'up' ? Math.ceil(ms / 1000) : Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = String(total % 60).padStart(2, '0');
+  return hours > 0
+    ? `${String(hours)}:${String(minutes).padStart(2, '0')}:${seconds}`
+    : `${String(minutes)}:${seconds}`;
 }
+
+/** The whole minutes of a session, at least 1, for the result of a sprint with no time limit. */
+const minutesOf = (ms: number) => Math.max(1, Math.round(ms / 60_000));
 
 /** Closes a session with what the project gained since it started. Returns the words added. */
 async function finishSession(projectId: string, running: Running): Promise<number> {
@@ -80,7 +91,8 @@ export function SessionTimer({
 }) {
   const [running, setRunning] = useState<Running | null>(null);
   const [now, setNow] = useState(() => clock.now());
-  const [asking, setAsking] = useState(false);
+  /** The gentle prompt when the time is up. A sprint with no time limit asks at its target instead. */
+  const [asking, setAsking] = useState<'time' | null>(null);
   const [message, setMessage] = useState('');
   const [outcome, setOutcome] = useState<SprintOutcome | null>(null);
   const runningRef = useRef<Running | null>(null);
@@ -95,7 +107,7 @@ export function SessionTimer({
       if (!open) return;
       runningRef.current = null;
       setRunning(null);
-      setAsking(false);
+      setAsking(null);
       void finishSession(projectId, open);
     };
     window.addEventListener('pagehide', leave);
@@ -117,12 +129,13 @@ export function SessionTimer({
     };
   }, [projectId, unit]);
 
+  // A stopwatch ticks for as long as it runs. A timer stops ticking once the writer keeps writing past it.
   useEffect(() => {
-    if (!running || running.overtime) return;
+    if (!running || (running.overtime && running.endsAt !== null)) return;
     const tick = () => {
       const time = clock.now();
       setNow(time);
-      if (time >= running.endsAt) setAsking(true);
+      if (running.endsAt !== null && !running.overtime && time >= running.endsAt) setAsking('time');
     };
     const timer = setInterval(tick, 1000);
     return () => {
@@ -130,20 +143,23 @@ export function SessionTimer({
     };
   }, [running]);
 
-  async function start(minutes: number, sprint?: Omit<SprintStart, 'minutes'>) {
+  async function start(minutes: number | null, sprint?: Omit<SprintStart, 'minutes'>) {
     const [session, totals] = await Promise.all([
       startSession(projectId, minutes, sprint?.target),
       projectTotals(projectId),
     ]);
     const startedAt = session.startedAt;
     setNow(startedAt);
-    setMessage(`${sprint ? 'Sprint' : 'Session'} started. ${String(minutes)} minutes.`);
+    setMessage(
+      `${sprint ? 'Sprint' : minutes === null ? 'Stopwatch' : 'Session'} started. ${minutes === null ? 'No time limit.' : `${String(minutes)} minutes.`}`,
+    );
     setRunning({
       session,
-      endsAt: startedAt + minutes * 60_000,
+      endsAt: minutes === null ? null : startedAt + minutes * 60_000,
       minutes,
       start: totals,
       overtime: false,
+      targetSeen: false,
       ...(sprint?.room ? { room: sprint.room } : {}),
     });
   }
@@ -153,16 +169,21 @@ export function SessionTimer({
     runningRef.current = null;
     const words = await finishSession(projectId, running);
     setRunning(null);
-    setAsking(false);
+    setAsking(null);
     const target = running.session.target;
+    const took = running.minutes ?? minutesOf(clock.now() - running.session.startedAt);
     if (target === undefined) {
-      setMessage(`Session closed. You wrote ${formatWords(words, unit)}.`);
+      setMessage(
+        running.minutes === null
+          ? `Session closed. You wrote ${formatWords(words, unit)} in ${String(took)} ${took === 1 ? 'minute' : 'minutes'}.`
+          : `Session closed. You wrote ${formatWords(words, unit)}.`,
+      );
       return;
     }
     // The last post gives the room the final words. The result shows without the room if it fails.
     let standings: Standing[] | undefined;
     if (running.room) standings = await postWords(running.room, words).catch(() => undefined);
-    setOutcome({ words, target, minutes: running.minutes, ...(standings ? { standings } : {}) });
+    setOutcome({ words, target, minutes: took, ...(standings ? { standings } : {}) });
   }
 
   // The words of the running sprint so far, for its room. It changes only with the sprint.
@@ -172,8 +193,29 @@ export function SessionTimer({
     [projectId, startWords],
   );
 
-  const left = running ? running.endsAt - now : 0;
-  const fraction = running ? Math.min(1, Math.max(0, left / (running.minutes * 60_000))) : 0;
+  // The words of the session so far, live from the stored counts. Each save updates them.
+  const totals = useLiveQuery(
+    () => (startWords === undefined ? undefined : projectTotals(projectId)),
+    [projectId, startWords],
+  );
+  const words = totals && startWords !== undefined ? Math.max(0, totals.words - startWords) : 0;
+  const target = running?.session.target;
+
+  // A sprint with no time limit ends at its target, so the gentle prompt comes then.
+  const targetDue =
+    running?.minutes === null && target !== undefined && !running.targetSeen && words >= target;
+  const prompt = asking ?? (targetDue ? 'target' : null);
+
+  const stopwatch = running?.endsAt === null;
+  const left = running?.endsAt ? running.endsAt - now : 0;
+  const fraction =
+    running?.minutes && !stopwatch ? Math.min(1, Math.max(0, left / (running.minutes * 60_000))) : 0;
+  // A sprint with no time limit fills its ring with words instead.
+  const ring = stopwatch ? (target === undefined ? null : Math.min(1, words / target)) : fraction;
+  const counted =
+    target === undefined
+      ? `+${formatWords(words, unit)}`
+      : `${words.toLocaleString()} of ${formatWords(target, unit)}`;
 
   return (
     <>
@@ -196,6 +238,13 @@ export function SessionTimer({
                 Write for {minutes} minutes
               </DropdownMenuItem>
             ))}
+            <DropdownMenuItem
+              onSelect={() => {
+                void start(null);
+              }}
+            >
+              Stopwatch, no time limit
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => {
@@ -210,7 +259,7 @@ export function SessionTimer({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">
-              {!running.overtime && (
+              {ring !== null && (running.endsAt === null || !running.overtime) && (
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 -rotate-90">
                   <circle cx="12" cy="12" r={RADIUS} fill="none" stroke="var(--rule)" strokeWidth="2.5" />
                   <circle
@@ -222,18 +271,30 @@ export function SessionTimer({
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeDasharray={CIRCUMFERENCE}
-                    strokeDashoffset={CIRCUMFERENCE * (1 - fraction)}
+                    strokeDashoffset={CIRCUMFERENCE * (1 - ring)}
                   />
                 </svg>
               )}
-              {running.overtime ? (
-                'Session open'
+              {stopwatch ? (
+                // The name holds the visible time and count, so a voice command that says them works (WCAG 2.5.3).
+                <span>
+                  <span className="sr-only">Stopwatch, </span>
+                  <span className="tabular-nums">{clockText(now - running.session.startedAt, 'down')}</span>
+                  <span className="sr-only"> so far, </span>
+                  <span className="ml-2 text-muted tabular-nums max-sm:sr-only">{counted}</span>
+                </span>
+              ) : running.overtime ? (
+                <span>
+                  Session open
+                  <span className="sr-only"> with </span>
+                  <span className="ml-2 text-muted tabular-nums max-sm:sr-only">{counted}</span>
+                </span>
               ) : (
-                // The name holds the visible time, so a voice command that says it works (WCAG 2.5.3).
                 <span>
                   <span className="sr-only">Session timer, </span>
                   <span className="tabular-nums">{clockText(left)}</span>
-                  <span className="sr-only"> left</span>
+                  <span className="sr-only"> left, </span>
+                  <span className="ml-2 text-muted tabular-nums max-sm:sr-only">{counted}</span>
                 </span>
               )}
             </Button>
@@ -266,24 +327,33 @@ export function SessionTimer({
       />
 
       <AlertDialog
-        open={asking}
+        open={prompt !== null}
         onOpenChange={(open) => {
           // Escape counts as "Keep writing", so the prompt does not come back each second.
-          if (!open) setRunning((r) => (r ? { ...r, overtime: true } : r));
-          setAsking(open);
+          if (!open)
+            setRunning((r) =>
+              r ? (prompt === 'target' ? { ...r, targetSeen: true } : { ...r, overtime: true }) : r,
+            );
+          if (!open) setAsking(null);
         }}
       >
         <AlertDialogContent>
-          <AlertDialogTitle>Close the session?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {prompt === 'target' ? 'You reached your target' : 'Close the session?'}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Your {running?.minutes ?? ''} minutes are up. You can close the session now or keep writing.
+            {prompt === 'target'
+              ? `You wrote ${counted}. You can end the sprint now or keep writing.`
+              : `Your ${String(running?.minutes ?? '')} minutes are up. You can close the session now or keep writing.`}
           </AlertDialogDescription>
           <div className="flex flex-wrap justify-end gap-2">
             <AlertDialogCancel asChild>
               <Button variant="outline">Keep writing</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button onClick={() => void close()}>Close session</Button>
+              <Button onClick={() => void close()}>
+                {prompt === 'target' ? 'End the sprint' : 'Close session'}
+              </Button>
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
