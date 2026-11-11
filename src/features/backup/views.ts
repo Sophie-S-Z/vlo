@@ -207,19 +207,25 @@ function changes(value: unknown): void {
 
 /**
  * The Phase 3 rows with new ids, for an import as a copy. `itemId` gives each item's new id. The result
- * also maps each old life stage id to its new id, for the memories that name one, and each old person id
- * to its new id, for the private-name marks in the text.
+ * also maps each old life stage id to its new id, for the memories that name one, each old person id
+ * to its new id, for the private-name marks in the text, and each old Codex entry id to its new id.
  */
 export function copyViews(
   views: ViewRows,
   projectId: string,
   itemId: (old: string) => string,
-): { views: ViewRows; lifeStageId: (old: string) => string; personId: (old: string) => string | null } {
+): {
+  views: ViewRows;
+  lifeStageId: (old: string) => string;
+  personId: (old: string) => string | null;
+  entryId: (old: string) => string | null;
+} {
   const fresh = (rows: readonly { id: string }[]) => new Map(rows.map((row) => [row.id, newId()]));
   const cardIds = fresh(views.cards);
   const threadIds = fresh(views.threads);
   const stageIds = fresh(views.lifeStages);
   const personIds = fresh(views.people);
+  const entryIds = fresh(views.codex);
   const from = (map: Map<string, string>) => (old: string) => map.get(old) ?? old;
   const cardId = from(cardIds);
   const threadId = from(threadIds);
@@ -227,6 +233,7 @@ export function copyViews(
   return {
     lifeStageId,
     personId: (old) => personIds.get(old) ?? null,
+    entryId: (old) => entryIds.get(old) ?? null,
     views: {
       cards: views.cards.map((card) => ({
         ...card,
@@ -267,7 +274,12 @@ export function copyViews(
         const kept = (changes ?? [])
           .filter((change) => itemId(change.itemId) !== change.itemId)
           .map((change) => ({ ...change, itemId: itemId(change.itemId) }));
-        return { ...entry, id: newId(), projectId, ...(kept.length > 0 ? { changes: kept } : {}) };
+        return {
+          ...entry,
+          id: entryIds.get(entry.id) ?? newId(),
+          projectId,
+          ...(kept.length > 0 ? { changes: kept } : {}),
+        };
       }),
       // A citation names its source by key, so the keys stay as they are.
       sources: views.sources.map((source) => ({ ...source, id: newId(), projectId })),

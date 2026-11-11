@@ -155,11 +155,8 @@ export function Binder({ project, items, openItemId, onOpen, onOpenBeside, resea
       openBeside: (item) => {
         latest.current.onOpenBeside?.(item.id);
       },
-      rename: (item) => {
-        setAction({ type: 'rename', item, hasChildren: false });
-      },
-      synopsis: (item) => {
-        setAction({ type: 'synopsis', item, hasChildren: false });
+      edit: (item, type) => {
+        setAction({ type, item, hasChildren: false });
       },
       remove: (item) => {
         const hasChildren = latest.current.nodes.some((n) => n.parentId === item.id);

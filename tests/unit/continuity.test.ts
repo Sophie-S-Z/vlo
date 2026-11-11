@@ -2,7 +2,13 @@ import { Editor } from '@tiptap/core';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { codexMatcher } from '@/features/codex/codex';
-import { resetCodex, setCodexEntries, setContinuityKept, setReadingOrder } from '@/features/codex/codexStore';
+import {
+  getCodex,
+  resetCodex,
+  setCodexEntries,
+  setContinuityKept,
+  setReadingOrder,
+} from '@/features/codex/codexStore';
 import {
   continuityNotes,
   leftBefore,
@@ -61,9 +67,10 @@ describe('rule 1: a name one letter away from a Codex name', () => {
     expect(marks("We met Mria's sister.")).toEqual(['near-name:Mria']);
   });
 
-  test('the first word of a sentence, a Codex name, a short word and a kept word never mark', () => {
+  test('the first word of a sentence, a Codex name or its plural, a short word and a kept word never mark', () => {
     expect(marks('Then she left. “Then go,” he said. Mira Hale and Thea wait.')).toEqual([]);
     expect(marks('Ask Mra and Ted.')).toEqual([]);
+    expect(marks('We met the Hales.')).toEqual([]);
     expect(marks('She saw Mria.', { keptWords: new Set(['Mria']) })).toEqual([]);
     // An English project only: other languages give no near-name list.
     expect(marks('She saw Mria.', { nearNames: null })).toEqual([]);
@@ -123,5 +130,14 @@ describe('the marks in the editor', () => {
     expect(editor.getJSON()).toEqual(before);
     setContinuityKept({ words: ['Mria'], scenes: [sceneKey('m', 's3')] });
     expect(shown(editor)).toEqual([]);
+  });
+
+  test('kept marks that each save reads again as a new object leave the Codex state as it is', () => {
+    setContinuityKept({ words: ['Mria'], scenes: [] });
+    const before = getCodex();
+    setContinuityKept({ words: ['Mria'], scenes: [] });
+    expect(getCodex()).toBe(before);
+    setContinuityKept(undefined);
+    expect(getCodex()).not.toBe(before);
   });
 });

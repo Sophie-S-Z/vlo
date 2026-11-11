@@ -75,18 +75,20 @@
 
 - [x] Tests first: "Mria" in the middle of a sentence marks "Mira"; "Then" at the start of a sentence never marks "Thea"; a Codex name, a word of under 4 letters and a kept word never mark; a mention after "Leaves the story" marks, and the scene of the change and a kept scene do not; the text stays the same.
 - [x] "Not a problem" in the cursor line keeps the word or the scene in the project settings, and the mark goes at once. A browser test turns the check on from the command menu and keeps a mark. Commit.
-- Built: Continuity check is in More tools beside Style check, and in the command menu. A first word counts as the start of a sentence after an end mark, a colon, a quotation mark, a bracket or a dash. A near name must have at least 4 letters, and so must each word of a Codex name that rule 1 reads. A mark has a double underline, so its shape differs from a style check mark. The kept marks are `settings.continuity` (backup version 11). Help version 14.
+- Built: Continuity check is in More tools beside Style check, and in the command menu. A first word counts as the start of a sentence after an end mark, a colon, a quotation mark, a bracket or a dash. A near name must have at least 4 letters, and so must each word of a Codex name that rule 1 reads. A Codex name word with an added "s", such as "the Hales", does not mark. A mark has a double underline, so its shape differs from a style check mark. The kept marks are `settings.continuity` (backup version 11). A copy import moves each kept scene to the new entry and scene ids. The editor rescans only when the kept marks change, not when a save reads the project again. Help version 14.
 
 ### Task N4: Story dates (F67)
 
 **Files:** Modify `src/lib/db.ts` (`Item.storyDate?`), `src/features/binder/ItemDialogs.tsx`, `src/features/binder/BinderItem.tsx`, `src/features/backup/views.ts`, `src/features/backup/file.ts` (backup version 12), `src/features/help/help.ts`. Extend `tests/unit/binder.test.ts` or create `tests/unit/story-dates.test.ts`.
 
-- [ ] Tests first: "Story date" in the item menu of a scene takes a year, a month or a day, and a wrong date gives a message; the date survives save, reload, backup, import and sync. Commit.
+- [x] Tests first: "Story date" in the item menu of a scene takes a year, a month or a day, and a wrong date gives a message; the date survives save, reload, backup, import and sync. Commit.
+- Built: "Story date" sits beside Rename and Edit synopsis in the binder menu of each item with text, except a memory, which has its own date. One dialog edits the title, the synopsis or the story date. An empty date takes the date off (`setStoryDate`). The binder shows the date beside the status. Sync carries the item row whole, so the date needs no sync change. Backup version 12. A copy import copies each item row whole, so `views.ts` needs no change.
 
 ### Task N5: One timeline for a series (F67) and Gate 14
 
 **Files:** Create `src/features/series/SeriesTimeline.tsx`, `tests/e2e/series-timeline.spec.ts`. Modify `src/features/series/series.ts`, `src/features/series/SeriesPage.tsx`, `docs/STATUS.md`.
 
-- [ ] Tests first: dated scenes of two books sort by date, with a partial date at its middle; scenes with one date keep their reading order; undated scenes follow in reading order; each row names its book and opens its scene.
-- [ ] A browser test of the Series page Timeline list, with axe. Commit.
+- [x] Tests first: dated scenes of two books sort by date, with a partial date at its middle; scenes with one date keep their reading order; undated scenes follow in reading order; each row names its book and opens its scene.
+- [x] A browser test of the Series page Timeline list, with axe. Commit.
+- Built: `seriesTimeline` sorts the reading order of the series with `compareDates`. `inReadingOrder` is the one place that puts the items of books in reading order, for the Codex changes and the timeline. With no dated scene, the list says how to add a date and hides the undated scenes. Help version 15.
 - [ ] Gate 14: run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. A fresh review agent reviews the Phase 14 diff against Review Focus 1 to 4. Ask the product owner to run "Run workflow" for all 4 browsers.

@@ -8,6 +8,8 @@ import { BACKUP_VERSION, BackupError, backupFileName, writeBackup } from '@/feat
 import { backupDue, backupLabel, daysBetween } from '@/features/backup/reminder';
 import { safariDevice } from '@/features/backup/safari';
 import { DEFAULT_BOOK } from '@/features/book/book';
+import { addEntry } from '@/features/codex/codex';
+import { sceneKey } from '@/features/codex/continuity';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
 import { updateToJson } from '@/features/export/read';
 import { createProject } from '@/features/library/projects';
@@ -183,8 +185,8 @@ describe('Backup round trip', () => {
         continuity: { words: ['Marla'], scenes: ['entry:item'] },
       },
     });
-    // A poem form (F56) is an item field, so it goes with the item.
-    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet' });
+    // A poem form (F56) and a story date (F67) are item fields, so they go with the item.
+    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet', storyDate: '1994-07' });
     const before = await rowsOf(project.id);
     const texts = await Promise.all(scenes.map((s) => textOf(s.id)));
     const { bytes } = await backUpProject(project.id, { music: false });
@@ -216,6 +218,28 @@ describe('Backup round trip', () => {
       );
       doc.destroy();
     }
+  });
+
+  test('a copy keeps each kept continuity mark (F66), with the new entry and scene ids', async () => {
+    const { project, scenes } = await novelWithText();
+    const scene = scenes[0];
+    if (!scene) throw new Error('The novel has no scene.');
+    const entry = await addEntry(project.id, 'character', 'Mira');
+    const scenesKept = [sceneKey(entry.id, scene.id), sceneKey(entry.id, 'gone')];
+    await db.projects.update(project.id, {
+      settings: { ...project.settings, continuity: { words: ['Mria'], scenes: scenesKept } },
+    });
+    const backup = await readBackup((await backUpProject(project.id, { music: false })).bytes);
+
+    const copyId = await importBackup(backup, 'copy');
+    const copiedEntry = await db.codex.where('projectId').equals(copyId).first();
+    const copiedScene = (await db.items.where('projectId').equals(copyId).toArray()).find(
+      (i) => i.title === scene.title,
+    );
+    expect((await db.projects.get(copyId))?.settings.continuity).toEqual({
+      words: ['Mria'],
+      scenes: [sceneKey(copiedEntry?.id ?? '', copiedScene?.id ?? '')],
+    });
   });
 
   // Plan Task H9 (roadmap F38): a backup from before the change holds word counts.
@@ -484,6 +508,7 @@ describe('Reading a backup', () => {
       ['a wrong poem form', (m) => (row(m, 'items').form = 'limerick'), /has a wrong poem form/],
       ['a version name of no text', (m) => (row(m, 'items').versionName = 42), /has no versionName/],
       ['an empty version name', (m) => (row(m, 'items').versionName = ' '), /has a wrong version name/],
+      ['a wrong story date', (m) => (row(m, 'items').storyDate = '1994-13'), /has a wrong story date/],
       [
         'a wrong day of words',
         (m) => {
