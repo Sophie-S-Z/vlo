@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 17,
+  version: 18,
   date: '2026-11-11',
   guide: [
     {
@@ -127,6 +127,15 @@ export const HELP = {
         'Give the file to a teacher, an editor or a contest. They open the verify page at /verify and drop the file there. The check runs in their browser and sends nothing.',
         'The check shows if someone changed the file. It cannot show who sat at the device.',
         'To prove when the record existed, turn on Add a public timestamp before you download it. Vlo sends one hash of the record to two free OpenTimestamps servers, and Bitcoin confirms it in a few hours. On the verify page, choose Check the timestamp to see the date.',
+      ],
+    },
+    {
+      title: 'Hide the text from people near you',
+      steps: [
+        'Choose Hide text next to the timer, or press Ctrl+Shift+. (Command+Shift+. on a Mac). Press it again to show the text.',
+        'In the Focus menu, pick Blur the words or Cover the words with bars.',
+        'Turn on Keep my paragraph clear to read only the paragraph that you type in. When you leave the text, it hides too.',
+        'Only the screen changes. Your words, the word count and each export stay the same, and a screen reader still reads the text.',
       ],
     },
     {

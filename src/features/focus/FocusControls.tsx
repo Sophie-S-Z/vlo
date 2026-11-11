@@ -5,12 +5,16 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
-import { setFocusPrefs, useFocusPrefs } from './focusPrefs';
+import { HIDE_STYLES, setFocusPrefs, useFocusPrefs, type HideStyle } from './focusPrefs';
 
-/** Focus mode, typewriter scrolling and focus-line dimming. */
+const HIDE_LABEL: Record<HideStyle, string> = { blur: 'Blur the words', bars: 'Cover the words with bars' };
+
+/** Focus mode, typewriter scrolling, focus-line dimming and the choices of Hide the text. */
 export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
   const prefs = useFocusPrefs();
   return (
@@ -39,6 +43,37 @@ export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
           }}
         >
           Dim other lines
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuCheckboxItem
+          checked={prefs.hide}
+          onCheckedChange={(checked) => {
+            setFocusPrefs({ hide: checked });
+          }}
+        >
+          Hide the text
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuRadioGroup
+          aria-label="How to hide the text"
+          value={prefs.hideStyle}
+          onValueChange={(value) => {
+            // Picking a style shows it at once, so the choice turns Hide the text on.
+            setFocusPrefs({ hideStyle: value as HideStyle, hide: true });
+          }}
+        >
+          {HIDE_STYLES.map((style) => (
+            <DropdownMenuRadioItem key={style} value={style}>
+              {HIDE_LABEL[style]}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+        <DropdownMenuCheckboxItem
+          checked={prefs.hideKeep}
+          onCheckedChange={(checked) => {
+            setFocusPrefs({ hideKeep: checked });
+          }}
+        >
+          Keep my paragraph clear
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -179,6 +179,47 @@
   transition: opacity 0.2s var(--ease-reveal, ease-out);
 }
 
+/* Hide the text (src/features/focus/hideText.ts). Only the screen changes: the words, the word count,
+   every export and a screen reader stay the same. With "Keep my paragraph clear", the block with the
+   caret stays clear while the text has focus. The caret keeps the text color in each style. */
+html[data-hide-text] .vlo-manuscript {
+  caret-color: var(--text);
+}
+
+html[data-hide-text='blur']:not([data-hide-keep]) .vlo-manuscript > *,
+html[data-hide-text='blur'][data-hide-keep] .vlo-manuscript:not(.ProseMirror-focused) > *,
+html[data-hide-text='blur'][data-hide-keep] .vlo-manuscript.ProseMirror-focused > :not(.vlo-caret-block) {
+  filter: blur(0.4em);
+}
+
+/* Bars: each line becomes a solid bar. The letters are clear of color, and a line through them as thick
+   as the text covers the words and the spaces between them. Inner marks lose their own colors and lines. */
+html[data-hide-text='bars']:not([data-hide-keep]) .vlo-manuscript > *,
+html[data-hide-text='bars']:not([data-hide-keep]) .vlo-manuscript > * *,
+html[data-hide-text='bars'][data-hide-keep] .vlo-manuscript:not(.ProseMirror-focused) > *,
+html[data-hide-text='bars'][data-hide-keep] .vlo-manuscript:not(.ProseMirror-focused) > * *,
+html[data-hide-text='bars'][data-hide-keep] .vlo-manuscript.ProseMirror-focused > :not(.vlo-caret-block),
+html[data-hide-text='bars'][data-hide-keep] .vlo-manuscript.ProseMirror-focused > :not(.vlo-caret-block) * {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  text-decoration-line: line-through !important;
+  text-decoration-style: solid !important;
+  text-decoration-color: var(--muted) !important;
+  text-decoration-thickness: 1.05em !important;
+  text-decoration-skip-ink: none;
+  background: none !important;
+}
+
+/* An equation draws its own glyphs, so it blurs in both styles. */
+html[data-hide-text='bars']:not([data-hide-keep]) .vlo-manuscript .vlo-math,
+html[data-hide-text='bars'][data-hide-keep] .vlo-manuscript:not(.ProseMirror-focused) .vlo-math,
+html[data-hide-text='bars'][data-hide-keep]
+  .vlo-manuscript.ProseMirror-focused
+  > :not(.vlo-caret-block)
+  .vlo-math {
+  filter: blur(0.4em);
+}
+
 /* Typewriter scrolling needs room below the last line to bring it to the middle. */
 .vlo-typewriter .vlo-manuscript {
   padding-bottom: 50vh;
