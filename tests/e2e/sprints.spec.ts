@@ -60,6 +60,31 @@ test('a sprint counts only its own words and shows the result', async ({ page })
   await expect(page.getByRole('button', { name: 'Timer' })).toBeFocused();
 });
 
+test('a sprint with no time limit ends at its target, and the timer shows the words so far', async ({
+  page,
+}) => {
+  await newNovel(page);
+  await page.getByRole('button', { name: 'Timer' }).click();
+  await page.getByRole('menuitem', { name: 'Start a sprint' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Start a sprint' });
+  await dialog.getByRole('group', { name: 'Minutes' }).getByRole('button', { name: 'No limit' }).click();
+  await dialog.getByLabel('Word target').fill('4');
+  await dialog.getByRole('button', { name: 'Start the sprint' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('button', { name: /^Stopwatch, / })).toHaveAccessibleName(
+    /^Stopwatch, 0:0\d so far, 0 of 4 words$/,
+  );
+  await page.getByRole('textbox', { name: 'Scene 1' }).click();
+  await page.keyboard.type('The tide came in.');
+
+  const prompt = page.getByRole('alertdialog', { name: 'You reached your target' });
+  await expect(prompt).toContainText('You wrote 4 of 4 words.');
+  expect(await seriousIssues(page)).toEqual([]);
+  await prompt.getByRole('button', { name: 'End the sprint' }).click();
+  const result = page.getByRole('dialog', { name: 'Sprint result' });
+  await expect(result.getByTestId('sprint-words')).toHaveText('4 of 4 words in 1 minute');
+});
+
 test('a sprint room gets only the code, a member id, the nickname and the count', async ({ page }) => {
   const calls: { name: string; body: Record<string, unknown> }[] = [];
   await page.route(`${RPC}*`, async (route) => {

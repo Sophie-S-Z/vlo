@@ -19,12 +19,15 @@ import { Standings } from './RoomPanel';
  */
 
 export interface SprintStart {
-  minutes: number;
+  /** The minutes of the sprint, or null for a sprint with no time limit that ends at the target. */
+  minutes: number | null;
   target: number;
   room?: Room;
 }
 
 const NICKNAME_KEY = 'vlo:sprint-nickname';
+/** The Minutes value of a sprint with no time limit. */
+const NO_LIMIT = 'none';
 const number = new Intl.NumberFormat();
 
 function savedNickname(): string {
@@ -76,7 +79,11 @@ export function SprintDialog({
           // The nickname is a convenience for next time.
         }
       }
-      await onStart({ minutes: Number(minutes), target: words, ...(room ? { room } : {}) });
+      await onStart({
+        minutes: minutes === NO_LIMIT ? null : Number(minutes),
+        target: words,
+        ...(room ? { room } : {}),
+      });
       onOpenChange(false);
     } catch (problem) {
       setError(roomMessage(problem));
@@ -91,7 +98,8 @@ export function SprintDialog({
         <div className="grid gap-1">
           <DialogTitle>Start a sprint</DialogTitle>
           <DialogDescription>
-            Write to a target in a set time. Only the {unit} of the sprint count.
+            Write to a target in a set time, or with no time limit until you reach it. Only the {unit} of the
+            sprint count.
           </DialogDescription>
         </div>
         <form
@@ -108,7 +116,10 @@ export function SprintDialog({
             </span>
             <Segmented
               label="Minutes"
-              options={lengths.map((m) => ({ value: String(m), label: String(m) }))}
+              options={[
+                ...lengths.map((m) => ({ value: String(m), label: String(m) })),
+                { value: NO_LIMIT, label: 'No limit' },
+              ]}
               value={minutes}
               onChange={setMinutes}
             />
@@ -236,7 +247,8 @@ export function SprintResult({
               data-testid="sprint-words"
             >
               <span className="font-display text-4xl font-semibold">{number.format(outcome.words)}</span> of{' '}
-              {formatWords(outcome.target, unit)} in {outcome.minutes} minutes
+              {formatWords(outcome.target, unit)} in {outcome.minutes}{' '}
+              {outcome.minutes === 1 ? 'minute' : 'minutes'}
             </p>
             {outcome.standings && outcome.standings.length > 0 && (
               <div className="grid gap-1">

@@ -617,6 +617,12 @@ Last update: 2026-11-10
     so the day of the set counts from that moment. With goals on, a ring next to the timer shows the goal of
     today and opens Progress. Checks: unit tests for the cut rules, the day of the set, the backup check and
     `todayGoal`; browser tests for a goal to cut, the ring on the writing screen, and no ring with goals off.
+  - Timer: Timer has "Stopwatch, no time limit", which counts up past an hour and closes with the real
+    minutes. A sprint can have No limit: it ends at its target with the gentle prompt, and the result shows
+    the real minutes. While a session runs, the timer shows its words so far ("+5 words", or "8 of 20
+    words" in a sprint), live from the stored counts. A sprint with no limit fills its ring with words. A
+    stopwatch session keeps its start as `endedAt` until it closes. Checks: unit tests for the stopwatch row
+    and the time text; browser tests for the stopwatch past an hour and a sprint with no limit, with axe.
   - Not built, with the reason: a native iOS app (spec non-goal; Vlo installs as a PWA and works offline),
     free trials (Vlo is free), reader links (Vlo has them since Phase 9), a toggle of all headings (the binder
     holds each scene as its own item), input lag (the Gate 1 budgets hold at 200,000 words), and folder

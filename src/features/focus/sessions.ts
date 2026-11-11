@@ -13,15 +13,20 @@ export async function projectTotals(projectId: string): Promise<{ words: number;
 
 /**
  * Starts a writing session, or a sprint when it has a word target. `endedAt` holds the planned end until
- * the writer closes the session.
+ * the writer closes the session. A stopwatch (`minutes` null) has no planned end, so `endedAt` holds the
+ * start until then.
  */
-export async function startSession(projectId: string, minutes: number, target?: number): Promise<Session> {
+export async function startSession(
+  projectId: string,
+  minutes: number | null,
+  target?: number,
+): Promise<Session> {
   const startedAt = clock.now();
   const session: Session = {
     id: newId(),
     projectId,
     startedAt,
-    endedAt: startedAt + minutes * 60_000,
+    endedAt: minutes === null ? startedAt : startedAt + minutes * 60_000,
     wordsAdded: 0,
     poemsAdded: 0,
     ...(target === undefined ? {} : { target }),

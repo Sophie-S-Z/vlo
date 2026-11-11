@@ -124,6 +124,33 @@ test('the session timer ends with a gentle prompt and no penalty', async ({ page
   );
 });
 
+test('the stopwatch counts up with no time limit and shows the words of the session', async ({ page }) => {
+  await page.clock.install();
+  await newNovel(page);
+  await page.keyboard.type('Before the watch. ');
+  await expect(page.getByText('3 words', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Timer' }).click();
+  await page.getByRole('menuitem', { name: 'Stopwatch, no time limit' }).click();
+  const watch = page.getByRole('button', { name: /^Stopwatch, / });
+  await expect(watch).toHaveAccessibleName(/^Stopwatch, 0:0\d so far, \+0 words$/);
+  await scene(page, 1).click();
+  await page.keyboard.press('End');
+  await page.keyboard.type('Rain on the ledger.');
+  await expect(page.getByText('7 words', { exact: true })).toBeVisible();
+  // Only the words of the session count, and the time passes an hour with no prompt.
+  await expect(watch).toHaveAccessibleName(/^Stopwatch, \d+:\d\d so far, \+4 words$/);
+  await page.clock.fastForward('01:05:00');
+  await expect(watch).toHaveAccessibleName(/^Stopwatch, 1:05:\d\d so far, \+4 words$/);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  expect(await seriousIssues(page)).toEqual([]);
+
+  await watch.click();
+  await page.getByRole('menuitem', { name: 'Close session' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Session closed' })).toHaveText(
+    'Session closed. You wrote 4 words in 65 minutes.',
+  );
+});
+
 /** The project's session rows, read from Vlo's own database. */
 function sessionRows(page: Page) {
   return page.evaluate(

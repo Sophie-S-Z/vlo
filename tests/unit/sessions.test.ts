@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
+import { clockText } from '@/features/focus/SessionTimer';
 import { endSession, projectTotals, startSession } from '@/features/focus/sessions';
 import { createProject } from '@/features/library/projects';
 import { clock } from '@/lib/clock';
@@ -41,4 +42,22 @@ test('projectTotals sums word counts and counts poems', async () => {
   const { project, firstItemId } = await createProject({ title: 'Salt', templates: ['poetry'] });
   await db.items.update(firstItemId, { wordCount: 12 });
   expect(await projectTotals(project.id)).toEqual({ words: 12, poems: 1 });
+});
+
+test('a stopwatch has no planned end, and closing it records the real end (Ellipsus October 2026)', async () => {
+  const start = now;
+  const session = await startSession('p', null);
+  expect(session).toMatchObject({ startedAt: start, endedAt: start });
+  now += 95 * 60_000;
+  await endSession(session.id, 1_200, 0);
+  expect(await db.sessions.get(session.id)).toMatchObject({ endedAt: start + 95 * 60_000 });
+});
+
+test('the timer shows minutes and seconds, and hours from one hour', () => {
+  expect(clockText(600_000)).toBe('10:00');
+  // Time left rounds up, so 0:00 shows only at the end. Time gone rounds down.
+  expect(clockText(59_001)).toBe('1:00');
+  expect(clockText(59_999, 'down')).toBe('0:59');
+  expect(clockText(3_725_000, 'down')).toBe('1:02:05');
+  expect(clockText(-5)).toBe('0:00');
 });
