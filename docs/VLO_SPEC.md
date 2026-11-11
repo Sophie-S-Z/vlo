@@ -637,9 +637,10 @@ Vlo's app must match the marketing site's brand.
 
 - **Fonts:** Fraunces (display headings, uses the wght, opsz and SOFT axes), Newsreader (manuscript text), Inter (interface), JetBrains Mono (counters, logs, word counts).
 - **Themes:** define all colors as CSS variables on `:root`. Follow the system color scheme by default.
-  - Ink (dark): background #0E0D0C, surface #171513, text #EFE8DC, muted #8C857A, rule #2A2724, accent #E0664B.
-  - Paper (light): background #F5F1E8, surface #FBF8F2, text #1C1A17, muted #6B655C, rule #E2DCCF, accent #C8452D.
-  - Sepia: background #EFE3CC, text #3A2E22, accent #A8432A.
+  - Two base colors and one accent. Ink (a blue-black) and Paper (a stone white) swap roles between the dark and the light theme. Celadon (the pale green glaze of old pottery) is the accent.
+  - Ink (dark): background #0B0E14, surface #14171E, text #EBE9E5, muted #979BA3, rule #282B32, accent #A9D4B3.
+  - Paper (light): background #F5F4F1, surface #FCFCF9, text #141A23, muted #5B616A, rule #DFDED9, accent #689373.
+  - Sepia: background #EFE3CC, text #3A2E22, accent #325E3F.
 - **Shape:** 10 px card corners, 1 px rules, soft shadow only on hover, no gradients on interface surfaces.
 - **Texture:** 4% film grain (SVG feTurbulence) on the Library and the onboarding only. Never in the editor.
 - **Motion tokens:** reveals use ease "power3.out", 0.4 s to 0.9 s. Interface springs use stiffness 300 and damping 30.

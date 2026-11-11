@@ -62,9 +62,7 @@ export function NewProjectDialog() {
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogTitle>New project</DialogTitle>
-        <DialogDescription>
-          Pick one shape or mix several. You can rename the project at any time.
-        </DialogDescription>
+        <DialogDescription>You can rename the project at any time.</DialogDescription>
         <form
           onSubmit={(event) => {
             event.preventDefault();

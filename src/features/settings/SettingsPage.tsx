@@ -1,6 +1,6 @@
 import { lazy, Suspense, useId, useRef, useState } from 'react';
 import { useMotionAllowed, usePreferences } from '@/app/PreferencesProvider';
-import type { ThemeChoice } from '@/app/preferences';
+import type { ResolvedTheme, ThemeChoice } from '@/app/preferences';
 import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
@@ -34,6 +34,19 @@ const THEME_HINTS: Record<ThemeChoice, string> = {
   sepia: 'Brown text on a warm page.',
   contrast: 'Black text on a white page, with the strongest contrast.',
 };
+
+/** A small page in a theme's own colors. The theme variables apply to any element with `data-theme`. */
+function ThemeSwatch({ theme }: { theme: ResolvedTheme }) {
+  return (
+    <span
+      data-theme={theme}
+      className="flex h-8 w-12 items-center justify-center gap-1 rounded-md border border-rule bg-bg font-display text-sm text-text"
+    >
+      Aa
+      <span className="size-1.5 rounded-full bg-accent" />
+    </span>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -119,7 +132,7 @@ export function SettingsPage() {
               return (
                 <div key={choice} className="flex min-h-11 items-start gap-3">
                   <RadioGroupItem id={id} value={choice} aria-describedby={`${id}-hint`} className="mt-0.5" />
-                  <div className="grid gap-0.5">
+                  <div className="grid flex-1 gap-0.5">
                     <label htmlFor={id} className="cursor-pointer">
                       {THEME_LABELS[choice]}
                     </label>
@@ -127,6 +140,15 @@ export function SettingsPage() {
                       {THEME_HINTS[choice]}
                     </span>
                   </div>
+                  {/* System shows Paper with Ink over its lower right half. */}
+                  <span aria-hidden="true" className="relative shrink-0">
+                    <ThemeSwatch theme={choice === 'system' ? 'paper' : choice} />
+                    {choice === 'system' && (
+                      <span className="absolute inset-0 [clip-path:polygon(100%_0,100%_100%,0_100%)]">
+                        <ThemeSwatch theme="ink" />
+                      </span>
+                    )}
+                  </span>
                 </div>
               );
             })}

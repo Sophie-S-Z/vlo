@@ -9,9 +9,9 @@ const font = readFileSync(
   join(root, 'node_modules/@fontsource-variable/fraunces/files/fraunces-latin-full-normal.woff2'),
 ).toString('base64');
 
-const INK = '#0e0d0c';
-const PAPER_TEXT = '#efe8dc';
-const ACCENT = '#e0664b';
+const INK = '#0b0e14';
+const PAPER_TEXT = '#ebe9e5';
+const ACCENT = '#a9d4b3';
 
 // scale: share of the canvas that the mark fills. Maskable icons keep the mark inside the 80% safe zone.
 function html(size, scale, radius) {

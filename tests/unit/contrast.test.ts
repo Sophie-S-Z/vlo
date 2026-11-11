@@ -54,22 +54,29 @@ test('the Contrast theme meets 7:1 for text and 3:1 for borders', () => {
 
 test('spec colors are present unchanged', () => {
   expect(themeBlock('ink')).toMatchObject({
-    bg: '#0e0d0c',
-    surface: '#171513',
-    text: '#efe8dc',
-    muted: '#8c857a',
-    rule: '#2a2724',
-    accent: '#e0664b',
+    bg: '#0b0e14',
+    surface: '#14171e',
+    text: '#ebe9e5',
+    muted: '#979ba3',
+    rule: '#282b32',
+    accent: '#a9d4b3',
   });
   expect(themeBlock('paper')).toMatchObject({
-    bg: '#f5f1e8',
-    surface: '#fbf8f2',
-    text: '#1c1a17',
-    muted: '#6b655c',
-    rule: '#e2dccf',
-    accent: '#c8452d',
+    bg: '#f5f4f1',
+    surface: '#fcfcf9',
+    text: '#141a23',
+    muted: '#5b616a',
+    rule: '#dfded9',
+    accent: '#689373',
   });
-  expect(themeBlock('sepia')).toMatchObject({ bg: '#efe3cc', text: '#3a2e22', accent: '#a8432a' });
+  expect(themeBlock('sepia')).toMatchObject({ bg: '#efe3cc', text: '#3a2e22', accent: '#325e3f' });
+});
+
+test('text on the accent color meets WCAG AA in every theme', () => {
+  for (const theme of ['ink', 'paper', 'sepia', 'contrast']) {
+    const vars = themeBlock(theme);
+    expect(contrast(vars['on-accent'] ?? '', vars.accent ?? ''), theme).toBeGreaterThanOrEqual(4.5);
+  }
 });
 
 test('an unchecked switch has a --muted border, which meets 3:1 for controls in every theme', () => {
