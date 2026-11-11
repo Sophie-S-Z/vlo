@@ -47,3 +47,49 @@ test('a Codex entry marks its names in the text, shows on the cursor, and counts
     'Mira, character: Owes the harbour master.',
   );
 });
+
+test('F65: a change at Scene 2 shows on the cursor in Scene 2, and not in Scene 1', async ({ page }) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  await page
+    .getByRole('dialog', { name: 'New project' })
+    .getByRole('button', { name: 'Create project' })
+    .click();
+  await expect(scene(page)).toBeFocused();
+  await page.keyboard.type('Mira rowed out.');
+  const binder = page.getByRole('navigation', { name: 'Binder' });
+  await binder.getByRole('button', { name: 'Options for Chapter 1' }).click();
+  await page.getByRole('menuitem', { name: 'Add Scene inside' }).click();
+  const second = page.getByRole('textbox', { name: 'Scene 2' });
+  await expect(second).toBeFocused();
+  await page.keyboard.type('Mira waits.');
+
+  await views(page).getByRole('link', { name: 'Codex' }).click();
+  await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
+  await page.getByRole('button', { name: 'Add entry' }).click();
+  await page.getByRole('textbox', { name: 'Note' }).fill('Ferry pilot.');
+  await page.getByRole('button', { name: 'Add a change' }).click();
+  const form = page.getByRole('form', { name: 'Add a change' });
+  await expect(form.getByLabel('From the scene')).toBeFocused();
+  await form.getByLabel('From the scene').selectOption({ label: 'Scene 2' });
+  await form.getByLabel('Change').fill('Loses her left eye.');
+  expect(await seriousIssues(page)).toEqual([]);
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Added the change.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add a change' })).toBeFocused();
+  await expect(page.getByRole('list', { name: 'Changes at scenes' })).toContainText(
+    'Scene 2Loses her left eye.',
+  );
+  expect(await seriousIssues(page)).toEqual([]);
+
+  await views(page).getByRole('link', { name: 'Write' }).click();
+  await page.getByRole('button', { name: 'More tools' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Show Codex names' }).click();
+  const note = page.locator('[data-vlo-cursor-note]');
+  await binder.getByRole('button', { name: 'Scene 2', exact: true }).click();
+  await second.locator('.vlo-codex').click();
+  await expect(note).toHaveText('Mira, character: Ferry pilot. Loses her left eye.');
+  await binder.getByRole('button', { name: 'Scene 1', exact: true }).click();
+  await scene(page).locator('.vlo-codex').click();
+  await expect(note).toHaveText('Mira, character: Ferry pilot.');
+});

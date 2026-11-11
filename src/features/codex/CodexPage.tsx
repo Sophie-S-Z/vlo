@@ -9,7 +9,7 @@ import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import { ProjectMissing } from '@/features/project/ViewNotices';
 import { shareEntry, useSeriesOf } from '@/features/series/series';
-import { db, type CodexEntry, type CodexKind, type Series } from '@/lib/db';
+import { db, type CodexEntry, type CodexKind, type Item, type Series } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Input } from '@/ui/input';
@@ -26,7 +26,10 @@ import {
   restoreEntry,
   updateEntry,
   useCodex,
+  useReadingOrder,
+  type ReadingItem,
 } from './codex';
+import { CodexChanges } from './CodexChanges';
 import { CodexMatrix } from './CodexMatrix';
 
 /*
@@ -134,12 +137,16 @@ function EntryPanel({
   projectId,
   series,
   mentions,
+  order,
+  scenes,
   onDelete,
 }: {
   entry: CodexEntry;
   projectId: string;
   series: Series | null;
   mentions: number;
+  order: readonly ReadingItem[];
+  scenes: readonly Item[];
   onDelete: (entry: CodexEntry) => void;
 }) {
   const id = useId();
@@ -244,6 +251,7 @@ function EntryPanel({
           }}
         />
       </div>
+      <CodexChanges entry={entry} projectId={projectId} order={order} scenes={scenes} />
       {series && (
         <div className="grid gap-1.5">
           <div className="flex items-center gap-3">
@@ -284,6 +292,7 @@ export function CodexPage() {
   const state = useProject(projectId);
   const entries = useCodex(projectId);
   const series = useSeriesOf(projectId);
+  const order = useReadingOrder(projectId);
   const texts = useLiveQuery(() => db.itemTexts.where('projectId').equals(projectId).toArray(), [projectId]);
   const [message, setMessage] = useState('');
   const [deleted, setDeleted] = useState<CodexEntry | null>(null);
@@ -294,7 +303,8 @@ export function CodexPage() {
     if (deleted) undoRef.current?.focus();
   }, [deleted]);
 
-  if (state.status === 'loading' || entries === undefined || series === undefined) return null;
+  if (state.status === 'loading' || entries === undefined || series === undefined || order === undefined)
+    return null;
   if (state.status === 'missing') return <ProjectMissing />;
 
   const { project, items } = state;
@@ -404,6 +414,8 @@ export function CodexPage() {
               projectId={project.id}
               series={series}
               mentions={total(open)}
+              order={order}
+              scenes={textItems}
               onDelete={(target) => {
                 deleteEntry(target.id).then(
                   (row) => {

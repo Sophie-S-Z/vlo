@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
-import { db, type CodexEntry, type CodexKind } from '@/lib/db';
+import { flattenTree } from '@/features/binder/tree';
+import { db, type CodexChange, type CodexEntry, type CodexKind, type Item } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderAfterLast, sortByOrder } from '@/lib/order';
 
@@ -21,6 +22,8 @@ export const CODEX_KINDS: readonly { id: CodexKind; label: string; heading: stri
 export const MAX_CODEX_NAME = 80;
 export const MAX_CODEX_NOTE = 5000;
 export const MAX_ALIASES = 20;
+export const MAX_CHANGES = 200;
+export const MAX_CHANGE_TEXT = 500;
 
 /**
  * The Codex of a project: its own entries and the shared entries of its series (F59), in the order the
@@ -125,6 +128,125 @@ export async function restoreEntry(entry: CodexEntry): Promise<void> {
     await db.codex.put(entry);
     await touch(entry.projectId);
   });
+}
+
+/* ------------------------------------------------------------------ Changes at a scene (F65) */
+
+/** Adds a change to an entry, or saves one that the entry has. Returns the saved change. */
+export async function saveChange(
+  entryId: string,
+  change: { id?: string; itemId: string; text: string; leaves: boolean },
+): Promise<CodexChange> {
+  const text = change.text.trim();
+  if (text === '') throw new RangeError('Type the change.');
+  if (text.length > MAX_CHANGE_TEXT)
+    throw new RangeError(`A change can have up to ${String(MAX_CHANGE_TEXT)} characters.`);
+  const saved: CodexChange = {
+    id: change.id ?? newId(),
+    itemId: change.itemId,
+    text,
+    ...(change.leaves ? { leaves: true } : {}),
+  };
+  await db.transaction('rw', db.codex, db.projects, async () => {
+    const entry = await db.codex.get(entryId);
+    if (!entry) throw new RangeError('This entry is not on this device now.');
+    const changes = entry.changes ?? [];
+    const known = changes.some((c) => c.id === saved.id);
+    if (!known && changes.length >= MAX_CHANGES)
+      throw new RangeError(`An entry can have up to ${String(MAX_CHANGES)} changes.`);
+    await db.codex.put({
+      ...entry,
+      changes: known ? changes.map((c) => (c.id === saved.id ? saved : c)) : [...changes, saved],
+    });
+    await touch(entry.projectId);
+  });
+  return saved;
+}
+
+/** Deletes a change and returns it, for Undo. */
+export async function deleteChange(entryId: string, changeId: string): Promise<CodexChange | undefined> {
+  return db.transaction('rw', db.codex, db.projects, async () => {
+    const entry = await db.codex.get(entryId);
+    const gone = entry?.changes?.find((c) => c.id === changeId);
+    if (!entry || !gone) return undefined;
+    const { changes = [], ...rest } = entry;
+    const left = changes.filter((c) => c.id !== changeId);
+    await db.codex.put(left.length > 0 ? { ...rest, changes: left } : rest);
+    await touch(entry.projectId);
+    return gone;
+  });
+}
+
+/** An item in reading order, with the title of its book. */
+export interface ReadingItem {
+  item: Item;
+  book: string;
+}
+
+/**
+ * The items of a project in reading order: the binder order. In a series, the books before it come
+ * first, in the series order, and the books after it follow, so a change in book 1 holds in book 2.
+ */
+export async function readingOrder(projectId: string): Promise<ReadingItem[]> {
+  return db.transaction('r', db.series, db.items, db.projects, async () => {
+    const series = await db.series.where('projectIds').equals(projectId).first();
+    const books = series?.projectIds ?? [projectId];
+    const [items, projects] = await Promise.all([
+      db.items.where('projectId').anyOf(books).toArray(),
+      db.projects.bulkGet(books),
+    ]);
+    return books.flatMap((book, i) =>
+      flattenTree(items.filter((item) => item.projectId === book)).map(({ item }) => ({
+        item,
+        book: projects[i]?.title ?? '',
+      })),
+    );
+  });
+}
+
+/** The reading order of a project, live. Undefined while it loads. */
+export function useReadingOrder(projectId: string): ReadingItem[] | undefined {
+  return useLiveQuery(() => readingOrder(projectId), [projectId]);
+}
+
+/** The place of each item in reading order, from 0. */
+export const placesOf = (order: readonly ReadingItem[]): ReadonlyMap<string, number> =>
+  new Map(order.map(({ item }, i) => [item.id, i]));
+
+/**
+ * The changes of an entry that hold at an item, in reading order: those at the item or before it. A
+ * change whose scene is gone holds nowhere, and so does each change at an item with no place.
+ */
+export function changesAt(
+  entry: CodexEntry,
+  places: ReadonlyMap<string, number>,
+  itemId: string,
+): CodexChange[] {
+  const here = places.get(itemId);
+  if (here === undefined) return [];
+  return (entry.changes ?? [])
+    .map((change) => ({ change, at: places.get(change.itemId) ?? Infinity }))
+    .filter(({ at }) => at <= here)
+    .sort((a, b) => a.at - b.at)
+    .map(({ change }) => change);
+}
+
+/** Ends a part of a note with a period, unless it ends with a period, a question mark or an exclamation mark. */
+const stop = (text: string) => (/[.?!]$/.test(text) ? text : `${text}.`);
+
+/** The entry as it is at an item: its note, then the text of each change that holds there. */
+export function entryAt(entry: CodexEntry, places: ReadonlyMap<string, number>, itemId: string): CodexEntry {
+  const held = changesAt(entry, places, itemId);
+  if (held.length === 0) return entry;
+  const parts = [entry.note?.trim() ?? '', ...held.map((change) => change.text)].filter(Boolean);
+  return { ...entry, note: parts.map(stop).join(' ') };
+}
+
+/** The Codex of a project as it is at an item (F65), for the reader panel. */
+export async function codexAt(projectId: string, itemId: string): Promise<CodexEntry[]> {
+  const [entries, order] = await Promise.all([codexFor(projectId), readingOrder(projectId)]);
+  const places = placesOf(order);
+  return entries.map((entry) => entryAt(entry, places, itemId));
 }
 
 export interface CodexMatch {

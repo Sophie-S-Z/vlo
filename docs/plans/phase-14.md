@@ -50,19 +50,20 @@
 
 **Interfaces:**
 
-- Produces: `CodexChange { id: string; itemId: string; projectId: string; text: string; leaves?: true }`.
-- Produces: `entryAt(entry: CodexEntry, place: (change: CodexChange) => number | null, here: number): { note: string; changes: CodexChange[]; gone: CodexChange | null }`.
-- Produces: `readingPlaces(books: readonly string[], items: ReadonlyMap<string, readonly Item[]>): (projectId: string, itemId: string) => number | null`.
+- Produces: `CodexChange { id: string; itemId: string; text: string; leaves?: true }` and `CodexEntry.changes?: CodexChange[]`.
+- Produces: `readingOrder(projectId): Promise<ReadingItem[]>`, `placesOf(order): ReadonlyMap<string, number>`, `changesAt(entry, places, itemId): CodexChange[]` and `entryAt(entry, places, itemId): CodexEntry`.
 
-- [ ] Tests first: a change holds at its scene and after it, and not before it; a change in book 1 holds in book 2; a change of a deleted scene holds nowhere; changes survive save, reload, backup, a copy import (new item ids) and sync; an older backup with no changes reads.
-- [ ] The entry panel lists the changes, each with its scene, and adds, edits and deletes them, with Undo. Commit.
+- [x] Tests first: a change holds at its scene and after it, and not before it; a change in book 1 holds in book 2; a change of a deleted scene holds nowhere; changes survive save, reload, backup, a copy import (new item ids) and sync; an older backup with no changes reads.
+- [x] The entry panel lists the changes, each with its scene, and adds, edits and deletes them, with Undo. Commit.
+- Built: a change names its scene by item id only, because item ids are unique on every device. The reading order covers each book of the series, so a change in book 2 has a later place than each scene of book 1. A copy import keeps only the changes of its own scenes, with their new ids, because the copy is in no series. Help version 13.
 
 ### Task N2: The entry at the open scene (F65)
 
 **Files:** Modify `src/features/codex/codexStore.ts` (the place of each scene), `src/features/editor/CursorNote.tsx`, `src/features/ai/reader.ts` (`codexContext`), `src/features/project/ProjectPage.tsx`. Extend `tests/unit/codex-changes.test.ts` and `tests/unit/reader.test.ts`.
 
-- [ ] Tests first: the cursor line on a Codex name shows the note and the changes up to the open scene; a reader panel request holds the entry at its scene and no later change, inside the Codex budget.
-- [ ] A browser test: a change at scene 2 shows in scene 3 and not in scene 1, and axe finds no serious issue. Commit.
+- [x] Tests first: the cursor line on a Codex name shows the note and the changes up to the open scene; a reader panel request holds the entry at its scene and no later change, inside the Codex budget.
+- [x] A browser test: a change at scene 2 shows in scene 3 and not in scene 1, and axe finds no serious issue. Commit.
+- Built: `codexAt(projectId, itemId)` gives the Codex as it is at an item, and the reader panel request uses it, so `codexContext` and its 600-token budget do not change. The project screen puts the reading places in `codexStore`, and the cursor line folds the entry at its own item. A change shows as the note, then the text of each change that holds, each ending with a period.
 
 ### Task N3: The continuity check (F66)
 

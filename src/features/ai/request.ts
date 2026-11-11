@@ -2,7 +2,7 @@ import type { JSONContent } from '@tiptap/core';
 import type { EditorState } from '@tiptap/pm/state';
 import { docBody } from '@/features/editor/itemText';
 import { leafText } from '@/features/editor/leafText';
-import { codexFor } from '@/features/codex/codex';
+import { codexAt, codexFor } from '@/features/codex/codex';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { privatePeople } from '@/features/people/people';
 import { seriesOf } from '@/features/series/series';
@@ -105,8 +105,10 @@ export async function buildAiRequest(input: RequestInput): Promise<BuiltRequest>
         ...(context ? { item: context } : {}),
         question: input.question,
         passages: needsAll ? await passages(project, items, context) : [],
-        // Only the reader panel reads the Codex (plan decision K8).
-        ...(action === 'panel' ? { codex: await codexFor(project.id) } : {}),
+        // Only the reader panel reads the Codex (plan decision K8), as it is at the open item (F65).
+        ...(action === 'panel'
+          ? { codex: await (context ? codexAt(project.id, context.id) : codexFor(project.id)) }
+          : {}),
         budget,
         ...(input.inBrowser ? { passageBudget: WEBLLM_PASSAGES } : {}),
       });
