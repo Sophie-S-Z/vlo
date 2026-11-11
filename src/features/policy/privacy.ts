@@ -8,8 +8,8 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 7,
-  date: '2026-11-10',
+  version: 8,
+  date: '2026-11-11',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
@@ -62,6 +62,12 @@ export const PRIVACY = {
       when: 'Only when you sprint with friends, from the start of the sprint to its end.',
       sends:
         'The room code, the nickname that you type, the count of the sprint and a random id for this sprint. Never a title or a word of text. A room ends 24 hours after someone makes it.',
+    },
+    timestamp: {
+      title: 'Public timestamps',
+      when: 'Only when you turn on "Add a public timestamp" and download an authorship record, and when a reader presses "Check the timestamp" on the check page.',
+      sends:
+        'One SHA-256 hash of the record, mixed with random bytes, to two free OpenTimestamps servers. The hash shows no text, title or count. The check page asks the same servers for the finished proof, and asks mempool.space for the Bitcoin block that holds it.',
     },
   } satisfies Record<NetPurpose, { title: string; when: string; sends: string }>,
   contact: {

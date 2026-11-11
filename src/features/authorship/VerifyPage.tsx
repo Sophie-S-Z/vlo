@@ -4,11 +4,14 @@ import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { formatWords } from '@/features/library/format';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
-import { verifyRecord, type VerifyResult } from './verify';
+import { downloadBytes } from '@/lib/download';
+import { checkTimestamp, type TimestampCheck } from './ots';
+import { verifyRecord, withTimestamp, type VerifyResult } from './verify';
 
 /*
  * The check page of an authorship record (roadmap F54, plan Task K6). It reads the file in this browser
- * and sends nothing, so it works offline and with no account.
+ * and sends nothing, so it works offline and with no account. Only "Check the timestamp" sends a request
+ * (roadmap 2 F68): the hash of the proof goes to the calendar server and the Bitcoin block server.
  */
 
 const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -71,26 +74,111 @@ function Result({ result, name }: { result: VerifyResult; name: string }) {
   );
 }
 
+/** The public timestamp of a record that passed (F68). Nothing leaves the page until the reader asks. */
+function PublicTimestamp({
+  timestamp,
+  file,
+  name,
+}: {
+  timestamp: { proof: Uint8Array; digest: Uint8Array };
+  file: string;
+  name: string;
+}) {
+  const id = useId();
+  const [busy, setBusy] = useState(false);
+  const [check, setCheck] = useState<TimestampCheck | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setCheck(await checkTimestamp(timestamp.proof, timestamp.digest));
+    setBusy(false);
+  };
+  return (
+    <section aria-labelledby={id} className="grid gap-3 rounded-md border border-rule p-4">
+      <h2 id={id} className="font-semibold">
+        Public timestamp
+      </h2>
+      <p className="text-sm text-muted">
+        This record has a public timestamp. To check it, Vlo asks an OpenTimestamps server for the finished
+        proof and asks mempool.space for the Bitcoin block. They get the hash of the proof, never the record.
+      </p>
+      <div>
+        <Button type="button" variant="outline" disabled={busy} onClick={() => void run()}>
+          {busy ? 'Checking the timestamp' : 'Check the timestamp'}
+        </Button>
+      </div>
+      {check?.state === 'failed' ? (
+        <p role="alert">The timestamp does not pass: {check.reason}</p>
+      ) : (
+        <p role="status" className="empty:hidden">
+          {check?.state === 'pending' &&
+            'Bitcoin has not confirmed this timestamp yet. That takes a few hours. Try again later.'}
+          {check?.state === 'confirmed' && (
+            <>
+              Bitcoin block {number.format(check.height)} holds this record, so the record existed on{' '}
+              <time dateTime={new Date(check.time).toISOString()}>{when.format(check.time)}</time>.
+            </>
+          )}
+        </p>
+      )}
+      {check?.state === 'confirmed' && check.finished && (
+        <div className="grid gap-2">
+          <p className="text-sm text-muted">
+            The proof is now complete. Save the finished record, so that a later check needs no calendar
+            server.
+          </p>
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const finished = check.finished;
+                if (finished)
+                  downloadBytes(
+                    name,
+                    'application/json',
+                    new TextEncoder().encode(withTimestamp(file, finished)),
+                  );
+              }}
+            >
+              Download the finished record
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function VerifyPage() {
   useDocumentTitle('Check an authorship record');
   const inputId = useId();
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
-  const [checked, setChecked] = useState<{ name: string; result: VerifyResult } | null>(null);
+  // Each check gets a new number, so the timestamp part starts again for each file.
+  const checks = useRef(0);
+  const [checked, setChecked] = useState<{
+    n: number;
+    name: string;
+    text: string;
+    result: VerifyResult;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const check = async (file: File | undefined) => {
     if (!file) return;
     setBusy(true);
     try {
+      const text = file.size > MAX_FILE ? '' : await file.text();
       const result: VerifyResult =
         file.size > MAX_FILE
           ? { ok: false, reason: 'This file is too large to be an authorship record.', entry: null }
-          : await verifyRecord(await file.text());
-      setChecked({ name: file.name, result });
+          : await verifyRecord(text);
+      setChecked({ n: (checks.current += 1), name: file.name, text, result });
     } catch {
       setChecked({
+        n: (checks.current += 1),
         name: file.name,
+        text: '',
         result: { ok: false, reason: 'This browser could not read the file.', entry: null },
       });
     } finally {
@@ -148,6 +236,14 @@ export function VerifyPage() {
       </div>
 
       {checked && <Result result={checked.result} name={checked.name} />}
+      {checked?.result.ok && checked.result.timestamp && (
+        <PublicTimestamp
+          key={checked.n}
+          timestamp={checked.result.timestamp}
+          file={checked.text}
+          name={checked.name}
+        />
+      )}
 
       <section aria-labelledby={`${inputId}-proves`} className="grid gap-3">
         <h2 id={`${inputId}-proves`} className="font-display text-2xl font-semibold">
@@ -164,7 +260,10 @@ export function VerifyPage() {
             That the words came from the writer's mind. Text that someone typed from another source counts as
             typed.
           </li>
-          <li>The times. Each device's own clock gives them.</li>
+          <li>
+            The times of the entries. Each device's own clock gives them. A public timestamp proves only the
+            date by which the whole record existed.
+          </li>
           <li>That the record is complete. A writer can write in another app.</li>
         </ul>
       </section>

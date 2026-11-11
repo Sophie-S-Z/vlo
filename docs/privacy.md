@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 7, 10 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 8, 11 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -57,6 +57,12 @@ Your projects, encrypted in the browser with a key that only your devices have: 
 Only when you sprint with friends, from the start of the sprint to its end.
 
 The room code, the nickname that you type, the count of the sprint and a random id for this sprint. Never a title or a word of text. A room ends 24 hours after someone makes it.
+
+### Public timestamps
+
+Only when you turn on "Add a public timestamp" and download an authorship record, and when a reader presses "Check the timestamp" on the check page.
+
+One SHA-256 hash of the record, mixed with random bytes, to two free OpenTimestamps servers. The hash shows no text, title or count. The check page asks the same servers for the finished proof, and asks mempool.space for the Bitcoin block that holds it.
 
 ## Contact
 

@@ -3,7 +3,8 @@ import { clock } from '@/lib/clock';
 import { db, type AuthorshipEntry } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { signingKey } from './keys';
-import { entryText, recordFile, sha256Hex, toHex } from './verify';
+import { sha256, stamp } from './ots';
+import { entryText, recordFile, sha256Hex, toHex, withTimestamp } from './verify';
 
 /*
  * The authorship record of each project (roadmap F54, plan Task K5). The editor counts the characters of
@@ -114,6 +115,14 @@ export async function exportRecord(projectId: string): Promise<string | null> {
   if (entries.length === 0) return null;
   entries.sort((a, b) => a.device.localeCompare(b.device) || a.seq - b.seq);
   return recordFile(entries);
+}
+
+/**
+ * The record file with a public timestamp (F68): the calendar servers get one hash of the file, and the
+ * file gets their proof. It throws when no server answers.
+ */
+export async function stampRecord(file: string): Promise<string> {
+  return withTimestamp(file, await stamp(await sha256(new TextEncoder().encode(file))));
 }
 
 /** Forgets the counts that no entry holds yet, for tests. */

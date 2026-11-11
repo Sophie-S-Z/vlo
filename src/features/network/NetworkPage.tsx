@@ -18,6 +18,7 @@ const PURPOSE_LABEL: Record<NetPurpose, string> = {
   originality: 'Originality check',
   sync: 'Sync',
   room: 'Sprint room',
+  timestamp: 'Public timestamp',
 };
 
 const MODE_LABEL: Record<AiMode, string> = { pen: 'Pen', reader: 'Reader', cowriter: 'Co-writer' };
