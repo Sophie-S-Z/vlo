@@ -4,7 +4,7 @@ import { readBackup, writeBackup } from '@/features/backup/file';
 import { openTargets } from '@/features/binder/tree';
 import { createProject } from '@/features/library/projects';
 import { TEMPLATES } from '@/features/library/templates';
-import { DEFAULT_GOAL, goalsOf, setGoals } from '@/features/progress/progress';
+import { DEFAULT_GOAL, goalsOf, setGoals, todayGoal } from '@/features/progress/progress';
 import { db, type Item } from '@/lib/db';
 
 /* Plan Task C9 (F21): the goal settings and the item that a tile opens. */
@@ -90,6 +90,54 @@ describe('deadline (plan Task H2, F46)', () => {
     });
     backup.project.settings.deadline = { date: '31/12/2026', words: 80_000 };
     await expect(readBackup(await writeBackup(backup))).rejects.toThrow('damaged');
+  });
+});
+
+describe("a goal to cut, and today's goal on the writing screen", () => {
+  it('stores the words of the project with a deadline, and the backup check reads them', async () => {
+    const { project } = await createProject({ title: 'Debt', templates: ['novel'] });
+    await setGoals(project.id, {
+      deadline: { date: '2026-12-31', words: 80_000, from: 95_000, since: '2026-11-09' },
+    });
+    expect((await db.projects.get(project.id))?.settings.deadline).toEqual({
+      date: '2026-12-31',
+      words: 80_000,
+      from: 95_000,
+      since: '2026-11-09',
+    });
+    await expect(
+      setGoals(project.id, { deadline: { date: '2026-12-31', words: 80_000, since: '9 Nov' } }),
+    ).rejects.toThrow(RangeError);
+    await expect(
+      setGoals(project.id, { deadline: { date: '2026-12-31', words: 80_000, from: -1 } }),
+    ).rejects.toThrow(RangeError);
+    const backup = await collectBackup(project.id, { music: false });
+    expect((await readBackup(await writeBackup(backup))).project.settings.deadline).toMatchObject({
+      from: 95_000,
+    });
+    backup.project.settings.deadline = { date: '2026-12-31', words: 80_000, from: 1.5 };
+    await expect(readBackup(await writeBackup(backup))).rejects.toThrow('damaged');
+  });
+
+  it('gives no goal while goals are off, and the words a day with no deadline', async () => {
+    const { project } = await createProject({ title: 'Debt', templates: ['novel'] });
+    expect(todayGoal(project.settings, 0, '2026-11-09')).toBeNull();
+    const on = { ...project.settings, streaksEnabled: true, wordsByDay: { '2026-11-09': 120 } };
+    expect(todayGoal(on, 120, '2026-11-09')).toEqual({ goal: 500, done: 120, cut: false });
+  });
+
+  it('gives the daily goal of a running deadline, and counts the words removed with a goal to cut', async () => {
+    const { project } = await createProject({ title: 'Debt', templates: ['novel'] });
+    const settings = {
+      ...project.settings,
+      streaksEnabled: true,
+      // 9 November 2026 to 18 November 2026: 10 writing days.
+      deadline: { date: '2026-11-18', words: 9_000, from: 10_000, since: '2026-11-02' },
+      wordsByDay: { '2026-11-09': -30 },
+    };
+    expect(todayGoal(settings, 9_970, '2026-11-09')).toEqual({ goal: 100, done: 30, cut: true });
+    // After its date, a day counts the words it adds again.
+    expect(todayGoal(settings, 9_970, '2026-11-20')).toEqual({ goal: 500, done: 0, cut: false });
   });
 });
 

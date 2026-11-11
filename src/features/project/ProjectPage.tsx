@@ -18,6 +18,7 @@ import { pause as stopSound } from '@/features/sound/controller';
 import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
+import { GoalChip } from '@/features/progress/GoalChip';
 import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
 import { useCodex, useReadingOrder } from '@/features/codex/codex';
@@ -612,12 +613,15 @@ export function ProjectPage() {
             changeFocusMode(false);
           }}
           timer={
-            <SessionTimer
-              projectId={project.id}
-              unit={countUnit(project.settings.language)}
-              sprintOpen={sprintOpen}
-              onSprintOpenChange={setSprintOpen}
-            />
+            <>
+              <GoalChip project={project} total={totalWords} />
+              <SessionTimer
+                projectId={project.id}
+                unit={countUnit(project.settings.language)}
+                sprintOpen={sprintOpen}
+                onSprintOpenChange={setSprintOpen}
+              />
+            </>
           }
           {...(project.aiMode === 'pen'
             ? {}

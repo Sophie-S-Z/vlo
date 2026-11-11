@@ -165,6 +165,49 @@ test('F46: a deadline sets the daily goal from the words and the writing days le
   await expect(page.getByTestId('goal-today')).toContainText('5 of 500 words today');
 });
 
+test('a target under the words of the project sets a goal to cut, and the writing screen shows it', async ({
+  page,
+}) => {
+  await novelWithWords(page);
+  await page.getByRole('switch', { name: 'Track a daily goal and streak' }).click();
+  const end = new Date();
+  end.setDate(end.getDate() + 9);
+  const date = `${String(end.getFullYear())}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+  await page.getByLabel('Finish by').fill(date);
+  await page.getByLabel('Words in all by then').fill('3');
+  await expect(page.getByLabel('Words in all by then')).toHaveAccessibleDescription(
+    'The project has 5 words now. This target sets a goal to cut the draft down.',
+  );
+  await page.getByRole('button', { name: 'Set a goal to cut' }).click();
+  // 2 words to remove over today and the 9 days after it.
+  await expect(page.getByTestId('deadline')).toContainText(
+    '2 words to cut: 1 word a day over 10 writing days.',
+  );
+  await expect(page.getByTestId('deadline-progress')).toHaveText('0 of 2 words cut, 0%');
+  await expect(page.getByTestId('goal-today')).toContainText('0 of 1 words cut today');
+  expect(await seriousIssues(page)).toEqual([]);
+
+  // The writing screen shows today's goal, and a cut word fills it.
+  await page.getByRole('navigation', { name: 'Project views' }).getByRole('link', { name: 'Write' }).click();
+  const chip = page.getByTestId('goal-chip');
+  await expect(chip).toHaveAccessibleName('Today’s goal: 0 of 1 words cut');
+  const scene = page.getByRole('textbox', { name: 'Scene 1' });
+  await scene.click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Control+Backspace');
+  await expect(page.getByText('4 words', { exact: true })).toBeVisible();
+  await expect(chip).toHaveAccessibleName('Today’s goal: 1 of 1 words cut. Goal met.');
+  await chip.click();
+  await expect(page.getByTestId('deadline-progress')).toHaveText('1 of 2 words cut, 50%');
+});
+
+test('the writing screen shows no goal until the writer turns goals on', async ({ page }) => {
+  await novelWithWords(page);
+  await page.getByRole('navigation', { name: 'Project views' }).getByRole('link', { name: 'Write' }).click();
+  await expect(page.getByRole('textbox', { name: 'Scene 1' })).toBeVisible();
+  await expect(page.getByTestId('goal-chip')).toHaveCount(0);
+});
+
 test('the tiles enter as a mosaic, and Calm mode shows them at once', async ({ page }) => {
   await novelWithWords(page);
   await page.reload();

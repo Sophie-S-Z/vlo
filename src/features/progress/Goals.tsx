@@ -15,6 +15,9 @@ import {
   DAY_SHORT,
   dayKey,
   deadlineGoal,
+  deadlineProgress,
+  goalRecord,
+  isCut,
   lastDays,
   streakOf,
   WEEK,
@@ -25,7 +28,8 @@ import {
 /*
  * The daily goal and the streak (spec 8.4, plan Task C9, F21). Both are off by default. A rest day keeps
  * the streak. The last weeks show as a calendar, Monday first. A deadline (F46) sets the goal from the
- * words left and the writing days left.
+ * words left and the writing days left. A target under the words of the project is a goal to cut the
+ * draft down, and each day then counts the words that it removed.
  */
 
 const WEEKS_SHOWN = 4;
@@ -43,6 +47,18 @@ function days(n: number): string {
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'long', timeZone: 'UTC' });
 
+/** A bar that fills from 0 to 1. The text next to it gives the numbers, so screen readers skip the bar. */
+function Bar({ share }: { share: number }) {
+  return (
+    <div aria-hidden="true" className="h-2 max-w-md overflow-hidden rounded-full bg-rule">
+      <div
+        className="vlo-goal-fill h-full rounded-full bg-accent"
+        style={{ transform: `scaleX(${String(Math.min(1, Math.max(0, share)))})` }}
+      />
+    </div>
+  );
+}
+
 /** "Finish by": a date and a word target that set the daily goal (F46). */
 function Deadline({ project, total, save }: { project: Project; total: number; save: Save }) {
   const id = useId();
@@ -51,6 +67,8 @@ function Deadline({ project, total, save }: { project: Project; total: number; s
   const deadline = project.settings.deadline;
   const [date, setDate] = useState('');
   const [target, setTarget] = useState('');
+  const typed = Number(target.trim());
+  const cutting = target.trim() !== '' && Number.isInteger(typed) && typed >= 1 && typed < total;
   if (deadline) {
     const today = dayKey(clock.now());
     const plan = deadlineGoal(
@@ -61,16 +79,42 @@ function Deadline({ project, total, save }: { project: Project; total: number; s
       today,
     );
     const when = dateFormat.format(new Date(`${deadline.date}T00:00:00Z`));
+    const cut = isCut(deadline);
+    const progress = deadlineProgress(deadline, total);
+    const percent = `${String(Math.floor(progress.share * 100))}%`;
+    const days = plan
+      ? `${words(plan.perDay)} a day over ${plan.daysLeft.toLocaleString()} writing ${plan.daysLeft === 1 ? 'day' : 'days'}.`
+      : '';
     return (
       <div className="grid gap-2" data-testid="deadline">
-        <p>
-          Finish by <strong className="font-semibold">{when}</strong> with {words(deadline.words)} in all.{' '}
-          {plan
-            ? `${words(Math.max(0, deadline.words - total))} left: ${words(plan.perDay)} a day over ${plan.daysLeft.toLocaleString()} writing ${plan.daysLeft === 1 ? 'day' : 'days'}.`
-            : total >= deadline.words
-              ? 'You reached the target.'
-              : 'The date has passed.'}
-        </p>
+        {cut ? (
+          <p>
+            Cut to <strong className="font-semibold">{words(deadline.words)}</strong> by{' '}
+            <strong className="font-semibold">{when}</strong>.{' '}
+            {plan
+              ? `${words(Math.max(0, total - deadline.words))} to cut: ${days}`
+              : total <= deadline.words
+                ? 'You reached the target.'
+                : 'The date has passed.'}
+          </p>
+        ) : (
+          <p>
+            Finish by <strong className="font-semibold">{when}</strong> with {words(deadline.words)} in all.{' '}
+            {plan
+              ? `${words(Math.max(0, deadline.words - total))} left: ${days}`
+              : total >= deadline.words
+                ? 'You reached the target.'
+                : 'The date has passed.'}
+          </p>
+        )}
+        <div className="grid gap-1.5" data-testid="deadline-progress">
+          <p className="text-sm text-muted tabular-nums">
+            {cut
+              ? `${progress.done.toLocaleString()} of ${words(progress.need)} cut, ${percent}`
+              : `${progress.done.toLocaleString()} of ${words(progress.need)}, ${percent}`}
+          </p>
+          <Bar share={progress.share} />
+        </div>
         <Button
           variant="outline"
           className="justify-self-start"
@@ -88,7 +132,8 @@ function Deadline({ project, total, save }: { project: Project; total: number; s
       className="flex flex-wrap items-end gap-3"
       onSubmit={(event) => {
         event.preventDefault();
-        save({ deadline: { date, words: Number(target.trim()) } });
+        // The words now go with the deadline, so a target under them is a goal to cut.
+        save({ deadline: { date, words: Number(target.trim()), from: total, since: dayKey(clock.now()) } });
       }}
     >
       <div className="grid gap-1.5">
@@ -113,6 +158,7 @@ function Deadline({ project, total, save }: { project: Project; total: number; s
           min={1}
           max={MAX_TARGET}
           className="max-w-40"
+          aria-describedby={`${id}-cut`}
           value={target}
           onChange={(event) => {
             setTarget(event.target.value);
@@ -120,8 +166,15 @@ function Deadline({ project, total, save }: { project: Project; total: number; s
         />
       </div>
       <Button type="submit" variant="outline">
-        Set a deadline
+        {cutting ? 'Set a goal to cut' : 'Set a deadline'}
       </Button>
+      <p id={`${id}-cut`} className="basis-full text-sm text-muted empty:hidden">
+        {cutting
+          ? `The project has ${words(total)} now. This target sets a goal to cut the draft down.`
+          : total > 0
+            ? `Type a target under ${words(total)} to cut the draft down.`
+            : ''}
+      </p>
     </form>
   );
 }
@@ -168,12 +221,14 @@ export function Goals({ project, total }: { project: Project; total: number }) {
     save({ goalWordsPerDay: n });
   };
 
-  const record = project.settings.wordsByDay ?? {};
   const today = dayKey(clock.now());
   const deadline = project.settings.deadline;
+  const record = goalRecord(deadline, total, project.settings.wordsByDay ?? {}, today);
   const plan = deadline ? deadlineGoal(deadline, total, record, restDays, today) : null;
   const goal = plan?.perDay ?? goals.goalWordsPerDay;
-  const rules = { goal, restDays };
+  // A goal to cut counts the words that each day removed, until its date or its target.
+  const cut = plan !== null && deadline !== undefined && isCut(deadline);
+  const rules = { goal, restDays, cut };
   const streak = streakOf(record, rules, today);
   // Whole weeks, Monday first, ending with the week of today.
   const count = (WEEKS_SHOWN - 1) * 7 + WEEK.indexOf(weekdayOf(today)) + 1;
@@ -213,15 +268,10 @@ export function Goals({ project, total }: { project: Project; total: number }) {
                 <span className="font-display text-3xl font-semibold">
                   <CountUp value={streak.today} />
                 </span>{' '}
-                of {goal.toLocaleString()} {unit} today
+                of {goal.toLocaleString()} {unit} {cut ? 'cut today' : 'today'}
                 {streak.todayMet && <span className="text-accent-text">. Goal met.</span>}
               </p>
-              <div aria-hidden="true" className="h-2 max-w-md overflow-hidden rounded-full bg-rule">
-                <div
-                  className="vlo-goal-fill h-full rounded-full bg-accent"
-                  style={{ transform: `scaleX(${String(share)})` }}
-                />
-              </div>
+              <Bar share={share} />
             </div>
             <p data-testid="goal-streak">
               Streak: <strong className="font-semibold">{days(streak.current)}</strong>. Best:{' '}
