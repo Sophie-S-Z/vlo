@@ -607,8 +607,12 @@ Last update: 2026-11-10
   - Focus stays in a useful place after Stop, Remove and the key dialog. "Prepare the request" waits for
     the request before it takes a second press.
 
-## Done in Phases 7 to 14
+## Done in Phases 7 to 15
 
+- Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 to F70).
+  - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in
+    all, with the 200,000-word book. The Gate 1 test runs on the 100,000-word and the 200,000-word
+    project, with the same budgets.
 - Design pass of 2026-11-11 (the product owner's design notes, checked against Part J0 of
   `docs/plans/phase-10.md`). Headings balance their lines and other text avoids a widow, outside the
   editor. On a phone the welcome actions stay in view at the bottom. An empty item's stats line shows only

@@ -3,8 +3,9 @@ import type { Item, ItemKind, Project } from '@/lib/db';
 import { countLines, countWords } from '@/lib/wordcount';
 
 /*
- * Builds the 100,000-word project for the performance budgets (VLO_SPEC sections 12 and 15). The same seed
- * always gives the same project. Every generated word is plain lowercase letters, so each one counts as one
+ * Builds the 100,000-word project for the performance budgets (VLO_SPEC sections 12 and 15), or one of
+ * another size, such as the 200,000-word project of the release checks (roadmap 2 F70). The same seed and
+ * size always give the same project. Every generated word is plain lowercase letters, so each one counts as one
  * word. The binder rules let a writer put poems only in a poetry collection. This project holds both kinds
  * on purpose, so one project covers both editors at full size.
  */
@@ -103,11 +104,12 @@ export interface LargeProject {
   texts: Map<string, string>;
 }
 
-export function generateLargeProject(seed: number): LargeProject {
+export function generateLargeProject(seed: number, totalWords = LARGE_TOTAL_WORDS): LargeProject {
   const random = seededRandom(seed);
   const make = new TextMaker(random);
   const createdAt = Date.UTC(2026, 0, 1);
-  const projectId = `large-${String(seed)}`;
+  // The 100,000-word project keeps its first id, so its tests and their logs stay the same.
+  const projectId = totalWords === LARGE_TOTAL_WORDS ? `large-${String(seed)}` : `large-${String(seed)}-${String(totalWords)}`;
   let serial = 0;
   const items: Item[] = [];
   const texts = new Map<string, string>();
@@ -140,7 +142,7 @@ export function generateLargeProject(seed: number): LargeProject {
   const poemWords = poems.reduce((sum, poem) => sum + countWords(poem), 0);
 
   const shortScenes = LARGE_SCENES - 1;
-  const shortTotal = LARGE_TOTAL_WORDS - LARGE_LONG_SCENE_WORDS - poemWords;
+  const shortTotal = totalWords - LARGE_LONG_SCENE_WORDS - poemWords;
   const weights = Array.from({ length: shortScenes }, () => 0.6 + random() * 0.8);
   const weightSum = weights.reduce((a, b) => a + b, 0);
   const sizes = weights.map((w) => Math.floor((w / weightSum) * shortTotal));
@@ -165,7 +167,7 @@ export function generateLargeProject(seed: number): LargeProject {
 
   const project: Project = {
     id: projectId,
-    title: 'The hundred thousand',
+    title: `${(totalWords / 1000).toLocaleString('en-US')} thousand words`,
     templates: ['novel'],
     aiMode: 'pen',
     createdAt,

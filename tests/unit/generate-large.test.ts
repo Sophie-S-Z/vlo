@@ -53,4 +53,18 @@ describe('generateLargeProject', () => {
     expect(allLines.some((line) => line.text.startsWith('    '))).toBe(true);
     expect(allLines.some((line) => /\S {4}\S/.test(line.text))).toBe(true);
   });
+
+  // Roadmap 2 F70, plan Task O1: the release checks run on a book twice as long.
+  test('a 200,000-word project has the same parts and the same 10,000-word scene', () => {
+    const long = generateLargeProject(1, 200_000);
+    let total = 0;
+    for (const text of long.texts.values()) total += countWords(text);
+    expect(Math.abs(total - 200_000)).toBeLessThanOrEqual(200_000 * 0.005);
+    expect(long.items.map((i) => [i.kind, i.title])).toEqual(large.items.map((i) => [i.kind, i.title]));
+    expect(long.items.filter((i) => i.wordCount === LARGE_LONG_SCENE_WORDS).map((i) => i.title)).toEqual([
+      'Scene 20.2',
+    ]);
+    expect(long.project.id).not.toBe(large.project.id);
+    expect(generateLargeProject(1, 200_000).texts).toEqual(long.texts);
+  });
 });

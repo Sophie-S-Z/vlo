@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { getSchema, type JSONContent } from '@tiptap/core';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
+import { DEFAULT_BOOK } from '@/features/book/book';
 import { poemExtensions } from '@/features/editor/extensions/poem';
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { scriptExtensions } from '@/features/editor/extensions/script';
@@ -10,7 +11,7 @@ import { parsePoemText, poemDataToJSON } from '@/features/editor/poemText';
 import { buildExportDoc, type ExportScope } from '@/features/export/build';
 import type { ExportDoc } from '@/features/export/model';
 import type { EditorForm } from '@/features/library/templates';
-import type { Item, ItemKind, Project, Template } from '@/lib/db';
+import type { BookSettings, Item, ItemKind, Project, Template } from '@/lib/db';
 import { YFRAGMENT } from '@/lib/ydocs';
 
 /* Builds export input from editor JSON, through the same schema and Yjs format that the editor writes. */
@@ -111,6 +112,62 @@ export function singleDoc(
     items,
     scope,
     updates: new Map([['i1', updateOf(json, form)]]),
+  });
+}
+
+/** The book settings of the book fixtures (F51), with every part of the front and back matter. */
+export const BOOK: BookSettings = {
+  ...DEFAULT_BOOK,
+  copyright: 'Copyright © 2026 Ada Marlow\nAll rights reserved.',
+  dedication: 'For the keepers of the light.',
+  epigraph: 'The sea keeps every secret it is told.',
+  acknowledgments: 'Thanks to the harbor.',
+  about: 'Ada Marlow lives by the sea.',
+};
+
+export function bookNovel(book: BookSettings = BOOK): ExportDoc {
+  return buildExportDoc({
+    project: project('novel', { authorName: 'Ada Marlow' }),
+    items: [
+      item('c1', 'chapter', 'The Harbor'),
+      item('s1', 'scene', 'Arrival', 'c1'),
+      item('s2', 'scene', 'Later', 'c1'),
+      item('c2', 'chapter', 'Chapter Two'),
+      item('s3', 'scene', 'Night', 'c2'),
+    ],
+    scope: { kind: 'project' },
+    updates: new Map([
+      ['s1', proseUpdate(['The harbor lights came on.', 'The boats came in.'])],
+      ['s2', proseUpdate(['The gulls slept.'])],
+      ['s3', proseUpdate(['The tide turned.'])],
+    ]),
+    book,
+  });
+}
+
+export function bookMemoir(): ExportDoc {
+  return buildExportDoc({
+    project: project('memoir', { authorName: 'Ada Marlow' }),
+    items: [item('m1', 'memory', 'The Kettle'), item('m2', 'memory', 'The Porch')],
+    scope: { kind: 'project' },
+    updates: new Map([
+      ['m1', proseUpdate(MEMOIR_TEXT.split(/\n{2,}/).slice(0, 6))],
+      ['m2', proseUpdate(['The porch light stayed on all night.'])],
+    ]),
+    book: BOOK,
+  });
+}
+
+export function bookPoetry(): ExportDoc {
+  return buildExportDoc({
+    project: project('poetry', { authorName: 'Ada Marlow' }),
+    items: [item('p1', 'poem', 'Salt on the Sill'), item('p2', 'poem', 'Low Tide')],
+    scope: { kind: 'project' },
+    updates: new Map([
+      ['p1', poemUpdate()],
+      ['p2', poemUpdate('The water goes out\n    and leaves its lines.')],
+    ]),
+    book: { ...BOOK, sceneBreak: 'fleuron' },
   });
 }
 

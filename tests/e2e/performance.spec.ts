@@ -6,7 +6,7 @@ import { useTool } from './support/tools';
 import { seedProjects } from './support/seed';
 import { seedLarge } from './support/seed-bundle';
 
-/* Gate 1: the budgets in VLO_SPEC section 12, measured on the seeded 100,000-word project. */
+/* Gate 1: the budgets in VLO_SPEC section 12, measured on the seeded 100,000-word and 200,000-word projects. */
 
 // A trace takes DOM snapshots during each step, and on a 10,000-word page that cost would count against the budgets.
 test.use({ bypassCSP: true, trace: 'off' });
@@ -98,158 +98,161 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('Gate 1: the 100,000-word project opens its 10,000-word scene fast and types fast', async ({
-  page,
-  browserName,
-  isMobile,
-}) => {
-  test.slow();
-  await skipOnboarding(page);
-  // Review Focus 3 of Phase 8: the style check and the Codex names are on, so their marks count in the budget.
-  await page.evaluate(() => {
-    localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full', styleCheck: true }));
-  });
-  const seeded = await seedLarge(page);
-  // The Codex names are on too: an entry whose names come in the typed text.
-  await page.evaluate(
-    (projectId) =>
-      new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open('vlo');
-        open.onerror = () => {
-          reject(open.error ?? new Error('No database.'));
-        };
-        open.onsuccess = () => {
-          const tx = open.result.transaction('codex', 'readwrite');
-          tx.objectStore('codex').put({
-            id: 'codex-lamp',
-            projectId,
-            kind: 'thing',
-            name: 'lamp',
-            aliases: ['water'],
-            order: 'a0',
-          });
-          tx.oncomplete = () => {
-            open.result.close();
-            resolve();
+// Roadmap 2 F70, plan Task O1: the same budgets hold in a book twice as long.
+for (const words of [100_000, 200_000]) {
+  test(`Gate 1: the ${words.toLocaleString('en-US')}-word project opens its 10,000-word scene fast and types fast`, async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
+    test.slow();
+    await skipOnboarding(page);
+    // Review Focus 3 of Phase 8: the style check and the Codex names are on, so their marks count in the budget.
+    await page.evaluate(() => {
+      localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full', styleCheck: true }));
+    });
+    const seeded = await seedLarge(page, 1, words);
+    // The Codex names are on too: an entry whose names come in the typed text.
+    await page.evaluate(
+      (projectId) =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('vlo');
+          open.onerror = () => {
+            reject(open.error ?? new Error('No database.'));
           };
-          tx.onerror = () => {
-            reject(tx.error ?? new Error('No write.'));
+          open.onsuccess = () => {
+            const tx = open.result.transaction('codex', 'readwrite');
+            tx.objectStore('codex').put({
+              id: 'codex-lamp',
+              projectId,
+              kind: 'thing',
+              name: 'lamp',
+              aliases: ['water'],
+              order: 'a0',
+            });
+            tx.oncomplete = () => {
+              open.result.close();
+              resolve();
+            };
+            tx.onerror = () => {
+              reject(tx.error ?? new Error('No write.'));
+            };
           };
-        };
-      }),
-    seeded.projectId,
-  );
+        }),
+      seeded.projectId,
+    );
 
-  // A cold page load straight to the scene also boots the app. It is logged for STATUS, not held to the budget.
-  await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}`);
-  const coldAt = await page.waitForFunction(
-    (end) => {
-      const last = document.querySelector('.vlo-manuscript')?.lastElementChild;
-      return last?.textContent.endsWith(end) ? performance.now() : false;
-    },
-    seeded.longSceneEnd,
-    { polling: 'raf' },
-  );
-  console.log(
-    `[${browserName}] cold page load to the scene's text: ${Number(await coldAt.jsonValue()).toFixed(0)} ms`,
-  );
+    // A cold page load straight to the scene also boots the app. It is logged for STATUS, not held to the budget.
+    await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}`);
+    const coldAt = await page.waitForFunction(
+      (end) => {
+        const last = document.querySelector('.vlo-manuscript')?.lastElementChild;
+        return last?.textContent.endsWith(end) ? performance.now() : false;
+      },
+      seeded.longSceneEnd,
+      { polling: 'raf' },
+    );
+    console.log(
+      `[${browserName}] cold page load to the scene's text: ${Number(await coldAt.jsonValue()).toFixed(0)} ms`,
+    );
 
-  // The budget: the writer picks the scene in the binder while another item is open.
-  await page.goto(`/p/${seeded.projectId}?item=${seeded.projectId}-002`);
-  const editor = page.getByRole('textbox', { name: seeded.longSceneTitle });
-  await expect(page.getByRole('textbox', { name: 'Scene 1.1' })).toBeVisible();
-  // Phones get the binder as a drawer.
-  if (isMobile) await page.getByRole('button', { name: 'Binder' }).click();
-  await expect(
-    page.getByRole('navigation', { name: 'Binder' }).getByText(seeded.longSceneTitle),
-  ).toBeVisible();
-  await page.evaluate(() => {
-    window.__itemOpens = [];
-    window.__itemOpenedAt = [];
-    window.__itemReadAt = [];
-    window.__manuscriptAt = [];
-  });
-  const open = await page.evaluate(
-    ({ title, end }) =>
-      new Promise<{ total: number; database: number; read: number; built: number; editor: number }>(
-        (resolve, reject) => {
-          const button = [...document.querySelectorAll<HTMLButtonElement>('[data-binder-title]')].find(
-            (b) => b.textContent === title,
-          );
-          if (!button) {
-            reject(new Error(`No binder button for ${title}`));
-            return;
-          }
-          const old = document.querySelector('.vlo-manuscript');
-          let editorAt = 0;
-          const start = performance.now();
-          button.click();
-          // Done when the scene's last words are in the editor and the browser reaches the next frame.
-          const check = () => {
-            const manuscript = document.querySelector('.vlo-manuscript');
-            if (!editorAt && manuscript && manuscript !== old) editorAt = performance.now();
-            if (manuscript?.lastElementChild?.textContent.endsWith(end)) {
-              // The text is in the page. Stop the clock once the browser has painted it.
-              window.__afterPaint(() => {
-                resolve({
-                  total: performance.now() - start,
-                  database: (window.__itemOpenedAt[0] ?? start) - start,
-                  read: (window.__itemReadAt[0] ?? start) - start,
-                  built: (window.__manuscriptAt[0] ?? start) - start,
-                  editor: (editorAt || performance.now()) - start,
+    // The budget: the writer picks the scene in the binder while another item is open.
+    await page.goto(`/p/${seeded.projectId}?item=${seeded.projectId}-002`);
+    const editor = page.getByRole('textbox', { name: seeded.longSceneTitle });
+    await expect(page.getByRole('textbox', { name: 'Scene 1.1' })).toBeVisible();
+    // Phones get the binder as a drawer.
+    if (isMobile) await page.getByRole('button', { name: 'Binder' }).click();
+    await expect(
+      page.getByRole('navigation', { name: 'Binder' }).getByText(seeded.longSceneTitle),
+    ).toBeVisible();
+    await page.evaluate(() => {
+      window.__itemOpens = [];
+      window.__itemOpenedAt = [];
+      window.__itemReadAt = [];
+      window.__manuscriptAt = [];
+    });
+    const open = await page.evaluate(
+      ({ title, end }) =>
+        new Promise<{ total: number; database: number; read: number; built: number; editor: number }>(
+          (resolve, reject) => {
+            const button = [...document.querySelectorAll<HTMLButtonElement>('[data-binder-title]')].find(
+              (b) => b.textContent === title,
+            );
+            if (!button) {
+              reject(new Error(`No binder button for ${title}`));
+              return;
+            }
+            const old = document.querySelector('.vlo-manuscript');
+            let editorAt = 0;
+            const start = performance.now();
+            button.click();
+            // Done when the scene's last words are in the editor and the browser reaches the next frame.
+            const check = () => {
+              const manuscript = document.querySelector('.vlo-manuscript');
+              if (!editorAt && manuscript && manuscript !== old) editorAt = performance.now();
+              if (manuscript?.lastElementChild?.textContent.endsWith(end)) {
+                // The text is in the page. Stop the clock once the browser has painted it.
+                window.__afterPaint(() => {
+                  resolve({
+                    total: performance.now() - start,
+                    database: (window.__itemOpenedAt[0] ?? start) - start,
+                    read: (window.__itemReadAt[0] ?? start) - start,
+                    built: (window.__manuscriptAt[0] ?? start) - start,
+                    editor: (editorAt || performance.now()) - start,
+                  });
                 });
-              });
-            } else requestAnimationFrame(check);
-          };
-          requestAnimationFrame(check);
-        },
-      ),
-    { title: seeded.longSceneTitle, end: seeded.longSceneEnd },
-  );
-  const contentVisibility = await page.evaluate(() => CSS.supports('content-visibility', 'auto'));
-  console.log(
-    `[${browserName}] open the 10,000-word scene from the binder: ${open.total.toFixed(0)} ms ` +
-      `(database open at ${open.database.toFixed(0)} ms, updates read at ${open.read.toFixed(0)} ms, ` +
-      `editor built at ${open.built.toFixed(0)} ms, first frame with it at ${open.editor.toFixed(0)} ms, ` +
-      `content-visibility ${contentVisibility ? 'supported' : 'not supported'})`,
-  );
-  // The budget is 300 ms. The Linux WebKit build in CI is slower than Safari and varies by up to 200 ms
-  // between runs, so it has a 700 ms ceiling that still catches a real slowdown. Real Safari is checked by
-  // hand in Phase 6 (product owner decision, 2026-11-03).
-  expect(open.total).toBeLessThan(browserName === 'webkit' ? 700 : 300);
-  await expect(editor).toBeVisible();
+              } else requestAnimationFrame(check);
+            };
+            requestAnimationFrame(check);
+          },
+        ),
+      { title: seeded.longSceneTitle, end: seeded.longSceneEnd },
+    );
+    const contentVisibility = await page.evaluate(() => CSS.supports('content-visibility', 'auto'));
+    console.log(
+      `[${browserName}] open the 10,000-word scene from the binder: ${open.total.toFixed(0)} ms ` +
+        `(database open at ${open.database.toFixed(0)} ms, updates read at ${open.read.toFixed(0)} ms, ` +
+        `editor built at ${open.built.toFixed(0)} ms, first frame with it at ${open.editor.toFixed(0)} ms, ` +
+        `content-visibility ${contentVisibility ? 'supported' : 'not supported'})`,
+    );
+    // The budget is 300 ms. The Linux WebKit build in CI is slower than Safari and varies by up to 200 ms
+    // between runs, so it has a 700 ms ceiling that still catches a real slowdown. Real Safari is checked by
+    // hand in Phase 6 (product owner decision, 2026-11-03).
+    expect(open.total).toBeLessThan(browserName === 'webkit' ? 700 : 300);
+    await expect(editor).toBeVisible();
 
-  // Review Focus 6 of Phase 9: Track changes is on, so each key also gets its insert mark.
-  await useTool(page, 'Track changes');
-  await editor.click();
-  await page.keyboard.press('ControlOrMeta+End');
-  await page.evaluate(() => {
-    window.__keyDelays = [];
+    // Review Focus 6 of Phase 9: Track changes is on, so each key also gets its insert mark.
+    await useTool(page, 'Track changes');
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await page.evaluate(() => {
+      window.__keyDelays = [];
+    });
+    const typed = 'The lamp caught on the third match and light swung out over the water. '
+      .repeat(3)
+      .slice(0, 200);
+    // 30 ms a key is about 400 words a minute: faster than people type, slow enough that keys do not queue.
+    await page.keyboard.type(typed, { delay: 30 });
+    await expect(editor).toContainText(typed.trim().slice(-30));
+    // The last key's frame can come just after its text shows.
+    await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+    const delays = await page.evaluate(() => window.__keyDelays);
+    const sorted = [...delays].sort((a, b) => a - b);
+    const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+    console.log(`[${browserName}] keystroke to paint, p95 of ${String(delays.length)}: ${p95.toFixed(1)} ms`);
+    // The budget is 50 ms. The Linux WebKit build in CI takes 58 to 65 ms on this 10,000-word scene, so it has
+    // a 100 ms ceiling that still catches a real slowdown. Real Safari is checked by hand (product owner decision).
+    expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
+
+    // The scans ran on the scene, so the budget above holds with the marks on screen.
+    await expect(editor.locator('.vlo-style').first()).toBeAttached();
+    await expect(editor.locator('.vlo-change[data-change="insert"]').first()).toBeAttached();
+    await expect(editor.locator('[spellcheck="false"]').first()).toBeAttached();
+
+    const opened = await page.evaluate(() => [...new Set(window.__itemOpens)]);
+    expect(opened).toEqual([`vlo-item-${seeded.longSceneId}`]);
   });
-  const typed = 'The lamp caught on the third match and light swung out over the water. '
-    .repeat(3)
-    .slice(0, 200);
-  // 30 ms a key is about 400 words a minute: faster than people type, slow enough that keys do not queue.
-  await page.keyboard.type(typed, { delay: 30 });
-  await expect(editor).toContainText(typed.trim().slice(-30));
-  // The last key's frame can come just after its text shows.
-  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
-  const delays = await page.evaluate(() => window.__keyDelays);
-  const sorted = [...delays].sort((a, b) => a - b);
-  const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
-  console.log(`[${browserName}] keystroke to paint, p95 of ${String(delays.length)}: ${p95.toFixed(1)} ms`);
-  // The budget is 50 ms. The Linux WebKit build in CI takes 58 to 65 ms on this 10,000-word scene, so it has
-  // a 100 ms ceiling that still catches a real slowdown. Real Safari is checked by hand (product owner decision).
-  expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
-
-  // The scans ran on the scene, so the budget above holds with the marks on screen.
-  await expect(editor.locator('.vlo-style').first()).toBeAttached();
-  await expect(editor.locator('.vlo-change[data-change="insert"]').first()).toBeAttached();
-  await expect(editor.locator('[spellcheck="false"]').first()).toBeAttached();
-
-  const opened = await page.evaluate(() => [...new Set(window.__itemOpens)]);
-  expect(opened).toEqual([`vlo-item-${seeded.longSceneId}`]);
-});
+}
 
 test('typing stays under 50 ms at p95 in the 10,000-word scene with a pane open beside it', async ({
   page,

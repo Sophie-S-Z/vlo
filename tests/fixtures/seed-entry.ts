@@ -45,8 +45,8 @@ export interface SeededLarge {
   longSceneEnd: string;
 }
 
-async function large(seed: number): Promise<SeededLarge> {
-  const { project, items, texts } = generateLargeProject(seed);
+async function large(seed: number, words?: number): Promise<SeededLarge> {
+  const { project, items, texts } = generateLargeProject(seed, words);
   const now = Date.now();
   await db.transaction('rw', db.projects, db.items, db.itemTexts, async () => {
     await db.projects.put(project);
