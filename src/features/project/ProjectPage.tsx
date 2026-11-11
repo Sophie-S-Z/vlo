@@ -18,6 +18,8 @@ import { pause as stopSound } from '@/features/sound/controller';
 import { FocusControls } from '@/features/focus/FocusControls';
 import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
+import { HideTextButton } from '@/features/focus/HideTextButton';
+import { HIDE_TEXT_KEYS, isHideTextKey, toggleHideText, useHideText } from '@/features/focus/hideText';
 import { GoalChip } from '@/features/progress/GoalChip';
 import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
@@ -260,10 +262,18 @@ export function ProjectPage() {
     };
   }, [projectId]);
 
+  useHideText();
+
   // Mod-K opens the command menu from anywhere on the project screen, the editor included.
   // Over another dialog or menu, the key does nothing, so two dialogs never stack.
+  // Mod-Shift-. turns Hide the text on and off from anywhere on the project screen.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (isHideTextKey(event)) {
+        event.preventDefault();
+        toggleHideText();
+        return;
+      }
       if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'k') {
         if (layerOpen()) return;
         event.preventDefault();
@@ -375,6 +385,13 @@ export function ProjectPage() {
       run: () => {
         setFocusPrefs({ dim: !getFocusPrefs().dim });
       },
+    },
+    {
+      id: 'hide-text',
+      label: getFocusPrefs().hide ? 'Show the text' : 'Hide the text',
+      keywords: ['redact', 'privacy', 'blur', 'cover', 'illegible', 'public', 'shoulder'],
+      hint: shortcutLabel(HIDE_TEXT_KEYS),
+      run: toggleHideText,
     },
     {
       id: 'export',
@@ -621,6 +638,7 @@ export function ProjectPage() {
                 sprintOpen={sprintOpen}
                 onSprintOpenChange={setSprintOpen}
               />
+              <HideTextButton />
             </>
           }
           {...(project.aiMode === 'pen'

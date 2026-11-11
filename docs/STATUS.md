@@ -623,6 +623,13 @@ Last update: 2026-11-10
     words" in a sprint), live from the stored counts. A sprint with no limit fills its ring with words. A
     stopwatch session keeps its start as `endedAt` until it closes. Checks: unit tests for the stopwatch row
     and the time text; browser tests for the stopwatch past an hour and a sprint with no limit, with axe.
+  - Hide the text: a Hide text button next to the timer (so it stays in focus mode), Mod-Shift-. by the
+    physical key, and a command turn it on and off. The Focus menu picks a blur or bars, and "Keep my
+    paragraph clear" leaves the block with the caret clear while the text has focus. It is CSS on the page
+    root from `useHideText`, so the text, the count, each export and a screen reader do not change, and the
+    split pane hides too. The choice stays on the device, so a reload never shows the words. Checks: unit
+    tests for the stored choices and the key; browser tests for the blur, the bars, the clear paragraph, a
+    reload, the command and the Library, with axe.
   - Not built, with the reason: a native iOS app (spec non-goal; Vlo installs as a PWA and works offline),
     free trials (Vlo is free), reader links (Vlo has them since Phase 9), a toggle of all headings (the binder
     holds each scene as its own item), input lag (the Gate 1 budgets hold at 200,000 words), and folder

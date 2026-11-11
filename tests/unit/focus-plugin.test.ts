@@ -103,5 +103,5 @@ describe('typewriter scrolling', () => {
 test('focus switches persist on this device', () => {
   setFocusPrefs({ typewriter: true });
   reloadFocusPrefs();
-  expect(getFocusPrefs()).toEqual({ typewriter: true, dim: false });
+  expect(getFocusPrefs()).toMatchObject({ typewriter: true, dim: false, hide: false });
 });
