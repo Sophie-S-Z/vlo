@@ -2,7 +2,7 @@ import { clock } from '@/lib/clock';
 import { db, readViewRows, viewTables, type Item, type Project } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
-import { countUnit, recountItems } from '@/lib/wordcount';
+import { recountItems } from '@/lib/wordcount';
 import { READ_AT_ONCE, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
 import { holdsText } from '@/features/library/templates';
@@ -273,12 +273,10 @@ async function storeBackup(backup: Backup): Promise<void> {
       async () => {
         if (backup.series) await joinSeries(backup.series, backup.project.id);
         await db.projects.add(backup.project);
-        // A backup made before Chinese and Japanese counted characters (F38) holds word counts.
-        const { language } = backup.project.settings;
+        // A backup made before Chinese and Japanese counted characters (F38), or before count rule 2,
+        // holds counts of an older rule, so each item counts again from its text copy.
         await db.items.bulkAdd(
-          countUnit(language) === 'words'
-            ? backup.items
-            : recountItems(backup.items, backup.itemTexts, language),
+          recountItems(backup.items, backup.itemTexts, backup.project.settings.language),
         );
         await db.snapshots.bulkAdd(backup.snapshots);
         await db.itemVersions.bulkAdd(backup.versions);

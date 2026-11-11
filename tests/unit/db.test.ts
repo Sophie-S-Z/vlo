@@ -46,7 +46,7 @@ afterEach(async () => {
 describe('Vlo database', () => {
   test('version 13 has the Phase 1 tables, the music, the template views, the network log, the shares, the Codex, research, the sync clock, the item versions, the authorship record, the series and the sources', () => {
     expect(db.name).toBe('vlo');
-    expect(db.verno).toBe(13);
+    expect(db.verno).toBe(14);
     expect(db.tables.map((t) => t.name).sort()).toEqual([
       'appMeta',
       'audioFiles',
@@ -103,7 +103,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(13);
+    expect(upgraded.verno).toBe(14);
     expect((await upgraded.networkLog.get('n1'))?.host).toBe('api.groq.com');
     await upgraded.shares.add({
       id: 'sh1',
@@ -140,7 +140,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(13);
+    expect(upgraded.verno).toBe(14);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect((await upgraded.projects.get('kept'))?.templates).toEqual(['poetry']);
     expect(await upgraded.items.count()).toBe(1);
@@ -185,7 +185,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(13);
+    expect(upgraded.verno).toBe(14);
     expect((await upgraded.projects.get('kept'))?.title).toBe('Salt');
     expect(await upgraded.items.count()).toBe(1);
     expect(await upgraded.audioFiles.count()).toBe(1);
@@ -246,7 +246,7 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(13);
+    expect(upgraded.verno).toBe(14);
     const rows = await upgraded.projects.toArray();
     const byId = new Map(rows.map((r) => [r.id, r]));
     expect(byId.get('poems')?.templates).toEqual(['poetry']);
@@ -298,9 +298,62 @@ describe('Vlo database', () => {
 
     const upgraded = new VloDb(name);
     await upgraded.open();
-    expect(upgraded.verno).toBe(13);
+    expect(upgraded.verno).toBe(14);
     expect((await upgraded.items.get('a'))?.wordCount).toBe(5);
-    expect((await upgraded.items.get('b'))?.wordCount).toBe(2);
+    // Version 14 counts every item again, so the English project now has the real count of its text.
+    expect((await upgraded.items.get('b'))?.wordCount).toBe(3);
+    await upgraded.delete();
+  });
+
+  test('opening a version 13 database counts each item again with count rule 2', async () => {
+    const name = 'vlo-upgrade-test-13';
+    const old = new Dexie(name);
+    old.version(13).stores({
+      projects: 'id, updatedAt',
+      items: 'id, projectId, [projectId+parentId]',
+      snapshots: 'id, itemId, [itemId+createdAt], projectId',
+      sessions: 'id, projectId',
+      itemTexts: 'itemId, projectId',
+      appMeta: 'key',
+      audioFiles: 'id, addedAt',
+      cards: 'id, projectId, itemId',
+      threads: 'id, projectId',
+      cardLinks: 'id, projectId, fromCardId, toCardId',
+      lifeStages: 'id, projectId',
+      sequences: 'id, projectId',
+      people: 'id, projectId',
+      submissions: 'id, projectId',
+      networkLog: 'id, at',
+      shares: 'id, projectId, createdAt',
+      codex: 'id, projectId',
+      research: 'id, projectId',
+      syncClock: 'key, projectId, at',
+      itemVersions: 'id, projectId, itemId',
+      authorship: 'id, projectId',
+      series: 'id, *projectIds',
+      sources: 'id, projectId',
+    });
+    await old.open();
+    await old.table('projects').add(project('en'));
+    // Rule 1 counted each part of a hyphenated word and of a time.
+    await old.table('items').bulkAdd([
+      { ...item('a', 'en', null, 'a0'), wordCount: 9 },
+      { ...item('b', 'en', null, 'a1'), wordCount: 3 },
+    ]);
+    await old.table('itemTexts').add({
+      itemId: 'a',
+      projectId: 'en',
+      text: 'A state-of-the-art lab at 10:30 and/or later.',
+      updatedAt: 1,
+    });
+    old.close();
+
+    const upgraded = new VloDb(name);
+    await upgraded.open();
+    expect(upgraded.verno).toBe(14);
+    expect((await upgraded.items.get('a'))?.wordCount).toBe(7);
+    // An item with no text copy keeps its count.
+    expect((await upgraded.items.get('b'))?.wordCount).toBe(3);
     await upgraded.delete();
   });
 

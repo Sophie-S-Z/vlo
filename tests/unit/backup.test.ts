@@ -1,3 +1,4 @@
+import { countWords } from '@/lib/wordcount';
 import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -54,6 +55,8 @@ async function novelWithText() {
       text: texts[index % 2] ?? '',
       updatedAt: 5,
     });
+    // A save stores the count with the text, and an import counts each item again from its text.
+    await db.items.update(scene.id, { wordCount: countWords(texts[index % 2] ?? '') });
   }
   const first = scenes[0];
   if (!first) throw new Error('The novel has no scene.');
