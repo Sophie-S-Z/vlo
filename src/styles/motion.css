@@ -156,6 +156,11 @@ html.vlo-theme-reveal::view-transition-new(root) {
   transition: transform 0.6s var(--ease-reveal);
 }
 
+/* The ring of today's goal on the writing screen fills the same way. */
+.vlo-goal-ring {
+  transition: stroke-dashoffset 0.6s var(--ease-reveal);
+}
+
 /* An icon swap (SwapIcon): the old icon blurs and shrinks out as the new one comes in. */
 .vlo-swap {
   display: grid;

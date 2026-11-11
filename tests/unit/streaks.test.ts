@@ -4,6 +4,9 @@ import {
   addWordsToDay,
   dayKey,
   deadlineGoal,
+  deadlineProgress,
+  goalRecord,
+  isCut,
   lastDays,
   streakOf,
   weekdayOf,
@@ -178,5 +181,62 @@ describe('deadlineGoal (plan Task H2, F46)', () => {
   it('gives null after the deadline or when the target is met', () => {
     expect(deadlineGoal(deadline, 5_000, {}, [], '2026-11-19')).toBeNull();
     expect(deadlineGoal(deadline, 15_000, {}, [], '2026-11-09')).toBeNull();
+  });
+});
+
+describe('a goal to cut a draft down (Ellipsus October 2026 comparison)', () => {
+  // The writer set the deadline at 100,000 words and wants 90,000 by Wednesday 18 November.
+  const cut = { date: '2026-11-18', words: 90_000, from: 100_000 };
+
+  it('is a cut only when the target is under the words of the day it was set', () => {
+    expect(isCut(cut)).toBe(true);
+    expect(isCut({ ...cut, words: 120_000 })).toBe(false);
+    // A deadline from before this change has no start total, so it stays a goal to write.
+    expect(isCut({ date: '2026-11-18', words: 90_000 })).toBe(false);
+  });
+
+  it('divides the words to remove by the writing days left', () => {
+    expect(deadlineGoal(cut, 100_000, {}, [], '2026-11-09')).toEqual({ perDay: 1_000, daysLeft: 10 });
+    // Today's cut goes back into what is left, so the goal stays the same all day.
+    const record = { '2026-11-09': -400 };
+    expect(deadlineGoal(cut, 99_600, record, [], '2026-11-09')).toEqual({ perDay: 1_000, daysLeft: 10 });
+    expect(deadlineGoal(cut, 90_000, {}, [], '2026-11-10')).toBeNull();
+  });
+
+  it('counts the day of the set from the moment of the set', () => {
+    // The writer added 2,000 words earlier today, then set the goal at 100,000 words.
+    const today = { ...cut, since: '2026-11-09' };
+    const record = { '2026-11-09': 2_000 };
+    expect(deadlineGoal(today, 100_000, record, [], '2026-11-09')).toEqual({ perDay: 1_000, daysLeft: 10 });
+    expect(goalRecord(today, 99_700, record, '2026-11-09')).toEqual({ '2026-11-09': -300 });
+    expect(deadlineGoal(today, 99_700, record, [], '2026-11-09')).toEqual({ perDay: 1_000, daysLeft: 10 });
+    // The next day uses the record as it is.
+    expect(goalRecord(today, 99_700, record, '2026-11-10')).toBe(record);
+  });
+
+  it('counts the words that each day removed toward the streak', () => {
+    const record = { '2026-11-02': -500, '2026-11-03': 800, '2026-11-04': -200 };
+    const days = lastDays(record, { goal: 400, restDays: [], cut: true }, '2026-11-04', 3);
+    expect(days).toEqual([
+      { day: '2026-11-02', words: 500, state: 'met' },
+      { day: '2026-11-03', words: 0, state: 'missed' },
+      { day: '2026-11-04', words: 200, state: 'today' },
+    ]);
+    expect(streakOf(record, { goal: 400, restDays: [], cut: true }, '2026-11-04')).toMatchObject({
+      today: 200,
+      todayMet: false,
+    });
+  });
+
+  it('shows the share of the target', () => {
+    expect(deadlineProgress(cut, 97_500)).toEqual({ done: 2_500, need: 10_000, share: 0.25 });
+    // New words since the start show as no progress, never as a loss under 0.
+    expect(deadlineProgress(cut, 101_000)).toMatchObject({ done: 0, share: 0 });
+    expect(deadlineProgress(cut, 85_000)).toMatchObject({ done: 10_000, share: 1 });
+    expect(deadlineProgress({ date: '2026-11-18', words: 80_000 }, 20_000)).toEqual({
+      done: 20_000,
+      need: 80_000,
+      share: 0.25,
+    });
   });
 });

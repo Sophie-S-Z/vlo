@@ -126,10 +126,16 @@ export interface Challenge {
   words: number;
 }
 
-/** A date as YYYY-MM-DD and the project's total words to reach by the end of that day (F46). */
+/**
+ * A date as YYYY-MM-DD and the project's total words to reach by the end of that day (F46). `from` holds
+ * the total when the writer set the deadline, on the day `since`. A target under it is a goal to cut the
+ * draft down.
+ */
 export interface Deadline {
   date: string;
   words: number;
+  from?: number;
+  since?: string;
 }
 
 /** The most labels that a project can have (F40). */

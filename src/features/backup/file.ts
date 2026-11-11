@@ -275,7 +275,11 @@ function checkProject(value: unknown): Project {
       /^\d{4}-\d{2}-\d{2}$/.test(deadline.date) &&
       typeof deadline.words === 'number' &&
       Number.isInteger(deadline.words) &&
-      deadline.words >= 1
+      deadline.words >= 1 &&
+      (deadline.from === undefined ||
+        (typeof deadline.from === 'number' && Number.isInteger(deadline.from) && deadline.from >= 0)) &&
+      (deadline.since === undefined ||
+        (typeof deadline.since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(deadline.since)))
     )
   )
     fail(`${DAMAGED} The project settings are wrong.`);

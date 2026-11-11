@@ -130,6 +130,15 @@ export const HELP = {
       ],
     },
     {
+      title: 'Set a writing goal',
+      steps: [
+        'In Progress, turn on Track a daily goal and streak. Type the words for each day, or set a deadline.',
+        'A deadline takes a date and the words that the project must have by then. Vlo divides the words left by the writing days left, and the bar shows how far you are.',
+        'To cut a draft down, type a target under the words that the project has now. Each day then counts the words that you remove.',
+        'While goals are on, a ring next to the timer shows the goal of today. Choose it to open Progress.',
+      ],
+    },
+    {
       title: 'Sprint and take a month challenge',
       steps: [
         'Choose Timer, then Start a sprint. Pick the minutes and a word target. Only the words that you write in the sprint count.',
