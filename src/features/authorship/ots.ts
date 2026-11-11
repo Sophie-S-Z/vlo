@@ -45,9 +45,11 @@ const MAX_BYTES = 4096;
 const MAX_DEPTH = 256;
 /** The largest answer that Vlo reads from a server. A calendar answer is a few hundred bytes. */
 const MAX_ANSWER = 64 * 1024;
+/** A server that does not answer in this time counts as down, so a request never holds the page. */
+const TIMEOUT_MS = 15_000;
 
 /** The free calendar servers that Vlo sends a hash to (decision O3). */
-export const CALENDARS = ['https://a.pool.opentimestamps.org', 'https://b.pool.opentimestamps.org'];
+const CALENDARS = ['https://a.pool.opentimestamps.org', 'https://b.pool.opentimestamps.org'];
 /** The calendars that finish the proofs of the two pools. A proof that names another one stays pending. */
 const FINISHERS = [
   'https://alice.btc.calendar.opentimestamps.org',
@@ -75,7 +77,17 @@ export async function sha256(bytes: Uint8Array): Promise<Uint8Array<ArrayBuffer>
 }
 
 /** A proof that is not in the OpenTimestamps form, or that Vlo cannot read. */
-export class ProofError extends Error {}
+class ProofError extends Error {}
+
+/** A server that answered with an error status. It says nothing about the proof. */
+class ServerError extends Error {}
+
+const ask = (url: string, body?: Uint8Array<ArrayBuffer>) =>
+  vloFetch(url, {
+    purpose: 'timestamp',
+    ...(body ? { body } : {}),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
 
 class Reader {
   private at = 0;
@@ -151,14 +163,17 @@ function readAttestation(reader: Reader): Attestation {
   const tag = reader.take(8);
   const payload = reader.varbytes(8192);
   const inner = new Reader(payload);
+  let attestation: Attestation = { kind: 'other', tag, payload };
   if (same(tag, PENDING)) {
     const uri = new TextDecoder().decode(inner.varbytes(1000));
     if (!/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[A-Za-z0-9._/-]*)?$/.test(uri))
       throw new ProofError('The proof names a calendar server with a wrong address.');
-    return { kind: 'pending', uri };
-  }
-  if (same(tag, BITCOIN)) return { kind: 'bitcoin', height: inner.varuint() };
-  return { kind: 'other', tag, payload };
+    attestation = { kind: 'pending', uri };
+  } else if (same(tag, BITCOIN)) attestation = { kind: 'bitcoin', height: inner.varuint() };
+  // As in the reference client, a known attestation has no bytes after its value.
+  if (attestation.kind !== 'other' && !inner.done)
+    throw new ProofError('The proof has an attestation with bytes after its end.');
+  return attestation;
 }
 
 function readOp(tag: number, reader: Reader): Op {
@@ -282,7 +297,7 @@ function merge(into: Timestamp, from: Timestamp): void {
 }
 
 async function answer(response: Response): Promise<Uint8Array> {
-  if (!response.ok) throw new ProofError(`The server answered ${String(response.status)}.`);
+  if (!response.ok) throw new ServerError(`The server answered ${String(response.status)}.`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.length > MAX_ANSWER) throw new ProofError('The server answer is too large.');
   return bytes;
@@ -297,9 +312,7 @@ export async function stamp(digest: Uint8Array): Promise<Uint8Array<ArrayBuffer>
   const nonce = crypto.getRandomValues(new Uint8Array(16));
   const message = await sha256(concat(digest, nonce));
   const answers = await Promise.allSettled(
-    CALENDARS.map(async (calendar) =>
-      readAnswer(await answer(await vloFetch(`${calendar}/digest`, { purpose: 'timestamp', body: message }))),
-    ),
+    CALENDARS.map(async (calendar) => readAnswer(await answer(await ask(`${calendar}/digest`, message)))),
   );
   const joined: Timestamp = { attestations: [], ops: [] };
   for (const result of answers) if (result.status === 'fulfilled') merge(joined, result.value);
@@ -324,17 +337,19 @@ export type TimestampCheck =
   | { state: 'confirmed'; height: number; time: number; finished: Uint8Array | null }
   /** No Bitcoin block holds it yet. */
   | { state: 'pending' }
+  /** A server did not answer, so the check says nothing about the proof. */
+  | { state: 'unreachable' }
   | { state: 'failed'; reason: string };
 
-/** The block hash is the double SHA-256 of the 80-byte header, with its bytes in reverse order. */
+/**
+ * The block hash is the double SHA-256 of the 80-byte header, with its bytes in reverse order. The check
+ * trusts the block server to give the header of the main chain at `height`: it does not check the proof
+ * of work. `ots verify` with a Bitcoin node of one's own trusts no server.
+ */
 async function blockTime(height: number, root: Uint8Array): Promise<number | null> {
-  const hash = (
-    await answerText(await vloFetch(`${BLOCKS}/block-height/${String(height)}`, { purpose: 'timestamp' }))
-  ).trim();
+  const hash = (await answerText(await ask(`${BLOCKS}/block-height/${String(height)}`))).trim();
   if (!/^[0-9a-f]{64}$/.test(hash)) throw new ProofError('The block server gave a wrong block hash.');
-  const headerHex = (
-    await answerText(await vloFetch(`${BLOCKS}/block/${hash}/header`, { purpose: 'timestamp' }))
-  ).trim();
+  const headerHex = (await answerText(await ask(`${BLOCKS}/block/${hash}/header`))).trim();
   if (!/^[0-9a-f]{160}$/.test(headerHex)) throw new ProofError('The block server gave a wrong block header.');
   const header = new Uint8Array((headerHex.match(/../g) ?? []).map((pair) => parseInt(pair, 16)));
   if (hex((await sha256(await sha256(header))).reverse()) !== hash)
@@ -362,11 +377,7 @@ export async function checkTimestamp(bytes: Uint8Array, digest: Uint8Array): Pro
       for (const { attestation, message, holder } of all) {
         if (attestation.kind !== 'pending' || !FINISHERS.includes(attestation.uri)) continue;
         try {
-          const rest = readAnswer(
-            await answer(
-              await vloFetch(`${attestation.uri}/timestamp/${hex(message)}`, { purpose: 'timestamp' }),
-            ),
-          );
+          const rest = readAnswer(await answer(await ask(`${attestation.uri}/timestamp/${hex(message)}`)));
           holder.attestations = holder.attestations.filter((a) => a !== attestation);
           merge(holder, rest);
           finished = true;
@@ -389,7 +400,9 @@ export async function checkTimestamp(bytes: Uint8Array, digest: Uint8Array): Pro
       ? { state: 'failed', reason: 'No Bitcoin block holds this timestamp.' }
       : { state: 'pending' };
   } catch (problem) {
-    if (problem instanceof ProofError) return { state: 'failed', reason: problem.message };
-    return { state: 'failed', reason: 'Vlo could not reach the servers. Try again later.' };
+    // A server error or a lost connection says nothing about the proof.
+    return problem instanceof ProofError
+      ? { state: 'failed', reason: problem.message }
+      : { state: 'unreachable' };
   }
 }

@@ -3,8 +3,16 @@ import { clock } from '@/lib/clock';
 import { db, type AuthorshipEntry } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { signingKey } from './keys';
-import { sha256, stamp } from './ots';
-import { entryText, recordFile, sha256Hex, toHex, withTimestamp } from './verify';
+import { stamp } from './ots';
+import {
+  entryText,
+  recordDigest,
+  recordFile,
+  sha256Hex,
+  toHex,
+  withTimestamp,
+  type RecordEntry,
+} from './verify';
 
 /*
  * The authorship record of each project (roadmap F54, plan Task K5). The editor counts the characters of
@@ -122,7 +130,8 @@ export async function exportRecord(projectId: string): Promise<string | null> {
  * file gets their proof. It throws when no server answers.
  */
 export async function stampRecord(file: string): Promise<string> {
-  return withTimestamp(file, await stamp(await sha256(new TextEncoder().encode(file))));
+  const { entries } = JSON.parse(file) as { entries: RecordEntry[] };
+  return withTimestamp(file, await stamp(await recordDigest(entries)));
 }
 
 /** Forgets the counts that no entry holds yet, for tests. */

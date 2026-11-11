@@ -620,6 +620,8 @@ Last update: 2026-11-10
     the proof only when the reader asks: it finishes a pending proof at its calendar, and shows the date
     only when the Bitcoin block header from mempool.space holds the hash. `ots.ts` is Vlo's own reader and
     writer of the `.ots` format.
+  - Gate 15: a fresh review found no blocking defect. Its 7 minor findings are fixed, with a 15-second
+    limit on each timestamp request and a separate "could not reach the servers" result on `/verify`.
 - Design pass of 2026-11-11 (the product owner's design notes, checked against Part J0 of
   `docs/plans/phase-10.md`). Headings balance their lines and other text avoids a widow, outside the
   editor. On a phone the welcome actions stay in view at the bottom. An empty item's stats line shows only

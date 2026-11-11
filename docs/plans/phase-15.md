@@ -73,4 +73,5 @@
 
 ### Gate 15
 
-- [ ] Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. A fresh review agent reviews the Phase 15 diff against Review Focus 1 to 3. Ask the product owner to run "Run workflow" for all 4 browsers.
+- [x] Run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. A fresh review agent reviews the Phase 15 diff against Review Focus 1 to 3. Ask the product owner to run "Run workflow" for all 4 browsers.
+- Built: the review found no blocking defect, and Review Focus 1 to 3 hold. Its 7 minor findings are fixed: each timestamp request stops after 15 seconds, so a server that never answers cannot hold the download; a server error or a lost connection shows "Vlo could not reach the servers" and no longer reads as a failed proof; a pending or Bitcoin attestation with extra bytes fails, as in `ots verify`; `stampRecord` hashes the entries with `recordDigest`, so a second timestamp also passes; and the privacy notice (version 9), the check page and `docs/authorship-record.md` now name the servers that each check asks. `/verify` trusts mempool.space for the block header, and `docs/authorship-record.md` says so.

@@ -11,7 +11,7 @@ import { verifyRecord, withTimestamp, type VerifyResult } from './verify';
 /*
  * The check page of an authorship record (roadmap F54, plan Task K6). It reads the file in this browser
  * and sends nothing, so it works offline and with no account. Only "Check the timestamp" sends a request
- * (roadmap 2 F68): the hash of the proof goes to the calendar server and the Bitcoin block server.
+ * (roadmap 2 F68): a hash from the proof goes to the calendar server, and a block number to mempool.space.
  */
 
 const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -99,7 +99,8 @@ function PublicTimestamp({
       </h2>
       <p className="text-sm text-muted">
         This record has a public timestamp. To check it, Vlo asks an OpenTimestamps server for the finished
-        proof and asks mempool.space for the Bitcoin block. They get the hash of the proof, never the record.
+        proof and asks mempool.space for the Bitcoin block. The OpenTimestamps server gets a hash from the
+        proof, and mempool.space gets only the block number. Neither gets the record.
       </p>
       <div>
         <Button type="button" variant="outline" disabled={busy} onClick={() => void run()}>
@@ -112,9 +113,10 @@ function PublicTimestamp({
         <p role="status" className="empty:hidden">
           {check?.state === 'pending' &&
             'Bitcoin has not confirmed this timestamp yet. That takes a few hours. Try again later.'}
+          {check?.state === 'unreachable' && 'Vlo could not reach the servers. Try again later.'}
           {check?.state === 'confirmed' && (
             <>
-              Bitcoin block {number.format(check.height)} holds this record, so the record existed on{' '}
+              Bitcoin block {number.format(check.height)} holds this record, so the record existed by{' '}
               <time dateTime={new Date(check.time).toISOString()}>{when.format(check.time)}</time>.
             </>
           )}

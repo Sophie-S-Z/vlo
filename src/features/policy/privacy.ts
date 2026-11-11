@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 8,
+  version: 9,
   date: '2026-11-11',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -67,7 +67,7 @@ export const PRIVACY = {
       title: 'Public timestamps',
       when: 'Only when you turn on "Add a public timestamp" and download an authorship record, and when a reader presses "Check the timestamp" on the check page.',
       sends:
-        'One SHA-256 hash of the record, mixed with random bytes, to two free OpenTimestamps servers. The hash shows no text, title or count. The check page asks the same servers for the finished proof, and asks mempool.space for the Bitcoin block that holds it.',
+        'One SHA-256 hash of the record, mixed with random bytes, to two free OpenTimestamps servers. The hash shows no text, title or count. The check page asks the OpenTimestamps servers that finish the proof for the rest of it, and asks mempool.space for the Bitcoin block that holds it.',
     },
   } satisfies Record<NetPurpose, { title: string; when: string; sends: string }>,
   contact: {
