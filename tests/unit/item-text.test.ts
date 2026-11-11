@@ -2,7 +2,7 @@ import { Editor } from '@tiptap/core';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { proseExtensions } from '@/features/editor/extensions/prose';
-import { docText, writeItemText } from '@/features/editor/itemText';
+import { docText, refreshItemText, writeItemText } from '@/features/editor/itemText';
 import { withoutNotes } from '@/features/editor/format/notes';
 import { dayStartKey, localDay, wordsToday } from '@/features/editor/stats/stats';
 import { createProject, updateProjectSettings } from '@/features/library/projects';
@@ -112,4 +112,23 @@ test('writeItemText adds the net change in words to the day', async () => {
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({ [today]: -4 });
   await writeItemText(item, 'one two three four', 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({});
+});
+
+test('refreshItemText brings a copy that missed the last words up to date, and keeps it for an empty editor', async () => {
+  const { firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
+  const item = await db.items.get(firstItemId);
+  if (!item) throw new Error('no item');
+  // The tab closed in the save pause: the copy has the first sentence only.
+  await writeItemText(item, 'The rain came.', 'prose');
+  const editor = new Editor({ extensions: proseExtensions(new Y.Doc()) });
+
+  // An editor that has not drawn its document yet leaves the copy alone.
+  await refreshItemText(item, editor.state.doc, 'prose');
+  expect((await db.itemTexts.get(firstItemId))?.text).toBe('The rain came.');
+
+  editor.commands.setContent('<p>The rain came. The river rose.</p>');
+  await refreshItemText(item, editor.state.doc, 'prose');
+  expect((await db.itemTexts.get(firstItemId))?.text).toBe('The rain came. The river rose.');
+  expect((await db.items.get(firstItemId))?.wordCount).toBe(6);
+  editor.destroy();
 });

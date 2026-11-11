@@ -126,7 +126,9 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
   }, [editor, kind, prefs.bar, language]);
 
   if (!prefs.bar) return null;
-  const parts = stats ? prefs.metrics.map((metric) => metricText(metric, stats, kind, unit)) : [];
+  // An empty item shows only its count, not "none to read" and "grade none".
+  const metrics = stats?.characters === 0 ? (['words'] as const) : prefs.metrics;
+  const parts = stats ? metrics.map((metric) => metricText(metric, stats, kind, unit)) : [];
   if (selected > 0) parts.push(`${numbers.format(selected)} selected`);
 
   return (

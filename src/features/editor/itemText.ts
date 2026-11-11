@@ -83,3 +83,20 @@ export async function writeItemText(
       });
   });
 }
+
+/**
+ * Writes the text copy and the counts again when the copy differs from the open document. A tab that
+ * closes in the save pause can end before its write, and the copy then misses the last words.
+ */
+export async function refreshItemText(
+  item: Pick<Item, 'id' | 'projectId'>,
+  doc: ProseMirrorNode,
+  kind: EditorForm,
+  language?: string,
+): Promise<void> {
+  const text = docText(doc, kind);
+  // An empty editor can be one that has not drawn its document yet, so it never replaces a stored copy.
+  if (text === '') return;
+  const stored = await db.itemTexts.get(item.id);
+  if (stored?.text !== text) await writeItemText(item, text, kind, docBody(doc, kind), language);
+}
