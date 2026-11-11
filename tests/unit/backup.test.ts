@@ -185,8 +185,8 @@ describe('Backup round trip', () => {
         continuity: { words: ['Marla'], scenes: ['entry:item'] },
       },
     });
-    // A poem form (F56) is an item field, so it goes with the item.
-    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet' });
+    // A poem form (F56) and a story date (F67) are item fields, so they go with the item.
+    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet', storyDate: '1994-07' });
     const before = await rowsOf(project.id);
     const texts = await Promise.all(scenes.map((s) => textOf(s.id)));
     const { bytes } = await backUpProject(project.id, { music: false });
@@ -508,6 +508,7 @@ describe('Reading a backup', () => {
       ['a wrong poem form', (m) => (row(m, 'items').form = 'limerick'), /has a wrong poem form/],
       ['a version name of no text', (m) => (row(m, 'items').versionName = 42), /has no versionName/],
       ['an empty version name', (m) => (row(m, 'items').versionName = ' '), /has a wrong version name/],
+      ['a wrong story date', (m) => (row(m, 'items').storyDate = '1994-13'), /has a wrong story date/],
       [
         'a wrong day of words',
         (m) => {

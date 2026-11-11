@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 14,
+  version: 15,
   date: '2026-11-11',
   guide: [
     {
@@ -181,6 +181,7 @@ export const HELP = {
       steps: [
         'When an entry changes in the story, open it and choose Add a change, such as “Loses her left eye” from Scene 4. The change holds from that scene on. The cursor line and the Reader panel show the entry as it is at the open scene.',
         'More tools also has Continuity check, which is off at first. In an English project, it marks a capital word in a sentence that is one letter away from a Codex name, such as “Mria” for “Mira”. In every project, it marks a name after the scene where its entry leaves the story. Put the cursor in the mark to see why, and choose Not a problem to keep it.',
+        'In the binder, open the menu of a scene and choose Story date. Type a year, a month or a day, such as 1994-07. In a series, the Series page shows the dated scenes of every book on one Timeline, with the undated scenes after them.',
       ],
     },
     {

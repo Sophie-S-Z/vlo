@@ -8,13 +8,12 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { cn } from '@/ui/cn';
-import { formatDate, isDate } from './dates';
+import { DATE_HINT, formatDate, isDate } from './dates';
 import { addStage, cleanThemes, deleteStage, moveStage, setMemory, updateStage } from './memories';
 
 /* The Memory Timeline's forms: a memory's date, stage and themes, and the life stages (plan Task C4). */
 
 const SAVE_FAILED = 'Vlo could not save this change on this device. Check the storage space and try again.';
-const DATE_HINT = 'A year, a month or a day: 1994, 1994-07 or 1994-07-12.';
 
 /** Edit a memory: its title, date, life stage and themes. */
 export function MemoryDialog({

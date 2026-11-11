@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { codexMatcher } from '@/features/codex/codex';
+import { codexMatcher, type ReadingItem } from '@/features/codex/codex';
+import { compareDates } from '@/features/timeline/dates';
 import { clock } from '@/lib/clock';
 import { db, type Series, type StyleRule } from '@/lib/db';
 import { newId } from '@/lib/ids';
@@ -147,4 +148,19 @@ export async function renameSeries(seriesId: string, title: string): Promise<voi
   await change(seriesId, (series) => {
     series.title = clean;
   });
+}
+
+/**
+ * The scenes of a series on one timeline (F67): the dated scenes by story date, then the undated scenes.
+ * A partial date sorts at its middle, as on the Memory Timeline. The sort is stable, so scenes with one
+ * date and the undated scenes keep their reading order.
+ */
+export function seriesTimeline(order: readonly ReadingItem[]): {
+  dated: ReadingItem[];
+  undated: ReadingItem[];
+} {
+  const dated = order
+    .filter(({ item }) => item.storyDate !== undefined)
+    .sort((a, b) => compareDates(a.item.storyDate ?? '', b.item.storyDate ?? ''));
+  return { dated, undated: order.filter(({ item }) => item.storyDate === undefined) };
 }

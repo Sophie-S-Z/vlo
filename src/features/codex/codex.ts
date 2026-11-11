@@ -195,14 +195,24 @@ export async function readingOrder(projectId: string): Promise<ReadingItem[]> {
       db.items.where('projectId').anyOf(books).toArray(),
       db.projects.bulkGet(books),
     ]);
-    return books.flatMap((book, i) =>
-      flattenTree(items.filter((item) => item.projectId === book)).map(({ item }) => ({
-        item,
-        book: projects[i]?.title ?? '',
-      })),
+    return inReadingOrder(
+      books.map((id, i) => ({ id, title: projects[i]?.title ?? '' })),
+      items,
     );
   });
 }
+
+/** The items of some books in reading order: the books in their order, and the binder order in each book. */
+export const inReadingOrder = (
+  books: readonly { id: string; title: string }[],
+  items: readonly Item[],
+): ReadingItem[] =>
+  books.flatMap((book) =>
+    flattenTree(items.filter((item) => item.projectId === book.id)).map(({ item }) => ({
+      item,
+      book: book.title,
+    })),
+  );
 
 /** The reading order of a project, live. Undefined while it loads. */
 export function useReadingOrder(projectId: string): ReadingItem[] | undefined {

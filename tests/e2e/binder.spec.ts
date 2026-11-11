@@ -121,6 +121,25 @@ test.describe('wide screens, item menu', () => {
     await expect(binder(page).getByText('Mira finds the ledger.')).toBeVisible();
   });
 
+  test('"Story date" takes a year, a month or a day, and a wrong date gives a message (F67)', async ({
+    page,
+  }) => {
+    await novelWithTwoScenes(page);
+    const row = binder(page).getByRole('listitem').filter({ hasText: 'Scene 1' });
+    await binder(page).getByRole('button', { name: 'Options for Scene 1' }).click();
+    await page.getByRole('menuitem', { name: 'Story date' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Story date for Scene 1' });
+    await dialog.getByLabel('Story date').fill('1994-13');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(dialog.getByRole('alert')).toContainText('Vlo cannot read that date.');
+    expect(await seriousIssues(page)).toEqual([]);
+    await dialog.getByLabel('Story date').fill('1994-07');
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(row.getByText('July 1994')).toBeVisible();
+    await page.reload();
+    await expect(binder(page).getByText('July 1994')).toBeVisible();
+  });
+
   test('deleting the open item opens another and removes its stored text', async ({ page }) => {
     await novelWithTwoScenes(page);
     await expect(page.getByRole('heading', { level: 2, name: 'Scene 2' })).toBeVisible();

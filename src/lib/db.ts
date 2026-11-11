@@ -174,6 +174,8 @@ export interface Item {
   versionName?: string;
   /** The id of one of the project's labels (F40). An id that the project no longer has shows no label. */
   labelId?: string;
+  /** When the scene happens in the story (F67): "YYYY", "YYYY-MM" or "YYYY-MM-DD". Undated when absent. */
+  storyDate?: string;
   createdAt: number;
   updatedAt: number;
   memory?: {

@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { isPoemForm } from '@/features/craft/forms';
+import { isDate } from '@/features/timeline/dates';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
@@ -70,14 +71,14 @@ import type {
  * row (`series`) and its shared Codex entries (`seriesCodex`). Version 8 adds the Script template, its
  * `script` items and their script lines (F63). Version 9 adds the sources (`sources`), the citations in the
  * text and the citation style (F64). Version 10 adds the changes of Codex entries at scenes (`changes`,
- * F65). Version 11 adds the continuity marks that the writer kept (`settings.continuity`, F66). Vlo still
- * reads versions 1 to 10.
+ * F65). Version 11 adds the continuity marks that the writer kept (`settings.continuity`, F66). Version 12 adds the story date of a scene (`storyDate`, F67). Vlo still reads
+ * versions 1 to 11.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 11;
+export const BACKUP_VERSION = 12;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -378,6 +379,8 @@ function checkItems(rows: Json[], projectId: string): Item[] {
         fail(`${DAMAGED} ${what} has a wrong version name.`);
     }
     optionalText(row, 'labelId', what);
+    if (row.storyDate !== undefined && !isDate(text(row, 'storyDate', what)))
+      fail(`${DAMAGED} ${what} has a wrong story date.`);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);
     if (row.memory !== undefined && !isObject(row.memory)) fail(`${DAMAGED} ${what} has a wrong memory.`);

@@ -81,6 +81,24 @@ export async function updateItem(
   });
 }
 
+/** Gives a scene its story date (F67), or takes the date off with null. */
+export async function setStoryDate(id: string, date: string | null): Promise<void> {
+  const now = clock.now();
+  await db.transaction('rw', db.items, db.projects, async () => {
+    const item = await db.items.get(id);
+    if (!item) return;
+    await db.items
+      .where('id')
+      .equals(id)
+      .modify((row) => {
+        if (date === null) delete row.storyDate;
+        else row.storyDate = date;
+        row.updatedAt = now;
+      });
+    await touchProject(item.projectId, now);
+  });
+}
+
 /**
  * Deletes an item and everything under it, with their snapshots, versions, text copies and stored text. Board
  * cards of a deleted item stay on the board without their link, and each poem order drops the item.

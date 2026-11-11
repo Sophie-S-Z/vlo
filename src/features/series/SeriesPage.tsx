@@ -4,9 +4,10 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
-import { mentionMatrix } from '@/features/codex/codex';
+import { inReadingOrder, mentionMatrix } from '@/features/codex/codex';
 import { CodexMatrix } from '@/features/codex/CodexMatrix';
 import { formatWords } from '@/features/library/format';
+import { holdsText } from '@/features/library/templates';
 import { SequenceList, type SequenceActions } from '@/features/sequences/SequenceList';
 import { db, type Project, type Series, type StyleRule } from '@/lib/db';
 import { sortByOrder } from '@/lib/order';
@@ -21,11 +22,21 @@ import {
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
-import { leaveSeries, MAX_SERIES_TITLE, moveBook, renameSeries, setStyleSheet, styleRule } from './series';
+import {
+  leaveSeries,
+  MAX_SERIES_TITLE,
+  moveBook,
+  renameSeries,
+  seriesTimeline,
+  setStyleSheet,
+  styleRule,
+} from './series';
+import { SeriesTimeline } from './SeriesTimeline';
 
 /*
  * The Series page (roadmap F59, plan Task K8): the books in order, their words, the shared Codex with its
- * mentions in each book, and the style sheet that the style check of each book uses.
+ * mentions in each book, the style sheet that the style check of each book uses, and the timeline of
+ * the scenes of every book (F67).
  */
 
 interface Book {
@@ -38,16 +49,23 @@ interface Book {
 const SAVE_FAILED = 'Vlo could not save that change on this device.';
 const problemText = (problem: unknown) => (problem instanceof RangeError ? problem.message : SAVE_FAILED);
 
-/** The series with its books, its shared entries and their mentions in each book. Null when it is gone. */
+/** The series with its books, its shared entries, their mentions in each book and its timeline. Null when it is gone. */
 async function seriesView(seriesId: string) {
   return db.transaction('r', [db.series, db.projects, db.items, db.codex, db.itemTexts], async () => {
     const series = await db.series.get(seriesId);
     if (!series) return null;
     const projects = (await db.projects.bulkGet(series.projectIds)).filter((p): p is Project => !!p);
     const ids = projects.map((p) => p.id);
+    const items = await db.items.where('projectId').anyOf(ids).toArray();
     const words = new Map<string, number>();
-    for (const item of await db.items.where('projectId').anyOf(ids).toArray())
-      words.set(item.projectId, (words.get(item.projectId) ?? 0) + item.wordCount);
+    for (const item of items) words.set(item.projectId, (words.get(item.projectId) ?? 0) + item.wordCount);
+    const templates = new Map(projects.map((p) => [p.id, p.templates]));
+    const timeline = seriesTimeline(
+      // A memory has its own date on the Memory Timeline, so it takes no story date.
+      inReadingOrder(projects, items).filter(
+        ({ item }) => item.kind !== 'memory' && holdsText(templates.get(item.projectId) ?? [], item.kind),
+      ),
+    );
     const books: Book[] = projects.map((p) => ({
       id: p.id,
       title: p.title,
@@ -61,7 +79,7 @@ async function seriesView(seriesId: string) {
       entries,
       texts.map((t) => ({ itemId: t.projectId, text: t.text })),
     );
-    return { series, books, entries, matrix };
+    return { series, books, entries, matrix, timeline };
   });
 }
 
@@ -329,7 +347,7 @@ export function SeriesPage() {
       </section>
     );
 
-  const { series, books, entries, matrix } = view;
+  const { series, books, entries, matrix, timeline } = view;
   const unit = books[0]?.unit ?? 'words';
   const sameUnit = books.every((b) => b.unit === unit);
   const total = books.reduce((sum, b) => sum + b.words, 0);
@@ -380,6 +398,8 @@ export function SeriesPage() {
         </p>
         <CodexMatrix entries={entries} columns={books} noun="book" matrix={matrix} />
       </section>
+
+      <SeriesTimeline {...timeline} />
 
       <StyleSheet series={series} announce={setMessage} />
 

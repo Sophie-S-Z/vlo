@@ -22,6 +22,9 @@ function daysIn(year: number, month: number): number {
   return date.getUTCDate();
 }
 
+/** How to type a date, for a field that takes one. */
+export const DATE_HINT = 'A year, a month or a day: 1994, 1994-07 or 1994-07-12.';
+
 export function parseDate(value: string): DateParts | null {
   const match = PATTERN.exec(value);
   if (!match) return null;

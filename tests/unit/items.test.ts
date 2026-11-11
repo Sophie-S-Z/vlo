@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { addItem, deleteItem, moveItem, nextTitle, updateItem } from '@/features/binder/items';
+import { addItem, deleteItem, moveItem, nextTitle, setStoryDate, updateItem } from '@/features/binder/items';
 import { createProject } from '@/features/library/projects';
 import { db } from '@/lib/db';
 import { itemDocName } from '@/lib/itemDocName';
@@ -97,4 +97,14 @@ test('deleteItem removes the item, its descendants, their rows and their text da
   expect(names).toContain(itemDocName(keep.id));
   expect(await db.items.get(keep.id)).toBeDefined();
   expect(await db.snapshots.get(`snap-${keep.id}`)).toBeDefined();
+});
+
+test('setStoryDate gives a scene its story date (F67), and null takes the date off', async () => {
+  const { project, firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
+  await setStoryDate(firstItemId, '1994-07');
+  expect((await db.items.get(firstItemId))?.storyDate).toBe('1994-07');
+  await setStoryDate(firstItemId, null);
+  const item = await db.items.get(firstItemId);
+  expect(item && 'storyDate' in item).toBe(false);
+  expect((await db.projects.get(project.id))?.updatedAt).toBeGreaterThanOrEqual(project.updatedAt);
 });

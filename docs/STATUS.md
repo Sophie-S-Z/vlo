@@ -620,6 +620,10 @@ Last update: 2026-11-10
     name. In every project, rule 2 marks a mention of an entry after its "Leaves the story" scene. The
     cursor line gives the reason, and "Not a problem" keeps the word or the scene in
     `settings.continuity` (backup version 11). The check never changes the text.
+  - N4 and N5 (F67): "Story date" in the binder menu of a scene takes a year, a month or a day, in the
+    Memory Timeline date format. The binder shows the date under the title (`storyDate`, backup version
+    12). The Series page has a Timeline list: the dated scenes of every book by date, each with its book
+    and a link to it, then the undated scenes in reading order.
 - Phase 13 (plan `docs/plans/phase-13.md`, roadmap 2 "Every form", F62 to F64). The product owner
   approved roadmap 2 decisions R1 to R6 as recommended on 2026-11-10.
   - M1 (F62): Speak to write in More tools, the / menu and the command menu of every prose and poem item.

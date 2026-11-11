@@ -5,7 +5,9 @@ import { memo, useRef } from 'react';
 import type { TemplateDef } from '@/features/library/templates';
 import { threadStroke } from '@/features/board/board';
 import type { Item, ItemKind, Label, Status } from '@/lib/db';
+import { formatDate } from '@/features/timeline/dates';
 import { cn } from '@/ui/cn';
+import type { FormAction } from './ItemDialogs';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,14 +36,20 @@ export type BinderMove = 'up' | 'down' | 'indent' | 'outdent';
 export interface BinderItemActions {
   open: (item: Item) => void;
   openBeside: (item: Item) => void;
-  rename: (item: Item) => void;
-  synopsis: (item: Item) => void;
+  /** Opens the dialog that edits the title, the synopsis or the story date (F67). */
+  edit: (item: Item, type: FormAction) => void;
   remove: (item: Item) => void;
   setStatus: (item: Item, status: Status) => void;
   addChild: (item: Item, kind: ItemKind) => void;
   canMove: (item: Item, move: BinderMove) => boolean;
   move: (item: Item, move: BinderMove) => void;
 }
+
+const EDITS: { type: FormAction; label: string }[] = [
+  { type: 'rename', label: 'Rename' },
+  { type: 'synopsis', label: 'Edit synopsis' },
+  { type: 'story-date', label: 'Story date' },
+];
 
 const MOVES: { move: BinderMove; label: string }[] = [
   { move: 'up', label: 'Move up' },
@@ -93,6 +101,8 @@ export const BinderItem = memo(function BinderItem({
     useSortable({ id: item.id });
   const toEditor = useRef(false);
   const writable = template.editorKind(item.kind) !== null;
+  // A memory has its own date on the Memory Timeline.
+  const dated = writable && item.kind !== 'memory';
   const kindLabel = template.kindLabel[item.kind] ?? item.kind;
   const childKinds = template.childKinds[item.kind] ?? [];
 
@@ -143,6 +153,12 @@ export const BinderItem = memo(function BinderItem({
             <span>{kindLabel}</span>
             <span aria-hidden="true">·</span>
             <span>{STATUS_LABEL[item.status]}</span>
+            {item.storyDate && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{formatDate(item.storyDate)}</span>
+              </>
+            )}
             {label && (
               <>
                 <span aria-hidden="true">·</span>
@@ -195,20 +211,16 @@ export const BinderItem = memo(function BinderItem({
                 Open beside
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem
-              onSelect={() => {
-                actions.rename(item);
-              }}
-            >
-              Rename
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                actions.synopsis(item);
-              }}
-            >
-              Edit synopsis
-            </DropdownMenuItem>
+            {EDITS.filter(({ type }) => type !== 'story-date' || dated).map(({ type, label }) => (
+              <DropdownMenuItem
+                key={type}
+                onSelect={() => {
+                  actions.edit(item, type);
+                }}
+              >
+                {label}
+              </DropdownMenuItem>
+            ))}
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
