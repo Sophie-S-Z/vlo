@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
 import { db, type Challenge, type Deadline, type Project } from '@/lib/db';
+import { dayKey, deadlineGoal, goalRecord, isCut, wordsOn } from './streaks';
 
 /* The Progress data (spec 8.4, plan Task C9, F21): the session count and the goal settings. */
 
@@ -51,6 +52,10 @@ export async function setGoals(
   if (deadline && !ISO_DAY.test(deadline.date)) throw new RangeError('Pick a date to finish by.');
   if (deadline && (!Number.isInteger(deadline.words) || deadline.words < 1 || deadline.words > MAX_TARGET))
     throw new RangeError(`Type a target from 1 to ${MAX_TARGET.toLocaleString()} words.`);
+  if (deadline?.from !== undefined && !(Number.isInteger(deadline.from) && deadline.from >= 0))
+    throw new RangeError('The words of the project are wrong.');
+  if (deadline?.since !== undefined && !ISO_DAY.test(deadline.since))
+    throw new RangeError('The day of the deadline is wrong.');
   const challenge = change.challenge;
   if (challenge && !ISO_MONTH.test(challenge.month)) throw new RangeError('Pick a month.');
   if (
@@ -78,7 +83,16 @@ export async function setGoals(
             ? { goalWordsPerDay: DEFAULT_GOAL }
             : {}),
         ...(restDays === undefined ? {} : { restDays }),
-        ...(deadline ? { deadline: { date: deadline.date, words: deadline.words } } : {}),
+        ...(deadline
+          ? {
+              deadline: {
+                date: deadline.date,
+                words: deadline.words,
+                ...(deadline.from === undefined ? {} : { from: deadline.from }),
+                ...(deadline.since === undefined ? {} : { since: deadline.since }),
+              },
+            }
+          : {}),
         ...(challenge ? { challenge: { month: challenge.month, words: challenge.words } } : {}),
       };
       if (deadline === null) delete project.settings.deadline;
@@ -92,4 +106,34 @@ export async function setGoals(
       }
       project.updatedAt = clock.now();
     });
+}
+
+export interface TodayGoal {
+  /** The words to write today, or to remove with a goal to cut. */
+  goal: number;
+  /** The words written today, or removed with a goal to cut. Never under 0. */
+  done: number;
+  cut: boolean;
+}
+
+/**
+ * Today's goal of a project: the deadline's daily goal while a deadline runs, else the words a day. Null when
+ * the writer has not turned goals on. The Progress screen and the goal on the writing screen use it.
+ */
+export function todayGoal(
+  settings: Project['settings'],
+  total: number,
+  today = dayKey(clock.now()),
+): TodayGoal | null {
+  if (!settings.streaksEnabled) return null;
+  const deadline = settings.deadline;
+  const record = goalRecord(deadline, total, settings.wordsByDay ?? {}, today);
+  const plan = deadline ? deadlineGoal(deadline, total, record, settings.restDays, today) : null;
+  // A goal to cut runs until its date or its target. After that, a day counts the words it adds again.
+  const cut = plan !== null && deadline !== undefined && isCut(deadline);
+  return {
+    goal: plan?.perDay ?? goalsOf(settings).goalWordsPerDay,
+    done: wordsOn(record, today, cut),
+    cut,
+  };
 }

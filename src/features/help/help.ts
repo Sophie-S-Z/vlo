@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 15,
+  version: 16,
   date: '2026-11-11',
   guide: [
     {
@@ -126,6 +126,15 @@ export const HELP = {
         'In Export, choose Download the record. Each device signs its part of the record with a key that stays on it.',
         'Give the file to a teacher, an editor or a contest. They open the verify page at /verify and drop the file there. The check runs in their browser and sends nothing.',
         'The check shows if someone changed the file. It cannot show who sat at the device.',
+      ],
+    },
+    {
+      title: 'Set a writing goal',
+      steps: [
+        'In Progress, turn on Track a daily goal and streak. Type the words for each day, or set a deadline.',
+        'A deadline takes a date and the words that the project must have by then. Vlo divides the words left by the writing days left, and the bar shows how far you are.',
+        'To cut a draft down, type a target under the words that the project has now. Each day then counts the words that you remove.',
+        'While goals are on, a ring next to the timer shows the goal of today. Choose it to open Progress.',
       ],
     },
     {

@@ -609,6 +609,19 @@ Last update: 2026-11-10
 
 ## Done in Phases 7 to 15
 
+- Ellipsus October 2026 comparison (the product owner's request of 2026-11-11). Each item of the Ellipsus
+  October update was checked against Vlo. Vlo builds the gaps in four pull requests.
+  - Writing goals: a deadline shows a bar of the total against the target. A target under the words of the
+    project is a goal to cut the draft down: each day counts the words that it removed, and the bar counts
+    the words removed since the set. The deadline keeps `from` (the total) and `since` (the day of the set),
+    so the day of the set counts from that moment. With goals on, a ring next to the timer shows the goal of
+    today and opens Progress. Checks: unit tests for the cut rules, the day of the set, the backup check and
+    `todayGoal`; browser tests for a goal to cut, the ring on the writing screen, and no ring with goals off.
+  - Not built, with the reason: a native iOS app (spec non-goal; Vlo installs as a PWA and works offline),
+    free trials (Vlo is free), reader links (Vlo has them since Phase 9), a toggle of all headings (the binder
+    holds each scene as its own item), input lag (the Gate 1 budgets hold at 200,000 words), and folder
+    dates (the binder shows no dates). Images in the text: the product owner chose a plan for a later phase.
+
 - Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 to F70).
   - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in
     all, with the 200,000-word book. The Gate 1 test runs on the 100,000-word and the 200,000-word

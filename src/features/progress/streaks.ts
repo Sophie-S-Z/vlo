@@ -9,6 +9,8 @@ export interface StreakRules {
   goal: number;
   /** Rest days as weekday numbers: 0 is Sunday and 6 is Saturday. */
   restDays: readonly number[];
+  /** A goal to cut a draft down: a day counts the words that it removed, not the words that it added. */
+  cut?: boolean;
 }
 
 export interface Streak {
@@ -16,7 +18,7 @@ export interface Streak {
   current: number;
   /** The longest run in the record. */
   best: number;
-  /** The words of today. */
+  /** The words of today: added, or removed with a goal to cut. */
   today: number;
   todayMet: boolean;
 }
@@ -99,9 +101,10 @@ export function addWordsToDay(
   return words === 0 ? others : { ...others, [day]: words };
 }
 
-/** The words of one day, never under 0. */
-function wordsOn(record: Readonly<Record<string, number>>, day: string): number {
-  return Object.hasOwn(record, day) ? Math.max(0, record[day] ?? 0) : 0;
+/** The words of one day, never under 0. With `cut`, the words that the day removed. */
+export function wordsOn(record: Readonly<Record<string, number>>, day: string, cut = false): number {
+  const net = Object.hasOwn(record, day) ? (record[day] ?? 0) : 0;
+  return Math.max(0, cut ? -net : net);
 }
 
 function metOn(words: number, goal: number): boolean {
@@ -118,14 +121,15 @@ export function streakOf(
   const days = Object.keys(record)
     .map(dayNumber)
     .filter((n) => Number.isFinite(n) && n <= end);
-  const todayWords = wordsOn(record, today);
+  const cut = rules.cut === true;
+  const todayWords = wordsOn(record, today, cut);
   const todayMet = metOn(todayWords, rules.goal);
   if (days.length === 0) return { current: 0, best: 0, today: todayWords, todayMet };
   const first = Math.min(...days);
   const rest = new Set(rules.restDays);
   const stateOf = (n: number): 'met' | 'keep' | 'break' => {
     const day = fromNumber(n);
-    if (metOn(wordsOn(record, day), rules.goal)) return 'met';
+    if (metOn(wordsOn(record, day, cut), rules.goal)) return 'met';
     // Today is not over, and a rest day is allowed off.
     return n === end || rest.has(weekdayOf(day)) ? 'keep' : 'break';
   };
@@ -150,7 +154,7 @@ export function lastDays(
   const rest = new Set(rules.restDays);
   return Array.from({ length: count }, (_, i) => {
     const day = addDays(today, i - count + 1);
-    const words = wordsOn(record, day);
+    const words = wordsOn(record, day, rules.cut === true);
     const state: DayState = metOn(words, rules.goal)
       ? 'met'
       : day === today
@@ -162,13 +166,59 @@ export function lastDays(
   });
 }
 
+/** A date to finish by, the project's words then, and the words when the writer set it (F46). */
+export interface DeadlineRule {
+  date: string;
+  words: number;
+  from?: number | undefined;
+  /** The day that the writer set the deadline, as YYYY-MM-DD. */
+  since?: string | undefined;
+}
+
+/** A deadline with a target under the words of the day it was set is a goal to cut the draft down. */
+export function isCut(deadline: DeadlineRule): boolean {
+  return deadline.from !== undefined && deadline.words < deadline.from;
+}
+
+/**
+ * The day record that a goal counts. On the day that the writer sets a goal to cut, today counts from that
+ * moment: the words that the writer added earlier today are words to cut, not words that the goal undoes.
+ */
+export function goalRecord(
+  deadline: DeadlineRule | undefined,
+  total: number,
+  record: Readonly<Record<string, number>>,
+  today: string,
+): Readonly<Record<string, number>> {
+  if (!deadline || !isCut(deadline) || deadline.since !== today || deadline.from === undefined) return record;
+  return { ...record, [today]: total - deadline.from };
+}
+
+/**
+ * How far the project is to the target of a deadline. A goal to write counts the total against the
+ * target. A goal to cut counts the words removed since the writer set it against the words to remove.
+ */
+export function deadlineProgress(
+  deadline: DeadlineRule,
+  total: number,
+): { done: number; need: number; share: number } {
+  if (isCut(deadline)) {
+    const need = (deadline.from ?? 0) - deadline.words;
+    const done = Math.min(need, Math.max(0, (deadline.from ?? 0) - total));
+    return { done, need, share: done / need };
+  }
+  const done = Math.max(0, total);
+  return { done, need: deadline.words, share: Math.min(1, done / deadline.words) };
+}
+
 /**
  * The daily goal that reaches a deadline (F46): the words left at the start of today over the writing days
  * left, today and the deadline day included, rest days out. So a missed day spreads its words over the days
- * left, and the goal stays the same all day. Null after the deadline or when the target is met.
+ * left, and the goal stays the same all day. With a goal to cut, the words left are the words to remove.
+ * Null after the deadline or when the target is met.
  */
 export function deadlineGoal(
-  deadline: { date: string; words: number },
+  deadline: DeadlineRule,
   total: number,
   record: Readonly<Record<string, number>>,
   restDays: readonly number[],
@@ -177,7 +227,10 @@ export function deadlineGoal(
   const start = dayNumber(today);
   const end = dayNumber(deadline.date);
   if (!(end >= start)) return null;
-  const left = deadline.words - (total - (Object.hasOwn(record, today) ? (record[today] ?? 0) : 0));
+  const days = goalRecord(deadline, total, record, today);
+  // Today's words go back into what is left, so the goal stays the same all day.
+  const startOfToday = total - (Object.hasOwn(days, today) ? (days[today] ?? 0) : 0);
+  const left = isCut(deadline) ? startOfToday - deadline.words : deadline.words - startOfToday;
   if (left <= 0) return null;
   const rest = new Set(restDays);
   let daysLeft = 0;
