@@ -75,7 +75,7 @@
 
 - [x] Tests first: "Mria" in the middle of a sentence marks "Mira"; "Then" at the start of a sentence never marks "Thea"; a Codex name, a word of under 4 letters and a kept word never mark; a mention after "Leaves the story" marks, and the scene of the change and a kept scene do not; the text stays the same.
 - [x] "Not a problem" in the cursor line keeps the word or the scene in the project settings, and the mark goes at once. A browser test turns the check on from the command menu and keeps a mark. Commit.
-- Built: Continuity check is in More tools beside Style check, and in the command menu. A first word counts as the start of a sentence after an end mark, a colon, a quotation mark, a bracket or a dash. A near name must have at least 4 letters, and so must each word of a Codex name that rule 1 reads. A mark has a double underline, so its shape differs from a style check mark. The kept marks are `settings.continuity` (backup version 11). Help version 14.
+- Built: Continuity check is in More tools beside Style check, and in the command menu. A first word counts as the start of a sentence after an end mark, a colon, a quotation mark, a bracket or a dash. A near name must have at least 4 letters, and so must each word of a Codex name that rule 1 reads. A Codex name word with an added "s", such as "the Hales", does not mark. A mark has a double underline, so its shape differs from a style check mark. The kept marks are `settings.continuity` (backup version 11). A copy import moves each kept scene to the new entry and scene ids. The editor rescans only when the kept marks change, not when a save reads the project again. Help version 14.
 
 ### Task N4: Story dates (F67)
 

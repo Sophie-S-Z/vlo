@@ -48,7 +48,11 @@ test('a Codex entry marks its names in the text, shows on the cursor, and counts
   );
 });
 
-test('F65: a change at Scene 2 shows on the cursor in Scene 2, and not in Scene 1', async ({ page }) => {
+test('F65: a change at Scene 2 shows on the cursor in Scene 2, and not in Scene 1', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'Under 600 px the binder is a drawer. codex-changes.test.ts holds the rules.');
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   await page

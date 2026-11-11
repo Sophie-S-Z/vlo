@@ -8,6 +8,8 @@ import { BACKUP_VERSION, BackupError, backupFileName, writeBackup } from '@/feat
 import { backupDue, backupLabel, daysBetween } from '@/features/backup/reminder';
 import { safariDevice } from '@/features/backup/safari';
 import { DEFAULT_BOOK } from '@/features/book/book';
+import { addEntry } from '@/features/codex/codex';
+import { sceneKey } from '@/features/codex/continuity';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
 import { updateToJson } from '@/features/export/read';
 import { createProject } from '@/features/library/projects';
@@ -216,6 +218,28 @@ describe('Backup round trip', () => {
       );
       doc.destroy();
     }
+  });
+
+  test('a copy keeps each kept continuity mark (F66), with the new entry and scene ids', async () => {
+    const { project, scenes } = await novelWithText();
+    const scene = scenes[0];
+    if (!scene) throw new Error('The novel has no scene.');
+    const entry = await addEntry(project.id, 'character', 'Mira');
+    const scenesKept = [sceneKey(entry.id, scene.id), sceneKey(entry.id, 'gone')];
+    await db.projects.update(project.id, {
+      settings: { ...project.settings, continuity: { words: ['Mria'], scenes: scenesKept } },
+    });
+    const backup = await readBackup((await backUpProject(project.id, { music: false })).bytes);
+
+    const copyId = await importBackup(backup, 'copy');
+    const copiedEntry = await db.codex.where('projectId').equals(copyId).first();
+    const copiedScene = (await db.items.where('projectId').equals(copyId).toArray()).find(
+      (i) => i.title === scene.title,
+    );
+    expect((await db.projects.get(copyId))?.settings.continuity).toEqual({
+      words: ['Mria'],
+      scenes: [sceneKey(copiedEntry?.id ?? '', copiedScene?.id ?? '')],
+    });
   });
 
   // Plan Task H9 (roadmap F38): a backup from before the change holds word counts.

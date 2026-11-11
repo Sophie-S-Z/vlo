@@ -70,8 +70,11 @@ export function setReadingOrder(order: readonly ReadingItem[]): void {
   set({ ...state, places: placesOf(order), titles: new Map(order.map(({ item }) => [item.id, item.title])) });
 }
 
-export function setContinuityKept(kept: ContinuityKept | undefined): void {
-  if ((kept ?? NONE_KEPT) !== state.kept) set({ ...state, kept: kept ?? NONE_KEPT });
+const keptKey = (kept: ContinuityKept) => [...kept.words, '\u0001', ...kept.scenes].join('\u0000');
+
+/** Each save reads the project again as a new object, so only new kept marks set them. */
+export function setContinuityKept(kept: ContinuityKept = NONE_KEPT): void {
+  if (keptKey(kept) !== keptKey(state.kept)) set({ ...state, kept });
 }
 
 export function setShowCodexNames(show: boolean): void {

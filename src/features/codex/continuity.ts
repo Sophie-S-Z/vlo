@@ -91,7 +91,9 @@ export function continuityNotes(text: string, input: ContinuityInput): Continuit
       const word = found[0].replace(/['’]s$/u, '');
       const from = found.index;
       const lower = word.toLowerCase();
-      if (word.length < MIN_LETTERS || near.has(lower) || input.keptWords.has(word)) continue;
+      if (word.length < MIN_LETTERS || input.keptWords.has(word)) continue;
+      // A Codex name and its plural, such as "the Hales" for "Hale", never mark.
+      if (near.has(lower) || near.has(lower.replace(/s$/u, ''))) continue;
       if (SENTENCE_START.test(text.slice(0, from))) continue;
       if (named.some((m) => m.from <= from && from < m.to)) continue;
       for (const [other, { name, entryId }] of near)

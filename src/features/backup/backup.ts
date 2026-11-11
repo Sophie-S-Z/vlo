@@ -7,6 +7,7 @@ import { READ_AT_ONCE, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
 import { holdsText } from '@/features/library/templates';
 import { remapNameMarks } from '@/features/people/markAll';
+import { sceneKey } from '@/features/codex/continuity';
 import { copyViews } from './views';
 import {
   backupFileName,
@@ -141,9 +142,23 @@ function asCopy(source: Backup): Backup {
   // Each private-name mark in the text names a person by id, so it moves to the new id too.
   const marks = (update: Uint8Array) =>
     backup.views.people.length === 0 ? update : remapNameMarks(update, copied.personId);
+  // A kept rule 2 mark (F66) names an entry and a scene by id, so it moves to the new ids too.
+  const { settings } = backup.project;
+  const scenes = (settings.continuity?.scenes ?? []).flatMap((key) => {
+    const [entry = '', item = ''] = key.split(':');
+    const entryId = copied.entryId(entry);
+    return entryId !== null && ids.has(item) ? [sceneKey(entryId, itemId(item))] : [];
+  });
   return {
     ...backup,
-    project: { ...backup.project, id: projectId, title: `${backup.project.title} (copy)` },
+    project: {
+      ...backup.project,
+      id: projectId,
+      title: `${backup.project.title} (copy)`,
+      settings: settings.continuity
+        ? { ...settings, continuity: { ...settings.continuity, scenes } }
+        : settings,
+    },
     items: backup.items.map((item): Item => ({
       ...item,
       id: itemId(item.id),
