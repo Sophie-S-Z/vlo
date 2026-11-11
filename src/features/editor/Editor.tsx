@@ -283,7 +283,7 @@ export function Editor({
         <Toolbar editor={editor} kind={kind} templates={templates} />
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
-        <CursorNote editor={editor} />
+        <CursorNote editor={editor} itemId={itemId} />
       </div>
       <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
         {/* The Craft labels sit in a layer over the poem, outside the editable text. */}

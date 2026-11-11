@@ -186,7 +186,23 @@ export function checkCodex(rows: Json[], scopeId: string): CodexEntry[] {
       fail(`${DAMAGED} A Codex entry has wrong other names.`);
     optionalText(row, 'note', 'A Codex entry');
     checkOrder(text(row, 'order', 'A Codex entry'), 'A Codex entry');
+    if (row.changes !== undefined) changes(row.changes);
   });
+}
+
+/**
+ * The changes of a Codex entry at scenes (F65). A change may name a scene of another book of the series,
+ * or a deleted scene, which hold nowhere here.
+ */
+function changes(value: unknown): void {
+  if (!Array.isArray(value)) fail(`${DAMAGED} A Codex entry has wrong changes.`);
+  for (const change of value) {
+    if (typeof change !== 'object' || change === null) fail(`${DAMAGED} A Codex entry has wrong changes.`);
+    const row = change as Json;
+    for (const key of ['id', 'itemId', 'text']) text(row, key, 'A Codex change');
+    if (row.leaves !== undefined && row.leaves !== true)
+      fail(`${DAMAGED} A Codex change has a wrong leaves.`);
+  }
 }
 
 /**
@@ -245,7 +261,14 @@ export function copyViews(
         projectId,
         itemIds: submission.itemIds.map(itemId),
       })),
-      codex: views.codex.map((entry) => ({ ...entry, id: newId(), projectId })),
+      codex: views.codex.map(({ changes, ...entry }) => {
+        // A change of a scene that is not in this file, such as one in another book, holds nowhere in the
+        // copy, so it stays out. `itemId` gives back the old id for such a scene.
+        const kept = (changes ?? [])
+          .filter((change) => itemId(change.itemId) !== change.itemId)
+          .map((change) => ({ ...change, itemId: itemId(change.itemId) }));
+        return { ...entry, id: newId(), projectId, ...(kept.length > 0 ? { changes: kept } : {}) };
+      }),
       // A citation names its source by key, so the keys stay as they are.
       sources: views.sources.map((source) => ({ ...source, id: newId(), projectId })),
     },

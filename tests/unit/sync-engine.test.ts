@@ -300,6 +300,8 @@ describe('series (F59)', () => {
       name: 'Mira',
       aliases: [],
       order: 'a0',
+      // A change at a scene (F65) goes with its entry.
+      changes: [{ id: 'c1', itemId: 'i2', text: 'Loses her left eye.', leaves: true as const }],
     };
     await db.series.add(series);
     await db.codex.add(shared);

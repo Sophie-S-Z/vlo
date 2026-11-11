@@ -20,8 +20,13 @@ import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
-import { useCodex } from '@/features/codex/codex';
-import { resetCodex, setCodexEntries, setStyleSheetRules } from '@/features/codex/codexStore';
+import { placesOf, useCodex, useReadingOrder } from '@/features/codex/codex';
+import {
+  resetCodex,
+  setCodexEntries,
+  setReadingPlaces,
+  setStyleSheetRules,
+} from '@/features/codex/codexStore';
 import { useSources } from '@/features/cite/sources';
 import { resetSources, setSources } from '@/features/cite/sourceStore';
 import { useSeriesOf } from '@/features/series/series';
@@ -153,6 +158,11 @@ export function ProjectPage() {
   useEffect(() => {
     if (codex) setCodexEntries(projectId, codex);
   }, [codex, projectId]);
+  // A change at a scene (F65) holds from that scene on, in reading order.
+  const order = useReadingOrder(projectId);
+  useEffect(() => {
+    if (order) setReadingPlaces(placesOf(order));
+  }, [order]);
   // The editor's citations (F64) read the sources of the open project.
   const sources = useSources(projectId);
   const citeStyle = state.status === 'ready' ? state.project.settings.citeStyle : undefined;

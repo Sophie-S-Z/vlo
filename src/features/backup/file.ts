@@ -69,13 +69,14 @@ import type {
  * named versions of items. Version 6 adds the authorship record. Version 7 adds the book's series (F59): its
  * row (`series`) and its shared Codex entries (`seriesCodex`). Version 8 adds the Script template, its
  * `script` items and their script lines (F63). Version 9 adds the sources (`sources`), the citations in the
- * text and the citation style (F64). Vlo still reads versions 1 to 8.
+ * text and the citation style (F64). Version 10 adds the changes of Codex entries at scenes (`changes`,
+ * F65). Vlo still reads versions 1 to 9.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 9;
+export const BACKUP_VERSION = 10;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;

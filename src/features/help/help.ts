@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 12,
-  date: '2026-11-10',
+  version: 13,
+  date: '2026-11-11',
   guide: [
     {
       title: 'Start a project',
@@ -173,6 +173,7 @@ export const HELP = {
         'Every project has the Codex: its characters, places, things and lore, with other names and a note.',
         'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
         'Exports and shares leave the Codex out. Only the Reader panel of the Assistant sends the notes of the names in its text.',
+        'When an entry changes in the story, open it and choose Add a change, such as “Loses her left eye” from Scene 4. The change holds from that scene on. The cursor line and the Reader panel show the entry as it is at the open scene.',
         'At the Simple tool level, open the Outline and the Codex from the command menu.',
       ],
     },

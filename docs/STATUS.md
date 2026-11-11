@@ -607,8 +607,14 @@ Last update: 2026-11-10
   - Focus stays in a useful place after Stop, Remove and the key dialog. "Prepare the request" waits for
     the request before it takes a second press.
 
-## Done in Phases 7 to 13
+## Done in Phases 7 to 14
 
+- Phase 14 (plan `docs/plans/phase-14.md`, roadmap 2 "Continuity", F65 to F67).
+  - N1 and N2 (F65): a Codex entry has changes at scenes, such as "Loses her left eye" from Scene 4, each
+    with an optional "Leaves the story here". The changes are a list on the entry (`changes`, backup
+    version 10), so sync and the series share carry them. A change holds from its scene on, in reading
+    order: the books of the series in their order, then the binder order. The cursor line and the reader
+    panel show the entry as it is at the open scene. A change of a deleted scene holds nowhere.
 - Phase 13 (plan `docs/plans/phase-13.md`, roadmap 2 "Every form", F62 to F64). The product owner
   approved roadmap 2 decisions R1 to R6 as recommended on 2026-11-10.
   - M1 (F62): Speak to write in More tools, the / menu and the command menu of every prose and poem item.

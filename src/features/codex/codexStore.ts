@@ -19,6 +19,8 @@ export interface CodexState {
   /** The rules of the series style sheet. */
   rules: readonly StyleRule[];
   sheet: SheetMatcher;
+  /** The place of each item in reading order, for the changes at a scene (F65). */
+  places: ReadonlyMap<string, number>;
 }
 
 const EMPTY: CodexState = {
@@ -28,6 +30,7 @@ const EMPTY: CodexState = {
   show: false,
   rules: [],
   sheet: () => [],
+  places: new Map(),
 };
 let state = EMPTY;
 const listeners = new Set<() => void>();
@@ -48,6 +51,10 @@ export function setCodexEntries(projectId: string, entries: readonly CodexEntry[
 
 export function setStyleSheetRules(rules: readonly StyleRule[]): void {
   if (rules !== state.rules) set({ ...state, rules, sheet: sheetMatcher(rules) });
+}
+
+export function setReadingPlaces(places: ReadonlyMap<string, number>): void {
+  if (places !== state.places) set({ ...state, places });
 }
 
 export function setShowCodexNames(show: boolean): void {

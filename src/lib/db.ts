@@ -337,6 +337,17 @@ export type CodexKind = 'character' | 'place' | 'thing' | 'lore';
  * a note. No export or share reads the Codex. Only the reader panel (F61) sends the notes of the names in its
  * text.
  */
+/**
+ * A change to a Codex entry at a scene (F65), such as "Loses her left eye". It holds from that scene on,
+ * in reading order. `leaves` is true when the entry leaves the story there.
+ */
+export interface CodexChange {
+  id: string;
+  itemId: string;
+  text: string;
+  leaves?: true;
+}
+
 export interface CodexEntry {
   id: string;
   projectId: string;
@@ -345,6 +356,8 @@ export interface CodexEntry {
   aliases: string[];
   note?: string;
   order: string;
+  /** The changes at scenes, in the order the writer added them. None when absent. */
+  changes?: CodexChange[];
 }
 
 export const SOURCE_TYPES = ['book', 'chapter', 'article', 'web'] as const;
