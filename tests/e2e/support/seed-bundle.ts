@@ -18,7 +18,7 @@ export interface PoemLine {
 }
 
 interface VloSeed {
-  large: (seed: number) => Promise<SeededLarge>;
+  large: (seed: number, words?: number) => Promise<SeededLarge>;
   readPoem: (itemId: string) => Promise<PoemLine[][]>;
 }
 
@@ -31,10 +31,13 @@ export async function addSeed(page: Page): Promise<void> {
   await expect.poll(() => page.evaluate(() => 'vloSeed' in window)).toBe(true);
 }
 
-/** Writes the 100,000-word project into the page's IndexedDB. */
-export async function seedLarge(page: Page, seed = 1): Promise<SeededLarge> {
+/** Writes the 100,000-word project, or one of `words` words, into the page's IndexedDB. */
+export async function seedLarge(page: Page, seed = 1, words?: number): Promise<SeededLarge> {
   await addSeed(page);
-  return page.evaluate((s) => (window as unknown as { vloSeed: VloSeed }).vloSeed.large(s), seed);
+  return page.evaluate(({ s, w }) => (window as unknown as { vloSeed: VloSeed }).vloSeed.large(s, w), {
+    s: seed,
+    w: words,
+  });
 }
 
 /** Reads a poem's stored lines and hanging indents straight from IndexedDB. */

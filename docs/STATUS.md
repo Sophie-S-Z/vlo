@@ -607,8 +607,12 @@ Last update: 2026-11-10
   - Focus stays in a useful place after Stop, Remove and the key dialog. "Prepare the request" waits for
     the request before it takes a second press.
 
-## Done in Phases 7 to 14
+## Done in Phases 7 to 15
 
+- Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 to F70).
+  - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in
+    all, with the 200,000-word book. The Gate 1 test runs on the 100,000-word and the 200,000-word
+    project, with the same budgets.
 - Phase 14 (plan `docs/plans/phase-14.md`, roadmap 2 "Continuity", F65 to F67).
   - N1 and N2 (F65): a Codex entry has changes at scenes, such as "Loses her left eye" from Scene 4, each
     with an optional "Leaves the story here". The changes are a list on the entry (`changes`, backup
