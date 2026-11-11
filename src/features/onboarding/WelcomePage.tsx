@@ -131,7 +131,8 @@ export function WelcomePage() {
             </div>
           )}
 
-          <div className="mt-10 flex flex-wrap items-center gap-3">
+          {/* On a phone the step's options can fill the screen, so the actions stay in view at the bottom. */}
+          <div className="sticky bottom-0 -mx-4 mt-10 flex flex-wrap items-center gap-3 bg-bg px-4 py-3 sm:static sm:mx-0 sm:bg-transparent sm:p-0">
             {step > 0 && (
               <Button
                 variant="ghost"

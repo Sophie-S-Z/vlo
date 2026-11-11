@@ -55,4 +55,12 @@
     color: var(--accent-text);
     text-underline-offset: 3px;
   }
+  /* Headings balance their lines, and other text keeps a lone word off its last line (a widow). The
+     editor is left out, because a wrap that changes while the writer types makes the words jump. */
+  :where(h1, h2, h3, h4):not([contenteditable] *) {
+    text-wrap: balance;
+  }
+  :where(p, li, dd, figcaption):not([contenteditable] *) {
+    text-wrap: pretty;
+  }
 }

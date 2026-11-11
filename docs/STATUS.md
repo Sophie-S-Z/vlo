@@ -613,6 +613,11 @@ Last update: 2026-11-10
   - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in
     all, with the 200,000-word book. The Gate 1 test runs on the 100,000-word and the 200,000-word
     project, with the same budgets.
+- Design pass of 2026-11-11 (the product owner's design notes, checked against Part J0 of
+  `docs/plans/phase-10.md`). Headings balance their lines and other text avoids a widow, outside the
+  editor. On a phone the welcome actions stay in view at the bottom. An empty item's stats line shows only
+  "0 words". Fixed: a tab that closed in the save pause left the text copy and the word count without the
+  last words until the next edit. Opening the item now brings them up to date.
 - Phase 14 (plan `docs/plans/phase-14.md`, roadmap 2 "Continuity", F65 to F67).
   - N1 and N2 (F65): a Codex entry has changes at scenes, such as "Loses her left eye" from Scene 4, each
     with an optional "Leaves the story here". The changes are a list on the entry (`changes`, backup
