@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 16,
+  version: 17,
   date: '2026-11-11',
   guide: [
     {

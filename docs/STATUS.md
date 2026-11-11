@@ -621,8 +621,8 @@ Last update: 2026-11-10
     free trials (Vlo is free), reader links (Vlo has them since Phase 9), a toggle of all headings (the binder
     holds each scene as its own item), input lag (the Gate 1 budgets hold at 200,000 words), and folder
     dates (the binder shows no dates). Images in the text: the product owner chose a plan for a later phase.
-
-- Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 to F70).
+- Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 and F70). The product owner
+  took F69, Spanish app text, out of the phase on 2026-11-11.
   - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in
     all, with the 200,000-word book. The Gate 1 test runs on the 100,000-word and the 200,000-word
     project, with the same budgets.
@@ -632,6 +632,8 @@ Last update: 2026-11-10
     the proof only when the reader asks: it finishes a pending proof at its calendar, and shows the date
     only when the Bitcoin block header from mempool.space holds the hash. `ots.ts` is Vlo's own reader and
     writer of the `.ots` format.
+  - Gate 15: a fresh review found no blocking defect. Its 7 minor findings are fixed, with a 15-second
+    limit on each timestamp request and a separate "could not reach the servers" result on `/verify`.
 - Design pass of 2026-11-11 (the product owner's design notes, checked against Part J0 of
   `docs/plans/phase-10.md`). Headings balance their lines and other text avoids a widow, outside the
   editor. On a phone the welcome actions stay in view at the bottom. An empty item's stats line shows only

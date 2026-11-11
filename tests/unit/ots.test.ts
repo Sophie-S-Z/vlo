@@ -30,12 +30,12 @@ const TIME = Date.UTC(2026, 10, 11, 14, 5, 0);
 
 /** A server for each request: the path of each request, and a function that answers it. */
 function servers(answer: (url: URL, body: Uint8Array | null) => Response) {
-  const calls: { url: URL; body: Uint8Array | null }[] = [];
+  const calls: { url: URL; body: Uint8Array | null; signal: AbortSignal | null }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn((input: URL, init?: RequestInit) => {
       const body = init?.body instanceof Uint8Array ? init.body : null;
-      calls.push({ url: input, body });
+      calls.push({ url: input, body, signal: init?.signal ?? null });
       return Promise.resolve(answer(input, body));
     }),
   );
@@ -119,6 +119,9 @@ describe('a proof in the OpenTimestamps form', () => {
     const keccak = good.slice();
     keccak[good.length - 11] = 0x67;
     expect(() => readProof(keccak)).toThrow();
+    // The Bitcoin height 1 with one more byte in its payload, which `ots verify` also refuses.
+    const longer = new Uint8Array([...good.slice(0, -2), 0x02, 0x01, 0x00]);
+    expect(() => readProof(longer)).toThrow('bytes after its end');
   });
 });
 
@@ -132,7 +135,9 @@ describe('Get a public timestamp', () => {
       'b.pool.opentimestamps.org/digest',
     ]);
     const digest = await sha256(new TextEncoder().encode(plain));
-    for (const { body } of calls) {
+    for (const { body, signal } of calls) {
+      // A server that never answers must not hold the download.
+      expect(signal).toBeInstanceOf(AbortSignal);
       expect(body).toHaveLength(32);
       expect(hex(body ?? new Uint8Array())).not.toBe(hex(digest));
     }
@@ -156,6 +161,14 @@ describe('Get a public timestamp', () => {
     await expect(stampRecord((await exportRecord('p1')) ?? '')).rejects.toThrow(
       'No calendar server answered',
     );
+  });
+
+  test('a new timestamp of a record that has one replaces it, and the record still passes', async () => {
+    servers((url) => new Response(ANSWERS[url.host as keyof typeof ANSWERS]));
+    const once = await stampRecord(await record());
+    const twice = await stampRecord(once);
+    expect(twice).not.toBe(once);
+    expect(await verifyRecord(twice)).toMatchObject({ ok: true });
   });
 
   test('a record with no timestamp is the same file as before, and a changed proof or digest fails', async () => {
@@ -247,6 +260,20 @@ describe('Check the timestamp', () => {
     expect(check).toMatchObject({ state: 'confirmed', height: HEIGHT, time: TIME });
     const finished = check.state === 'confirmed' ? check.finished : null;
     expect(readProof(finished ?? new Uint8Array()).timestamp.attestations).toEqual([]);
+  });
+
+  test('a server that does not answer gives no verdict on the proof', async () => {
+    const proof = writeProof({
+      digest,
+      timestamp: { attestations: [{ kind: 'bitcoin', height: HEIGHT }], ops: [] },
+    });
+    servers(() => new Response('', { status: 503 }));
+    expect(await checkTimestamp(proof, digest)).toEqual({ state: 'unreachable' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    );
+    expect(await checkTimestamp(proof, digest)).toEqual({ state: 'unreachable' });
   });
 
   test('a proof that names another calendar server stays pending and sends nothing', async () => {
