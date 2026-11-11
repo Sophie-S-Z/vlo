@@ -28,6 +28,7 @@ import { SizePanel } from './panels/SizePanel';
 import { SpacingPanel } from './panels/SpacingPanel';
 import { ShortcutSheet } from './ShortcutSheet';
 import { PersonPanel } from '@/features/people/PersonPanel';
+import { SourcesPanel } from '@/features/cite/SourcesPanel';
 
 // The gradient editor loads the first time a writer opens it.
 const GradientPanel = lazy(async () => ({ default: (await import('./panels/GradientPanel')).GradientPanel }));
@@ -93,6 +94,8 @@ function PanelBody({
       return <PersonPanel editor={editor} onDone={closePanel} />;
     case 'comment':
       return <CommentPanel editor={editor} onDone={closePanel} />;
+    case 'cite':
+      return <SourcesPanel editor={editor} onDone={closePanel} />;
     case 'characters':
       return <CharactersPanel editor={editor} />;
     case 'footnote':
@@ -137,6 +140,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   memory: 'Record a memory',
   person: 'Mark as person',
   comment: 'Comment',
+  cite: 'Cite a source',
 };
 
 /** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */
@@ -233,7 +237,8 @@ export function PanelHost({
               popover.panel === 'gradient' ||
               popover.panel === 'math' ||
               popover.panel === 'read-aloud' ||
-              popover.panel === 'speak'
+              popover.panel === 'speak' ||
+              popover.panel === 'cite'
                 ? 'w-[min(24rem,calc(100vw-1.5rem))]'
                 : undefined
             }

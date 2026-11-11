@@ -3,7 +3,7 @@ import { exportFileName, type ExportScope } from '@/features/export/build';
 import type { ExportFile, ExportRequest } from '@/features/export/run';
 import { ExportJob, readOwnFonts } from '@/features/export/startExport';
 import { hasTemplate } from '@/features/library/templates';
-import type { Item, Project } from '@/lib/db';
+import type { Item, Project, Source } from '@/lib/db';
 import type { NameCheck, NameCount, PrivatePerson } from '@/lib/privacy';
 
 /*
@@ -25,12 +25,14 @@ export interface PacketInput {
   synopsis: string;
   people: PrivatePerson[];
   shareSafe: boolean;
+  /** The project's sources, for the citations and the reference list (F64). */
+  sources: readonly Source[];
 }
 
 /** The export of each file of a packet, in the order of the zip: the pieces, then the texts. */
 export function packetRequests(input: PacketInput): Omit<ExportRequest, 'updates'>[] {
-  const { project, items, format, people, shareSafe } = input;
-  const base = { project, items: [...items], format, people, shareSafe } as const;
+  const { project, items, format, people, shareSafe, sources } = input;
+  const base = { project, items: [...items], format, people, shareSafe, sources } as const;
   const details = project.settings.manuscript;
   const manuscript =
     hasTemplate(project, 'novel') && details?.on && details.name.trim() !== ''

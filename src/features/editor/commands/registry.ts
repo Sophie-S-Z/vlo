@@ -8,6 +8,7 @@ import {
   ArrowRightToLine,
   AudioLines,
   Bot,
+  BookMarked,
   BookUser,
   Asterisk,
   FilePenLine,
@@ -93,6 +94,7 @@ export type PanelId =
   | 'memory'
   | 'person'
   | 'comment'
+  | 'cite'
   | 'shortcuts';
 
 export type CommandGroup =
@@ -813,6 +815,18 @@ export const COMMANDS: readonly EditorCommand[] = [
     keywords: ['voice', 'microphone', 'interview', 'questions', 'speech to text', 'transcribe'],
     slash: true,
     panel: 'memory',
+  },
+  {
+    kind: 'panel',
+    id: 'cite',
+    label: 'Cite a source',
+    icon: BookMarked,
+    group: 'insert',
+    forms: PROSE,
+    templates: ['open', 'memoir'],
+    keywords: ['citation', 'sources', 'reference', 'bibliography', 'zotero', 'bibtex', 'works cited'],
+    slash: true,
+    panel: 'cite',
   },
   {
     kind: 'panel',

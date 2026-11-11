@@ -208,9 +208,17 @@ export function layOutScript(doc: ExportDoc, style: ScriptStyle): PrintedLine[][
     }
     const gap = gapOf(line, lines[i - 1]);
     if (line.role === 'heading') {
-      // A heading keeps the first line of what follows it on its page.
+      // A heading keeps the first line of what follows it on its page. For a speech, that is the name and
+      // the lines that a break needs: one line and "(MORE)", or the whole speech when it is shorter.
       const next = lines[i + 1];
-      const follow = next ? 1 + Math.min(rowsOf(next).length, 1) : 0;
+      let follow = next ? 1 + Math.min(rowsOf(next).length, 1) : 0;
+      if (next?.role === 'character') {
+        let said = 0;
+        for (let j = i + 2; said < 2 && IN_SPEECH.has(lines[j]?.role ?? 'action'); j += 1) {
+          said += rowsOf(lines[j]).length;
+        }
+        follow = 1 + rowsOf(next).length + Math.min(said, 2);
+      }
       if (used > 0 && used + gap + rows.length + follow > PAGE_LINES) newPage();
     } else if (used + gap + 1 > PAGE_LINES) newPage();
     used += used === 0 ? 0 : gap;

@@ -116,6 +116,17 @@ describe('the screenplay layout', () => {
       [0, 'EXT. DECK - NIGHT'],
       [2, 'Wind.'],
     ]);
+    // Before a speech, the heading needs room for the name, one line and "(MORE)".
+    const said = Array.from({ length: 5 }, (_, n): [ScriptRole, string] => [
+      'dialogue',
+      `Line ${String(n)}.`,
+    ]);
+    const speech = layOutScript(
+      script([filler(50), ['heading', 'INT. HALL - NIGHT'], ['character', 'MARA'], ...said]),
+      'screenplay',
+    );
+    expect(speech[0]?.map(text)).not.toContain('INT. HALL - NIGHT');
+    expect(speech[1]?.slice(0, 3).map(text)).toEqual(['INT. HALL - NIGHT', 'MARA', 'Line 0.']);
   });
 });
 

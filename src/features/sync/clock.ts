@@ -18,6 +18,7 @@ export const SYNC_TABLES = [
   'people',
   'submissions',
   'codex',
+  'sources',
   'research',
   'itemVersions',
   'authorship',

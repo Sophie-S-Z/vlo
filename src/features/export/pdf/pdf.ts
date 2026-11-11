@@ -522,21 +522,25 @@ class Layout {
     switch (block.type) {
       case 'paragraph': {
         // A book indents each paragraph that follows a paragraph, and justifies its lines.
-        const indent = book
-          ? this.last === 'paragraph'
-            ? 1.5 * textSize
-            : 0
-          : manuscript
-            ? 36
-            : block.firstLineIndent
-              ? 2 * textSize
-              : 0;
+        const indent = block.hanging
+          ? 0
+          : book
+            ? this.last === 'paragraph'
+              ? 1.5 * textSize
+              : 0
+            : manuscript
+              ? 36
+              : block.firstLineIndent
+                ? 2 * textSize
+                : 0;
         const rows = await this.paragraph(block.runs, {
           left: place.left,
           right: place.right,
           align: manuscript ? undefined : (block.align ?? (book ? 'justify' : undefined)),
           spacing: manuscript ? spacing : (block.lineSpacing ?? spacing),
           firstIndent: indent,
+          // A reference list entry hangs by half an inch, as the citation styles ask.
+          ...(block.hanging ? { hanging: 36 / textSize } : {}),
           dropCap: !manuscript && (block.dropCap === true || (opening && book?.dropCaps === true)),
           base: body,
         });

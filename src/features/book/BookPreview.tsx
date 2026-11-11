@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { readOwnFonts, ExportJob } from '@/features/export/startExport';
 import { hasTemplate } from '@/features/library/templates';
 import { privatePeople } from '@/features/people/people';
+import { sourcesFor } from '@/features/cite/sources';
 import { clock } from '@/lib/clock';
 import type { BookSettings, Item, Project } from '@/lib/db';
 import { cn } from '@/ui/cn';
@@ -90,6 +91,7 @@ export function BookPreview({
         scope: { kind: 'project' },
         format: 'pdf',
         people: await privatePeople(project.id),
+        sources: await sourcesFor(project.id),
         // As the Export dialog starts: a memoir gets its aliases, and AI text gets the provenance page.
         shareSafe: hasTemplate(project, 'memoir'),
         ...(project.settings.aiInsertedAt !== undefined ? { provenance: { at: clock.now() } } : {}),

@@ -23,6 +23,7 @@ export type SafeTreeInput = Pick<
   | 'review'
   | 'text'
   | 'book'
+  | 'sources'
 >;
 
 export interface SafeTree {

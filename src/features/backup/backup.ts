@@ -278,6 +278,7 @@ async function storeBackup(backup: Backup): Promise<void> {
         await db.people.bulkAdd(backup.views.people);
         await db.submissions.bulkAdd(backup.views.submissions);
         await db.codex.bulkAdd(backup.views.codex);
+        await db.sources.bulkAdd(backup.views.sources);
         await db.research.bulkAdd(
           backup.research.map(({ info, data }) =>
             data ? { ...info, data: new Blob([data], { type: info.type }) } : info,

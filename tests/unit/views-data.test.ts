@@ -103,6 +103,15 @@ async function novelWithViews() {
     note: 'Owes the harbour master.',
     order: 'a0',
   });
+  await db.sources.add({
+    id: `source-${p}`,
+    projectId: p,
+    key: 'marlow2019',
+    type: 'book',
+    authors: [{ family: 'Marlow', given: 'Ada' }],
+    title: 'Night Ferry',
+    year: '2019',
+  });
   return { project, first, second };
 }
 
@@ -117,10 +126,10 @@ describe('Template view rows', () => {
   test('deleting a project removes its view rows and keeps the rows of other projects', async () => {
     const { project } = await novelWithViews();
     const other = await novelWithViews();
-    expect(total(await views(project.id))).toBe(9);
+    expect(total(await views(project.id))).toBe(10);
     await deleteProject(project.id);
     expect(total(await views(project.id))).toBe(0);
-    expect(total(await views(other.project.id))).toBe(9);
+    expect(total(await views(other.project.id))).toBe(10);
   });
 
   test('deleting an item unlinks its card, drops it from each poem order, and keeps it in a submission', async () => {

@@ -242,7 +242,9 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
         extra.push(`line-height: ${String(Math.round(block.lineSpacing * 115) / 100)}`);
       const drop = block.dropCap ? withDropCap(book, block.runs, ctx) : null;
       // A drop cap takes the place of the first-line indent.
-      const classes = [drop ? 'has-drop-cap' : block.firstLineIndent ? 'indent' : ''].filter((c) => c !== '');
+      const classes = [
+        drop ? 'has-drop-cap' : block.hanging ? 'hanging' : block.firstLineIndent ? 'indent' : '',
+      ].filter((c) => c !== '');
       const cls = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
       const body = drop ?? inline(book, block.runs, ctx);
       return `<p${cls}${alignStyle(block.align, extra)}>${body === '' ? '<br/>' : body}</p>`;
@@ -397,6 +399,7 @@ const BASE_CSS = `
 body { line-height: 1.5; margin: 0 5%; }
 p { margin: 0 0 0.8em; white-space: pre-wrap; tab-size: 4; -moz-tab-size: 4; orphans: 2; widows: 2; }
 p.indent { text-indent: 2em; }
+p.hanging { padding-left: 2em; text-indent: -2em; text-align: start; }
 h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 0.6em; page-break-after: avoid; break-after: avoid; }
 h1 { font-size: 1.6em; }
 h2 { font-size: 1.35em; }

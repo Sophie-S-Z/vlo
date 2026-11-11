@@ -506,6 +506,28 @@ describe('Reading a backup', () => {
         },
         /The project settings are wrong/,
       ],
+      [
+        'a citation style that Vlo does not know',
+        (m) => ((m.project as { settings: Record<string, unknown> }).settings.citeStyle = 'harvard'),
+        /The project settings are wrong/,
+      ],
+      [
+        'a source key with a space',
+        (m) => {
+          const projectId = (m.project as { id: string }).id;
+          m.sources = [
+            {
+              id: 'source-a',
+              projectId,
+              key: 'marlow 2019',
+              type: 'book',
+              authors: [],
+              title: 'Night Ferry',
+            },
+          ];
+        },
+        /A source has a wrong key/,
+      ],
       ['a missing project', (m) => (m.project = null), /It has no project/],
       ['a snapshot of no item', (m) => (row(m, 'snapshots').itemId = 'gone'), /A snapshot has no item/],
       ['a version of no item', (m) => (row(m, 'versions').itemId = 'gone'), /A version has no item/],

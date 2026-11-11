@@ -6,7 +6,8 @@ import { xmlText } from './xml';
  * Fountain and Final Draft files of a script (roadmap 2 F63, plan Task M3). Both read the export tree.
  * A folder is a Fountain section ("#" for an act, "##" for a sequence). Final Draft has no sections, so
  * a folder title stays out of an FDX file. Text that is not a script line, such as a page of prose in a
- * mixed project, goes in as action.
+ * mixed project, goes in as action. Fountain starts a scene only at a scene heading, so on import a scene
+ * with no heading joins the scene before it.
  */
 
 export interface ScriptLine {
@@ -77,6 +78,7 @@ function fountainLine(line: ScriptLine, next: ScriptLine | undefined): string {
     case 'lyric':
       return `~${text}`;
     case 'parenthetical':
+      return /^\(.*\)$/.test(text) ? text : `(${text})`;
     case 'dialogue':
       return text;
     case 'action':
@@ -99,7 +101,9 @@ export function toFountain(doc: ExportDoc): string {
       const speech =
         IN_DIALOGUE.has(line.role) && before && (before.role === 'character' || IN_DIALOGUE.has(before.role));
       if (!speech) out.push('');
-      out.push(fountainLine(line, part.lines[i + 1]));
+      // Fountain has no dialogue without a character, so a lone dialogue line or parenthetical goes out as action.
+      const lone = !speech && (line.role === 'dialogue' || line.role === 'parenthetical');
+      out.push(fountainLine(lone ? { ...line, role: 'action' } : line, part.lines[i + 1]));
     });
   }
   return `${out.join('\n')}\n`;

@@ -295,7 +295,11 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
   switch (block.type) {
     case 'paragraph': {
       if (ctx.manuscript) {
-        const firstLine = place.numbering ? {} : { firstLine: STEP };
+        const firstLine = place.numbering
+          ? {}
+          : block.hanging
+            ? { left: place.left + STEP, hanging: STEP }
+            : { firstLine: STEP };
         return [
           new Paragraph({
             ...numbering,
@@ -311,8 +315,14 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
           ? { spacing: { line: Math.round(EM * block.lineSpacing), lineRule: LineRuleType.AUTO } }
           : {}),
       };
-      const firstLine = block.firstLineIndent ? { firstLine: 2 * EM } : {};
-      const paragraphIndent = indent || block.firstLineIndent ? { indent: { ...indent, ...firstLine } } : {};
+      // A reference list entry hangs by half an inch, as the citation styles ask.
+      const firstLine = block.hanging
+        ? { left: place.left + STEP, hanging: STEP }
+        : block.firstLineIndent
+          ? { firstLine: 2 * EM }
+          : {};
+      const paragraphIndent =
+        indent || block.firstLineIndent || block.hanging ? { indent: { ...indent, ...firstLine } } : {};
       const drop = block.dropCap && !place.numbering ? splitDropCap(block.runs) : null;
       if (drop) {
         // Word draws a drop cap as a framed paragraph that holds the letter, three lines tall. Word's own

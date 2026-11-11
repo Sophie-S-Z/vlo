@@ -84,19 +84,22 @@
 
 **Files:** Create `src/features/cite/sources.ts`, `src/features/cite/SourcesPanel.tsx`, `tests/unit/sources.test.ts`. Modify `src/lib/db.ts` (table `sources`, database version 13), `src/features/sync/*`, `src/features/backup/file.ts` (backup version 8), `src/features/library/projects.ts`.
 
-- [ ] Tests first: a BibTeX file and a CSL-JSON file from Zotero import with authors, title, container, year, pages and DOI; a duplicate key gets a suffix; sources round trip through save, reload, backup, import and sync.
-- [ ] The Sources panel in More tools lists, edits and deletes sources, with Undo. Commit.
+- [x] Tests first: a BibTeX file and a CSL-JSON file from Zotero import with authors, title, container, year, pages and DOI; a duplicate key gets a suffix; sources round trip through save, reload, backup, import and sync.
+- [x] The Sources panel in More tools lists, edits and deletes sources, with Undo. Commit.
+- Built: the backup version is 9, because M-B took version 8. A source has a type (book, chapter, article or web page) and a key that does not change after the writer adds it. A citation names its source by that key, not by its id, so a copy of the project keeps its citations with no change to the text. The BibTeX reader turns LaTeX accents into letters and keeps the characters of a URL. A CSL-JSON id that is a Zotero link is no key, so Vlo makes one from the first author and the year. "Cite a source" opens the panel from More tools in Open writing and memoir. The editor reads the sources from `cite/sourceStore.ts`, which the project screen fills.
 
 ### Task M6: Citations in the text (F64)
 
 **Files:** Create `src/features/editor/extensions/cite.ts`, `tests/unit/cite.test.ts`. Modify `src/features/editor/extensions/prose.ts`, `src/features/editor/extensions/slashMenu.ts`, `src/features/editor/docSchema.ts` (`DOC_SCHEMA` 9).
 
-- [ ] Tests first: "Cite" puts an inline `cite` atom with the source id and an optional page; the atom shows the short form of the project's style; a deleted source shows "[missing source]"; copy and paste between items keeps the atom.
-- [ ] Commit.
+- [x] Tests first: "Cite" puts an inline `cite` atom with the source id and an optional page; the atom shows the short form of the project's style; a deleted source shows "[missing source]"; copy and paste between items keeps the atom.
+- [x] Commit.
+- Built: the atom holds the source's key, not its id (see Task M5). Its plain text is Pandoc's form, such as "[@marlow2019, 12]", for search, copies and readable backups. The node view reads the sources and the style from `cite/sourceStore.ts`, so a change of either changes each citation at once. The panel's Style list sets `settings.citeStyle`. "Cite a source" has no shortcut, which changes decision M4: Chrome keeps Ctrl+Shift+C and Cmd+Option+C for its inspector, so the writer types "/cite" or uses the command menu.
 
 ### Task M7: Bibliography in exports and Gate 13
 
 **Files:** Create `src/features/cite/styles.ts`, `tests/unit/cite-styles.test.ts`. Modify `src/features/export/build.ts`, `src/features/export/notices.ts`, `src/features/help/help.ts`, `docs/STATUS.md`, `docs/licenses.md`.
 
-- [ ] Tests first: fixtures of a book, a chapter, a journal article and a web page give the published examples of APA 7, MLA 9 and Chicago author-date; each export format has the in-text citations and a bibliography section; a missing source shows in the export notices.
+- [x] Tests first: fixtures of a book, a chapter, a journal article and a web page give the published examples of APA 7, MLA 9 and Chicago author-date; each export format has the in-text citations and a bibliography section; a missing source shows in the export notices.
+- Built: `cite/styles.ts` gives the in-text form and the reference list entry. The published examples are the APA Style website's journal article and chapter, two MLA 9 examples from a university guide, and a Chicago 18 book. Chicago 18 lists a chapter with no page range and puts "et al." after the first author in the text for three or more authors. MLA shortens the second page number (201–19). A title keeps the case that the writer typed. `buildExportDoc` gives each citation its text and adds the list of the cited sources as the last section, when the caller passes the sources: the Export dialog, share links, packets and the book preview do. A readable backup keeps "[@key]". An entry hangs by half an inch in Word, PDF and EPUB. `tests/e2e/cite.spec.ts` adds a source, cites it from the / menu, changes the style and exports Markdown.
 - [ ] Gate 13: run `npm run typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. A fresh review agent reviews the Phase 13 diff against Review Focus 1 to 4. Ask the product owner to run "Run workflow" for all 4 browsers.

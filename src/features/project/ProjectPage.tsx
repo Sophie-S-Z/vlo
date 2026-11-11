@@ -22,6 +22,8 @@ import { formatWords } from '@/features/library/format';
 import { resetNames, setNamePeople } from '@/features/people/nameStore';
 import { useCodex } from '@/features/codex/codex';
 import { resetCodex, setCodexEntries, setStyleSheetRules } from '@/features/codex/codexStore';
+import { useSources } from '@/features/cite/sources';
+import { resetSources, setSources } from '@/features/cite/sourceStore';
 import { useSeriesOf } from '@/features/series/series';
 import { resetTracking, setProjectTracking } from '@/features/editor/trackingStore';
 import { usePeople } from '@/features/people/people';
@@ -151,6 +153,12 @@ export function ProjectPage() {
   useEffect(() => {
     if (codex) setCodexEntries(projectId, codex);
   }, [codex, projectId]);
+  // The editor's citations (F64) read the sources of the open project.
+  const sources = useSources(projectId);
+  const citeStyle = state.status === 'ready' ? state.project.settings.citeStyle : undefined;
+  useEffect(() => {
+    if (sources) setSources(projectId, sources, citeStyle);
+  }, [sources, projectId, citeStyle]);
   // The style check marks the forms that the series style sheet avoids (F59).
   const series = useSeriesOf(projectId);
   useEffect(() => {
@@ -165,6 +173,7 @@ export function ProjectPage() {
     () => () => {
       resetNames();
       resetCodex();
+      resetSources();
       resetTracking();
     },
     [projectId],

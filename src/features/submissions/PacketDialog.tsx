@@ -3,6 +3,7 @@ import { hasTemplate } from '@/features/library/templates';
 import { updateProjectSettings } from '@/features/library/projects';
 import { NameCheckLists } from '@/features/people/NameCheckLists';
 import { privatePeople } from '@/features/people/people';
+import { sourcesFor } from '@/features/cite/sources';
 import { saveFile } from '@/features/export/startExport';
 import type { ExportFile } from '@/features/export/run';
 import { MAX_PACKET_TEXT, type Item, type Project } from '@/lib/db';
@@ -111,6 +112,7 @@ export function PacketDialog({
         synopsis: shownSynopsis,
         // A failed read of the people fails the packet, so a share-safe file never goes without aliases.
         people: await privatePeople(project.id),
+        sources: await sourcesFor(project.id),
         shareSafe: safe,
       });
       jobRef.current = job;

@@ -18,6 +18,7 @@ import { CopyButton } from '@/ui/copy-button';
 import { Switch } from '@/ui/switch';
 import { FAILED, NameCheckLists } from '@/features/people/NameCheckLists';
 import { privatePeople } from '@/features/people/people';
+import { sourcesFor } from '@/features/cite/sources';
 import { Textarea } from '@/ui/textarea';
 import { folderOf, type ExportScope } from './build';
 import type { FontSwap } from './fontCheck';
@@ -271,6 +272,7 @@ export function ExportDialog({
         format,
         // A failed read of the people fails the export, so a share-safe file never goes without aliases.
         people: await privatePeople(project.id),
+        sources: await sourcesFor(project.id),
         shareSafe: safe,
         ...(usesManuscript ? { manuscript: details } : {}),
         ...(usesBook ? { book: book ?? bookOf(project) } : {}),

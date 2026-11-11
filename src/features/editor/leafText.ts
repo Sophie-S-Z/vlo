@@ -1,4 +1,5 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { CITE, citeText } from './format/cite';
 import { MATH_BLOCK, MATH_INLINE, mathText } from './format/math';
 
 /*
@@ -6,7 +7,10 @@ import { MATH_BLOCK, MATH_INLINE, mathText } from './format/math';
  * the poem text all use it, so an equation reads the same way in each.
  */
 
-/** A line break keeps words apart, a scene break is "#", and an equation is its LaTeX between $ signs. */
+/**
+ * A line break keeps words apart, a scene break is "#", an equation is its LaTeX between $ signs, and a
+ * citation is its key, such as "[@marlow2019]".
+ */
 export function leafText(node: ProseMirrorNode): string {
   switch (node.type.name) {
     case 'hardBreak':
@@ -17,6 +21,8 @@ export function leafText(node: ProseMirrorNode): string {
       return mathText(String(node.attrs.latex ?? ''), false);
     case MATH_BLOCK:
       return mathText(String(node.attrs.latex ?? ''), true);
+    case CITE:
+      return citeText(node.attrs);
     default:
       return '';
   }

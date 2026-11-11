@@ -24,6 +24,7 @@ import {
 import { checkCodex, checkViews, ids } from './views';
 import {
   CHAPTER_STYLES,
+  CITE_STYLES,
   MAX_BOOK_TEXT,
   MAX_LABELS,
   MAX_PACKET_TEXT,
@@ -35,6 +36,7 @@ import {
 import type {
   AudioFile,
   AuthorshipEntry,
+  CiteStyle,
   CodexEntry,
   ResearchFile,
   Item,
@@ -66,13 +68,14 @@ import type {
  * the research files, so an older build refuses the file and never drops them. Version 5 (Phase 11) adds the
  * named versions of items. Version 6 adds the authorship record. Version 7 adds the book's series (F59): its
  * row (`series`) and its shared Codex entries (`seriesCodex`). Version 8 adds the Script template, its
- * `script` items and their script lines (F63). Vlo still reads versions 1 to 7.
+ * `script` items and their script lines (F63). Version 9 adds the sources (`sources`), the citations in the
+ * text and the citation style (F64). Vlo still reads versions 1 to 8.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 8;
+export const BACKUP_VERSION = 9;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -287,6 +290,8 @@ function checkProject(value: unknown): Project {
   )
     fail(`${DAMAGED} The project settings are wrong.`);
   if (settings.scriptStyle !== undefined && !SCRIPT_STYLES.includes(settings.scriptStyle as ScriptStyle))
+    fail(`${DAMAGED} The project settings are wrong.`);
+  if (settings.citeStyle !== undefined && !CITE_STYLES.includes(settings.citeStyle as CiteStyle))
     fail(`${DAMAGED} The project settings are wrong.`);
   const tracking = settings.tracking;
   if (

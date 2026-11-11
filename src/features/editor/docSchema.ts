@@ -5,9 +5,10 @@ import type * as Y from 'yjs';
  * build cannot show. An older build drops content it cannot show, and Yjs then saves that loss, so a
  * build never binds an editor to a document newer than its own schema. 1 is Phase 1; 2 adds the Phase 2
  * formats (styles, colors, gradient text and footnotes); 3 adds equations; 4 adds private names; 5 adds the aiOrigin mark;
- * 6 adds comments; 7 adds suggestions and the comment's author; 8 adds the script line (F63).
+ * 6 adds comments; 7 adds suggestions and the comment's author; 8 adds the script line (F63); 9 adds the
+ * citation (F64).
  */
-export const DOC_SCHEMA = 8;
+export const DOC_SCHEMA = 9;
 
 const META = 'vlo';
 const KEY = 'schema';

@@ -38,7 +38,8 @@ test('Speak to write in a poem asks before any download, and nothing leaves the 
   await page.getByRole('option', { name: 'Speak to write…' }).click();
   const panel = page.getByRole('dialog', { name: 'Speak to write' });
   await panel.getByRole('button', { name: 'Speak' }).click();
-  await expect(panel.getByRole('status').filter({ hasText: /^Listening, 0:0\d of 0:30$/ })).toBeVisible();
+  await expect(panel.getByRole('status').filter({ hasText: /^Listening$/ })).toBeVisible();
+  await expect(panel.getByText(/^Listening, 0:0\d of 0:30$/)).toBeVisible();
   expect(await seriousIssues(page)).toEqual([]);
   await panel.getByRole('button', { name: 'Stop and write' }).click();
 

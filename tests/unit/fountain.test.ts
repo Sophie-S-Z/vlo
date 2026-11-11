@@ -73,6 +73,19 @@ describe('Fountain', () => {
     expect(source.nodes.map((n) => n.title)).toEqual(['Opening', 'INT. HALL - DAY']);
   });
 
+  test('a speech line keeps its role and its words in a round trip, whatever mark it starts with', () => {
+    const { doc } = imported('INT. HALL - DAY\n\nMARA\n(quietly)\n#1 on my list.\n= Me.\n!Now.\n');
+    const paren = doc.sections[0]?.blocks[2];
+    // The editor does not add the parentheses, so the writer can type a parenthetical with none.
+    if (paren?.type === 'paragraph' && paren.runs[0]?.type === 'text') paren.runs[0].text = 'quietly';
+    const back = readFountain('x.fountain', toFountain(doc)).nodes[0]?.text?.html;
+    expect(back).toBe(
+      '<p data-role="heading">INT. HALL - DAY</p><p data-role="character">MARA</p>' +
+        '<p data-role="parenthetical">(quietly)</p><p data-role="dialogue">#1 on my list.</p>' +
+        '<p data-role="dialogue">= Me.</p><p data-role="dialogue">!Now.</p>',
+    );
+  });
+
   test('a script with other formats gets a notice', () => {
     const { doc } = imported();
     expect(exportNotices(doc, 'fountain')).toEqual([]);

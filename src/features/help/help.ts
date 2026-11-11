@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 11,
+  version: 12,
   date: '2026-11-10',
   guide: [
     {
@@ -203,6 +203,16 @@ export const HELP = {
         'On a character line, Vlo shows the rest of a Codex character name in grey. Enter takes the name.',
         'To change to a stage play, choose the page button above the text, then Script layout.',
         'Export gives a script PDF in Courier Prime on US Letter, a Fountain file or a Final Draft file. Import writing reads a Fountain file.',
+      ],
+    },
+    {
+      title: 'Cite a source',
+      steps: [
+        'In Open writing or a memoir, choose Cite a source in More tools, or type /cite.',
+        'Add a source, or import a BibTeX or CSL JSON file from Zotero or another reference manager.',
+        'Type a page if you want one, then choose the source. The citation goes in at the cursor.',
+        'Style sets APA 7, MLA 9 or Chicago author-date for each citation in the project. Type each title in the case that your style asks for.',
+        'Each export ends with a list of the sources that it cites. A citation of a deleted source shows “[missing source]”, and Undo gives the source back.',
       ],
     },
     {

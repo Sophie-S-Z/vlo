@@ -61,11 +61,16 @@ export interface Project {
     book?: BookSettings;
     /** The layout of a Script project's scenes (F63). A screenplay when absent. */
     scriptStyle?: ScriptStyle;
+    /** The style of the citations and the bibliography in an export (F64). APA when absent. */
+    citeStyle?: CiteStyle;
   };
 }
 
 export const SCRIPT_STYLES = ['screenplay', 'stage'] as const;
 export type ScriptStyle = (typeof SCRIPT_STYLES)[number];
+
+export const CITE_STYLES = ['apa', 'mla', 'chicago'] as const;
+export type CiteStyle = (typeof CITE_STYLES)[number];
 
 export const TRIMS = ['5x8', '5.25x8', '5.5x8.5', '6x9', 'a5'] as const;
 /** A print trim size: inches, or A5. */
@@ -342,6 +347,40 @@ export interface CodexEntry {
   order: string;
 }
 
+export const SOURCE_TYPES = ['book', 'chapter', 'article', 'web'] as const;
+export type SourceType = (typeof SOURCE_TYPES)[number];
+
+/** A person's name in a source. An organization as author has only a family name. */
+export interface SourceName {
+  family: string;
+  given?: string;
+}
+
+/**
+ * A source that the writer cites (F64): a book, a chapter of a book, a journal article or a web page. A
+ * citation in the text names its source by `key`, so a copy of the project keeps its citations.
+ */
+export interface Source {
+  id: string;
+  projectId: string;
+  /** Unique in the project, such as "marlow2019". It does not change after the source is added. */
+  key: string;
+  type: SourceType;
+  authors: SourceName[];
+  /** The editors of the book that holds a chapter. */
+  editors?: SourceName[];
+  title: string;
+  /** The book of a chapter, the journal of an article, or the site of a web page. */
+  container?: string;
+  publisher?: string;
+  year?: string;
+  volume?: string;
+  issue?: string;
+  pages?: string;
+  doi?: string;
+  url?: string;
+}
+
 /** A rule of a series style sheet (F59): the form to use, and the forms that the style check marks. */
 export interface StyleRule {
   use: string;
@@ -493,6 +532,7 @@ export class VloDb extends Dexie {
   itemVersions!: Table<ItemVersion, string>;
   authorship!: Table<AuthorshipEntry, string>;
   series!: Table<Series, string>;
+  sources!: Table<Source, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -556,13 +596,18 @@ export class VloDb extends Dexie {
     this.version(11).stores({ authorship: 'id, projectId' });
     // Version 12 (Phase 11, Task K8): series of books. A new table only.
     this.version(12).stores({ series: 'id, *projectIds' });
+    // Version 13 (Phase 13, Task M5): the sources that a writer cites. A new table only.
+    this.version(13).stores({ sources: 'id, projectId' });
     this.use(syncClockMiddleware);
   }
 }
 
 export const db = new VloDb();
 
-/** The view tables (Phase 3, and the Codex of Phase 8). Each row has an `id` and a `projectId`. */
+/**
+ * The view tables (Phase 3, the Codex of Phase 8 and the sources of Phase 13). Each row has an `id` and a
+ * `projectId`.
+ */
 export const VIEW_TABLE_NAMES = [
   'cards',
   'threads',
@@ -572,6 +617,7 @@ export const VIEW_TABLE_NAMES = [
   'people',
   'submissions',
   'codex',
+  'sources',
 ] as const;
 
 /** The rows of the view tables of one project, by table. */
@@ -584,6 +630,7 @@ export interface ViewRows {
   people: Person[];
   submissions: Submission[];
   codex: CodexEntry[];
+  sources: Source[];
 }
 
 export function emptyViewRows(): ViewRows {
@@ -596,6 +643,7 @@ export function emptyViewRows(): ViewRows {
     people: [],
     submissions: [],
     codex: [],
+    sources: [],
   };
 }
 

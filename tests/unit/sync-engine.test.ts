@@ -324,6 +324,31 @@ describe('series (F59)', () => {
   });
 });
 
+describe('sources (F64)', () => {
+  test('a source goes in the rows blob, and an edit from the other device comes back', async () => {
+    const source = {
+      id: 'src1',
+      projectId: 'p1',
+      key: 'marlow2019',
+      type: 'book' as const,
+      authors: [{ family: 'Marlow', given: 'Ada' }],
+      title: 'Night Ferry',
+      year: '2019',
+    };
+    await db.sources.add(source);
+    now = 2000;
+    await syncOnce();
+    const blob = (await mine('rows:p1')) as RowsBlob;
+    expect(blob.rows.find((v) => v.table === 'sources')?.row).toEqual(source);
+
+    const edited = { ...source, pages: '12–14' };
+    await fromOther('rows:p1', rows([{ table: 'sources', id: 'src1', at: 5000, row: edited }]));
+    now = 6000;
+    await syncOnce();
+    expect(await db.sources.get('src1')).toEqual(edited);
+  });
+});
+
 describe('item versions (F55)', () => {
   test('each version goes in a blob of its own, and comes back as the same row', async () => {
     const version = {

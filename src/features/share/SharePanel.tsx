@@ -5,6 +5,7 @@ import { hasTemplate, projectDef } from '@/features/library/templates';
 import { markAllInProject } from '@/features/people/markAll';
 import { FAILED, NameCheckLists } from '@/features/people/NameCheckLists';
 import { privatePeople } from '@/features/people/people';
+import { sourcesFor } from '@/features/cite/sources';
 import { type Item, type Project, type ShareRecord } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { CopyButton } from '@/ui/copy-button';
@@ -298,6 +299,7 @@ export function SharePanel({ open, onOpenChange, project, items, currentItemId }
         items,
         itemIds: [...picked],
         people: await privatePeople(project.id),
+        sources: await sourcesFor(project.id),
         questions,
       });
       if (!mounted.current) return;
