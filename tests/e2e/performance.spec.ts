@@ -5,6 +5,7 @@ import { skipOnboarding } from './support/onboarding';
 import { useTool } from './support/tools';
 import { seedProjects } from './support/seed';
 import { seedLarge } from './support/seed-bundle';
+import { openView } from './support/views';
 
 /* Gate 1: the budgets in VLO_SPEC section 12, measured on the seeded 100,000-word and 200,000-word projects. */
 
@@ -430,9 +431,8 @@ test.describe('a mid-range phone', () => {
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog', { name })).toBeHidden();
     }
-    const views = page.getByRole('navigation', { name: 'Project views' });
     for (const view of ['Board', 'Plot Grid', 'Timeline', 'People', 'Sequences', 'Submissions', 'Progress']) {
-      await views.getByRole('link', { name: view }).click();
+      await openView(page, view);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     }
     await page.getByRole('link', { name: 'Settings' }).click();
