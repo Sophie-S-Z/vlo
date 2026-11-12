@@ -7,7 +7,9 @@ import {
   newOwnerToken,
   newShareKey,
   MAX_OPEN_BYTES,
+  openBytes,
   openJson,
+  sealBytes,
   sealJson,
   toBase64,
   toBase64Url,
@@ -120,5 +122,27 @@ describe('sealJson and openJson', () => {
     expect(MAX_OPEN_BYTES.comment).toBe(65_536);
     const big = await sealJson({ text: 'a'.repeat(70_000) }, key, 'bundle');
     expect(await openJson(big, key, 'bundle')).toEqual({ text: 'a'.repeat(70_000) });
+  });
+});
+
+describe('sealed image bytes (Phase 16, decision G6)', () => {
+  test('bytes open with the same key and purpose only, and a changed byte fails', async () => {
+    const { key } = await newShareKey();
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70]);
+    const sealed = await sealBytes(bytes, key, 'image');
+    expect(fromBase64(sealed.payload).subarray(0, 3)).not.toEqual(bytes.subarray(0, 3));
+    expect(await openBytes(sealed, key, 'image')).toEqual(bytes);
+    await expect(openBytes(sealed, key, 'bundle')).rejects.toBeInstanceOf(CryptoError);
+    await expect(openBytes(sealed, (await newShareKey()).key, 'image')).rejects.toBeInstanceOf(CryptoError);
+    // A label binds the seal to its place, such as image 3 of a link.
+    const third = await sealBytes(bytes, key, 'image', '3');
+    expect(await openBytes(third, key, 'image', '3')).toEqual(bytes);
+    await expect(openBytes(third, key, 'image', '4')).rejects.toBeInstanceOf(CryptoError);
+    await expect(openBytes(third, key, 'image')).rejects.toBeInstanceOf(CryptoError);
+    const changed = fromBase64(sealed.payload);
+    changed[0] = (changed[0] ?? 0) ^ 1;
+    await expect(openBytes({ ...sealed, payload: toBase64(changed) }, key, 'image')).rejects.toBeInstanceOf(
+      CryptoError,
+    );
   });
 });

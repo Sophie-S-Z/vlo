@@ -35,6 +35,11 @@ export interface SyncSpace {
    * push sends them, so each device keeps a blob of what it has, and a device that leaves takes no text away.
    */
   resend: string[];
+  /**
+   * This device's own blobs that the next push removes from the relay, such as `image:<id>` for an image
+   * that the sweep removed. A sweep's delete stays on this device, so no delete entry names the blob.
+   */
+  drop?: string[];
 }
 
 export type Pairing = Pick<SyncSpace, 'spaceId' | 'key' | 'token'>;
@@ -54,6 +59,32 @@ export async function updateSpace(
     .modify((meta) => {
       const space = meta.value as SyncSpace;
       if (space.spaceId === spaceId) meta.value = { ...space, ...changes };
+    });
+}
+
+/** Notes blobs for the next push to remove from the relay. Nothing happens without a sync space. */
+export async function dropLater(names: readonly string[]): Promise<void> {
+  if (names.length === 0) return;
+  await db.appMeta
+    .where('key')
+    .equals(SYNC_META)
+    .modify((meta) => {
+      const space = meta.value as SyncSpace;
+      meta.value = { ...space, drop: [...new Set([...(space.drop ?? []), ...names])] };
+    });
+}
+
+/** Forgets the blobs that a push removed. A name that a sweep noted since then stays. */
+export async function dropped(spaceId: string, names: readonly string[]): Promise<void> {
+  if (names.length === 0) return;
+  const done = new Set(names);
+  await db.appMeta
+    .where('key')
+    .equals(SYNC_META)
+    .modify((meta) => {
+      const space = meta.value as SyncSpace;
+      if (space.spaceId === spaceId)
+        meta.value = { ...space, drop: (space.drop ?? []).filter((name) => !done.has(name)) };
     });
 }
 

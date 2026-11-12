@@ -14,6 +14,7 @@ import { CommentMark } from './comment';
 import { SuggestionMark } from './suggestion';
 import { Footnote } from './footnote';
 import { MathInline } from './math';
+import { ImageNode } from './image';
 import { ClearFormatting, inlineFormatting } from './formatting';
 
 /* The poem schema: doc > stanza+ > poemLine+ > inline. Every space is content, and lines keep layout. */
@@ -37,10 +38,11 @@ interface PoemOptions {
   tabSpaces: number;
 }
 
+/** Stanzas, with images only between two stanzas (Phase 16, decision G3). */
 const PoemDocument = Node.create({
   name: 'doc',
   topNode: true,
-  content: 'stanza+',
+  content: 'stanza (image* stanza)*',
 });
 
 const Stanza = Node.create({
@@ -315,6 +317,7 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     }),
     PoemDocument,
     Stanza,
+    ImageNode,
     PoemLine.configure(opts),
     ...inlineFormatting(),
     ClearFormatting.configure({ blocks: false }),

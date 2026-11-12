@@ -1,10 +1,19 @@
-import { createContext, createElement, Fragment, useContext, type ReactNode } from 'react';
+import {
+  createContext,
+  createElement,
+  Fragment,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { MathNode } from '@/features/export/mathml';
 import {
   safeMathAttr,
   MATH_TAGS,
   safeLink,
   type ShareBlock,
+  type ShareImage,
   type ShareRun,
   type ShareText,
 } from '@/features/share/bundle';
@@ -110,6 +119,72 @@ const ALIGN: Record<string, string> = {
   justify: 'text-justify',
 };
 
+/**
+ * Gives the address of a link's image `n`: a `blob:` address of the opened bytes, or null when the image
+ * does not come. The reader page sets it. With none, each image shows its alt text.
+ */
+export type ImageLoader = (n: number) => Promise<string | null>;
+
+export const ShareImages = createContext<ImageLoader | null>(null);
+
+const IMAGE_PLACE: Record<ShareImage['align'], string> = {
+  left: 'mr-auto',
+  center: 'mx-auto',
+  right: 'ml-auto',
+};
+
+/** An image of the link. Its box has the image's shape from the start, so the text does not jump. */
+function ReaderImage({ block }: { block: ShareImage }) {
+  const load = useContext(ShareImages);
+  const [loaded, setLoaded] = useState<{ n: number; src: string | null } | null>(null);
+  useEffect(() => {
+    if (!load) return;
+    let live = true;
+    const done = (src: string | null) => {
+      if (live) setLoaded({ n: block.n, src });
+    };
+    load(block.n).then(done, () => {
+      done(null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [load, block.n]);
+  // Undefined while the image loads, null when it does not come.
+  const src = !load ? null : loaded?.n === block.n ? loaded.src : undefined;
+  const shape = { aspectRatio: `${String(block.w)} / ${String(block.h)}` };
+  return (
+    <figure
+      className={`grid gap-2 ${IMAGE_PLACE[block.align]}`}
+      style={{ width: `${String(block.width)}%`, maxWidth: '100%' }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={block.decorative ? '' : block.alt}
+          width={block.w}
+          height={block.h}
+          className="h-auto w-full rounded-[var(--radius-card)]"
+          style={shape}
+        />
+      ) : (
+        <div
+          className="grid place-items-center rounded-[var(--radius-card)] border border-rule bg-surface p-4 text-center font-ui text-sm text-muted"
+          style={shape}
+        >
+          <span>
+            {src === null ? 'This image did not load.' : 'Loading the image.'}
+            {block.alt !== '' && !block.decorative && <span className="block italic">{block.alt}</span>}
+          </span>
+        </div>
+      )}
+      {block.caption !== '' && (
+        <figcaption className="text-center font-ui text-sm text-muted italic">{block.caption}</figcaption>
+      )}
+    </figure>
+  );
+}
+
 /** One block. The bundle's title is the page's h1, so the highest heading is an h2. */
 export function Block({ block }: { block: ShareBlock }): ReactNode {
   switch (block.type) {
@@ -175,6 +250,8 @@ export function Block({ block }: { block: ShareBlock }): ReactNode {
           <MathTree node={block.math} display="block" />
         </div>
       );
+    case 'img':
+      return <ReaderImage block={block} />;
   }
 }
 

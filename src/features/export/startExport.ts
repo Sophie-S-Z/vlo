@@ -2,10 +2,8 @@ import { downloadBytes } from '@/lib/download';
 import type { BookSettings } from '@/lib/db';
 import type { NameCheck } from '@/lib/privacy';
 import { holdsText } from '@/features/library/templates';
-import { db } from '@/lib/db';
 import { readItemUpdates } from '@/lib/ydocs';
-import { imageIdsIn } from '@/features/images/images';
-import type { ExportImage } from './model';
+import { readImages } from '@/features/images/images';
 import { scopeItems } from './build';
 import { localFontName } from '@/features/editor/format/fonts';
 import type { ExportMessage, ExportResponse } from './export.worker';
@@ -26,28 +24,6 @@ export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Prom
     .filter((item) => holdsText(request.project.templates, item.kind))
     .map((item) => item.id);
   return readItemUpdates(ids);
-}
-
-/** The stored copy of each image that the items' text holds (Phase 16). A lost row stays out. */
-export async function readImages(updates: readonly [string, Uint8Array][]): Promise<[string, ExportImage][]> {
-  const ids = new Set<string>();
-  for (const [, update] of updates) imageIdsIn(update, ids);
-  if (ids.size === 0) return [];
-  const rows = await db.images.bulkGet([...ids]);
-  const out: [string, ExportImage][] = [];
-  for (const row of rows) {
-    if (!row || (row.type !== 'image/jpeg' && row.type !== 'image/png')) continue;
-    out.push([
-      row.id,
-      {
-        type: row.type,
-        width: row.width,
-        height: row.height,
-        data: new Uint8Array(await row.data.arrayBuffer()),
-      },
-    ]);
-  }
-  return out;
 }
 
 /**

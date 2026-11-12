@@ -3,6 +3,7 @@ import type { TextFill } from '@/features/editor/format/fill';
 import type { ScriptRole } from '@/features/editor/scriptRoles';
 import type { BookSettings, ScriptStyle } from '@/lib/db';
 import type { EditorForm } from '@/features/library/templates';
+import type { ImageAlign, ImageWidth } from '@/features/images/attrs';
 
 /*
  * The export tree (plan Part B). Every exporter reads this one tree, never the editor or the Yjs
@@ -130,9 +131,9 @@ export interface ImageBlock {
   alt: string;
   decorative: boolean;
   caption: string;
-  /** Percent of the text width. */
-  width: number;
-  align: 'left' | 'center' | 'right';
+  /** Percent of the text width: 33, 50, 75 or 100. */
+  width: ImageWidth;
+  align: ImageAlign;
 }
 
 /** The stored copy of an image, as an export embeds it. */

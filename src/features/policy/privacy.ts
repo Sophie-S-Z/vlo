@@ -8,8 +8,8 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 9,
-  date: '2026-11-11',
+  version: 10,
+  date: '2026-11-12',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
@@ -37,7 +37,7 @@ export const PRIVACY = {
       title: 'Share links and comments',
       when: 'Only when you create a link, refresh its comments or stop sharing, and when a reader opens it or comments.',
       sends:
-        'The chosen items with your questions for readers, and the comments, answers and reactions of readers, encrypted in the browser. The key stays in the link and never goes to the server. The owner token, which lets you stop the link, goes too, and the server keeps only its hash. In a memoir, the aliases replace the real names.',
+        'The chosen items with your questions for readers, each image in them at most 1,600 pixels on its long side, and the comments, answers and reactions of readers, encrypted in the browser. The key stays in the link and never goes to the server. The owner token, which lets you stop the link, goes too, and the server keeps only its hash. In a memoir, the aliases replace the real names.',
     },
     usage: {
       title: 'Weekly usage counts',
@@ -55,7 +55,7 @@ export const PRIVACY = {
       title: 'Sync between your devices',
       when: 'Only after you turn on sync in Settings, and only between the devices that you pair.',
       sends:
-        'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
+        'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
     },
     room: {
       title: 'Sprint rooms',

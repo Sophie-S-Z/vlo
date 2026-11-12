@@ -424,6 +424,104 @@ describe('item versions (F55)', () => {
   });
 });
 
+describe('images in the text (Phase 16, decision G7)', () => {
+  const image = (id: string, size: number, bytes = 'jpeg') => ({
+    id,
+    projectId: 'p1',
+    type: 'image/jpeg',
+    size,
+    width: 40,
+    height: 30,
+    addedAt: 0,
+    data: new Blob([bytes], { type: 'image/jpeg' }),
+  });
+
+  test('each image up to 2 MB goes in a sealed blob of its own, and a larger one stays here', async () => {
+    await db.images.bulkAdd([image('g1', 4), image('g2', MAX_SYNC_FILE + 1)]);
+    now = 2000;
+    await syncOnce();
+    const rowsBlob = (await mine('rows:p1')) as RowsBlob;
+    expect(rowsBlob.rows.some((v) => v.table === 'images')).toBe(false);
+    const own = (await mine('image:g1')) as RowsBlob;
+    expect(own.rows[0]).toMatchObject({ table: 'images', id: 'g1', row: { width: 40, height: 30 } });
+    expect(await (own.rows[0]?.row?.data as Blob).text()).toBe('jpeg');
+    expect(await mine('image:g2')).toBeUndefined();
+    // The relay sees no image bytes.
+    for (const b of [...fake.spaces.values()].flatMap((space) => space.blobs))
+      expect(new TextDecoder().decode(fromBase64(b.payload))).not.toContain('jpeg');
+  });
+
+  test('the other device gets the image as a Blob, and a delete there removes it here', async () => {
+    const { data, ...info } = image('g3', 4, 'bytes');
+    await fromOther(
+      'image:g3',
+      rows([
+        {
+          table: 'images',
+          id: 'g3',
+          at: 5000,
+          row: { ...info, data: toBase64(new TextEncoder().encode('bytes')) },
+        },
+      ]),
+    );
+    now = 6000;
+    await syncOnce();
+    const got = await db.images.get('g3');
+    expect(got).toMatchObject(info);
+    expect(await got?.data.text()).toBe(await data.text());
+
+    await fromOther('rows:p1', rows([{ table: 'images', id: 'g3', at: 7000, seen: 5000 }]));
+    now = 8000;
+    await syncOnce();
+    expect(await db.images.get('g3')).toBeUndefined();
+  });
+
+  test("the daily sweep's deletes stay on this device, and its own copy leaves the relay", async () => {
+    const { sweepImages } = await import('@/features/images/images');
+    const DAY = 24 * 60 * 60 * 1000;
+    await db.images.add(image('g4', 4));
+    now = 2000;
+    await syncOnce();
+    expect(await mine('image:g4')).not.toBeUndefined();
+    // No text holds g4. The first sweep notes it, and the sweep a day later removes it.
+    now = 2000 + DAY;
+    expect(await sweepImages('p1')).toBe(0);
+    now = 2000 + 2 * DAY;
+    expect(await sweepImages('p1')).toBe(1);
+    // No delete entry: the other devices keep their copy, since their texts may still hold it.
+    expect(await db.syncClock.get('images:g4')).toBeUndefined();
+    await syncOnce();
+    // This device's blob of the image leaves the relay, so the space keeps its room.
+    expect(await mine('image:g4')).toBeUndefined();
+  });
+
+  test('the sweep keeps an image that came from another device', async () => {
+    const { sweepImages } = await import('@/features/images/images');
+    const DAY = 24 * 60 * 60 * 1000;
+    const { data, ...info } = image('g5', 4, 'bytes');
+    await fromOther(
+      'image:g5',
+      rows([
+        {
+          table: 'images',
+          id: 'g5',
+          at: 1500,
+          row: { ...info, data: toBase64(new Uint8Array(await data.arrayBuffer())) },
+        },
+      ]),
+    );
+    now = 2000;
+    await syncOnce();
+    expect(await db.images.get('g5')).toBeDefined();
+    // The snapshots of the other device may hold it, and they never come here.
+    now = 2000 + DAY;
+    await sweepImages('p1');
+    now = 2000 + 2 * DAY;
+    expect(await sweepImages('p1')).toBe(0);
+    expect(await db.images.get('g5')).toBeDefined();
+  });
+});
+
 describe('pull', () => {
   test('rows merge by time, and a delete there removes the item, its text and a whole project here', async () => {
     await db.projects.add(novel('p2'));

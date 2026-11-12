@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 9, 11 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 10, 12 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -32,7 +32,7 @@ Requests for the model files. No text or audio goes with them.
 
 Only when you create a link, refresh its comments or stop sharing, and when a reader opens it or comments.
 
-The chosen items with your questions for readers, and the comments, answers and reactions of readers, encrypted in the browser. The key stays in the link and never goes to the server. The owner token, which lets you stop the link, goes too, and the server keeps only its hash. In a memoir, the aliases replace the real names.
+The chosen items with your questions for readers, each image in them at most 1,600 pixels on its long side, and the comments, answers and reactions of readers, encrypted in the browser. The key stays in the link and never goes to the server. The owner token, which lets you stop the link, goes too, and the server keeps only its hash. In a memoir, the aliases replace the real names.
 
 ### Weekly usage counts
 
@@ -50,7 +50,7 @@ Up to 6 short phrases from the open item. A phrase that holds a private name sta
 
 Only after you turn on sync in Settings, and only between the devices that you pair.
 
-Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables and research files up to 2 MB. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.
+Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.
 
 ### Sprint rooms
 

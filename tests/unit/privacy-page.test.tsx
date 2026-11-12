@@ -17,8 +17,8 @@ describe('the privacy page', () => {
   });
 
   it('matches docs/privacy.md, with the same version and date', () => {
-    expect(doc).toContain(`Version ${String(PRIVACY.version)}, 11 November 2026.`);
-    expect(PRIVACY.date).toBe('2026-11-11');
+    expect(doc).toContain(`Version ${String(PRIVACY.version)}, 12 November 2026.`);
+    expect(PRIVACY.date).toBe('2026-11-12');
     for (const line of PRIVACY.stays) expect(doc).toContain(line);
     for (const entry of Object.values(PRIVACY.leaves)) {
       expect(doc).toContain(`### ${entry.title} ${entry.when} ${entry.sends}`);

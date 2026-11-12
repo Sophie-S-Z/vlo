@@ -192,6 +192,45 @@ describe('share links', () => {
     expect(calls).toHaveLength(0);
   });
 
+  test('each image goes sealed in a call of its own, and a failed image stops the link (G6)', async () => {
+    const { createShare } = m;
+    answers.add_share_image = () => Response.json(true);
+    const bundle = { v: 1 as const, title: 'T', createdAt: 1, sections: [] };
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+    const images = [
+      { type: 'image/jpeg' as const, width: 4, height: 3, data: jpeg },
+      { type: 'image/jpeg' as const, width: 4, height: 3, data: jpeg },
+    ];
+    const record = await createShare(
+      { bundle, itemIds: ['i'], names: { unmarked: [], changed: [] }, images },
+      'p',
+      7,
+    );
+    expect(calls.map((c) => c.name)).toEqual(['create_share', 'add_share_image', 'add_share_image']);
+    const [, first, second] = calls;
+    expect(Object.keys(first?.body ?? {}).sort()).toEqual([
+      'p_id',
+      'p_iv',
+      'p_n',
+      'p_owner_token',
+      'p_payload',
+    ]);
+    expect(first?.body).toMatchObject({ p_id: SHARE_ID, p_n: 0, p_owner_token: record.ownerToken });
+    expect(second?.body.p_n).toBe(1);
+    // The same bytes seal to two different payloads, and neither holds the JPEG header.
+    expect(first?.body.p_payload).not.toBe(second?.body.p_payload);
+    expect(String(first?.body.p_payload)).not.toMatch(/^\/9j\//);
+
+    calls = [];
+    await m.db.shares.clear();
+    answers.add_share_image = () => Response.json({ message: 'server full' }, { status: 400 });
+    await expect(
+      createShare({ bundle, itemIds: ['i'], names: { unmarked: [], changed: [] }, images }, 'p', 7),
+    ).rejects.toMatchObject({ kind: 'busy' });
+    expect(calls.map((c) => c.name)).toEqual(['create_share', 'add_share_image', 'revoke_share']);
+    expect(await m.db.shares.count()).toBe(0);
+  });
+
   test('an answer that is not a share id stores nothing', async () => {
     const { createShare } = m;
     answers.create_share = () => Response.json('<img src=x>');

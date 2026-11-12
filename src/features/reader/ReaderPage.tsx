@@ -32,12 +32,20 @@ import {
 } from '@/features/share/comments';
 import { rpc, ShareError } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
-import { CryptoError, importShareKey, openJson } from '@/lib/crypto';
+import { CryptoError, importShareKey, openBytes, openJson } from '@/lib/crypto';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { Textarea } from '@/ui/textarea';
-import { Block, NoteText, notesOf, TopHeading, topHeading } from './ReaderText';
+import {
+  Block,
+  NoteText,
+  notesOf,
+  ShareImages,
+  TopHeading,
+  topHeading,
+  type ImageLoader,
+} from './ReaderText';
 import { pickedWords, type Picked, type PickedWords } from './selection';
 
 /*
@@ -395,6 +403,48 @@ const shortQuote = (quote: string) => (quote.length > 60 ? `${quote.slice(0, 59)
 type Sending = Pick<ReaderComment, 'section' | 'block' | 'quote' | 'text'> &
   Partial<Pick<ReaderComment, 'start' | 'end' | 'reaction' | 'question'>>;
 
+/** The type of image bytes, from their first bytes: JPEG or PNG only, as Vlo stores them. */
+function imageType(bytes: Uint8Array): string | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+  return null;
+}
+
+/**
+ * Loads each image of the link once (decision G6): the sealed bytes from get_share_image, opened with the
+ * link's key, as a `blob:` address. Gives the loader and a function that frees each address.
+ */
+function imageLoader(shareId: string, key: CryptoKey): { load: ImageLoader; free: () => void } {
+  const loads = new Map<number, Promise<string | null>>();
+  const addresses: string[] = [];
+  const fetchOne = async (n: number): Promise<string | null> => {
+    const rows = await rpc<unknown>('get_share_image', { p_id: shareId, p_n: n }, 'share');
+    const row = (Array.isArray(rows) ? rows[0] : null) as
+      { payload?: unknown; iv?: unknown } | null | undefined;
+    if (!row || typeof row.payload !== 'string' || typeof row.iv !== 'string') return null;
+    // The number is in the seal, so the server cannot give one image in the place of another.
+    const bytes = await openBytes({ payload: row.payload, iv: row.iv }, key, 'image', String(n));
+    const type = imageType(bytes);
+    if (!type) return null;
+    const address = URL.createObjectURL(new Blob([bytes], { type }));
+    addresses.push(address);
+    return address;
+  };
+  return {
+    load: (n) => {
+      let load = loads.get(n);
+      if (!load) {
+        load = fetchOne(n).catch(() => null);
+        loads.set(n, load);
+      }
+      return load;
+    },
+    free: () => {
+      for (const address of addresses) URL.revokeObjectURL(address);
+    },
+  };
+}
+
 function ReaderBody({
   shareId,
   bundle,
@@ -418,6 +468,8 @@ function ReaderBody({
   const top = useMemo(() => topHeading(bundle.sections.flatMap((s) => s.blocks)), [bundle]);
   const quotes = useMemo(() => bundle.sections.map((s) => s.blocks.map(blockQuote)), [bundle]);
   const texts = useMemo(() => bundle.sections.map((s) => s.blocks.map(textOfBlock)), [bundle]);
+  const images = useMemo(() => imageLoader(shareId, keyValue), [shareId, keyValue]);
+  useEffect(() => images.free, [images]);
   const questions = bundle.questions ?? NO_QUESTIONS;
   const byPlace = useMemo(() => {
     const map = new Map<string, ListedComment[]>();
@@ -487,155 +539,162 @@ function ReaderBody({
 
   return (
     <TopHeading.Provider value={top}>
-      <article className="grid gap-10">
-        <header className="grid gap-3 font-ui">
-          <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere] sm:text-5xl">
-            {bundle.title}
-          </h1>
-          {bundle.author !== undefined && <p className="text-lg [overflow-wrap:anywhere]">{bundle.author}</p>}
-          <p className="text-sm text-muted">
-            Shared for reading until {date.format(expiresAt)}. To comment or react, tap or click a paragraph,
-            or select some words. The writer and anyone with this link can read the comments.
-          </p>
-          {commentsFailed && (
-            <p role="alert" className="text-sm text-accent-text">
-              Vlo could not load the comments. Reload the page to try again.
+      <ShareImages.Provider value={images.load}>
+        <article className="grid gap-10">
+          <header className="grid gap-3 font-ui">
+            <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere] sm:text-5xl">
+              {bundle.title}
+            </h1>
+            {bundle.author !== undefined && (
+              <p className="text-lg [overflow-wrap:anywhere]">{bundle.author}</p>
+            )}
+            <p className="text-sm text-muted">
+              Shared for reading until {date.format(expiresAt)}. To comment or react, tap or click a
+              paragraph, or select some words. The writer and anyone with this link can read the comments.
             </p>
-          )}
-          <p role="status" className="sr-only">
-            {sent}
-          </p>
-        </header>
-        {bundle.sections.map((section, s) => (
-          <section key={s} aria-label={section.title || undefined} className="grid gap-5">
-            {section.blocks.map((block, b) => {
-              const quote = quotes[s]?.[b] ?? '';
-              const place = `${String(s)}:${String(b)}`;
-              const open = openAt?.place === place;
-              const words = open ? openAt.words : null;
-              return (
-                <ReaderBlock
-                  key={b}
-                  block={block}
-                  place={place}
-                  quote={quote}
-                  comments={byPlace.get(place) ?? NO_COMMENTS}
-                  open={open}
-                  onOpen={onOpen}
-                  form={
-                    open && (
-                      <CommentForm
-                        quote={words?.quote ?? (quote === '' ? 'this part' : quote)}
-                        name={name}
-                        onName={setName}
-                        onSend={async (text, reaction) => {
-                          await send(
-                            {
-                              section: s,
-                              block: b,
-                              quote: words?.quote ?? quote,
-                              ...(words ? { start: words.start, end: words.end } : {}),
-                              ...(reaction ? { reaction } : {}),
-                              text,
-                            },
-                            'Comment sent.',
-                          );
-                          setOpenAt(null);
-                          setPicked(null);
-                        }}
-                        onCancel={() => {
-                          setOpenAt(null);
-                        }}
-                      />
-                    )
-                  }
-                />
-              );
-            })}
-          </section>
-        ))}
-        {notes.length > 0 && (
-          <section aria-labelledby="reader-notes" className="grid gap-3 border-t border-rule pt-6 text-base">
-            <h2 id="reader-notes" className="font-display text-2xl font-semibold">
-              Notes
-            </h2>
-            <ol className="grid list-decimal gap-2 pl-6">
-              {notes.map(({ fn, note }) => (
-                <li key={fn} id={`note-${String(fn)}`} value={fn}>
-                  <NoteText note={note} />{' '}
-                  <a
-                    href={`#note-ref-${String(fn)}`}
-                    className="underline"
-                    aria-label={`Back to note ${String(fn)} in the text`}
-                  >
-                    ↩
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </section>
-        )}
-        {questions.length > 0 && (
-          <section
-            aria-labelledby={`${ids}-questions`}
-            className="grid gap-5 border-t border-rule pt-6 font-ui text-base"
-          >
-            <h2 id={`${ids}-questions`} className="font-display text-2xl font-semibold">
-              Questions from the writer
-            </h2>
-            <div className="grid max-w-sm gap-1.5">
-              <Label htmlFor={`${ids}-name`}>Your name (optional)</Label>
-              <Input
-                id={`${ids}-name`}
-                value={name}
-                maxLength={MAX_NAME}
-                autoComplete="name"
-                onChange={(event) => {
-                  setName(event.target.value);
-                }}
-              />
-            </div>
-            <ol className="grid gap-6">
-              {questions.map((question, q) => (
-                <li key={q} className="grid gap-3">
-                  <AnswerForm
-                    question={question}
-                    onSend={(text) =>
-                      send({ section: 0, block: 0, quote: '', question: q, text }, 'Answer sent.')
+            {commentsFailed && (
+              <p role="alert" className="text-sm text-accent-text">
+                Vlo could not load the comments. Reload the page to try again.
+              </p>
+            )}
+            <p role="status" className="sr-only">
+              {sent}
+            </p>
+          </header>
+          {bundle.sections.map((section, s) => (
+            <section key={s} aria-label={section.title || undefined} className="grid gap-5">
+              {section.blocks.map((block, b) => {
+                const quote = quotes[s]?.[b] ?? '';
+                const place = `${String(s)}:${String(b)}`;
+                const open = openAt?.place === place;
+                const words = open ? openAt.words : null;
+                return (
+                  <ReaderBlock
+                    key={b}
+                    block={block}
+                    place={place}
+                    quote={quote}
+                    comments={byPlace.get(place) ?? NO_COMMENTS}
+                    open={open}
+                    onOpen={onOpen}
+                    form={
+                      open && (
+                        <CommentForm
+                          quote={words?.quote ?? (quote === '' ? 'this part' : quote)}
+                          name={name}
+                          onName={setName}
+                          onSend={async (text, reaction) => {
+                            await send(
+                              {
+                                section: s,
+                                block: b,
+                                quote: words?.quote ?? quote,
+                                ...(words ? { start: words.start, end: words.end } : {}),
+                                ...(reaction ? { reaction } : {}),
+                                text,
+                              },
+                              'Comment sent.',
+                            );
+                            setOpenAt(null);
+                            setPicked(null);
+                          }}
+                          onCancel={() => {
+                            setOpenAt(null);
+                          }}
+                        />
+                      )
                     }
                   />
-                  <CommentList
-                    comments={answers[q] ?? NO_COMMENTS}
-                    label={`Answers to question ${String(q + 1)}`}
-                  />
-                </li>
-              ))}
-            </ol>
-          </section>
+                );
+              })}
+            </section>
+          ))}
+          {notes.length > 0 && (
+            <section
+              aria-labelledby="reader-notes"
+              className="grid gap-3 border-t border-rule pt-6 text-base"
+            >
+              <h2 id="reader-notes" className="font-display text-2xl font-semibold">
+                Notes
+              </h2>
+              <ol className="grid list-decimal gap-2 pl-6">
+                {notes.map(({ fn, note }) => (
+                  <li key={fn} id={`note-${String(fn)}`} value={fn}>
+                    <NoteText note={note} />{' '}
+                    <a
+                      href={`#note-ref-${String(fn)}`}
+                      className="underline"
+                      aria-label={`Back to note ${String(fn)} in the text`}
+                    >
+                      ↩
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+          {questions.length > 0 && (
+            <section
+              aria-labelledby={`${ids}-questions`}
+              className="grid gap-5 border-t border-rule pt-6 font-ui text-base"
+            >
+              <h2 id={`${ids}-questions`} className="font-display text-2xl font-semibold">
+                Questions from the writer
+              </h2>
+              <div className="grid max-w-sm gap-1.5">
+                <Label htmlFor={`${ids}-name`}>Your name (optional)</Label>
+                <Input
+                  id={`${ids}-name`}
+                  value={name}
+                  maxLength={MAX_NAME}
+                  autoComplete="name"
+                  onChange={(event) => {
+                    setName(event.target.value);
+                  }}
+                />
+              </div>
+              <ol className="grid gap-6">
+                {questions.map((question, q) => (
+                  <li key={q} className="grid gap-3">
+                    <AnswerForm
+                      question={question}
+                      onSend={(text) =>
+                        send({ section: 0, block: 0, quote: '', question: q, text }, 'Answer sent.')
+                      }
+                    />
+                    <CommentList
+                      comments={answers[q] ?? NO_COMMENTS}
+                      label={`Answers to question ${String(q + 1)}`}
+                    />
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+        </article>
+        {picked && openAt?.place !== picked.place && (
+          <div className="fixed inset-x-0 bottom-0 flex justify-center p-4 font-ui">
+            <Button
+              type="button"
+              className="max-w-full shadow-[var(--shadow-hover)]"
+              onPointerDown={() => {
+                pressing.current = true;
+              }}
+              onPointerCancel={() => {
+                pressing.current = false;
+              }}
+              onClick={() => {
+                pressing.current = false;
+                setSent('');
+                setOpenAt({ place: picked.place, words: picked });
+              }}
+            >
+              <MessageSquare aria-hidden="true" className="size-4" />
+              <span className="truncate">Comment on “{shortQuote(picked.quote)}”</span>
+            </Button>
+          </div>
         )}
-      </article>
-      {picked && openAt?.place !== picked.place && (
-        <div className="fixed inset-x-0 bottom-0 flex justify-center p-4 font-ui">
-          <Button
-            type="button"
-            className="max-w-full shadow-[var(--shadow-hover)]"
-            onPointerDown={() => {
-              pressing.current = true;
-            }}
-            onPointerCancel={() => {
-              pressing.current = false;
-            }}
-            onClick={() => {
-              pressing.current = false;
-              setSent('');
-              setOpenAt({ place: picked.place, words: picked });
-            }}
-          >
-            <MessageSquare aria-hidden="true" className="size-4" />
-            <span className="truncate">Comment on “{shortQuote(picked.quote)}”</span>
-          </Button>
-        </div>
-      )}
+      </ShareImages.Provider>
     </TopHeading.Provider>
   );
 }

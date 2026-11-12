@@ -46,6 +46,8 @@ export function poemDataToText(poem: PoemData): string {
 export function poemDataFromDoc(doc: ProseMirrorNode): PoemData {
   const poem: PoemData = [];
   doc.forEach((stanza) => {
+    // An image between two stanzas has no lines.
+    if (stanza.type.name !== 'stanza') return;
     const lines: PoemLineData[] = [];
     stanza.forEach((line) => {
       lines.push({ text: nodeText(line), hanging: Number(line.attrs.hanging) || 0 });
