@@ -83,6 +83,9 @@
   }
   .vlo-tip::after {
     content: attr(data-tip);
+    /* The empty alt text keeps the tip out of the button's accessible name, so a screen reader says the
+       name once. A browser with no alt text syntax keeps the line above. */
+    content: attr(data-tip) / '';
     position: absolute;
     top: calc(100% + 6px);
     left: 50%;

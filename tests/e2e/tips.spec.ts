@@ -54,6 +54,13 @@ test('the views that are not tabs sit in the More menu, with a line that says wh
   const views = page.getByRole('navigation', { name: 'Project views' });
   await expect(views.getByRole('link')).toHaveText(['Write', 'Board', 'Plot Grid']);
   expect(await seriousIssues(page)).toEqual([]);
+  // A tip that shows on keyboard focus stays out of the name, so a screen reader says "Export" once.
+  const exportButton = page.getByRole('button', { name: 'Export', exact: true });
+  await exportButton.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(exportButton).toBeFocused();
+  await expect(exportButton).toHaveAccessibleName('Export');
   await views.getByRole('button', { name: 'More views' }).click();
   const codex = page.getByRole('menuitem', { name: /^Codex/ });
   await expect(codex).toContainText('Characters, places and things');
