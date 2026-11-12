@@ -7,3 +7,8 @@
 export function sweepKey(projectId: string): string {
   return `imageSweep:${projectId}`;
 }
+
+/** The key of the time when a sweep first found each image of a project unused, in `appMeta`. */
+export function unusedKey(projectId: string): string {
+  return `imageUnused:${projectId}`;
+}

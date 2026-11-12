@@ -5,7 +5,7 @@ import { db, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
 import { prepareImage } from './resize';
-import { sweepKey } from './sweepKey';
+import { sweepKey, unusedKey } from './sweepKey';
 
 /*
  * The images in the text (Phase 16, Task G1). Each image is a row of the `images` table. The item's
@@ -153,26 +153,66 @@ export function remapImageIds(update: Uint8Array, imageId: (old: string) => stri
 export async function imagesInUse(projectId: string): Promise<Set<string>> {
   const itemIds = await db.items.where('projectId').equals(projectId).primaryKeys();
   const used = new Set<string>();
-  for (const [, update] of await readItemUpdates(itemIds)) imageIdsIn(update, used);
+  // Each text is read on its own turn, so a large project does not stop the typing.
+  for (const [, update] of await readItemUpdates(itemIds)) {
+    imageIdsIn(update, used);
+    await nextTurn();
+  }
   const snapshots = await db.snapshots.where('projectId').equals(projectId).toArray();
-  for (const snapshot of snapshots) imageIdsIn(snapshot.state, used);
+  for (const snapshot of snapshots) {
+    imageIdsIn(snapshot.state, used);
+    await nextTurn();
+  }
   const versions = await db.itemVersions.where('projectId').equals(projectId).toArray();
-  for (const version of versions) imageIdsIn(version.state, used);
+  for (const version of versions) {
+    imageIdsIn(version.state, used);
+    await nextTurn();
+  }
   return used;
 }
 
+/** Lets the page handle its events before the work goes on. */
+function nextTurn(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
+/** The time when a sweep first found each image unused, by image id. */
+async function unusedSince(projectId: string): Promise<Record<string, number>> {
+  const value = (await db.appMeta.get(unusedKey(projectId)))?.value;
+  if (typeof value !== 'object' || value === null) return {};
+  const out: Record<string, number> = {};
+  for (const [id, at] of Object.entries(value)) if (typeof at === 'number') out[id] = at;
+  return out;
+}
+
 /**
- * Removes the image rows of the project that no item, snapshot or version holds any more, once they are
- * older than `IMAGE_GRACE_MS`. Returns how many it removed.
+ * Removes the image rows of the project that no item, snapshot or version holds any more. A row goes only
+ * when it is older than `IMAGE_GRACE_MS` and an earlier sweep found it unused at least `IMAGE_GRACE_MS`
+ * before. So a cut image on the clipboard, or a deleted image that Undo can put back, keeps its bytes for
+ * a day. Returns how many it removed.
  */
 export async function sweepImages(projectId: string): Promise<number> {
   const rows = await db.images.where('projectId').equals(projectId).toArray();
-  const old = rows.filter((row) => clock.now() - row.addedAt >= IMAGE_GRACE_MS);
-  if (old.length === 0) return 0;
+  const now = clock.now();
+  const old = rows.filter((row) => now - row.addedAt >= IMAGE_GRACE_MS);
+  const marks = await unusedSince(projectId);
+  if (old.length === 0 && Object.keys(marks).length === 0) return 0;
   const used = await imagesInUse(projectId);
-  const unused = old.filter((row) => !used.has(row.id)).map((row) => row.id);
-  await db.images.bulkDelete(unused);
-  return unused.length;
+  const next: Record<string, number> = {};
+  const gone: string[] = [];
+  for (const row of old) {
+    if (used.has(row.id)) continue;
+    const since = marks[row.id];
+    if (since === undefined) next[row.id] = now;
+    else if (now - since >= IMAGE_GRACE_MS) gone.push(row.id);
+    else next[row.id] = since;
+  }
+  await db.images.bulkDelete(gone);
+  if (Object.keys(next).length === 0) await db.appMeta.delete(unusedKey(projectId));
+  else await db.appMeta.put({ key: unusedKey(projectId), value: next });
+  return gone.length;
 }
 
 /**

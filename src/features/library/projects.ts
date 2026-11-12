@@ -1,6 +1,6 @@
 import { clock } from '@/lib/clock';
 import { cleanDayStart, dayStartKey } from '@/features/editor/stats/dayStart';
-import { sweepKey } from '@/features/images/sweepKey';
+import { sweepKey, unusedKey } from '@/features/images/sweepKey';
 import { db, viewTables, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
@@ -187,7 +187,7 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       if (!options.keepShares) await db.shares.where('projectId').equals(id).delete();
       // The start of today's word count (writing stats).
       await db.appMeta.delete(dayStartKey(id));
-      await db.appMeta.delete(sweepKey(id));
+      await db.appMeta.bulkDelete([sweepKey(id), unusedKey(id)]);
       await db.projects.delete(id);
       return ids;
     },

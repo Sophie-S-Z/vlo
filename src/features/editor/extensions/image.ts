@@ -4,6 +4,7 @@ import { NodeSelection, Plugin, PluginKey, type EditorState } from '@tiptap/pm/s
 import { dropPoint } from '@tiptap/pm/transform';
 import type { EditorView } from '@tiptap/pm/view';
 import { yUndoPluginKey } from '@tiptap/y-tiptap';
+import { clock } from '@/lib/clock';
 import { db, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import {
@@ -287,8 +288,14 @@ export const ImageNode = Node.create({
           if (!node) return false;
           if (dispatch) {
             const { $from, empty } = state.selection;
+            // A selected image stays, and the new image goes after it. So several files go in one by one.
+            if (selectedImage(state) !== null) {
+              const after = state.selection.to;
+              tr.insert(after, node);
+              tr.setSelection(NodeSelection.create(tr.doc, after));
+            }
             // An empty paragraph gives its place to the image.
-            if (empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0) {
+            else if (empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0) {
               const start = $from.before();
               tr.replaceWith(start, $from.after(), node);
               tr.setSelection(NodeSelection.create(tr.doc, start));
@@ -398,7 +405,8 @@ function copyRows(pairs: readonly (readonly [string, string])[], projectId: stri
   for (const [old, id] of pairs)
     void db.images
       .get(old)
-      .then((row) => (row ? db.images.add({ ...row, id, projectId }) : undefined))
+      // The copy is new, so it gets the full time before a sweep may remove it.
+      .then((row) => (row ? db.images.add({ ...row, id, projectId, addedAt: clock.now() }) : undefined))
       .catch(() => {
         markImageFailed(id);
       });
@@ -475,8 +483,8 @@ export const ImageInput = Extension.create<ImageInputOptions>({
             return insertImageFiles(editor, projectId, files);
           },
           transformPasted: (slice: Slice, view: EditorView) =>
-            // A drag inside this editor moves the node and keeps its row.
-            view.dragging ? slice : withNewIds(slice, projectId),
+            // A drag that moves the node keeps its row. A copy drag (with Ctrl or Alt) gets new ids.
+            view.dragging?.move ? slice : withNewIds(slice, projectId),
         },
       }),
     ];

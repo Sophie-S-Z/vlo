@@ -213,7 +213,7 @@ describe('Storage (Review Focus 2)', () => {
       imageRow('img-gone', project.id),
       imageRow('img-snapshot', project.id),
       imageRow('img-version', project.id),
-      imageRow('img-new', project.id, IMAGE_GRACE_MS),
+      imageRow('img-new', project.id, 3 * IMAGE_GRACE_MS),
     ]);
     await db.snapshots.add({
       id: 'snap',
@@ -234,7 +234,10 @@ describe('Storage (Review Focus 2)', () => {
       text: '',
     });
     expect([...(await imagesInUse(project.id))].sort()).toEqual(['img-1', 'img-snapshot', 'img-version']);
+    // The first sweep only notes the unused image. It goes a day later.
     clock.now = () => IMAGE_GRACE_MS + 10;
+    expect(await sweepImages(project.id)).toBe(0);
+    clock.now = () => 2 * IMAGE_GRACE_MS + 10;
     expect(await sweepImages(project.id)).toBe(1);
     expect((await db.images.toCollection().primaryKeys()).sort()).toEqual([
       'img-1',
@@ -242,20 +245,52 @@ describe('Storage (Review Focus 2)', () => {
       'img-snapshot',
       'img-version',
     ]);
-    // Once the snapshot goes, so does its image.
+    // Once the snapshot goes, so does its image, a day later.
     await db.snapshots.delete('snap');
+    expect(await sweepImages(project.id)).toBe(0);
+    clock.now = () => 3 * IMAGE_GRACE_MS + 10;
     expect(await sweepImages(project.id)).toBe(1);
     expect(await db.images.count()).toBe(3);
+  });
+
+  test('an image that is in the text again before the day ends stays', async () => {
+    const { project, scene } = await novelWithImage();
+    await db.images.add(imageRow('img-cut', project.id));
+    clock.now = () => IMAGE_GRACE_MS + 10;
+    expect(await sweepImages(project.id)).toBe(0);
+    // The image is in a text again, here a version.
+    const version = {
+      id: 'version',
+      projectId: project.id,
+      itemId: scene.id,
+      name: 'With the photo',
+      createdAt: 1,
+      updatedAt: 1,
+      state: sceneWith(['img-cut']),
+      text: '',
+    };
+    await db.itemVersions.add(version);
+    clock.now = () => 2 * IMAGE_GRACE_MS + 10;
+    expect(await sweepImages(project.id)).toBe(0);
+    // Unused again: the day starts again at the next sweep.
+    await db.itemVersions.delete('version');
+    clock.now = () => 3 * IMAGE_GRACE_MS;
+    expect(await sweepImages(project.id)).toBe(0);
+    expect(await db.images.get('img-cut')).toBeDefined();
+    clock.now = () => 4 * IMAGE_GRACE_MS;
+    expect(await sweepImages(project.id)).toBe(1);
   });
 
   test('the project page sweeps at most once a day', async () => {
     const { project } = await novelWithImage();
     await db.images.add(imageRow('img-gone', project.id));
     clock.now = () => IMAGE_GRACE_MS + 10;
-    expect(await sweepImagesDaily(project.id)).toBe(1);
+    expect(await sweepImagesDaily(project.id)).toBe(0);
     await db.images.add(imageRow('img-gone-2', project.id));
     expect(await sweepImagesDaily(project.id)).toBe(0);
     clock.now = () => 2 * IMAGE_GRACE_MS + 20;
+    expect(await sweepImagesDaily(project.id)).toBe(1);
+    clock.now = () => 3 * IMAGE_GRACE_MS + 30;
     expect(await sweepImagesDaily(project.id)).toBe(1);
     expect(await db.images.toCollection().primaryKeys()).toEqual(['img-1']);
   });
