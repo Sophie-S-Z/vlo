@@ -15,6 +15,11 @@ Last update: 2026-11-12
     show above the text and never export. A References page lists the sources in the project's style, takes
     a BibTeX or CSL JSON import, and sets where the list goes in an export. Add to binder has a Section with
     a guide menu. Cite a source works in the new modes. Backup format 14 keeps guide, words and role.
+  - Q-C, Publish: a dialog with 15 platforms (Substack, Medium, WordPress, Ghost, Beehiiv, LinkedIn,
+    Tumblr, AO3, Wattpad, Royal Road, DEV, Hashnode, Write.as, Reddit and any Markdown editor). Each gets
+    a copy with only what its editor keeps, the title and subtitle as their own copies, the steps to paste,
+    what the platform changes, and its length limits. WordPress also gets an import file (WXR). A build with
+    `VITE_WPCOM_CLIENT_ID` can save a draft on WordPress.com (`docs/publish-setup.md`, purpose `publish`).
 
 - Phase 6 (plan `docs/plans/phase-6.md`): pull request #18 merged on 2026-11-08.
   - F1: the architecture review (`docs/architecture-review-phase-6.md`). Fixed: the web originality check

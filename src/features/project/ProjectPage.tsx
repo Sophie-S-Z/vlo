@@ -1,7 +1,7 @@
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { sweepImagesDaily } from '@/features/images/images';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
-import { Download, Search, Share2 } from 'lucide-react';
+import { Download, Search, Send, Share2 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
@@ -106,6 +106,9 @@ const FOLDER_SAVE_EVERY_MS = 10 * 60_000;
 // The command menu, cmdk and MiniSearch load the first time the writer opens the menu.
 const CommandMenu = lazy(async () => ({ default: (await import('./CommandMenu')).CommandMenu }));
 // The export dialog loads the first time the writer opens it. Each format's code loads in the export worker.
+const PublishDialog = lazy(async () => ({
+  default: (await import('@/features/publish/PublishDialog')).PublishDialog,
+}));
 const ExportDialog = lazy(async () => ({
   default: (await import('@/features/export/ExportDialog')).ExportDialog,
 }));
@@ -165,6 +168,7 @@ export function ProjectPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
   const [sprintOpen, setSprintOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -471,6 +475,36 @@ export function ProjectPage() {
       },
     },
     {
+      id: 'publish',
+      label: 'Publish to Substack, Medium, WordPress…',
+      keywords: [
+        'substack',
+        'medium',
+        'wordpress',
+        'ghost',
+        'beehiiv',
+        'linkedin',
+        'tumblr',
+        'ao3',
+        'wattpad',
+        'royal road',
+        'dev.to',
+        'hashnode',
+        'write.as',
+        'reddit',
+        'blog',
+        'newsletter',
+        'post',
+        'copy',
+        'paste',
+      ],
+      run: () => {
+        afterMenu.current = () => {
+          setPublishOpen(true);
+        };
+      },
+    },
+    {
       id: 'import-review',
       label: 'Import an editor’s changes…',
       keywords: ['word', 'docx', 'editor', 'tracked changes', 'comments', 'review', 'round trip'],
@@ -772,6 +806,17 @@ export function ProjectPage() {
               <Button
                 variant="ghost"
                 className={ICON_BUTTON}
+                data-tip="Publish"
+                onClick={() => {
+                  setPublishOpen(true);
+                }}
+              >
+                <Send aria-hidden="true" className="size-4" />
+                <span className="sr-only">Publish</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className={ICON_BUTTON}
                 data-tip="Share"
                 onClick={() => {
                   setShareOpen(true);
@@ -967,6 +1012,17 @@ export function ProjectPage() {
               items={items}
               currentItemId={current?.id ?? null}
               people={people ?? []}
+            />
+          </Suspense>
+        )}
+        {publishOpen && (
+          <Suspense fallback={null}>
+            <PublishDialog
+              open
+              onOpenChange={setPublishOpen}
+              project={project}
+              items={items}
+              currentItemId={current?.id ?? null}
             />
           </Suspense>
         )}

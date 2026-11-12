@@ -83,6 +83,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        // The WordPress.com sign-in comes back to its own page, never to the app (Phase 17 Publish).
+        navigateFallbackDenylist: [/^\/wpcom-callback\.html/],
         globPatterns: ['**/*.{js,css,html,png,woff2,webmanifest}'],
         // The writing fonts are not in the install cache. Each one is cached the first time it loads.
         // The pronouncing dictionary of the Craft labels (about 1 MB gzip) is not in the install cache

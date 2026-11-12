@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 10,
+  version: 11,
   date: '2026-11-12',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -68,6 +68,12 @@ export const PRIVACY = {
       when: 'Only when you turn on "Add a public timestamp" and download an authorship record, and when a reader presses "Check the timestamp" on the check page.',
       sends:
         'One SHA-256 hash of the record, mixed with random bytes, to two free OpenTimestamps servers. The hash shows no text, title or count. The check page asks the OpenTimestamps servers that finish the proof for the rest of it, and asks mempool.space for the Bitcoin block that holds it.',
+    },
+    publish: {
+      title: 'Drafts on WordPress.com',
+      when: 'Only when you choose "Save as a draft on WordPress.com" in Publish, in a build that offers it.',
+      sends:
+        'The title, the excerpt and the text of the post, with the access token that WordPress.com gave when you signed in, to the WordPress.com site that you picked. Vlo saves the post as a draft. The token stays in the tab until you close it. Every other platform in Publish gets only what you copy and paste.',
     },
   } satisfies Record<NetPurpose, { title: string; when: string; sends: string }>,
   contact: {
