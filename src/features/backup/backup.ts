@@ -8,12 +8,14 @@ import { deleteProject } from '@/features/library/projects';
 import { holdsText } from '@/features/library/templates';
 import { remapNameMarks } from '@/features/people/markAll';
 import { sceneKey } from '@/features/codex/continuity';
+import { remapImageIds } from '@/features/images/images';
 import { copyViews } from './views';
 import {
   backupFileName,
   readBackup,
   writeBackup,
   type Backup,
+  type BackupImage,
   type BackupMusic,
   type BackupResearch,
 } from './file';
@@ -45,6 +47,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       db.itemTexts,
       db.audioFiles,
       db.research,
+      db.images,
       db.series,
       ...viewTables(),
     ],
@@ -59,6 +62,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
       itemTexts: await db.itemTexts.where('projectId').equals(projectId).toArray(),
       music: options.music ? await db.audioFiles.orderBy('addedAt').toArray() : [],
       research: await db.research.where('projectId').equals(projectId).sortBy('addedAt'),
+      images: await db.images.where('projectId').equals(projectId).sortBy('addedAt'),
       views: await readViewRows(projectId),
     }),
   );
@@ -81,6 +85,12 @@ export async function collectBackup(projectId: string, options: { music: boolean
       data ? { info, data: await data.arrayBuffer() } : { info },
     ),
   );
+  const images = await Promise.all(
+    rows.images.map(async ({ data, ...info }): Promise<BackupImage> => ({
+      info,
+      data: await data.arrayBuffer(),
+    })),
+  );
   return {
     createdAt: clock.now(),
     project,
@@ -93,6 +103,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     updates: new Map(updates),
     music,
     research,
+    images,
     views: rows.views,
     ...(series ? { series } : {}),
   };
@@ -139,9 +150,14 @@ function asCopy(source: Backup): Backup {
   const itemId = (old: string) => ids.get(old) ?? old;
   const views = series ? { ...backup.views, codex: [...backup.views.codex, ...series.codex] } : backup.views;
   const copied = copyViews(views, projectId, itemId);
-  // Each private-name mark in the text names a person by id, so it moves to the new id too.
-  const marks = (update: Uint8Array) =>
+  // Each private-name mark in the text names a person by id, so it moves to the new id too. So does each
+  // image node, because an image row belongs to one project.
+  const imageIds = new Map(backup.images.map((image) => [image.info.id, newId()]));
+  const imageId = (old: string) => imageIds.get(old) ?? old;
+  const names = (update: Uint8Array) =>
     backup.views.people.length === 0 ? update : remapNameMarks(update, copied.personId);
+  const marks = (update: Uint8Array) =>
+    imageIds.size === 0 ? names(update) : remapImageIds(names(update), imageId);
   // A kept rule 2 mark (F66) names an entry and a scene by id, so it moves to the new ids too.
   const { settings } = backup.project;
   const scenes = (settings.continuity?.scenes ?? []).flatMap((key) => {
@@ -193,6 +209,10 @@ function asCopy(source: Backup): Backup {
         projectId,
         ...(r.info.itemId === undefined ? {} : { itemId: itemId(r.info.itemId) }),
       },
+    })),
+    images: backup.images.map((image) => ({
+      ...image,
+      info: { ...image.info, id: imageId(image.info.id), projectId },
     })),
     itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
     updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), marks(update)])),
@@ -267,6 +287,7 @@ async function storeBackup(backup: Backup): Promise<void> {
         db.itemTexts,
         db.audioFiles,
         db.research,
+        db.images,
         db.series,
         ...viewTables(),
       ],
@@ -296,6 +317,9 @@ async function storeBackup(backup: Backup): Promise<void> {
           backup.research.map(({ info, data }) =>
             data ? { ...info, data: new Blob([data], { type: info.type }) } : info,
           ),
+        );
+        await db.images.bulkAdd(
+          backup.images.map(({ info, data }) => ({ ...info, data: new Blob([data], { type: info.type }) })),
         );
         // Music belongs to the device, not the project. A file that is already here stays as it is.
         const known = new Set(await db.audioFiles.toCollection().primaryKeys());

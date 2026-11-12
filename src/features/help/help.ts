@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 19,
-  date: '2026-11-11',
+  version: 20,
+  date: '2026-11-12',
   guide: [
     {
       title: 'Start a project',
@@ -39,6 +39,15 @@ export const HELP = {
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
         'To make a note to yourself, select the words and choose Comment. Comments show under the text, and exports leave them out.',
         'In an English project, More tools has Style check. It marks repeated words, filler words, cliches and long sentences. Put the cursor in the marked words to see why. The check never changes your text.',
+      ],
+    },
+    {
+      title: 'Put an image in the text',
+      steps: [
+        'Drop an image file on a scene, a memory or a page. The image goes in where you drop it. You can also paste an image, or type / and choose Image.',
+        'Vlo asks for the alt text: what the image shows, for a reader who cannot see it. Choose Decorative when the image adds nothing that the words do not say.',
+        'Drag the image to move it. Or select it and press Alt with the Up or Down arrow key. Press Enter on a selected image to change its alt text, caption, size or place.',
+        'Vlo keeps a copy of at most 2,400 pixels on the long side, on this device. The copy holds no camera data, such as the place of a photo. Backups keep each image.',
       ],
     },
     {

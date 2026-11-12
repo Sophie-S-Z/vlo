@@ -220,6 +220,17 @@ html[data-hide-text='bars'][data-hide-keep]
   filter: blur(0.4em);
 }
 
+/* An image has no letters, so it blurs more in both styles, until no face or word shows in it. */
+html[data-hide-text]:not([data-hide-keep]) .vlo-manuscript .vlo-image-frame,
+html[data-hide-text][data-hide-keep] .vlo-manuscript:not(.ProseMirror-focused) .vlo-image-frame,
+html[data-hide-text][data-hide-keep]
+  .vlo-manuscript.ProseMirror-focused
+  > :not(.vlo-caret-block)
+  .vlo-image-frame {
+  overflow: hidden;
+  filter: blur(1.5em);
+}
+
 /* Typewriter scrolling needs room below the last line to bring it to the middle. */
 .vlo-typewriter .vlo-manuscript {
   padding-bottom: 50vh;
@@ -910,4 +921,47 @@ html[data-calm='true'] .vlo-fill-shimmer {
   flex-shrink: 0;
   border-radius: 9999px;
   background: var(--vlo-pass);
+}
+
+/* Images in the text (Phase 16). The figure takes its share of the text width, at its place. A drag
+   moves it. A missing row shows a box with the alt text, never an empty gap. */
+.vlo-manuscript .vlo-image {
+  width: var(--vlo-image-width, 100%);
+  max-width: 100%;
+  margin: 1em auto;
+  cursor: grab;
+}
+.vlo-manuscript .vlo-image[data-align='left'] {
+  margin-left: 0;
+}
+.vlo-manuscript .vlo-image[data-align='right'] {
+  margin-right: 0;
+}
+.vlo-manuscript .vlo-image-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.25rem;
+}
+.vlo-manuscript .vlo-image-missing {
+  display: grid;
+  place-content: center;
+  gap: 0.25rem;
+  aspect-ratio: var(--vlo-image-ratio, 3 / 2);
+  padding: 1rem;
+  border: 1px dashed var(--muted);
+  border-radius: 0.25rem;
+  color: var(--muted);
+  font-size: 0.875em;
+  text-align: center;
+}
+.vlo-manuscript .vlo-image-caption {
+  margin-top: 0.5em;
+  color: var(--muted);
+  font-size: 0.875em;
+  text-align: center;
+}
+.vlo-manuscript .vlo-image.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

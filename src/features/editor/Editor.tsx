@@ -25,6 +25,7 @@ import { CaretBlock } from './extensions/caretBlock';
 import { ClickBelow } from './extensions/clickBelow';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
+import { ImageInput } from './extensions/image';
 import { ChangesList } from './ChangesList';
 import { CommentList } from './CommentList';
 import { FootnoteList } from './FootnoteList';
@@ -185,6 +186,7 @@ export function Editor({
         CodexNames,
         ContinuityCheck.configure({ itemId, english }),
         AuthorshipCount.configure({ projectId: projectId ?? null }),
+        ...(kind === 'script' ? [] : [ImageInput.configure({ projectId: projectId ?? null })]),
         SlashMenu.configure({
           items: slashItems(kind, templates),
           listId,

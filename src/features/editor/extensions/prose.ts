@@ -13,6 +13,7 @@ import { CommentMark } from './comment';
 import { SuggestionMark } from './suggestion';
 import { SceneBreak } from './sceneBreak';
 import { Cite } from './cite';
+import { ImageNode } from './image';
 
 /** The prose schema for scenes, memories and notes. Collaboration keeps undo history, so UndoRedo is off. */
 export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
@@ -37,6 +38,7 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     MathInline,
     MathBlock,
     Cite,
+    ImageNode,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

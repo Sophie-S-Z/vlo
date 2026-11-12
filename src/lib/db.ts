@@ -449,6 +449,25 @@ export interface ResearchFile {
   itemId?: string;
 }
 
+/**
+ * An image in the text of an item (Phase 16). The item's document holds only the image's id, so a scene
+ * with photos opens as fast as one without, and a typed key never copies the bytes. Vlo stores each image
+ * as a JPEG or a PNG of at most `MAX_IMAGE_SIDE` pixels on its long side.
+ */
+export interface ImageFile {
+  id: string;
+  projectId: string;
+  /** "image/jpeg" or "image/png". */
+  type: string;
+  /** Bytes. */
+  size: number;
+  /** Pixels. */
+  width: number;
+  height: number;
+  addedAt: number;
+  data: Blob;
+}
+
 /** A plain-text copy of each item, for search and readable backups (ADR 0003). */
 export interface ItemText {
   itemId: string;
@@ -563,6 +582,7 @@ export class VloDb extends Dexie {
   authorship!: Table<AuthorshipEntry, string>;
   series!: Table<Series, string>;
   sources!: Table<Source, string>;
+  images!: Table<ImageFile, string>;
 
   constructor(name = 'vlo') {
     super(name);
@@ -641,6 +661,8 @@ export class VloDb extends Dexie {
           await tx.table('items').bulkPut(recountItems(items, texts, project.settings.language));
         }
       });
+    // Version 15 (Phase 16, Task G1): the images in the text. A new table only.
+    this.version(15).stores({ images: 'id, projectId' });
     this.use(syncClockMiddleware);
   }
 }
