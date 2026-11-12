@@ -10,6 +10,7 @@ import { cn } from '@/ui/cn';
 import type { FormAction } from './ItemDialogs';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
@@ -40,6 +41,8 @@ export interface BinderItemActions {
   edit: (item: Item, type: FormAction) => void;
   remove: (item: Item) => void;
   setStatus: (item: Item, status: Status) => void;
+  /** Shows the section's title as a heading in exports, or keeps it as a working label (Phase 17). */
+  setWorkingTitle: (item: Item, on: boolean) => void;
   addChild: (item: Item, kind: ItemKind) => void;
   canMove: (item: Item, move: BinderMove) => boolean;
   move: (item: Item, move: BinderMove) => void;
@@ -238,6 +241,17 @@ export const BinderItem = memo(function BinderItem({
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            {/* A section of an essay, an article or a research paper (Phase 17). */}
+            {item.kind === 'page' && kindLabel === 'Section' && item.role === undefined && (
+              <DropdownMenuCheckboxItem
+                checked={!item.workingTitle}
+                onCheckedChange={(checked) => {
+                  actions.setWorkingTitle(item, !checked);
+                }}
+              >
+                Title as a heading in exports
+              </DropdownMenuCheckboxItem>
+            )}
             {childKinds.length > 0 && <DropdownMenuSeparator />}
             {childKinds.map((kind) => (
               <DropdownMenuItem

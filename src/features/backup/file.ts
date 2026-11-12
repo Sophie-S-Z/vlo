@@ -45,6 +45,7 @@ import type {
   ResearchFile,
   Item,
   ItemKind,
+  ItemRole,
   ItemText,
   ItemVersion,
   Project,
@@ -76,13 +77,14 @@ import type {
  * `script` items and their script lines (F63). Version 9 adds the sources (`sources`), the citations in the
  * text and the citation style (F64). Version 10 adds the changes of Codex entries at scenes (`changes`,
  * F65). Version 11 adds the continuity marks that the writer kept (`settings.continuity`, F66). Version 12 adds the story date of a scene (`storyDate`, F67). Version 13 adds the
- * images in the text (`images`, Phase 16). Vlo still reads versions 1 to 12.
+ * images in the text (`images`, Phase 16). Version 14 adds the Essay, Article and Research paper templates
+ * and the guide, the word range, the role and the working title switch of a section (Phase 17). Vlo still reads versions 1 to 13.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 13;
+export const BACKUP_VERSION = 14;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -382,6 +384,16 @@ function checkProject(value: unknown): Project {
   return value as unknown as Project;
 }
 
+const ITEM_ROLES: readonly ItemRole[] = ['references'];
+
+/** A word range: an object with a whole `min`, a whole `max`, or both, from 0. */
+function isWordRange(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const ok = (n: unknown) => n === undefined || (typeof n === 'number' && Number.isInteger(n) && n >= 0);
+  const range = value as Record<string, unknown>;
+  return ok(range.min) && ok(range.max) && Object.keys(range).every((k) => k === 'min' || k === 'max');
+}
+
 function checkItems(rows: Json[], projectId: string): Item[] {
   const ids = new Set<string>();
   for (const row of rows) {
@@ -410,6 +422,13 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     optionalText(row, 'labelId', what);
     if (row.storyDate !== undefined && !isDate(text(row, 'storyDate', what)))
       fail(`${DAMAGED} ${what} has a wrong story date.`);
+    optionalText(row, 'guide', what);
+    if (row.words !== undefined && !isWordRange(row.words))
+      fail(`${DAMAGED} ${what} has a wrong word range.`);
+    if (row.role !== undefined && !ITEM_ROLES.includes(row.role as ItemRole))
+      fail(`${DAMAGED} ${what} has a wrong role.`);
+    if (row.workingTitle !== undefined && row.workingTitle !== true)
+      fail(`${DAMAGED} ${what} has a wrong working title switch.`);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);
     if (row.memory !== undefined && !isObject(row.memory)) fail(`${DAMAGED} ${what} has a wrong memory.`);

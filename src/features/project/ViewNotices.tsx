@@ -22,7 +22,7 @@ function whatItIs(project: Project): string {
   if (names.length === 1)
     return project.templates[0] === 'open'
       ? 'This project is open writing.'
-      : `This project is a ${names[0] ?? ''}.`;
+      : `This project is ${/^[aeiou]/.test(names[0] ?? '') ? 'an' : 'a'} ${names[0] ?? ''}.`;
   const last = names.pop() ?? '';
   return `This project is a mix of ${names.join(', ')} and ${last}.`;
 }

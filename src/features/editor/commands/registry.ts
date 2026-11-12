@@ -837,7 +837,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     icon: BookMarked,
     group: 'insert',
     forms: PROSE,
-    templates: ['open', 'memoir'],
+    templates: ['open', 'memoir', 'essay', 'article', 'research'],
     keywords: ['citation', 'sources', 'reference', 'bibliography', 'zotero', 'bibtex', 'works cited'],
     slash: true,
     panel: 'cite',

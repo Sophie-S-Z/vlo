@@ -47,8 +47,8 @@ test('keyboard only: create a Memoir project with a typed title', async ({ page 
   // The first pick replaces the Novel suggestion.
   await expect(dialog.getByRole('checkbox', { name: /Memoir/ })).toBeChecked();
   await expect(dialog.getByRole('checkbox', { name: /Novel/ })).not.toBeChecked();
-  // Past Poetry collection, Open writing and Script to the title.
-  for (let i = 0; i < 4; i += 1) await page.keyboard.press('Tab');
+  // Past Poetry collection, Script, Essay, Article, Research paper and Open writing to the title.
+  for (let i = 0; i < 7; i += 1) await page.keyboard.press('Tab');
   await expect(dialog.getByLabel('Title')).toBeFocused();
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.type('Tide Tables');

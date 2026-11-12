@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { useId, useState } from 'react';
+import { lazy, Suspense, useId, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/ui/button';
 import {
@@ -14,7 +14,13 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { createProject } from './projects';
 import { TemplatePicker, useTemplatePick } from './TemplatePicker';
+import { FIRST_STRUCTURE } from './firstStructure';
 import { projectDef } from './templates';
+
+const StructurePicker = lazy(async () => ({
+  default: (await import('./StructurePicker')).StructurePicker,
+}));
+import type { Template } from '@/lib/db';
 
 export function NewProjectDialog() {
   const navigate = useNavigate();
@@ -24,6 +30,8 @@ export function NewProjectDialog() {
   const [title, setTitle] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The structure of each picked mode that has structures. Absent means the first one.
+  const [structures, setStructures] = useState<Partial<Record<Template, string>>>({});
   const titleId = useId();
   const errorId = useId();
   const shownTitle = title ?? projectDef(pick.value).untitled;
@@ -34,6 +42,7 @@ export function NewProjectDialog() {
       reset();
       setTitle(null);
       setError(null);
+      setStructures({});
     }
   }
 
@@ -44,7 +53,16 @@ export function NewProjectDialog() {
     }
     setBusy(true);
     try {
-      const { project, firstItemId } = await createProject({ title: shownTitle, templates: pick.value });
+      const chosen: Partial<Record<Template, string>> = {};
+      for (const template of pick.value) {
+        const id = structures[template] ?? FIRST_STRUCTURE[template];
+        if (id) chosen[template] = id;
+      }
+      const { project, firstItemId } = await createProject({
+        title: shownTitle,
+        templates: pick.value,
+        structures: chosen,
+      });
       await navigate(`/p/${project.id}?item=${firstItemId}`);
     } catch {
       setError('Vlo could not save the project on this device. Check that the browser allows site data.');
@@ -71,6 +89,19 @@ export function NewProjectDialog() {
           className="grid gap-6"
         >
           <TemplatePicker pick={pick} onToggle={toggle} label="What do you write?" />
+          {pick.value
+            .filter((template) => FIRST_STRUCTURE[template] !== undefined)
+            .map((template) => (
+              <Suspense key={template} fallback={<div className="min-h-24" />}>
+                <StructurePicker
+                  template={template}
+                  value={structures[template] ?? FIRST_STRUCTURE[template] ?? ''}
+                  onChange={(id) => {
+                    setStructures((prev) => ({ ...prev, [template]: id }));
+                  }}
+                />
+              </Suspense>
+            ))}
           <div className="grid gap-2">
             <Label htmlFor={titleId}>Title</Label>
             <Input

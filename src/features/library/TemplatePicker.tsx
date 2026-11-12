@@ -3,8 +3,11 @@ import {
   Check,
   Clapperboard,
   Feather,
+  GraduationCap,
   Hourglass,
+  Newspaper,
   NotebookPen,
+  ScrollText,
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useId, useState } from 'react';
@@ -18,7 +21,22 @@ const ICONS: Record<Template, LucideIcon> = {
   poetry: Feather,
   open: NotebookPen,
   script: Clapperboard,
+  essay: ScrollText,
+  article: Newspaper,
+  research: GraduationCap,
 };
+
+/** The order of the cards: stories and poems, then the nonfiction modes, then open writing. */
+const CARD_ORDER: readonly Template[] = [
+  'novel',
+  'memoir',
+  'poetry',
+  'script',
+  'essay',
+  'article',
+  'research',
+  'open',
+];
 
 /** The template that a new project starts with. */
 export const SUGGESTED_TEMPLATE: Template = 'novel';
@@ -70,8 +88,8 @@ export function TemplatePicker({ pick, onToggle, label = 'Template' }: TemplateP
       <p id={`${id}-hint`} className="mb-3 text-sm text-muted">
         Pick one or more. A project with more than one gets the tools of each.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-        {TEMPLATE_ORDER.map((template) => {
+      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+        {CARD_ORDER.map((template) => {
           const def = TEMPLATES[template];
           const Icon = ICONS[template];
           const checked = pick.value.includes(template);
@@ -87,7 +105,7 @@ export function TemplatePicker({ pick, onToggle, label = 'Template' }: TemplateP
                 onToggle(template);
               }}
               className={cn(
-                'relative flex flex-col items-start gap-2 rounded-[var(--radius-card)] border border-rule bg-bg p-4 text-left transition-[border-color,box-shadow,scale] duration-200 ease-out active:scale-[0.98]',
+                'relative grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-0.5 rounded-[var(--radius-card)] border border-rule bg-bg py-3 pr-10 pl-3 text-left transition-[border-color,box-shadow,scale] duration-200 ease-out active:scale-[0.98]',
                 'hover:border-muted data-[state=checked]:border-accent data-[state=checked]:shadow-[inset_0_0_0_1px_var(--accent)]',
               )}
             >
@@ -100,8 +118,8 @@ export function TemplatePicker({ pick, onToggle, label = 'Template' }: TemplateP
               >
                 <Check className={cn('vlo-swap size-3.5', !checked && 'vlo-swap-out')} strokeWidth={3} />
               </span>
-              <Icon aria-hidden="true" className="size-6 text-accent-text" />
-              <span className="font-display text-lg font-semibold">{def.label}</span>
+              <Icon aria-hidden="true" className="row-span-2 size-5 self-start text-accent-text" />
+              <span className="font-display text-base font-semibold">{def.label}</span>
               <span id={`${id}-${template}`} className="text-sm text-muted">
                 {def.description}
               </span>
