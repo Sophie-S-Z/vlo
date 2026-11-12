@@ -59,19 +59,8 @@ test('a mix of novel and memoir gets the starters, the binder kinds and the view
   await dialog.getByRole('button', { name: 'Create project' }).click();
 
   await expect(page.getByRole('heading', { level: 2, name: 'Scene 1' })).toBeVisible();
-  await expect(tabs(page)).toHaveText([
-    'Write',
-    'Board',
-    'Plot Grid',
-    'Timeline',
-    'People',
-    'Outline',
-    'Codex',
-    'Feedback',
-    'Book',
-    'Submissions',
-    'Progress',
-  ]);
+  // The views of both templates are tabs. The views of every project sit in the More menu.
+  await expect(tabs(page)).toHaveText(['Write', 'Board', 'Plot Grid', 'Timeline', 'People']);
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
   await expect(page.getByRole('list', { name: 'Projects' }).getByText('Novel + Memoir')).toBeVisible();
 });

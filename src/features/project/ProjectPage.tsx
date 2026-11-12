@@ -71,7 +71,7 @@ const ITEM_TOOLS: readonly { id: string; label: string; keywords: readonly strin
   {
     id: 'history',
     label: 'Open History…',
-    keywords: ['snapshots', 'versions', 'restore', 'undo', 'compare', 'diff', 'backup'],
+    keywords: ['snapshots', 'versions', 'restore', 'undo', 'compare', 'diff'],
   },
   {
     id: 'page',

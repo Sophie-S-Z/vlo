@@ -230,9 +230,9 @@ test('Progress has a tab on every template and a command', async ({ page }) => {
     const dialog = page.getByRole('dialog', { name: 'New project' });
     await dialog.getByRole('checkbox', { name: template }).click();
     await dialog.getByRole('button', { name: 'Create project' }).click();
-    await expect(page.getByRole('navigation', { name: 'Project views' }).getByRole('link').last()).toHaveText(
-      'Progress',
-    );
+    await page.getByRole('button', { name: 'More views' }).click();
+    await expect(page.getByRole('menuitem').last()).toHaveText(/^Progress/);
+    await page.keyboard.press('Escape');
   }
   await page.keyboard.press('ControlOrMeta+k');
   const menu = page.getByRole('dialog', { name: 'Command menu' });

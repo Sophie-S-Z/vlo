@@ -60,7 +60,7 @@ test('the badge shows Pen on every project screen, and a change away from Pen ex
   await newProject(page);
   await expect(badge(page)).toHaveAccessibleName('AI mode: Pen');
   for (const view of ['Board', 'Plot Grid', 'Submissions', 'Progress']) {
-    await views(page).getByRole('link', { name: view, exact: true }).click();
+    await openView(page, view);
     await expect(views(page).getByRole('link', { name: view, exact: true })).toHaveAttribute(
       'aria-current',
       'page',

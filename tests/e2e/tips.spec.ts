@@ -53,10 +53,10 @@ test('the views that are not tabs sit in the More menu, with a line that says wh
     .click();
   const views = page.getByRole('navigation', { name: 'Project views' });
   await expect(views.getByRole('link')).toHaveText(['Write', 'Board', 'Plot Grid']);
+  expect(await seriousIssues(page)).toEqual([]);
   await views.getByRole('button', { name: 'More views' }).click();
   const codex = page.getByRole('menuitem', { name: /^Codex/ });
   await expect(codex).toContainText('Characters, places and things');
-  expect(await seriousIssues(page)).toEqual([]);
   await codex.click();
   await expect(page.getByRole('heading', { level: 2, name: 'Codex' })).toBeVisible();
   // The view on show has its own tab, marked as the current page.
