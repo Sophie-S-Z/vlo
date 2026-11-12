@@ -7,6 +7,7 @@ import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
 import { holdsText, TEMPLATE_ORDER } from '@/features/library/templates';
+import { IMAGE_TYPES } from '@/features/images/resize';
 import {
   BackupError,
   checkOrder,
@@ -39,6 +40,7 @@ import type {
   AuthorshipEntry,
   CiteStyle,
   CodexEntry,
+  ImageFile,
   ResearchFile,
   Item,
   ItemKind,
@@ -64,6 +66,7 @@ import type {
  * - `versions/<id>.yjs`: the Yjs state of each named version of an item;
  * - `music/<id>`: each of the writer's music files, only when the writer asks for them;
  * - `research/<id>`: each research file of the project. A clipping has no file: its text is in the row.
+ * - `images/<id>`: each image in the text (Phase 16), as Vlo stores it.
  * Version 2 (Phase 3) adds the rows of the template views to `project.json`. Version 3 gives the project a
  * list of templates (`templates`) in place of one `template`. Version 4 (Phase 8) adds the Codex rows and
  * the research files, so an older build refuses the file and never drops them. Version 5 (Phase 11) adds the
@@ -71,14 +74,14 @@ import type {
  * row (`series`) and its shared Codex entries (`seriesCodex`). Version 8 adds the Script template, its
  * `script` items and their script lines (F63). Version 9 adds the sources (`sources`), the citations in the
  * text and the citation style (F64). Version 10 adds the changes of Codex entries at scenes (`changes`,
- * F65). Version 11 adds the continuity marks that the writer kept (`settings.continuity`, F66). Version 12 adds the story date of a scene (`storyDate`, F67). Vlo still reads
- * versions 1 to 11.
+ * F65). Version 11 adds the continuity marks that the writer kept (`settings.continuity`, F66). Version 12 adds the story date of a scene (`storyDate`, F67). Version 13 adds the
+ * images in the text (`images`, Phase 16). Vlo still reads versions 1 to 12.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 12;
+export const BACKUP_VERSION = 13;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -94,6 +97,13 @@ export interface BackupResearch {
   info: ResearchInfo;
   /** The file. A clipping has none. */
   data?: ArrayBuffer;
+}
+
+export type ImageInfo = Omit<ImageFile, 'data'>;
+
+export interface BackupImage {
+  info: ImageInfo;
+  data: ArrayBuffer;
 }
 
 /** A project, all its rows and all its text, as the backup file holds them. */
@@ -112,6 +122,8 @@ export interface Backup {
   updates: Map<string, Uint8Array>;
   music: BackupMusic[];
   research: BackupResearch[];
+  /** The images in the text (Phase 16). */
+  images: BackupImage[];
   /** Board cards, threads, life stages, poem orders, people and submissions (Phase 3), and the Codex. */
   views: ViewRows;
   /** The series of the book and its shared Codex entries (F59), when the book is in one. */
@@ -159,6 +171,7 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     itemTexts: backup.itemTexts,
     music: backup.music.map((m) => m.info),
     research: backup.research.map((r) => r.info),
+    images: backup.images.map((i) => i.info),
     ...backup.views,
     ...(backup.series ? { series: backup.series.row, seriesCodex: backup.series.codex } : {}),
   };
@@ -182,6 +195,8 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
   // Most research files are images, PDFs and audio, which are compressed already.
   for (const { info, data } of backup.research)
     if (data) zip.file(`research/${info.id}`, data, { compression: 'STORE' });
+  // A JPEG or a PNG is compressed already.
+  for (const { info, data } of backup.images) zip.file(`images/${info.id}`, data, { compression: 'STORE' });
   return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
 
@@ -540,6 +555,20 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     },
   );
 
+  const imageRows = checkRows<ImageInfo>(
+    manifest.images === undefined ? [] : list(manifest, 'images'),
+    project.id,
+    'An image',
+    (row) => {
+      id(row, 'id', 'An image');
+      if (!(IMAGE_TYPES as readonly unknown[]).includes(row.type))
+        fail(`${DAMAGED} An image has a wrong type.`);
+      for (const key of ['size', 'width', 'height', 'addedAt']) count(row, key, 'An image');
+      if ((row.width as number) < 1 || (row.height as number) < 1)
+        fail(`${DAMAGED} An image has a wrong size.`);
+    },
+  );
+
   const updates = new Map<string, Uint8Array>();
   for (const item of items) {
     const update = await readEntry(zip, `items/${item.id}.yjs`);
@@ -586,6 +615,17 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     research.push({ info, data: data.slice().buffer });
   }
 
+  const images: BackupImage[] = [];
+  const imageIds = new Set<string>();
+  for (const info of imageRows) {
+    if (imageIds.has(info.id)) fail(`${DAMAGED} Two images share one id.`);
+    imageIds.add(info.id);
+    const data = await readEntry(zip, `images/${info.id}`);
+    if (data === null) fail(`${DAMAGED} An image in the text is missing.`);
+    if (data.byteLength !== info.size) fail(`${DAMAGED} An image in the text is damaged.`);
+    images.push({ info, data: data.slice().buffer });
+  }
+
   return {
     createdAt: typeof manifest.createdAt === 'number' ? manifest.createdAt : 0,
     project,
@@ -598,6 +638,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     updates,
     music,
     research,
+    images,
     views,
     ...(manifest.series === undefined ? {} : { series: checkSeries(manifest, project.id) }),
   };

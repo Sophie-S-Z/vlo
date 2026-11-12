@@ -1,6 +1,6 @@
 # Vlo status
 
-Last update: 2026-11-10
+Last update: 2026-11-12
 
 ## Done
 
@@ -641,6 +641,23 @@ Last update: 2026-11-10
     free trials (Vlo is free), reader links (Vlo has them since Phase 9), a toggle of all headings (the binder
     holds each scene as its own item), input lag (the Gate 1 budgets hold at 200,000 words), and folder
     dates (the binder shows no dates). Images in the text: the product owner chose a plan for a later phase.
+- Phase 16 (plan `docs/plans/phase-16-images.md`, images in the text). The product owner approved
+  decisions G1 to G8 on 2026-11-12. Three pull requests: G-A, G-B and G-C.
+  - G-A (Tasks G1 and G2): an `image` block node in the prose schema (document schema 10) holds the id,
+    the alt text, "Decorative", a caption, a width (33, 50, 75 or 100%) and a place. The bytes go in the
+    new `images` table (database version 15) as a JPEG at 85%, or a PNG when a pixel is transparent, at
+    most 2,400 px on the long side. A dropped file goes in at the block under the pointer, a pasted image
+    at the caret, and a drag or Alt-Up and Alt-Down move the node, with Undo. The image panel asks for the
+    alt text. A missing row shows a box with the alt text, and a failed write shows "Vlo could not keep
+    this image on this device." Hide the text blurs each image. Backups are version 13 with
+    `images/<id>` files; a copy gives each image a new id in the row and in the text. A sweep, at most once
+    a day and 10 s after a project opens, removes the rows that no item, snapshot or version holds, a day after they went in.
+    A pasted image from a web page goes in only from the clipboard bytes, and a paste of Vlo's own image
+    node copies its row under a new id. Checks: unit tests for the size, the node, the backup round trip,
+    a damaged row, a copy, the project delete and the sweep; browser tests for a drop, a drag with Undo,
+    the arrow keys, a paste, Decorative, the / menu with a file chooser and Hide the text, with axe.
+  - Not yet: exports (G-B), share links, sync and images between the stanzas of a poem (G-C). Until G-B,
+    an export leaves each image out.
 - Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 and F70). The product owner
   took F69, Spanish app text, out of the phase on 2026-11-11.
   - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in

@@ -19,6 +19,7 @@ import {
   Heading3,
   Highlighter,
   Hash,
+  ImagePlus,
   IndentDecrease,
   IndentIncrease,
   Italic,
@@ -96,6 +97,7 @@ export type PanelId =
   | 'person'
   | 'comment'
   | 'cite'
+  | 'image'
   | 'shortcuts';
 
 export type CommandGroup =
@@ -741,6 +743,17 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isEnabled: (e) => e.can().insertMathBlock(),
+  },
+  {
+    kind: 'panel',
+    id: 'image',
+    label: 'Image',
+    icon: ImagePlus,
+    group: 'insert',
+    forms: PROSE,
+    keywords: ['picture', 'photo', 'photograph', 'map', 'figure', 'illustration', 'insert image'],
+    slash: true,
+    panel: 'image',
   },
   ...QUICK_CHARACTERS.map(([id, char, label, keywords]): RunCommand => ({
     kind: 'run',

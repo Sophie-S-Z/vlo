@@ -1,5 +1,6 @@
 import { clock } from '@/lib/clock';
 import { cleanDayStart, dayStartKey } from '@/features/editor/stats/dayStart';
+import { sweepKey } from '@/features/images/images';
 import { db, viewTables, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
@@ -163,6 +164,7 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       db.appMeta,
       db.shares,
       db.research,
+      db.images,
       db.series,
       ...viewTables(),
     ],
@@ -180,10 +182,12 @@ export async function deleteProject(id: string, options: { keepShares?: boolean 
       await db.authorship.where('projectId').equals(id).delete();
       await db.itemTexts.where('projectId').equals(id).delete();
       await db.research.where('projectId').equals(id).delete();
+      await db.images.where('projectId').equals(id).delete();
       // The keys and owner tokens of the project's links go with it. The delete dialog warns first.
       if (!options.keepShares) await db.shares.where('projectId').equals(id).delete();
       // The start of today's word count (writing stats).
       await db.appMeta.delete(dayStartKey(id));
+      await db.appMeta.delete(sweepKey(id));
       await db.projects.delete(id);
       return ids;
     },

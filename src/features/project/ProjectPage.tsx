@@ -1,4 +1,5 @@
 import { BackupDialog } from '@/features/backup/BackupDialog';
+import { sweepImagesDaily } from '@/features/images/images';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
 import { Download, Search, Share2 } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -93,6 +94,9 @@ function layerOpen(): boolean {
 }
 
 /** The left pane's place in the address: a text item or a research file (F41). */
+/** How long after the project opens Vlo looks for images that the text no longer holds. */
+const SWEEP_DELAY_MS = 10_000;
+
 type Place = { item: string } | { research: string };
 
 /** The item to open: the one in the address, else the first item that has an editor. */
@@ -151,6 +155,16 @@ export function ProjectPage() {
     if (aiMode === 'pen' && assistantModule) void assistantModule.shutDownAssistant(projectId);
   }, [aiMode, projectId]);
   const inserted = useRef(false);
+  // An image that no item, snapshot or version holds any more leaves the device a day after it went in.
+  // The sweep runs once a day, once the project is open and the writing has settled (Review Focus 2).
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void sweepImagesDaily(projectId).catch(() => undefined);
+    }, SWEEP_DELAY_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [projectId]);
 
   // The editor's private-name tools read the people of the open memoir.
   useEffect(() => {

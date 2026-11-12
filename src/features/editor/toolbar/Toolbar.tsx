@@ -69,6 +69,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'scene-break',
       'math',
       'math-block',
+      'image',
       'find',
       'replace',
       'read-aloud',

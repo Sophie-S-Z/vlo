@@ -182,6 +182,7 @@ export function toBackup(source: ImportSource, templates: readonly Template[], n
     updates,
     music: [],
     research: [],
+    images: [],
     views: emptyViewRows(),
   };
 }

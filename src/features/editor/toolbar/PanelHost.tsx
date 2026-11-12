@@ -39,6 +39,8 @@ const RecordDialog = lazy(async () => ({
   default: (await import('@/features/voice/RecordDialog')).RecordDialog,
 }));
 const SpeakPanel = lazy(async () => ({ default: (await import('@/features/voice/SpeakPanel')).SpeakPanel }));
+// And the image panel (Phase 16).
+const ImagePanel = lazy(async () => ({ default: (await import('@/features/images/ImagePanel')).ImagePanel }));
 
 /** A rectangle at the selection start, for panels opened from the / menu or the command menu. */
 function caretRect(editor: Editor): DOMRect {
@@ -77,6 +79,7 @@ function PanelBody({
   switch (panel) {
     case 'shortcuts':
     case 'memory':
+    case 'image':
       return null;
     case 'font':
       return <FontPanel editor={editor} />;
@@ -141,6 +144,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   person: 'Mark as person',
   comment: 'Comment',
   cite: 'Cite a source',
+  image: 'Image',
 };
 
 /** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */
@@ -149,7 +153,7 @@ function inMathLiveUi(target: EventTarget | null): boolean {
 }
 
 /** The panels that open as a dialog, not as a popover. */
-const DIALOGS: readonly PanelId[] = ['shortcuts', 'memory'];
+const DIALOGS: readonly PanelId[] = ['shortcuts', 'memory', 'image'];
 
 /**
  * Shows the panel any tool surface asked for: a popover at its button or the caret, the shortcut sheet, or
@@ -276,6 +280,31 @@ export function PanelHost({
               <DialogDescription>These keys work while the cursor is in the text.</DialogDescription>
             </div>
             <ShortcutSheet form={form} />
+          </DialogContent>
+        )}
+      </Dialog>
+      <Dialog
+        open={mine?.panel === 'image'}
+        onOpenChange={(open) => {
+          if (!open) closePanel();
+        }}
+      >
+        {mine?.panel === 'image' && (
+          <DialogContent className="max-w-md" onCloseAutoFocus={backToText}>
+            <DialogClose asChild>
+              <Button variant="ghost" aria-label="Close" className="absolute top-4 right-4 px-3">
+                <X aria-hidden="true" className="size-4" />
+              </Button>
+            </DialogClose>
+            <div className="grid gap-1 pr-10">
+              <DialogTitle>Image</DialogTitle>
+              <DialogDescription>
+                The image stays where you put it in the text. Every export and backup keeps it.
+              </DialogDescription>
+            </div>
+            <Suspense fallback={<p className="text-sm text-muted">Loading the image panel.</p>}>
+              <ImagePanel editor={editor} projectId={item?.projectId ?? null} onDone={closePanel} />
+            </Suspense>
           </DialogContent>
         )}
       </Dialog>
