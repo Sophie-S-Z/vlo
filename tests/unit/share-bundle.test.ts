@@ -18,6 +18,7 @@ import { docFromUpdate } from '@/lib/ydocs';
 import {
   item,
   MEMOIR_TEXT,
+  photoDoc,
   POEM_TEXT,
   poemUpdate,
   project,
@@ -209,6 +210,36 @@ describe('toBundle', () => {
     for (const bundle of [await memoirBundle(), await richBundle()])
       expect(roundTrip(bundle)).toEqual(bundle);
   });
+
+  test('an image that goes with the link is a numbered block, and one that does not is a line (G6)', async () => {
+    const doc = photoDoc();
+    const shared = new Map([
+      ['harbour', { n: 0, width: 40, height: 30 }],
+      ['seal', { n: 1, width: 20, height: 20 }],
+    ]);
+    const bundle = toBundle(doc, await mathmlFor(doc), 1, shared);
+    const blocks = bundle.sections[0]?.blocks ?? [];
+    expect(blocks.filter((b) => b.type === 'img')).toEqual([
+      {
+        type: 'img',
+        n: 0,
+        w: 40,
+        h: 30,
+        alt: 'Boats in the harbour',
+        caption: 'The harbour at dawn',
+        width: 75,
+        align: 'center',
+      },
+      { type: 'img', n: 1, w: 20, h: 20, alt: '', caption: '', decorative: true, width: 33, align: 'left' },
+    ]);
+    expect(blocks).toContainEqual({ type: 'p', runs: [{ t: '[Image: A lost photo]' }], align: 'center' });
+    // The bundle holds no image bytes.
+    expect(JSON.stringify(bundle)).not.toMatch(/\/9j\/|iVBORw0KGgo/);
+    expect(roundTrip(bundle)).toEqual(bundle);
+    // Without the files, every image is a line.
+    const plain = toBundle(doc, await mathmlFor(doc), 1);
+    expect(plain.sections[0]?.blocks.some((b) => b.type === 'img')).toBe(false);
+  });
 });
 
 describe('parseBundle refuses a crafted bundle', () => {
@@ -234,6 +265,30 @@ describe('parseBundle refuses a crafted bundle', () => {
     ['a missing title', { ...good(), title: undefined }],
     ['a number for the author', { ...good(), author: 7 }],
     ['a string where the sections go', { ...good(), sections: 'none' }],
+    ...(
+      [
+        ['an image number past the limit', { n: 200 }],
+        ['an image with no size', { w: 0 }],
+        ['an image width that Vlo has no size for', { width: 40 }],
+        ['an image place that is not a side', { align: 'justify' }],
+        ['image alt text over the limit', { alt: 'x'.repeat(2001) }],
+        ['a decorative flag that is not true', { decorative: false }],
+      ] as const
+    ).map(([name, change]): [string, Record<string, unknown>] => [
+      name,
+      {
+        ...good(),
+        sections: [
+          {
+            title: 'S',
+            form: 'prose',
+            blocks: [
+              { type: 'img', n: 0, w: 4, h: 3, alt: 'a', caption: '', width: 50, align: 'center', ...change },
+            ],
+          },
+        ],
+      },
+    ]),
     [
       'an unknown block type',
       { ...good(), sections: [{ title: 'S', form: 'prose', blocks: [{ type: 'script' }] }] },

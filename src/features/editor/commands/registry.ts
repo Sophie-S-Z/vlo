@@ -750,7 +750,7 @@ export const COMMANDS: readonly EditorCommand[] = [
     label: 'Image',
     icon: ImagePlus,
     group: 'insert',
-    forms: PROSE,
+    forms: BOTH,
     keywords: ['picture', 'photo', 'photograph', 'map', 'figure', 'illustration', 'insert image'],
     slash: true,
     panel: 'image',

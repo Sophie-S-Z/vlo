@@ -70,5 +70,5 @@
 
 **Files:** Modify `src/features/share/bundle.ts`, `src/features/reader/ReaderText.tsx`, `src/features/sync/engine.ts`, `src/features/sync/blobs.ts`, `src/features/policy/privacy.ts` (privacy page version), `src/features/help/help.ts`, `docs/STATUS.md`.
 
-- [ ] Tests first: a share link shows each image to the reader; the request bodies hold no image header; a second device gets the image after a sync round; an image over 2 MB stays on its device and shows its alt text there.
+- [x] Tests first: a share link shows each image to the reader; the request bodies hold no image header; a second device gets the image after a sync round; an image over 2 MB stays on its device and shows its alt text there.
 - [ ] Gate 16: `typecheck`, `lint`, `format:check`, `test`, `build`, `size` and the Chromium and phone suites. A fresh review agent checks Review Focus 1 to 5. Ask the product owner to run "Run workflow" for all 4 browsers.

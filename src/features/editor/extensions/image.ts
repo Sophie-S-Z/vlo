@@ -1,6 +1,6 @@
 import { Extension, mergeAttributes, Node, type Editor, type NodeViewRenderer } from '@tiptap/core';
 import { Fragment, Slice, type Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { NodeSelection, Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { dropPoint } from '@tiptap/pm/transform';
 import type { EditorView } from '@tiptap/pm/view';
 import { yUndoPluginKey } from '@tiptap/y-tiptap';
@@ -173,7 +173,31 @@ const textAttribute = (name: string) => ({
   }),
 });
 
-/** Moves the image at `pos` past its neighbor block. */
+/** True for a poem's document, whose images go only between two stanzas (decision G3). */
+function isPoem(doc: ProseMirrorNode): boolean {
+  return doc.firstChild?.type.name === 'stanza';
+}
+
+/**
+ * Puts the image nodes in at `pos` and gives where they went. In a poem they go between two stanzas: after
+ * the stanza at `pos`, never before the first one, and with a new empty stanza after the last one.
+ */
+function placeImages(tr: Transaction, pos: number, nodes: readonly ProseMirrorNode[]): number {
+  const { doc } = tr;
+  if (!isPoem(doc)) {
+    tr.insert(pos, Fragment.from(nodes));
+    return pos;
+  }
+  const $pos = doc.resolve(pos);
+  const first = doc.firstChild?.nodeSize ?? 0;
+  const at = Math.max(first, $pos.depth === 0 ? pos : $pos.after(1));
+  const stanza = doc.type.schema.nodes.stanza?.createAndFill();
+  const tail = at >= doc.content.size && stanza ? [stanza] : [];
+  tr.insert(at, Fragment.from([...nodes, ...tail]));
+  return at;
+}
+
+/** Moves the image at `pos` past its neighbor block, when the document allows the new order. */
 function moveBlock(state: EditorState, pos: number, direction: -1 | 1) {
   const $pos = state.doc.resolve(pos);
   const node = $pos.nodeAfter;
@@ -183,6 +207,11 @@ function moveBlock(state: EditorState, pos: number, direction: -1 | 1) {
   const other = index + direction;
   if (other < 0 || other >= parent.childCount) return null;
   const neighbor = parent.child(other);
+  // A poem keeps a stanza before and after each image.
+  const order: ProseMirrorNode[] = [];
+  parent.forEach((child) => order.push(child));
+  [order[index], order[other]] = [neighbor, node];
+  if (!parent.type.validContent(Fragment.from(order))) return null;
   const tr = state.tr.delete(pos, pos + node.nodeSize);
   const target = direction < 0 ? pos - neighbor.nodeSize : pos + neighbor.nodeSize;
   tr.insert(target, node);
@@ -264,6 +293,9 @@ export const ImageNode = Node.create({
               const after = state.selection.to;
               tr.insert(after, node);
               tr.setSelection(NodeSelection.create(tr.doc, after));
+            } else if (isPoem(state.doc)) {
+              const at = placeImages(tr, $from.pos, [node]);
+              tr.setSelection(NodeSelection.create(tr.doc, at));
             }
             // An empty paragraph gives its place to the image.
             else if (empty && $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0) {
@@ -346,8 +378,13 @@ export function insertImageFiles(
     for (const id of ids) chain = chain.insertImage({ id });
     if (!chain.run()) return false;
   } else {
-    const tr = editor.state.tr.insert(pos, Fragment.from(ids.map((id) => type.create({ id }))));
-    tr.setSelection(NodeSelection.create(tr.doc, pos)).scrollIntoView();
+    const tr = editor.state.tr;
+    const at = placeImages(
+      tr,
+      pos,
+      ids.map((id) => type.create({ id })),
+    );
+    tr.setSelection(NodeSelection.create(tr.doc, at)).scrollIntoView();
     editor.view.dispatch(tr);
     editor.view.focus();
   }

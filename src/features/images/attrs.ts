@@ -22,10 +22,10 @@ export interface ImageAttrs {
   align: ImageAlign;
 }
 
-const MAX_TEXT = 2000;
+export const MAX_IMAGE_TEXT = 2000;
 
 export function cleanImageText(value: unknown): string {
-  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, MAX_TEXT) : '';
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, MAX_IMAGE_TEXT) : '';
 }
 
 export function cleanImageWidth(value: unknown): ImageWidth {

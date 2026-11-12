@@ -344,6 +344,12 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, rev
 function poemBlocks(content: JSONContent[] | undefined, notes: NoteCounter, review: ExportReview): Block[] {
   const blocks: Block[] = [];
   for (const stanza of content ?? []) {
+    // An image between two stanzas (Phase 16).
+    if (stanza.type === IMAGE) {
+      const image = imageAttrs(stanza.attrs);
+      if (image.id !== '') blocks.push({ type: 'image', ...image });
+      continue;
+    }
     if (stanza.type !== 'stanza') continue;
     const lines: PoemLine[] = (stanza.content ?? [])
       .filter((line) => line.type === 'poemLine')

@@ -13,6 +13,9 @@ export type RpcName =
   | 'revoke_share'
   | 'add_comment'
   | 'list_comments'
+  // The images of a link (Phase 16, migration 0007).
+  | 'add_share_image'
+  | 'get_share_image'
   | 'ping'
   | 'submit_usage'
   // Sync between the writer's devices (F49, migration 0005).

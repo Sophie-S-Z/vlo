@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
+import { fakeSupabase } from './support/share';
 import { skipOnboarding } from './support/onboarding';
 
 /*
@@ -263,4 +264,86 @@ test('Markdown and Word exports hold the stored image with its alt text', async 
   expect((await word.file('word/document.xml')?.async('string')) ?? '').toContain(
     'descr="Fishing boats at the harbour wall"',
   );
+});
+
+test.describe('a share link with an image', () => {
+  // The fake Supabase routes need no service worker, as in the reader tests.
+  test.use({ serviceWorkers: 'block' });
+
+  test('the relay gets only sealed bytes, and the reader sees the image with its alt text', async ({
+    browser,
+  }) => {
+    const writerContext = await browser.newContext();
+    const fake = await fakeSupabase(writerContext);
+    const page = await writerContext.newPage();
+    const scene = await sceneWithThreeParagraphs(page);
+    // A 3,000-pixel photo goes in the link at most 1,600 pixels on its long side.
+    await dropOnParagraph(page, scene, 0);
+    const panel = page.getByRole('dialog', { name: 'Image' });
+    await panel.getByLabel('Alt text').fill('Fishing boats at the harbour wall');
+    await panel.getByLabel('Caption (optional)').fill('Port Isaac, 1962');
+    await panel.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
+
+    await page.getByRole('button', { name: 'Share' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Share for reading' });
+    await dialog.getByRole('button', { name: 'Create link' }).click();
+    const link = await dialog.getByRole('textbox', { name: 'Link for readers' }).inputValue();
+    expect(fake.calls.map((c) => c.name)).toEqual(['create_share', 'add_share_image']);
+    // No request body holds the base64 of a JPEG or PNG header, or the alt text or the caption.
+    for (const call of fake.calls) {
+      const body = JSON.stringify(call.body);
+      for (const header of ['/9j/', 'iVBORw0KGgo', 'Fishing boats', 'Port Isaac'])
+        expect(body).not.toContain(header);
+    }
+
+    const readerContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await fakeSupabase(readerContext, fake);
+    const reader = await readerContext.newPage();
+    await reader.goto(new URL(link).pathname + new URL(link).hash);
+    const image = reader.getByRole('img', { name: 'Fishing boats at the harbour wall' });
+    await expect(image).toBeVisible();
+    await expect(reader.getByText('Port Isaac, 1962')).toBeVisible();
+    const size = await image.evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight]);
+    expect(size).toEqual([1600, 800]);
+    expect(await reader.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    expect(await seriousIssues(reader)).toEqual([]);
+    await readerContext.close();
+    await writerContext.close();
+  });
+});
+
+test('a poem takes an image only between two stanzas', async ({ page }) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New project' });
+  await dialog.getByRole('checkbox', { name: /Poetry collection/ }).click();
+  await dialog.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('textbox', { name: 'Poem 1' })).toBeFocused();
+  await page.keyboard.type('Salt on the sill');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('and the tide out.');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('The gulls slept.');
+  const poem = page.locator('.vlo-manuscript');
+  await expect.poll(() => blocks(poem)).toEqual(['DIV', 'DIV']);
+
+  // A drop on the first line goes after its stanza, and the lines stay as they are.
+  const line = poem.locator('p').first();
+  const box = await line.boundingBox();
+  if (!box) throw new Error('No line.');
+  await giveImage(page, { drop: { x: box.x + 4, y: box.y + box.height / 2 } }, { width: 400, height: 300 });
+  await expect.poll(() => blocks(poem)).toEqual(['DIV', 'FIGURE', 'DIV']);
+  const panel = page.getByRole('dialog', { name: 'Image' });
+  await panel.getByLabel('Alt text').fill('A gull on the harbour wall');
+  await panel.getByRole('button', { name: 'Done' }).click();
+  await expect(poem.getByRole('img', { name: 'A gull on the harbour wall' })).toBeVisible();
+  await expect(poem.locator('[data-stanza]').first()).toHaveText('Salt on the silland the tide out.');
+
+  // The image cannot move above the first stanza or below the last one.
+  await poem.locator('figure').click();
+  await page.keyboard.press('Alt+ArrowUp');
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect.poll(() => blocks(poem)).toEqual(['DIV', 'FIGURE', 'DIV']);
 });

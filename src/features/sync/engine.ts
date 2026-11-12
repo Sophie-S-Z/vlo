@@ -27,7 +27,7 @@ import {
 } from './blobs';
 import { clockKey, onLocalChange, remoteTransaction, SYNC_TABLES } from './clock';
 import { mergeRows, type Version } from './merge';
-import { readSpace, SYNC_META, updateSpace, withSyncLock, type SyncSpace } from './space';
+import { dropped, readSpace, SYNC_META, updateSpace, withSyncLock, type SyncSpace } from './space';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
@@ -105,9 +105,13 @@ async function dropBlobs({ space, keys }: Sync, names: string[]): Promise<void> 
 
 /**
  * The rows that go in a blob of their own, by table, so a few large ones cannot pass the relay's blob
- * limit: research files and the Yjs state of item versions.
+ * limit: research files, images and the Yjs state of item versions.
  */
-const OWN_BLOB: Partial<Record<Version['table'], string>> = { research: 'file', itemVersions: 'version' };
+const OWN_BLOB: Partial<Record<Version['table'], string>> = {
+  research: 'file',
+  itemVersions: 'version',
+  images: 'image',
+};
 
 /** The name of the blob of an item's text, a research file or a version, or null for a row with no blob. */
 const blobName = (v: Pick<Version, 'table' | 'id'>) => {
@@ -144,7 +148,8 @@ async function push(sync: Sync, started: number): Promise<number> {
         ]),
       ];
   let pushed = 0;
-  const put = async (name: string, blob: RowsBlob | TextBlob) => {
+  /** `own` is true for a file or an image, which may stay on this device when the relay has no room. */
+  const put = async (name: string, blob: RowsBlob | TextBlob, own = false) => {
     const sealed = await sealBlob(blob, keys);
     try {
       await call('sync_put', space, {
@@ -155,8 +160,10 @@ async function push(sync: Sync, started: number): Promise<number> {
       });
       pushed += 1;
     } catch (error) {
-      // A text too large for the relay stays on this device, and the rest still syncs.
-      if (!(error instanceof ShareError && error.kind === 'too-large')) throw error;
+      // A text too large for the relay stays on this device, and the rest still syncs. So does a file or
+      // an image when the space is full: the other devices show its alt text or its name.
+      if (!(error instanceof ShareError && (error.kind === 'too-large' || (own && error.kind === 'limit'))))
+        throw error;
     }
   };
   for (const projectId of projectIds) {
@@ -174,12 +181,19 @@ async function push(sync: Sync, started: number): Promise<number> {
       }
       // The recording of a memory (F57) never leaves this device, not even sealed.
       if (v.table === 'research' && Number(v.row.size) <= MAX_SYNC_FILE && v.row.itemId === undefined)
-        await put(`file:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] });
+        await put(`file:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] }, true);
       if (v.table === 'itemVersions')
         await put(`version:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] });
+      // An image over 2 MB stays on this device. The other devices show its alt text (decision G7).
+      if (v.table === 'images' && Number(v.row.size) <= MAX_SYNC_FILE)
+        await put(`image:${v.id}`, { v: 1, schema: DOC_SCHEMA, from, projectId, rows: [v] }, true);
     }
   }
   await dropBlobs(sync, blobNames(changes.filter((e) => e.gone)));
+  // The images that the sweep removed (decision G7).
+  const swept = space.drop ?? [];
+  await dropBlobs(sync, swept);
+  await dropped(space.spaceId, swept);
   await updateSpace(space.spaceId, { pushedAt: started, resend: [] });
   return pushed;
 }
@@ -207,7 +221,7 @@ async function listNew(space: SyncSpace): Promise<Listed[]> {
  */
 async function dropProject(id: string): Promise<Pick<Version, 'table' | 'id'>[]> {
   const gone: Pick<Version, 'table' | 'id'>[] = [];
-  for (const table of ['items', 'research', 'itemVersions'] as const)
+  for (const table of ['items', 'research', 'itemVersions', 'images'] as const)
     for (const rowId of await syncTable(table).where('projectId').equals(id).primaryKeys())
       gone.push({ table, id: rowId });
   for (const name of [

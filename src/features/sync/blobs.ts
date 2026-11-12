@@ -14,7 +14,8 @@ import type { Version } from './merge';
 
 /*
  * The sealed blobs of sync (ADR 0008). A rows blob holds a project's rows and deletes, a text blob an
- * item's whole Yjs state, and a file blob one research file of at most 2 MB. Each carries the DOC_SCHEMA
+ * item's whole Yjs state, a file blob one research file of at most 2 MB, and an image blob one image of the
+ * text of at most 2 MB. Each carries the DOC_SCHEMA
  * of the device that made it.
  */
 
@@ -55,7 +56,10 @@ export function blobKey(keys: SyncKeys, name: string): Promise<string> {
   return hmacName(keys.name, name);
 }
 
-/** A research file's bytes and an item version's Yjs state go in the JSON as base64. */
+/** The tables whose rows hold a file as a Blob: research files, and the images in the text (G7). */
+const FILE_TABLES: ReadonlySet<string> = new Set(['research', 'images']);
+
+/** A research file's or an image's bytes and an item version's Yjs state go in the JSON as base64. */
 async function packRow(version: Version): Promise<Version> {
   const row = version.row;
   // A test database can give bytes of another realm, so the check reads the shape, not the class.
@@ -66,7 +70,7 @@ async function packRow(version: Version): Promise<Version> {
       row: { ...row, state: toBase64(new Uint8Array(state.buffer, state.byteOffset, state.byteLength)) },
     };
   const data = row?.data;
-  if (version.table !== 'research' || !(data instanceof Blob)) return version;
+  if (!FILE_TABLES.has(version.table) || !(data instanceof Blob)) return version;
   return { ...version, row: { ...row, data: toBase64(new Uint8Array(await data.arrayBuffer())) } };
 }
 
@@ -74,7 +78,7 @@ function unpackRow(version: Version): Version {
   const row = version.row;
   if (version.table === 'itemVersions' && typeof row?.state === 'string')
     return { ...version, row: { ...row, state: fromBase64(row.state) } };
-  if (version.table !== 'research' || typeof row?.data !== 'string') return version;
+  if (!FILE_TABLES.has(version.table) || typeof row?.data !== 'string') return version;
   return { ...version, row: { ...row, data: new Blob([fromBase64(row.data)], { type: String(row.type) }) } };
 }
 

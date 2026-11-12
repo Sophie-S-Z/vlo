@@ -651,7 +651,8 @@ Last update: 2026-11-12
     alt text. A missing row shows a box with the alt text, and a failed write shows "Vlo could not keep
     this image on this device." Hide the text blurs each image. Backups are version 13 with
     `images/<id>` files; a copy gives each image a new id in the row and in the text. A sweep, at most once
-    a day and 10 s after a project opens, removes the rows that no item, snapshot or version holds, a day after they went in.
+    a day and 10 s after a project opens, removes the rows that no item, snapshot or version holds. A row goes only
+    when a sweep found it unused a day before, so a cut image or an Undo keeps its bytes for a day.
     A pasted image from a web page goes in only from the clipboard bytes, and a paste of Vlo's own image
     node copies its row under a new id. Checks: unit tests for the size, the node, the backup round trip,
     a damaged row, a copy, the project delete and the sweep; browser tests for a drop, a drag with Undo,
@@ -669,8 +670,29 @@ Last update: 2026-11-12
     for each project, and a backup's readable Markdown points at its image files. Checks: 12 unit tests in
     `tests/unit/image-export.test.ts`, the share-safe test, EPUBCheck on an EPUB with images, and
     LibreOffice opens a Word file with images.
-  - Not yet: share links with the images, sync and images between the stanzas of a poem (G-C). Until
-    G-C, a share link shows "[Image: caption]" in place of each image.
+  - G-C (Task G4): a share link holds each image as a row of its own (migration 0007,
+    `share_images`), sealed in the browser with the link's key and with no gzip, at most 1,600 px on the
+    long side. Only the owner token adds an image, a stopped or expired link gives none, and a link's text
+    and images come to at most 27,000,000 base64 characters (20 MB). A failed image upload stops the new
+    link at once. The bundle has an `img` block with the image's number, size, alt text and caption, and
+    the reader page loads each image as a `blob:` address, in a box of the image's shape. Sync sends each
+    image of at most 2 MB in a sealed `image:<id>` blob; a larger one stays on its device, and the others
+    show its alt text. The daily sweep's deletes stay on the device. A poem takes images only between two
+    stanzas (document schema 11). Privacy page version 10, help version 22. Checks: migration tests in
+    PGlite, the sealed bytes, the upload and its stop, the bundle check, the sync blobs, the poem schema,
+    and browser tests for a share link read on a phone (with no JPEG or PNG header in any request body)
+    and a poem drop.
+  - Gate 16 review fixes (2026-11-12). A new image and a drag move are undo steps of their own. A paste of
+    several image files keeps each one. A copy drag (Ctrl or Alt) gives the copy a new id. The sweep lets
+    the page work between two texts. The sweep keeps a row that a sync brought from another device,
+    because that device's snapshots can hold it, and the next push removes this device's own blob of
+    each removed image from the relay. A file or an image that a full sync space refuses stays on its
+    device, and the texts still sync. A share image over 2 MB gets smaller (1,600, 1,200, then 800 px),
+    and one that stays too large shows its stand-in line. Each sealed share image has its number in the
+    additional data. Migration 0007 counts the images in the 300 MB for all links and gives its functions
+    only to the anon role.
+  - The product owner applies migration 0007 to the Supabase project before G-C ships. Until then, a
+    link with an image fails with "The share server refused the request."
 - Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 and F70). The product owner
   took F69, Spanish app text, out of the phase on 2026-11-11.
   - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in

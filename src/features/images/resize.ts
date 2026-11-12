@@ -72,7 +72,7 @@ function encode(canvas: Canvas, type: ImageType): Promise<Blob> {
 }
 
 /** Decodes an image file and makes the stored copy. */
-export async function prepareImage(file: Blob): Promise<PreparedImage> {
+export async function prepareImage(file: Blob, max = MAX_IMAGE_SIDE): Promise<PreparedImage> {
   if (file.size > MAX_IMAGE_INPUT) throw new ImageReadError('This image is larger than 50 MB.');
   let bitmap: ImageBitmap;
   try {
@@ -81,7 +81,7 @@ export async function prepareImage(file: Blob): Promise<PreparedImage> {
     throw new ImageReadError('Vlo cannot read this image. Use a JPEG, PNG, WebP or GIF file.');
   }
   try {
-    const size = fitSize(bitmap.width, bitmap.height);
+    const size = fitSize(bitmap.width, bitmap.height, max);
     const canvas = canvasOf(size.width, size.height);
     const context = canvas instanceof HTMLCanvasElement ? canvas.getContext('2d') : canvas.getContext('2d');
     if (!context) throw new ImageReadError('The browser could not draw the image.');

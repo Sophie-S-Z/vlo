@@ -85,13 +85,15 @@ export function newOwnerToken(): string {
 }
 
 /** What a sealed value is, bound into its seal, so a comment can never open as a bundle. */
-export type SealPurpose = 'bundle' | 'comment' | 'sync';
+export type SealPurpose = 'bundle' | 'comment' | 'sync' | 'image';
 
 /** The most bytes that a sealed value may unpack to, so a crafted gzip bomb cannot crash the tab. */
 export const MAX_OPEN_BYTES: Record<SealPurpose, number> = {
   bundle: 64 * 1024 * 1024,
   comment: 64 * 1024,
   sync: 64 * 1024 * 1024,
+  // An image of a share link (Phase 16) is at most 1,600 pixels on its long side.
+  image: 4 * 1024 * 1024,
 };
 
 /** The HMAC-SHA256 key that names sync blobs, from the text of the sync key (ADR 0008). */
@@ -104,7 +106,9 @@ export async function hmacName(key: CryptoKey, text: string): Promise<string> {
   return toBase64Url(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(text))));
 }
 
-const context = (purpose: SealPurpose) => new TextEncoder().encode(`vlo:${purpose}:v1`);
+/** The additional data of a seal. A label, such as an image's number in a link, binds the seal to its place. */
+const context = (purpose: SealPurpose, label = '') =>
+  new TextEncoder().encode(label === '' ? `vlo:${purpose}:v1` : `vlo:${purpose}:v1:${label}`);
 
 async function streamThrough(
   bytes: Uint8Array<ArrayBuffer>,
@@ -167,6 +171,49 @@ export async function openJson(sealed: Sealed, key: CryptoKey, purpose: SealPurp
     );
     const json = await streamThrough(packed, new DecompressionStream('gzip'), MAX_OPEN_BYTES[purpose]);
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(json)) as unknown;
+  } catch {
+    throw new CryptoError('damaged');
+  }
+}
+
+/**
+ * Bytes, such as an image, sealed with AES-GCM and a new IV, with no gzip, because an image is compressed
+ * already. The purpose and the label go in as additional data, so a seal opens only in its own place.
+ */
+export async function sealBytes(
+  bytes: Uint8Array,
+  key: CryptoKey,
+  purpose: SealPurpose,
+  label = '',
+): Promise<Sealed> {
+  const iv = randomBytes(IV_BYTES);
+  const plain = new Uint8Array(bytes);
+  const additionalData = context(purpose, label);
+  const cipher = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData }, key, plain),
+  );
+  return { payload: toBase64(cipher), iv: toBase64(iv) };
+}
+
+/** The bytes from `sealBytes` with the same purpose and label. Anything else throws `CryptoError('damaged')`. */
+export async function openBytes(
+  sealed: Sealed,
+  key: CryptoKey,
+  purpose: SealPurpose,
+  label = '',
+): Promise<Uint8Array<ArrayBuffer>> {
+  try {
+    const iv = fromBase64(sealed.iv);
+    const cipher = fromBase64(sealed.payload);
+    if (iv.length !== IV_BYTES || cipher.length > MAX_OPEN_BYTES[purpose] + 16)
+      throw new CryptoError('damaged');
+    return new Uint8Array(
+      await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv, additionalData: context(purpose, label) },
+        key,
+        cipher,
+      ),
+    );
   } catch {
     throw new CryptoError('damaged');
   }

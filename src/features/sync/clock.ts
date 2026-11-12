@@ -23,6 +23,8 @@ export const SYNC_TABLES = [
   'itemVersions',
   'authorship',
   'series',
+  // The images in the text (Phase 16, decision G7).
+  'images',
 ] as const;
 
 export type SyncTable = (typeof SYNC_TABLES)[number];

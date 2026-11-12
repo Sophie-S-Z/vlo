@@ -4,6 +4,9 @@ import { clock } from '@/lib/clock';
 import { db, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
+import { clockKey, remoteTransaction } from '@/features/sync/clock';
+import { dropLater } from '@/features/sync/space';
+import type { ExportImage } from '@/features/export/model';
 import { IMAGE } from './attrs';
 import { prepareImage } from './resize';
 import { sweepKey, unusedKey } from './sweepKey';
@@ -191,12 +194,15 @@ async function unusedSince(projectId: string): Promise<Record<string, number>> {
  * Removes the image rows of the project that no item, snapshot or version holds any more. A row goes only
  * when it is older than `IMAGE_GRACE_MS` and an earlier sweep found it unused at least `IMAGE_GRACE_MS`
  * before. So a cut image on the clipboard, or a deleted image that Undo can put back, keeps its bytes for
- * a day. Returns how many it removed.
+ * a day. A row that a sync brought from another device stays, because the snapshots of that device can
+ * still hold it, and they never come here. Returns how many it removed.
  */
 export async function sweepImages(projectId: string): Promise<number> {
   const rows = await db.images.where('projectId').equals(projectId).toArray();
   const now = clock.now();
-  const old = rows.filter((row) => now - row.addedAt >= IMAGE_GRACE_MS);
+  const aged = rows.filter((row) => now - row.addedAt >= IMAGE_GRACE_MS);
+  const entries = await db.syncClock.bulkGet(aged.map((row) => clockKey('images', row.id)));
+  const old = aged.filter((_, i) => entries[i]?.remote !== true);
   const marks = await unusedSince(projectId);
   if (old.length === 0 && Object.keys(marks).length === 0) return 0;
   const used = await imagesInUse(projectId);
@@ -209,9 +215,16 @@ export async function sweepImages(projectId: string): Promise<number> {
     else if (now - since >= IMAGE_GRACE_MS) gone.push(row.id);
     else next[row.id] = since;
   }
-  await db.images.bulkDelete(gone);
-  if (Object.keys(next).length === 0) await db.appMeta.delete(unusedKey(projectId));
-  else await db.appMeta.put({ key: unusedKey(projectId), value: next });
+  // The sweep reads the texts on this device only, and a text may not have come here yet. So its
+  // deletes stay on this device and never reach the other devices of a sync (decision G7).
+  // The next push removes this device's copy of each removed image from the relay, so the space keeps room.
+  await remoteTransaction(db, [db.images, db.syncClock, db.appMeta], async () => {
+    await db.images.bulkDelete(gone);
+    await db.syncClock.bulkDelete(gone.map((id) => clockKey('images', id)));
+    if (Object.keys(next).length === 0) await db.appMeta.delete(unusedKey(projectId));
+    else await db.appMeta.put({ key: unusedKey(projectId), value: next });
+    await dropLater(gone.map((id) => `image:${id}`));
+  });
   return gone.length;
 }
 
@@ -226,4 +239,26 @@ export async function sweepImagesDaily(projectId: string): Promise<number> {
   const removed = await sweepImages(projectId);
   await db.appMeta.put({ key, value: clock.now() });
   return removed;
+}
+
+/** The stored copy of each image that the items' text holds (Phase 16). A lost row stays out. */
+export async function readImages(updates: readonly [string, Uint8Array][]): Promise<[string, ExportImage][]> {
+  const ids = new Set<string>();
+  for (const [, update] of updates) imageIdsIn(update, ids);
+  if (ids.size === 0) return [];
+  const rows = await db.images.bulkGet([...ids]);
+  const out: [string, ExportImage][] = [];
+  for (const row of rows) {
+    if (!row || (row.type !== 'image/jpeg' && row.type !== 'image/png')) continue;
+    out.push([
+      row.id,
+      {
+        type: row.type,
+        width: row.width,
+        height: row.height,
+        data: new Uint8Array(await row.data.arrayBuffer()),
+      },
+    ]);
+  }
+  return out;
 }

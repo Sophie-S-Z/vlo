@@ -19,6 +19,8 @@ interface Share {
   expiresAt: number;
   revoked: boolean;
   comments: { id: string; payload: string; iv: string; created_at: string }[];
+  /** The sealed images of the link, by number (migration 0007). */
+  images?: Map<number, { payload: string; iv: string }>;
 }
 
 interface Fake {
@@ -93,6 +95,24 @@ export async function fakeSupabase(
           created_at: new Date(now).toISOString(),
         });
         await reply(200, id);
+        return;
+      }
+      case 'add_share_image': {
+        const share = fake.shares.get(String(body.p_id));
+        if (!share || share.revoked || share.expiresAt < now) {
+          await reply(400, { code: 'P0001', message: 'share unavailable' });
+          return;
+        }
+        share.images ??= new Map();
+        share.images.set(Number(body.p_n), { payload: String(body.p_payload), iv: String(body.p_iv) });
+        await reply(200, true);
+        return;
+      }
+      case 'get_share_image': {
+        const share = fake.shares.get(String(body.p_id));
+        const image =
+          share && !share.revoked && share.expiresAt >= now ? share.images?.get(Number(body.p_n)) : undefined;
+        await reply(200, image ? [image] : []);
         return;
       }
       case 'list_comments': {

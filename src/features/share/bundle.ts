@@ -9,6 +9,7 @@ import {
   type RunStyle,
 } from '@/features/export/model';
 import type { NoteContent } from '@/features/editor/format/notes';
+import { IMAGE_WIDTHS, MAX_IMAGE_TEXT, type ImageWidth } from '@/features/images/attrs';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
@@ -42,7 +43,27 @@ export type ShareBlock =
   | { type: 'quote'; blocks: ShareBlock[] }
   | { type: 'stanza'; lines: { runs: ShareRun[]; hanging: number }[] }
   | { type: 'break' }
-  | { type: 'math'; math: MathNode };
+  | { type: 'math'; math: MathNode }
+  | ShareImage;
+
+/**
+ * An image of the text (Phase 16). Its bytes are the link's image number `n`, sealed with the link's key.
+ * `w` and `h` are its size in pixels, so the reader's page keeps its place before the image comes.
+ */
+export interface ShareImage {
+  type: 'img';
+  n: number;
+  w: number;
+  h: number;
+  alt: string;
+  caption: string;
+  decorative?: true;
+  width: ImageWidth;
+  align: 'left' | 'center' | 'right';
+}
+
+/** The most images that a link holds, as migration 0007 allows. */
+export const MAX_SHARE_IMAGES = 200;
 
 export interface ShareSection {
   title: string;
@@ -221,7 +242,7 @@ function runsOf(runs: readonly Run[], toMathml: LatexToMathml): ShareRun[] {
   });
 }
 
-function blockOf(block: Block, toMathml: LatexToMathml): ShareBlock {
+function blockOf(block: Block, toMathml: LatexToMathml, images: SharedImages): ShareBlock {
   switch (block.type) {
     case 'paragraph':
       return {
@@ -241,10 +262,10 @@ function blockOf(block: Block, toMathml: LatexToMathml): ShareBlock {
         type: 'list',
         ordered: block.ordered,
         start: Math.trunc(block.start),
-        items: block.items.map((blocks) => blocks.map((b) => blockOf(b, toMathml))),
+        items: block.items.map((blocks) => blocks.map((b) => blockOf(b, toMathml, images))),
       };
     case 'quote':
-      return { type: 'quote', blocks: block.blocks.map((b) => blockOf(b, toMathml)) };
+      return { type: 'quote', blocks: block.blocks.map((b) => blockOf(b, toMathml, images)) };
     case 'stanza':
       return {
         type: 'stanza',
@@ -259,14 +280,38 @@ function blockOf(block: Block, toMathml: LatexToMathml): ShareBlock {
       const math = mathOf(block.latex, toMathml);
       return math ? { type: 'math', math } : { type: 'p', runs: [{ t: block.latex }] };
     }
-    // Pull request G-C sends the image itself, sealed with the share key (decision G6).
-    case 'image':
-      return { type: 'p', runs: [{ t: imageStandIn(block) }], align: 'center' };
+    // The image goes as its own sealed file (decision G6). One that is not on this device is a line.
+    case 'image': {
+      const shared = images.get(block.id);
+      if (!shared) return { type: 'p', runs: [{ t: imageStandIn(block) }], align: 'center' };
+      return {
+        type: 'img',
+        n: shared.n,
+        w: shared.width,
+        h: shared.height,
+        alt: block.decorative ? '' : block.alt,
+        caption: block.caption,
+        ...(block.decorative ? { decorative: true as const } : {}),
+        width: block.width,
+        align: block.align,
+      };
+    }
   }
 }
 
-/** The bundle of an aliased export tree. `toMathml` turns each equation into MathML. */
-export function toBundle(doc: ExportDoc, toMathml: LatexToMathml, createdAt: number): ShareBundle {
+/** The number and the size of each image that goes with the link, by image id. */
+export type SharedImages = ReadonlyMap<string, { n: number; width: number; height: number }>;
+
+/**
+ * The bundle of an aliased export tree. `toMathml` turns each equation into MathML. `images` names the
+ * images that go with the link as files of their own.
+ */
+export function toBundle(
+  doc: ExportDoc,
+  toMathml: LatexToMathml,
+  createdAt: number,
+  images: SharedImages = new Map(),
+): ShareBundle {
   return {
     v: 1,
     title: doc.title,
@@ -275,7 +320,7 @@ export function toBundle(doc: ExportDoc, toMathml: LatexToMathml, createdAt: num
     sections: doc.sections.map((section) => ({
       title: section.title,
       form: section.form,
-      blocks: section.blocks.map((b) => blockOf(b, toMathml)),
+      blocks: section.blocks.map((b) => blockOf(b, toMathml, images)),
     })),
   };
 }
@@ -360,6 +405,30 @@ function align(value: unknown): { align?: Align } {
   return { align: value as Align };
 }
 
+const whole = (v: unknown, low: number, high: number): v is number =>
+  isNum(v) && Number.isInteger(v) && v >= low && v <= high;
+
+function image(value: Obj): ShareImage {
+  const { n, w, h, alt, caption, decorative, width, align: place } = value;
+  if (!whole(n, 0, MAX_SHARE_IMAGES - 1) || !whole(w, 1, 10_000) || !whole(h, 1, 10_000)) fail();
+  if (!isStr(alt) || !isStr(caption) || alt.length > MAX_IMAGE_TEXT || caption.length > MAX_IMAGE_TEXT)
+    fail();
+  if (decorative !== undefined && decorative !== true) fail();
+  if (!(IMAGE_WIDTHS as readonly unknown[]).includes(width)) fail();
+  if (place !== 'left' && place !== 'center' && place !== 'right') fail();
+  return {
+    type: 'img',
+    n,
+    w,
+    h,
+    alt,
+    caption,
+    ...(decorative ? { decorative } : {}),
+    width: width as ImageWidth,
+    align: place,
+  };
+}
+
 function block(value: unknown, depth: number): ShareBlock {
   if (depth > MAX_DEPTH || !isObj(value)) fail();
   switch (value.type) {
@@ -392,6 +461,8 @@ function block(value: unknown, depth: number): ShareBlock {
       return { type: 'break' };
     case 'math':
       return { type: 'math', math: math(value.math, 0) };
+    case 'img':
+      return image(value);
     default:
       return fail();
   }
@@ -457,6 +528,7 @@ export function textOfBlock(b: ShareBlock): string {
     case 'break':
       return '';
     case 'math':
+    case 'img':
       return '';
   }
 }
