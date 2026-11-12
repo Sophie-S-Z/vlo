@@ -4,7 +4,7 @@ import type { NameCheck, PrivatePerson } from '@/lib/privacy';
 import { exportFileName, type BuildInput } from './build';
 import { checkOwnFonts, ownFontsOf, type FontCheck, type FontSwap } from './fontCheck';
 import type { ManuscriptDetails, ManuscriptSetup } from './manuscript';
-import type { ExportDoc } from './model';
+import type { ExportDoc, ExportImage } from './model';
 import { exportNotices, type ExportFormat } from './notices';
 import type { LoadFile } from './pdf/fonts';
 import type { PdfOptions } from './pdf/pdf';
@@ -20,6 +20,8 @@ export interface ExportRequest extends Omit<BuildInput, 'updates'> {
   format: ExportFormat;
   /** Each item's Yjs update, by item id. */
   updates: [string, Uint8Array][];
+  /** The stored copy of each image in the text, by image id (Phase 16). */
+  images?: [string, ExportImage][];
   /** The project's people, for share-safe export. */
   people: PrivatePerson[];
   shareSafe: boolean;
@@ -133,7 +135,8 @@ export async function makeExport(
   const { doc, format, manuscript, name } = prepared;
   const loadFile = options.loadFile ?? appFile;
   const swaps = new Map(fonts.swaps.map((s) => [s.value, s.standIn]));
-  const file = FORMAT_FILE[format];
+  // Markdown with images comes as a zip with an images folder (decision G5).
+  let packed: { extension: string; type: string } = FORMAT_FILE[format];
   let bytes: Uint8Array;
   let drawnStyles: { font: string; style: 'bold' | 'italic' }[] = [];
   let text: string | undefined;
@@ -158,13 +161,15 @@ export async function makeExport(
     const { toFdx, toFountain } = await import('./fountain');
     bytes = new TextEncoder().encode(format === 'fdx' ? toFdx(doc) : toFountain(doc));
   } else {
-    const { toMarkdown } = await import('./markdown');
-    bytes = new TextEncoder().encode(toMarkdown(doc));
+    const { markdownFile } = await import('./markdown');
+    const result = await markdownFile(doc, name);
+    bytes = result.bytes;
+    if (result.zip) packed = { extension: 'zip', type: 'application/zip' };
   }
   return {
     bytes,
-    name: `${name}.${file.extension}`,
-    type: file.type,
+    name: `${name}.${packed.extension}`,
+    type: packed.type,
     notices: exportNotices(doc, format, {
       swaps: fonts.swaps,
       drawnStyles,

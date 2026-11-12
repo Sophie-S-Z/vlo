@@ -1,5 +1,5 @@
 import type { ScriptRole } from '@/features/editor/scriptRoles';
-import { runsOf, runsText, type Block, type ExportDoc, type Run } from './model';
+import { imageStandIn, runsOf, runsText, type Block, type ExportDoc, type Run } from './model';
 import { xmlText } from './xml';
 
 /*
@@ -23,6 +23,8 @@ function otherLines(block: Block): ScriptLine[] {
   if (block.type === 'stanza') return block.lines.map((line) => ({ role: 'action', runs: line.runs }));
   if (block.type === 'list') return block.items.flatMap((item) => item.flatMap(otherLines));
   if (block.type === 'quote') return block.blocks.flatMap(otherLines);
+  if (block.type === 'image')
+    return [{ role: 'action', runs: [{ type: 'text', text: imageStandIn(block), style: {} }] }];
   const runs = runsOf([block]);
   return runs.length === 0 ? [] : [{ role: 'action', runs }];
 }

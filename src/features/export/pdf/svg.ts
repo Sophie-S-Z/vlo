@@ -2,7 +2,9 @@ import type { TextFill } from '@/features/editor/format/fill';
 import { gradientLine, rgbOf, SLANT, type Rgb, type TextOptions } from './draw';
 import type { Face } from './fonts';
 import type { LaidOutPdf } from './pdf';
-import type { Box, Sink } from './sink';
+import { toBase64 } from '@/lib/crypto';
+import type { ExportImage } from '../model';
+import type { Box, PlacedImage, Sink } from './sink';
 
 /*
  * The book preview (roadmap F51, plan Task J5) draws each page as SVG from the same layout as the PDF. Each
@@ -130,7 +132,21 @@ class SvgSink implements Sink {
   link(): void {
     // A preview page is a picture, so a link has nothing to open.
   }
+
+  image(image: PlacedImage, x: number, y: number, width: number, height: number): void {
+    let href = addresses.get(image.source);
+    if (href === undefined) {
+      href = `data:${image.source.type};base64,${toBase64(image.source.data)}`;
+      addresses.set(image.source, href);
+    }
+    this.parts.push(
+      `<image x="${fixed(x)}" y="${fixed(this.height - y - height)}" width="${fixed(width)}" height="${fixed(height)}" preserveAspectRatio="none" href="${href}"/>`,
+    );
+  }
 }
+
+/** The data: address of each image, made once for all the pages of a preview. */
+const addresses = new WeakMap<ExportImage, string>();
 
 const shared = new WeakMap<LaidOutPdf, Glyphs>();
 

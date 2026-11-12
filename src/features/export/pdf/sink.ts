@@ -1,4 +1,6 @@
+import type { PDFImage } from 'pdf-lib';
 import type { TextFill } from '@/features/editor/format/fill';
+import type { ExportImage } from '../model';
 import type { Rgb, TextOptions } from './draw';
 
 /*
@@ -13,6 +15,12 @@ export interface Box {
   y1: number;
 }
 
+/** An image of the text: its bytes, and the image that the PDF file embeds once (Phase 16). */
+export interface PlacedImage {
+  source: ExportImage;
+  embedded: PDFImage;
+}
+
 export interface Sink {
   /** Text with its baseline at y. */
   text: (text: string, x: number, y: number, options: TextOptions) => void;
@@ -24,6 +32,8 @@ export interface Sink {
   line: (points: readonly [number, number][], width: number, color: Rgb) => void;
   shape: (points: readonly [number, number][], color: Rgb) => void;
   link: (x: number, y: number, width: number, height: number, url: string) => void;
+  /** An image with its lower left corner at (x, y). */
+  image: (image: PlacedImage, x: number, y: number, width: number, height: number) => void;
 }
 
 /** The same sink with every x moved right by `dx`, for the left margin of each page. */
@@ -50,6 +60,9 @@ export function shifted(sink: Sink, dx: number): Sink {
     },
     link: (x, y, width, height, url) => {
       sink.link(x + dx, y, width, height, url);
+    },
+    image: (image, x, y, width, height) => {
+      sink.image(image, x + dx, y, width, height);
     },
   };
 }

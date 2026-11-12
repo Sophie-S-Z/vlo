@@ -3,11 +3,14 @@ import { textDirection } from '@/lib/language';
 import { gradientCss, type TextFill } from '@/features/editor/format/fill';
 import { fontLabel, localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
+import { toBase64 } from '@/lib/crypto';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { parseMathml, type MathNode } from './mathml';
 import { isNumbered } from '@/features/book/book';
 import type { BookSettings } from '@/lib/db';
 import {
+  imageNames,
+  imageStandIn,
   repeatsTitle,
   runsText,
   textBlocks,
@@ -65,12 +68,18 @@ interface FaceUse {
 class Book {
   readonly faces = new Map<string, FaceUse>();
   readonly fills = new Map<string, { id: number; fill: TextFill }>();
+  /** The file name of each image that is on this device, such as "image-1.jpg". */
+  readonly images: Map<string, string>;
   constructor(
     readonly doc: ExportDoc,
     readonly toMathml: LatexToMathml,
     private readonly own: ReadonlyMap<string, Uint8Array>,
     private readonly swaps: ReadonlyMap<string, string>,
-  ) {}
+    /** The address of an image from a page of the book: a file of the EPUB, or a data: address in a preview. */
+    readonly imageSrc: (id: string, name: string) => string = (_, name) => `../images/${name}`,
+  ) {
+    this.images = imageNames(doc);
+  }
 
   /** The font that draws a stored value: a Vlo font, an own font that may be embedded, or a stand-in. */
   resolve(value: string | undefined): string {
@@ -262,6 +271,14 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
     }
     case 'math':
       return `<div class="equation">${equation(book, block.latex, true)}</div>`;
+    case 'image': {
+      const name = book.images.get(block.id);
+      if (name === undefined) return `<p class="image-missing">${xmlText(imageStandIn(block))}</p>`;
+      const alt = block.decorative ? '' : xmlText(block.alt);
+      const caption = block.caption ? `<figcaption>${xmlText(block.caption)}</figcaption>` : '';
+      const role = block.decorative ? ' role="presentation"' : '';
+      return `<figure class="image align-${block.align}" style="width: ${String(block.width)}%"><img src="${xmlText(book.imageSrc(block.id, name))}" alt="${alt}"${role}/>${caption}</figure>`;
+    }
     case 'quote':
       return `<blockquote>${blocksHtml(book, block.blocks, ctx)}</blockquote>`;
     case 'list': {
@@ -415,6 +432,12 @@ section.folder h1, section.folder h2 { margin-top: 3em; text-align: center; }
 p.has-drop-cap { text-indent: 0; }
 .scene-break { text-align: center; margin: 1em 0; text-indent: 0; }
 .equation { text-align: center; margin: 0.8em 0; }
+figure.image { margin: 1em auto; text-indent: 0; page-break-inside: avoid; break-inside: avoid; }
+figure.image.align-left { margin-left: 0; }
+figure.image.align-right { margin-right: 0; }
+figure.image img { display: block; width: 100%; height: auto; max-height: 90vh; object-fit: contain; }
+figure.image figcaption { margin-top: 0.4em; font-size: 0.85em; font-style: italic; text-align: center; }
+.image-missing { text-align: center; font-style: italic; text-indent: 0; }
 code.latex { font-family: monospace; }
 blockquote { margin: 0 0 0.8em 1.5em; }
 .stanza { margin: 0 0 1.2em; }
@@ -527,8 +550,18 @@ interface FontFile {
 }
 
 /** Everything an EPUB holds but its zip: the files in reading order, the style sheet's parts and the fonts. */
-function prepareEpub(doc: ExportDoc, options: Pick<EpubOptions, 'own' | 'swaps'>, toMathml: LatexToMathml) {
-  const book = new Book(doc, toMathml, options.own ?? new Map(), options.swaps ?? new Map());
+function prepareEpub(
+  doc: ExportDoc,
+  options: Pick<EpubOptions, 'own' | 'swaps'> & { imageSrc?: (id: string, name: string) => string },
+  toMathml: LatexToMathml,
+) {
+  const book = new Book(
+    doc,
+    toMathml,
+    options.own ?? new Map(),
+    options.swaps ?? new Map(),
+    options.imageSrc,
+  );
   book.use(undefined, false, false);
   const files = chapters(book);
   const titlePage = doc.sections.length > 1 || doc.book !== undefined;
@@ -601,7 +634,12 @@ function prepareEpub(doc: ExportDoc, options: Pick<EpubOptions, 'own' | 'swaps'>
  * Vlo font from the app's own files under `fontBase`. An own font shows as its fallback.
  */
 export async function epubPreview(doc: ExportDoc, fontBase: string): Promise<string> {
-  const parts = prepareEpub(doc, {}, await mathmlFor(doc));
+  // The preview is one page with no files beside it, so each image goes in as a data: address.
+  const imageSrc = (id: string) => {
+    const image = doc.images?.[id];
+    return image ? `data:${image.type};base64,${toBase64(image.data)}` : '';
+  };
+  const parts = prepareEpub(doc, { imageSrc }, await mathmlFor(doc));
   const files = [
     ...(parts.titlePage ? [parts.titleBody] : []),
     ...parts.front.map((f) => f.body),
@@ -704,6 +742,13 @@ ${links.map((l) => `<li><a href="${xmlText(l.href)}">${xmlText(l.title)}</a></li
   );
 
   const id = options.id ?? `urn:uuid:${crypto.randomUUID()}`;
+  // Each image of the text, as Vlo stores it (decision G5).
+  const imageItems = [...imageNames(doc)].flatMap(([imageId, name], i) => {
+    const image = doc.images?.[imageId];
+    if (!image) return [];
+    zip.file(`OEBPS/images/${name}`, image.data, { compression: 'STORE' });
+    return [`<item id="image-${String(i + 1)}" href="images/${name}" media-type="${image.type}"/>`];
+  });
   const manifest = [
     '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
     '<item id="css" href="styles.css" media-type="text/css"/>',
@@ -719,6 +764,7 @@ ${links.map((l) => `<li><a href="${xmlText(l.href)}">${xmlText(l.title)}</a></li
       (f, i) =>
         `<item id="font-${String(i + 1)}" href="${f.path}" media-type="${f.path.endsWith('.otf') ? 'font/otf' : 'font/ttf'}"/>`,
     ),
+    ...imageItems,
   ];
   // A book reads: title page, front matter, contents, chapters, back matter.
   const spine = [

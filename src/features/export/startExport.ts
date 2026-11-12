@@ -2,7 +2,10 @@ import { downloadBytes } from '@/lib/download';
 import type { BookSettings } from '@/lib/db';
 import type { NameCheck } from '@/lib/privacy';
 import { holdsText } from '@/features/library/templates';
+import { db } from '@/lib/db';
 import { readItemUpdates } from '@/lib/ydocs';
+import { imageIdsIn } from '@/features/images/images';
+import type { ExportImage } from './model';
 import { scopeItems } from './build';
 import { localFontName } from '@/features/editor/format/fonts';
 import type { ExportMessage, ExportResponse } from './export.worker';
@@ -23,6 +26,28 @@ export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Prom
     .filter((item) => holdsText(request.project.templates, item.kind))
     .map((item) => item.id);
   return readItemUpdates(ids);
+}
+
+/** The stored copy of each image that the items' text holds (Phase 16). A lost row stays out. */
+export async function readImages(updates: readonly [string, Uint8Array][]): Promise<[string, ExportImage][]> {
+  const ids = new Set<string>();
+  for (const [, update] of updates) imageIdsIn(update, ids);
+  if (ids.size === 0) return [];
+  const rows = await db.images.bulkGet([...ids]);
+  const out: [string, ExportImage][] = [];
+  for (const row of rows) {
+    if (!row || (row.type !== 'image/jpeg' && row.type !== 'image/png')) continue;
+    out.push([
+      row.id,
+      {
+        type: row.type,
+        width: row.width,
+        height: row.height,
+        data: new Uint8Array(await row.data.arrayBuffer()),
+      },
+    ]);
+  }
+  return out;
 }
 
 /**
@@ -72,11 +97,17 @@ export class ExportJob {
     request: Omit<ExportRequest, 'updates'>,
   ): Promise<{ job: ExportJob; ownFonts: string[]; names: NameCheck }> {
     const updates = await readUpdates(request);
+    const images = await readImages(updates);
     const job = new ExportJob();
     // Each buffer moves to the worker once, without a copy. Two updates may share one buffer.
-    const buffers = new Set(updates.map(([, update]) => update.buffer as ArrayBuffer));
+    const buffers = new Set([
+      ...updates.map(([, update]) => update.buffer as ArrayBuffer),
+      ...images.map(([, image]) => image.data.buffer as ArrayBuffer),
+    ]);
     try {
-      const response = await job.send({ type: 'prepare', request: { ...request, updates } }, [...buffers]);
+      const response = await job.send({ type: 'prepare', request: { ...request, updates, images } }, [
+        ...buffers,
+      ]);
       return response.type === 'prepared'
         ? { job, ownFonts: response.ownFonts, names: response.names }
         : { job, ownFonts: [], names: { unmarked: [], changed: [] } };

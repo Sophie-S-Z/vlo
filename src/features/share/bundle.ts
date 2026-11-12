@@ -1,6 +1,13 @@
 import type { LatexToMathml } from '@/features/export/latex';
 import { parseMathml, type MathNode } from '@/features/export/mathml';
-import type { Align, Block, ExportDoc, Run, RunStyle } from '@/features/export/model';
+import {
+  imageStandIn,
+  type Align,
+  type Block,
+  type ExportDoc,
+  type Run,
+  type RunStyle,
+} from '@/features/export/model';
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { EditorForm } from '@/features/library/templates';
 
@@ -252,6 +259,9 @@ function blockOf(block: Block, toMathml: LatexToMathml): ShareBlock {
       const math = mathOf(block.latex, toMathml);
       return math ? { type: 'math', math } : { type: 'p', runs: [{ t: block.latex }] };
     }
+    // Pull request G-C sends the image itself, sealed with the share key (decision G6).
+    case 'image':
+      return { type: 'p', runs: [{ t: imageStandIn(block) }], align: 'center' };
   }
 }
 

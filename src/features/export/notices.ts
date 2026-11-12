@@ -32,6 +32,12 @@ interface Looks {
   math: boolean;
   layout: boolean;
   hanging: boolean;
+  /** The number of images in the text (Phase 16). */
+  images: number;
+  /** The name of each image that is not decorative and has no alt text, in reading order. */
+  noAlt: string[];
+  /** The number of images whose bytes are not on this device. */
+  missingImages: number;
 }
 
 function scan(doc: ExportDoc): Looks {
@@ -45,6 +51,9 @@ function scan(doc: ExportDoc): Looks {
     math: false,
     layout: false,
     hanging: false,
+    images: 0,
+    noAlt: [],
+    missingImages: 0,
   };
   const runs = (list: readonly Run[]) => {
     for (const run of list) {
@@ -94,6 +103,12 @@ function scan(doc: ExportDoc): Looks {
           break;
         case 'math':
           looks.math = true;
+          break;
+        case 'image':
+          looks.images += 1;
+          if (!doc.images?.[block.id]) looks.missingImages += 1;
+          if (!block.decorative && block.alt === '')
+            looks.noAlt.push(block.caption ? `“${block.caption}”` : `image ${String(looks.images)}`);
           break;
         case 'sceneBreak':
           break;
@@ -145,6 +160,42 @@ function drawnNotices(drawn: NoticeExtras['drawnStyles'], format: ExportFormat):
   return out;
 }
 
+/** What the export does with the images of the text (decisions G4 and G5). */
+function imageNotices(looks: Looks, format: ExportFormat, manuscript: boolean): string[] {
+  if (looks.images === 0) return [];
+  const one = looks.images === 1;
+  if (manuscript || format === 'web' || format === 'fountain' || format === 'fdx') {
+    const where =
+      format === 'web'
+        ? 'Web editors get'
+        : manuscript
+          ? 'Standard manuscript format puts'
+          : `${format === 'fdx' ? 'A Final Draft file' : 'Fountain'} gets`;
+    return [
+      `${where} a line such as “[Image: caption]” in place of ${one ? 'the image' : 'each image'}. The ${one ? 'image stays' : 'images stay'} in Vlo.`,
+    ];
+  }
+  const notices: string[] = [];
+  const missing = looks.missingImages;
+  if (missing > 0)
+    notices.push(
+      missing === 1
+        ? 'An image is not on this device, so the file has a line that names it in its place.'
+        : `${String(missing)} images are not on this device, so the file has a line that names each in its place.`,
+    );
+  if (format === 'pdf') {
+    notices.push('A PDF from Vlo holds no alt text. A caption stays below its image.');
+  } else if (looks.noAlt.length > 0) {
+    const names = list(looks.noAlt);
+    notices.push(
+      `${looks.noAlt.length === 1 ? 'This image has' : 'These images have'} no alt text: ${names}. A screen reader cannot say what ${looks.noAlt.length === 1 ? 'it shows' : 'they show'}. Select an image in Vlo and press Enter to add alt text, or mark it as decorative.`,
+    );
+  }
+  if (format === 'markdown' && looks.images > missing)
+    notices.push('The Markdown file and an “images” folder go in one zip file. Keep them together.');
+  return notices;
+}
+
 /** The notices for one export, in the order the writer reads them. An empty list means nothing changes. */
 export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: NoticeExtras = {}): string[] {
   const looks = scan(doc);
@@ -156,6 +207,7 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
         ? 'A citation names a source that this project does not have now. It shows “[missing source]”.'
         : `${String(missing)} citations name sources that this project does not have now. They show “[missing source]”.`,
     );
+  notices.push(...imageNotices(looks, format, extras.manuscriptFont !== undefined));
   for (const swap of extras.swaps ?? []) {
     notices.push(
       `${swap.name} is not in the file. ${swap.reason} The file uses ${swap.standInName} in its place.`,

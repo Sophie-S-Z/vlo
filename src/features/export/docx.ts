@@ -12,6 +12,7 @@ import {
   FrameAnchorType,
   FrameWrap,
   Header,
+  ImageRun,
   HeadingLevel,
   InsertedTextRun,
   LevelFormat,
@@ -41,11 +42,14 @@ import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manu
 import { parseMathml } from './mathml';
 import {
   bookmarkName,
+  imageStandIn,
   repeatsTitle,
   runsOf,
   type Align,
   type Block,
   type ExportDoc,
+  type ExportImage,
+  type ImageBlock,
   type Run,
   type RunStyle,
 } from './model';
@@ -145,6 +149,76 @@ interface Context {
   commentLeft: Map<string, number>;
   /** The Word id of each comment whose range started in this section. */
   commentWord: Map<string, number>;
+  /** The bytes of each image in the text, by id (Phase 16). */
+  images: Readonly<Record<string, ExportImage>>;
+  /** The width and the height of the text area, in twips. */
+  textWidth: number;
+  textHeight: number;
+  /** The images so far, for the name that Word shows in its Selection Pane. */
+  imageCount: number;
+}
+
+/** An italic run of plain text. */
+function italicRun(text: string, size?: number): IRunOptions {
+  return { text, italics: true, ...(size === undefined ? {} : { size }) };
+}
+
+const ALIGNS = {
+  left: AlignmentType.LEFT,
+  center: AlignmentType.CENTER,
+  right: AlignmentType.RIGHT,
+} as const;
+
+/** An image at its share of the text width, with its alt text, and its caption below it (decision G5). */
+function imageParagraphs(block: ImageBlock, place: Place, ctx: Context): Paragraph[] {
+  const image = ctx.images[block.id];
+  const alignment = ALIGNS[block.align];
+  const caption = block.caption
+    ? [
+        new Paragraph({
+          alignment,
+          spacing: { after: EM },
+          children: [new TextRun(italicRun(block.caption, 20))],
+        }),
+      ]
+    : [];
+  if (!image)
+    return [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun(italicRun(imageStandIn(block)))],
+      }),
+    ];
+  // Word sizes a drawing in pixels at 96 to the inch, and a twip is 1/1440 inch.
+  const room = Math.max(1, (ctx.textWidth - place.left) / 15);
+  let width = (room * block.width) / 100;
+  let height = (width * image.height) / image.width;
+  const tallest = (ctx.textHeight / 15) * 0.85;
+  if (height > tallest) {
+    width = (width * tallest) / height;
+    height = tallest;
+  }
+  ctx.imageCount += 1;
+  return [
+    new Paragraph({
+      alignment,
+      keepNext: caption.length > 0,
+      spacing: { before: EM / 2, after: caption.length > 0 ? 0 : EM / 2 },
+      children: [
+        new ImageRun({
+          type: image.type === 'image/png' ? 'png' : 'jpg',
+          data: image.data,
+          transformation: { width: Math.round(width), height: Math.round(height) },
+          altText: {
+            name: `Image ${String(ctx.imageCount)}`,
+            description: block.decorative ? '' : block.alt,
+            title: block.caption,
+          },
+        }),
+      ],
+    }),
+    ...caption,
+  ];
 }
 
 type TextRunModel = Extract<Run, { type: 'text' }>;
@@ -384,6 +458,8 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
           children: [equation(block.latex, ctx)],
         }),
       ];
+    case 'image':
+      return imageParagraphs(block, place, ctx);
     case 'quote':
       return blocksParagraphs(block.blocks, { ...place, left: place.left + STEP }, ctx);
     case 'list': {
@@ -625,6 +701,10 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     comments: [],
     commentLeft: new Map(),
     commentWord: new Map(),
+    images: doc.images ?? {},
+    textWidth,
+    textHeight,
+    imageCount: 0,
   };
   const font = wordFontName(doc.font) ?? 'Newsreader';
 

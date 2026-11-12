@@ -1,4 +1,5 @@
 import type { JSONContent } from '@tiptap/core';
+import { IMAGE, imageAttrs } from '@/features/images/attrs';
 import * as Y from 'yjs';
 import { parseFill } from '@/features/editor/format/fill';
 import { cleanFontValue } from '@/features/editor/format/fonts';
@@ -326,6 +327,11 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, rev
       case 'mathBlock': {
         const latex = cleanLatex(attrs?.latex);
         if (latex.trim() !== '') blocks.push({ type: 'math', latex });
+        break;
+      }
+      case IMAGE: {
+        const image = imageAttrs(attrs);
+        if (image.id !== '') blocks.push({ type: 'image', ...image });
         break;
       }
       default:

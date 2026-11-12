@@ -24,6 +24,7 @@ export type SafeTreeInput = Pick<
   | 'text'
   | 'book'
   | 'sources'
+  | 'images'
 >;
 
 export interface SafeTree {
@@ -41,9 +42,10 @@ export interface SafeTree {
  * the aliased text, so the page holds no real name.
  */
 export function safeExportTree(input: SafeTreeInput): SafeTree {
-  const built = input.text
+  const text = input.text
     ? textDoc(input.project, input.text.body)
     : buildExportDoc({ ...input, updates: new Map(input.updates) });
+  const built = input.images?.length ? { ...text, images: Object.fromEntries(input.images) } : text;
   const names = input.shareSafe ? nameCheck(built, input.people) : { unmarked: [], changed: [] };
   const safe = shareSafe(built, input.people, input.shareSafe);
   const words = exportWords(safe);

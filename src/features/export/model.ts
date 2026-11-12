@@ -123,6 +123,26 @@ export interface StanzaBlock {
   lines: PoemLine[];
 }
 
+/** An image in the text (Phase 16). The bytes are in `ExportDoc.images`, by the image's id. */
+export interface ImageBlock {
+  type: 'image';
+  id: string;
+  alt: string;
+  decorative: boolean;
+  caption: string;
+  /** Percent of the text width. */
+  width: number;
+  align: 'left' | 'center' | 'right';
+}
+
+/** The stored copy of an image, as an export embeds it. */
+export interface ExportImage {
+  type: 'image/jpeg' | 'image/png';
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
 export type Block =
   | ParagraphBlock
   | HeadingBlock
@@ -130,7 +150,8 @@ export type Block =
   | QuoteBlock
   | StanzaBlock
   | { type: 'sceneBreak' }
-  | { type: 'math'; latex: string };
+  | { type: 'math'; latex: string }
+  | ImageBlock;
 
 export type ExportForm = EditorForm;
 
@@ -161,6 +182,39 @@ export interface ExportDoc {
   script?: ScriptStyle;
   /** How many citations name a source that the project no longer has (F64). */
   missingSources?: number;
+  /** The bytes of each image in the text, by id (Phase 16). An image with no entry is not on this device. */
+  images?: Readonly<Record<string, ExportImage>>;
+}
+
+/** The image blocks of some blocks, in reading order. */
+export function imagesOf(blocks: readonly Block[]): ImageBlock[] {
+  return blocks.flatMap((block): ImageBlock[] => {
+    if (block.type === 'image') return [block];
+    if (block.type === 'list') return block.items.flatMap(imagesOf);
+    if (block.type === 'quote') return imagesOf(block.blocks);
+    return [];
+  });
+}
+
+/**
+ * A file name for each image of the export that has its bytes, in reading order, such as "image-1.jpg".
+ * Markdown, EPUB and the walk-away copy use them.
+ */
+export function imageNames(doc: ExportDoc): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const section of doc.sections)
+    for (const block of imagesOf(section.blocks)) {
+      const image = doc.images?.[block.id];
+      if (!image || names.has(block.id)) continue;
+      names.set(block.id, `image-${String(names.size + 1)}.${image.type === 'image/png' ? 'png' : 'jpg'}`);
+    }
+  return names;
+}
+
+/** The text that stands for an image where a format shows no image, such as "[Image: The harbour]". */
+export function imageStandIn(block: ImageBlock): string {
+  const words = block.caption || (block.decorative ? '' : block.alt);
+  return words === '' ? '[Image]' : `[Image: ${words}]`;
 }
 
 /**

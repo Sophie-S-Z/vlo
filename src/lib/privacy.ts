@@ -342,6 +342,8 @@ interface RunHandlers {
   group: (group: TextRun[]) => TextRun[];
   note: (note: NoteContent) => NoteContent;
   latex: (latex: string) => string;
+  /** Plain text with no marks, such as the alt text and the caption of an image. */
+  text: (text: string) => string;
 }
 
 /** Calls the handlers for each line of text runs, each note and each equation. */
@@ -383,6 +385,9 @@ function mapBlocks(blocks: readonly Block[], on: RunHandlers): Block[] {
         return { ...block, lines: block.lines.map((line) => ({ ...line, runs: mapRuns(line.runs, on) })) };
       case 'math':
         return { ...block, latex: on.latex(block.latex) };
+      case 'image':
+        // The alt text and the caption are text of the export, so a name in them gets its alias.
+        return { ...block, alt: on.text(block.alt), caption: on.text(block.caption) };
       default:
         return block;
     }
@@ -404,6 +409,7 @@ export function shareSafe(doc: ExportDoc, people: readonly PrivatePerson[], on: 
     // A note's runs are read as one text too, so a name in two styles is still found.
     note: (note) => joinRuns(aliasAcross(note, lookup.all, (run, text) => ({ ...run, text }))),
     latex: (latex) => aliasText(latex, lookup.all),
+    text: (text) => aliasText(text, lookup.all),
   };
   const book = doc.book;
   return {
@@ -482,6 +488,11 @@ export function nameCheck(doc: ExportDoc, people: readonly PrivatePerson[]): Nam
     },
     note: (note) => note,
     latex: (latex) => latex,
+    // The alt text and the caption of an image have no marks, but the export swaps a name in them.
+    text: (text) => {
+      for (const m of findMatches(text, lookup.all)) add(unmarked, m.name);
+      return text;
+    },
   };
   for (const section of doc.sections) {
     // Headings at levels 1 and 2 are folder and item titles, not text.

@@ -1,5 +1,13 @@
 import type { NoteContent } from '@/features/editor/format/notes';
-import { footnotesOf, repeatsTitle, type Block, type ExportDoc, type Run, type RunStyle } from './model';
+import {
+  footnotesOf,
+  imageStandIn,
+  repeatsTitle,
+  type Block,
+  type ExportDoc,
+  type Run,
+  type RunStyle,
+} from './model';
 
 /*
  * Web copies (roadmap F52, plan Task J2). A poem keeps each line break and each indent when the writer
@@ -84,6 +92,9 @@ function blockHtml(block: Block): string {
       return '<p align="center">*&#160;&#160;*&#160;&#160;*</p>';
     case 'math':
       return `<p align="center">${escapeHtml(`$$${block.latex}$$`)}</p>`;
+    // A site takes no image from the clipboard, so the copy names the image where it stands.
+    case 'image':
+      return `<p align="center"><i>${escapeHtml(imageStandIn(block))}</i></p>`;
     case 'quote':
       return `<blockquote>${block.blocks.map(blockHtml).join('')}</blockquote>`;
     case 'list': {
@@ -154,6 +165,8 @@ function blockText(block: Block): string {
       return '*  *  *';
     case 'math':
       return `$$${block.latex}$$`;
+    case 'image':
+      return imageStandIn(block);
     case 'quote':
       return block.blocks.map(blockText).join('\n\n');
     case 'list':

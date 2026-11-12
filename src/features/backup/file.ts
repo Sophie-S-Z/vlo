@@ -6,6 +6,7 @@ import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
+import { imagesOf } from '@/features/export/model';
 import { holdsText, TEMPLATE_ORDER } from '@/features/library/templates';
 import { IMAGE_TYPES } from '@/features/images/resize';
 import {
@@ -176,6 +177,8 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
     ...(backup.series ? { series: backup.series.row, seriesCodex: backup.series.codex } : {}),
   };
   zip.file('project.json', JSON.stringify(manifest, null, 2));
+  // The readable copy of an item points at each image file of the backup.
+  const imageIds = new Set(backup.images.map((i) => i.info.id));
   for (const item of backup.items) {
     const update = backup.updates.get(item.id);
     if (!update) continue;
@@ -186,7 +189,14 @@ export async function writeBackup(backup: Backup): Promise<Uint8Array> {
       scope: { kind: 'item', itemId: item.id },
       updates: backup.updates,
     });
-    zip.file(`items/${item.id}.md`, toMarkdown(readable));
+    const paths = new Map(
+      readable.sections.flatMap((section) =>
+        imagesOf(section.blocks)
+          .filter((block) => imageIds.has(block.id))
+          .map((block) => [block.id, `../images/${block.id}`] as const),
+      ),
+    );
+    zip.file(`items/${item.id}.md`, toMarkdown(readable, paths));
   }
   for (const snapshot of backup.snapshots) zip.file(`snapshots/${snapshot.id}.yjs`, snapshot.state);
   for (const version of backup.versions) zip.file(`versions/${version.id}.yjs`, version.state);

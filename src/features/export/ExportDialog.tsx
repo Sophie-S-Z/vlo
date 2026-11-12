@@ -65,7 +65,7 @@ const FORMATS: {
   {
     id: 'markdown',
     label: 'Markdown',
-    detail: 'A .md text file with its marks. It opens in any notes app.',
+    detail: 'A .md text file with its marks. It opens in any notes app. With images, it comes in a zip file.',
     icon: FileText,
   },
   {
