@@ -21,13 +21,14 @@ Migrations 0003 and 0005 then schedule the daily cleanups. One deletes each shar
 
 ## 3. Apply the migrations
 
-Run the 5 files in order. Each one runs once.
+Run the 7 files in order. Each one runs once.
 
 Option A, in the dashboard:
 
 1. Open SQL Editor and choose New query.
 2. Paste all of `supabase/migrations/0001_shares.sql`, then choose Run.
-3. Do the same for `0002_usage.sql`, `0003_cleanup.sql`, `0004_limits.sql` and `0005_sync.sql`.
+3. Do the same for `0002_usage.sql`, `0003_cleanup.sql`, `0004_limits.sql`, `0005_sync.sql`,
+   `0006_rooms.sql` and `0007_share_images.sql`.
 
 Option B, with the Supabase CLI on your computer:
 
