@@ -18,14 +18,15 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 23,
+  version: 24,
   date: '2026-11-12',
   guide: [
     {
       title: 'Start a project',
       steps: [
         'In the Library, choose New project.',
-        'Pick one or more shapes: Novel, Memoir, Poetry collection, Open writing or Script.',
+        'Pick one or more shapes: Novel, Memoir, Poetry collection, Script, Essay, Article, Research paper or Open writing.',
+        'An essay, an article or a research paper can start from a structure, such as IMRaD, a literature review, a five-paragraph essay or a how-to article.',
         'Choose Create project. The first item opens, ready for your words.',
         'For a fast note, choose Quick note (the notebook icon) in the Library. The note goes into the Inbox folder at the top of the project.',
         'To bring in a backup or writing from Word, Markdown or Scrivener, choose Import in the Library.',
@@ -259,9 +260,20 @@ export const HELP = {
       ],
     },
     {
+      title: 'Write an essay, an article or a research paper',
+      steps: [
+        'Each section of the structure shows a short guide above the text. The guide tells you what goes in the section, and it is not part of your text.',
+        'When a section has a word range, the guide shows it and tells you when you are under or over the range.',
+        'To add a section such as Methods, Counterargument or Appendix, choose Add to binder, then Section with a guide.',
+        'In an essay or an article, a section title such as Lede or Body paragraph 1 is a working label, and an export leaves it out. To show a title as a heading, open the options of the section in the binder and choose Title as a heading in exports.',
+        'The References page (or Works Cited in MLA) lists every source of the project. Import a BibTeX or CSL JSON file there, change the style, or copy the list.',
+        'In an export, the list goes where the References page is in the binder. When the text cites sources, the list shows only those sources.',
+      ],
+    },
+    {
       title: 'Cite a source',
       steps: [
-        'In Open writing or a memoir, choose Cite a source in More tools, or type /cite.',
+        'In Open writing, a memoir, an essay, an article or a research paper, choose Cite a source in More tools, or type /cite.',
         'Add a source, or import a BibTeX or CSL JSON file from Zotero or another reference manager.',
         'Type a page if you want one, then choose the source. The citation goes in at the cursor.',
         'Style sets APA 7, MLA 9 or Chicago author-date for each citation in the project. Type each title in the case that your style asks for.',

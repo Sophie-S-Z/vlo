@@ -137,22 +137,27 @@ function citeSections(
     run.text = inText(source, run.cite.page, style);
   }
   if (cited.size === 0) return { list: null, missing };
+  return { missing, list: referenceList([...cited], style, language) };
+}
+
+/** The id of the place that a References page keeps for the list, until the list is known. */
+const REFERENCES_SLOT = 'references-slot';
+
+/** The reference list of `sources`, under the title of the style. */
+function referenceList(sources: readonly Source[], style: CiteStyle, language: string): ExportSection {
   const title = LIST_TITLES[style];
   return {
-    missing,
-    list: {
-      id: 'references',
-      title,
-      form: 'prose',
-      blocks: [
-        { type: 'heading', level: 2, runs: [{ type: 'text', text: title, style: {} }] },
-        ...sortReferences([...cited], language).map((source): Block => ({
-          type: 'paragraph',
-          runs: reference(source, style),
-          hanging: true,
-        })),
-      ],
-    },
+    id: 'references',
+    title,
+    form: 'prose',
+    blocks: [
+      { type: 'heading', level: 2, runs: [{ type: 'text', text: title, style: {} }] },
+      ...sortReferences(sources, language).map((source): Block => ({
+        type: 'paragraph',
+        runs: reference(source, style),
+        hanging: true,
+      })),
+    ],
   };
 }
 
@@ -171,6 +176,12 @@ export function buildExportDoc({
   const sections: ExportSection[] = [];
   let lastWasScene = false;
   for (const { item, depth } of list) {
+    // The References page holds no text: the reference list goes in its place (Phase 17 decision M3).
+    if (item.role === 'references') {
+      sections.push({ id: REFERENCES_SLOT, title: item.title, form: 'prose', blocks: [] });
+      lastWasScene = false;
+      continue;
+    }
     const form = template.editorKind(item.kind);
     if (form === null) {
       // A part is the top level. A chapter, or a part inside a scope, is one level down.
@@ -192,8 +203,9 @@ export function buildExportDoc({
       lastWasScene = true;
     } else {
       lastWasScene = false;
-      // A single memory or poem is the whole export, and the title names it.
-      if (form !== 'script')
+      // A single memory or poem is the whole export, and the title names it. A working title, such as
+      // "Lede", gives no heading (Phase 17).
+      if (form !== 'script' && !item.workingTitle)
         blocks.push({ type: 'heading', level: 2, runs: [{ type: 'text', text: item.title, style: {} }] });
     }
     blocks.push(...body);
@@ -209,7 +221,19 @@ export function buildExportDoc({
   const cites = sources
     ? citeSections(sections, sources, project.settings.citeStyle ?? 'apa', language)
     : null;
-  if (cites?.list) sections.push(cites.list);
+  const slot = sections.findIndex((s) => s.id === REFERENCES_SLOT);
+  if (slot >= 0) {
+    // The References page takes the list of the cited sources, or of every source when none is cited.
+    const list =
+      cites?.list ??
+      (sources && sources.length > 0
+        ? referenceList(sources, project.settings.citeStyle ?? 'apa', language)
+        : null);
+    if (list) sections.splice(slot, 1, list);
+    else sections.splice(slot, 1);
+    for (let i = sections.length - 1; i >= 0; i -= 1)
+      if (sections[i]?.id === REFERENCES_SLOT) sections.splice(i, 1);
+  } else if (cites?.list) sections.push(cites.list);
   return {
     title,
     ...(project.authorName ? { author: project.authorName } : {}),

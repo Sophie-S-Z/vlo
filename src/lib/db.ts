@@ -6,7 +6,7 @@ import { countUnit, recountItems } from './wordcount';
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
 
 /** A kind of writing. A project has one or more (`Project.templates`). */
-export type Template = 'novel' | 'memoir' | 'poetry' | 'open' | 'script';
+export type Template = 'novel' | 'memoir' | 'poetry' | 'open' | 'script' | 'essay' | 'article' | 'research';
 export type AiMode = 'pen' | 'reader' | 'cowriter';
 /** A `script` item is a scene of a screenplay or a stage play (F63). */
 export type ItemKind = 'part' | 'chapter' | 'scene' | 'memory' | 'poem' | 'page' | 'script' | 'note';
@@ -151,6 +151,14 @@ export interface Label {
 
 export type PageFormat = 'pageless' | 'letter' | 'a4';
 
+/** A suggested length of a section, in words (Phase 17 decision M2). */
+export interface WordRange {
+  min?: number;
+  max?: number;
+}
+
+export type ItemRole = 'references';
+
 export interface ManuscriptSettings {
   on: boolean;
   /** The name on the first page and in the page header. */
@@ -182,6 +190,23 @@ export interface Item {
   labelId?: string;
   /** When the scene happens in the story (F67): "YYYY", "YYYY-MM" or "YYYY-MM-DD". Undated when absent. */
   storyDate?: string;
+  /**
+   * What the section is for, from the structure that started the project (Phase 17 decision M2), such as
+   * "State the question and why it matters." It shows above the text and never goes in an export.
+   */
+  guide?: string;
+  /** The word range that the structure suggests for the section. Either end can be absent. */
+  words?: WordRange;
+  /**
+   * A page with a job of its own. "references" shows the live reference list of the project's sources, and
+   * an export puts the list there (decision M3).
+   */
+  role?: ItemRole;
+  /**
+   * The title is a working label, such as "Lede" or "Body paragraph 1" (Phase 17). An export gives the
+   * section no heading, so the sections read as one piece. The binder menu can turn it off.
+   */
+  workingTitle?: true;
   createdAt: number;
   updatedAt: number;
   memory?: {

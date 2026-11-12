@@ -1,10 +1,18 @@
 import { flattenTree } from '@/features/binder/tree';
-import type { Item, ItemKind, Template } from '@/lib/db';
+import type { Item, ItemKind, ItemRole, Template, WordRange } from '@/lib/db';
 
 export interface StarterItem {
   kind: ItemKind;
   title: string;
   children?: StarterItem[];
+  /** What the section is for (Phase 17 decision M2). */
+  guide?: string;
+  /** The suggested length of the section, in words. */
+  words?: WordRange;
+  /** A page with a job of its own, such as the live reference list. */
+  role?: ItemRole;
+  /** The title is a working label that an export does not show. */
+  workingTitle?: true;
 }
 
 export interface TemplateDef {
@@ -117,9 +125,95 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
     starter: [{ kind: 'script', title: 'Scene 1' }],
     editorKind: editorFor,
   },
+  essay: {
+    id: 'essay',
+    label: 'Essay',
+    shortLabel: 'Essay',
+    description: 'An argument, a reflection or an analysis, in sections that each have a job.',
+    untitled: 'Untitled essay',
+    kinds: ['part', 'page', 'note'],
+    kindLabel: { part: 'Group', page: 'Section', note: 'Note' },
+    childKinds: { root: ['part', 'page', 'note'], part: ['page', 'note'] },
+    starter: [
+      {
+        kind: 'page',
+        title: 'Introduction',
+        guide: 'Open with a hook. End with your thesis in one sentence.',
+        workingTitle: true,
+      },
+      {
+        kind: 'page',
+        title: 'Body',
+        guide: 'Each paragraph makes one point that supports the thesis.',
+        workingTitle: true,
+      },
+      {
+        kind: 'page',
+        title: 'Conclusion',
+        guide: 'Say what the essay showed, and why it matters.',
+        workingTitle: true,
+      },
+    ],
+    editorKind: editorFor,
+  },
+  article: {
+    id: 'article',
+    label: 'Article',
+    shortLabel: 'Article',
+    description: 'A post, a feature or a newsletter, ready to publish to Substack, Medium or WordPress.',
+    untitled: 'Untitled article',
+    kinds: ['part', 'page', 'note'],
+    kindLabel: { part: 'Group', page: 'Section', note: 'Note' },
+    childKinds: { root: ['part', 'page', 'note'], part: ['page', 'note'] },
+    starter: [
+      {
+        kind: 'page',
+        title: 'Article',
+        guide:
+          'Start with the most interesting fact. Each paragraph answers the question the last one raised.',
+        workingTitle: true,
+      },
+    ],
+    editorKind: editorFor,
+  },
+  research: {
+    id: 'research',
+    label: 'Research paper',
+    shortLabel: 'Research',
+    description: 'Abstract, sections and a reference list that follows APA, MLA or Chicago.',
+    untitled: 'Untitled paper',
+    kinds: ['part', 'page', 'note'],
+    kindLabel: { part: 'Part', page: 'Section', note: 'Note' },
+    childKinds: { root: ['part', 'page', 'note'], part: ['page', 'note'] },
+    starter: [
+      {
+        kind: 'page',
+        title: 'Abstract',
+        guide: 'The question, the method, the main result and what it means, in one paragraph.',
+        words: { min: 150, max: 250 },
+      },
+      {
+        kind: 'page',
+        title: 'Introduction',
+        guide: 'The problem, what is known, the gap, and your question.',
+      },
+      { kind: 'page', title: 'References', role: 'references' },
+    ],
+    editorKind: editorFor,
+  },
 };
 
-export const TEMPLATE_ORDER: readonly Template[] = ['novel', 'memoir', 'poetry', 'open', 'script'];
+/** The templates in their stored order. New templates go at the end, so old projects keep their order. */
+export const TEMPLATE_ORDER: readonly Template[] = [
+  'novel',
+  'memoir',
+  'poetry',
+  'open',
+  'script',
+  'essay',
+  'article',
+  'research',
+];
 
 /** The templates in `TEMPLATE_ORDER`, each one time. An empty or unknown list gives a novel. */
 export function cleanTemplates(templates: readonly string[]): Template[] {

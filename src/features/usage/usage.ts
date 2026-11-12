@@ -32,7 +32,16 @@ export const ERROR_CODES = ['export-failed', 'backup-import-failed', 'share-fail
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 const AI_MODES: readonly AiMode[] = ['pen', 'reader', 'cowriter'];
-const TEMPLATES: readonly Template[] = ['novel', 'memoir', 'poetry', 'open', 'script'];
+const TEMPLATES: readonly Template[] = [
+  'novel',
+  'memoir',
+  'poetry',
+  'open',
+  'script',
+  'essay',
+  'article',
+  'research',
+];
 
 export const BANDS = ['0', '1-249', '250-999', '1000-4999', '5000+'] as const;
 export type Band = (typeof BANDS)[number];

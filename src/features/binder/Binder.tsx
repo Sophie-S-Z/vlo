@@ -12,14 +12,23 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { projectDef } from '@/features/library/templates';
+import { projectDef, type StarterItem } from '@/features/library/templates';
 import type { Item, ItemKind, Project, Status } from '@/lib/db';
 import { Button } from '@/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/ui/dropdown-menu';
+import { SECTION_LIBRARY } from '@/features/library/structures';
 import { BinderItem, INDENT_PX, type BinderItemActions, type BinderMove } from './BinderItem';
 import { labelOf } from '@/features/outline/outline';
 import { ItemDialogs, type ItemAction } from './ItemDialogs';
-import { addItem, moveItem, nextTitle, updateItem } from './items';
+import { addItem, moveItem, nextTitle, setWorkingTitle, updateItem } from './items';
 import {
   descendantIds,
   flattenTree,
@@ -136,6 +145,16 @@ export function Binder({ project, items, openItemId, onOpen, onOpenBeside, resea
     if (template.editorKind(kind) !== null) onOpen(item.id);
   }
 
+  async function addSection(section: StarterItem) {
+    const item = await addItem(project.id, null, 'page', section.title, {
+      ...(section.guide ? { guide: section.guide } : {}),
+      ...(section.words ? { words: section.words } : {}),
+      ...(section.role ? { role: section.role } : {}),
+    });
+    setMessage(`Added ${item.title}.`);
+    onOpen(item.id);
+  }
+
   // Rows get one stable actions object, so a drag move does not re-render every row. It reads the latest state here.
   const latest = useRef({ nodes, template, onOpen, onOpenBeside, place, add });
   useEffect(() => {
@@ -164,6 +183,9 @@ export function Binder({ project, items, openItemId, onOpen, onOpenBeside, resea
       },
       setStatus: (item, status: Status) => {
         void updateItem(item.id, { status });
+      },
+      setWorkingTitle: (item, on) => {
+        void setWorkingTitle(item.id, on);
       },
       addChild: (item, kind) => {
         void latest.current.add(item.id, kind);
@@ -207,6 +229,26 @@ export function Binder({ project, items, openItemId, onOpen, onOpenBeside, resea
                 {template.kindLabel[kind] ?? kind}
               </DropdownMenuItem>
             ))}
+            {/* Ready sections with a guide, for the nonfiction modes (Phase 17 decision M2). */}
+            {rootKinds.includes('page') &&
+              project.templates.some((t) => t === 'essay' || t === 'article' || t === 'research') && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Section with a guide</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {SECTION_LIBRARY.map((section) => (
+                      <DropdownMenuItem
+                        key={section.title}
+                        onSelect={() => {
+                          addToEditor.current = true;
+                          void addSection(section);
+                        }}
+                      >
+                        {section.title}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

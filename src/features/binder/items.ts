@@ -30,6 +30,7 @@ export async function addItem(
   parentId: string | null,
   kind: ItemKind,
   title: string,
+  extra: Pick<Item, 'guide' | 'words' | 'role'> = {},
 ): Promise<Item> {
   const now = clock.now();
   return db.transaction('rw', db.items, db.projects, async () => {
@@ -49,6 +50,9 @@ export async function addItem(
       wordCount: 0,
       createdAt: now,
       updatedAt: now,
+      ...(extra.guide ? { guide: extra.guide } : {}),
+      ...(extra.words ? { words: extra.words } : {}),
+      ...(extra.role ? { role: extra.role } : {}),
     };
     await db.items.add(item);
     await touchProject(projectId, now);
@@ -77,6 +81,24 @@ export async function updateItem(
     const item = await db.items.get(id);
     if (!item) return;
     await db.items.update(id, { ...clean, updatedAt: now });
+    await touchProject(item.projectId, now);
+  });
+}
+
+/** Marks a section's title as a working label that an export does not show, or as a heading (Phase 17). */
+export async function setWorkingTitle(id: string, on: boolean): Promise<void> {
+  const now = clock.now();
+  await db.transaction('rw', db.items, db.projects, async () => {
+    const item = await db.items.get(id);
+    if (!item) return;
+    await db.items
+      .where('id')
+      .equals(id)
+      .modify((row) => {
+        if (on) row.workingTitle = true;
+        else delete row.workingTitle;
+        row.updatedAt = now;
+      });
     await touchProject(item.projectId, now);
   });
 }
