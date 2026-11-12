@@ -73,3 +73,55 @@
     text-wrap: pretty;
   }
 }
+
+/* A quiet name for an icon button (Phase 17 decision S1). The button keeps its name for the screen reader in
+   a hidden span; `data-tip` shows the same name to a sighted writer on hover and on keyboard focus. Touch
+   screens show no tip: a tap runs the button at once. */
+@layer components {
+  .vlo-tip {
+    position: relative;
+  }
+  .vlo-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    z-index: 40;
+    translate: -50% 0;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 120ms var(--ease-out),
+      visibility 0s linear 120ms;
+  }
+  .vlo-tip[data-tip-align='end']::after {
+    left: auto;
+    right: 0;
+    translate: none;
+  }
+  .vlo-tip[data-tip-align='start']::after {
+    left: 0;
+    translate: none;
+  }
+  .vlo-tip:focus-visible:not([data-state='open'])::after {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  @media (hover: hover) {
+    .vlo-tip:hover:not([data-state='open'])::after {
+      opacity: 1;
+      visibility: visible;
+      transition-delay: 450ms, 450ms;
+    }
+  }
+}

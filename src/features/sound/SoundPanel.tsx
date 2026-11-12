@@ -2,6 +2,7 @@ import { Headphones, Pause, Play, Plus, SkipBack, SkipForward, Trash2, X } from 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { usePreferences } from '@/app/PreferencesProvider';
 import { Button } from '@/ui/button';
+import { ICON_BUTTON } from '@/ui/tip';
 import { cn } from '@/ui/cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
@@ -302,9 +303,15 @@ export function SoundControl({ scene }: { scene: SceneChoice }) {
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="ghost" aria-label={label} data-playing={sound.playing ? 'true' : 'false'}>
+        <Button
+          variant="ghost"
+          className={ICON_BUTTON}
+          aria-label={label}
+          data-tool="sound"
+          data-tip={label}
+          data-playing={sound.playing ? 'true' : 'false'}
+        >
           <Headphones aria-hidden="true" className={cn('size-4', sound.playing && 'text-accent-text')} />
-          <span className="max-sm:sr-only">Sound</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent

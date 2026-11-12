@@ -4,6 +4,8 @@ import type { ResolvedTheme, ThemeChoice } from '@/app/preferences';
 import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
+import { Button } from '@/ui/button';
+import { showTipsAgain, useTips } from '@/features/onboarding/Tips';
 import { ComfortSettings } from './ComfortSettings';
 import { StorageHealth } from './StorageHealth';
 import { FolderSave } from '@/features/backup/FolderSave';
@@ -85,6 +87,7 @@ function SettingSwitch({
 }
 
 export function SettingsPage() {
+  const tips = useTips();
   useDocumentTitle('Settings');
   const { prefs, resolvedTheme, setTheme, setCalm } = usePreferences();
   const motion = useMotionAllowed();
@@ -216,6 +219,24 @@ export function SettingsPage() {
                 setAnnouncement(on ? 'All tools in the toolbar.' : 'Main tools in the toolbar.');
               }}
             />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="grid gap-0.5">
+                <p className="text-sm font-medium">Tips</p>
+                <p className="text-sm text-muted">
+                  One line above the text names a way to the tools. Close it when you know them.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                disabled={!tips.closed}
+                onClick={() => {
+                  showTipsAgain();
+                  setAnnouncement('The tips show again above the text.');
+                }}
+              >
+                Show the tips again
+              </Button>
+            </div>
           </div>
         </Section>
 

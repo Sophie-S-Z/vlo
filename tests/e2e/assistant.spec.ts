@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /*
  * Plan Tasks D5 and D6 (spec section 10, F23 to F26, US10, US11). The Assistant panel against fake
@@ -158,7 +159,7 @@ test('F61: the reader panel sends the Codex notes of the names in the text, and 
   await page.keyboard.type('Mira hides the ledger.');
   await saved(page);
   const views = page.getByRole('navigation', { name: 'Project views' });
-  await views.getByRole('link', { name: 'Codex' }).click();
+  await openView(page, 'Codex');
   await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
   await page.getByRole('button', { name: 'Add entry' }).click();
   await page.getByRole('textbox', { name: 'Note' }).fill('Owes the harbour master.');

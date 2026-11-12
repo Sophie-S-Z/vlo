@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /* Roadmap 2 F66, plan Task N3: the continuity check. continuity.test.ts holds the rules. */
 
@@ -18,7 +19,7 @@ test('the continuity check is off at first, marks a near name with its reason, a
     .click();
   await expect(scene(page)).toBeFocused();
   await page.keyboard.type('The boat took Mria home.');
-  await views(page).getByRole('link', { name: 'Codex' }).click();
+  await openView(page, 'Codex');
   await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
   await page.getByRole('button', { name: 'Add entry' }).click();
   await expect(page.getByRole('heading', { level: 3, name: 'Mira' })).toBeVisible();

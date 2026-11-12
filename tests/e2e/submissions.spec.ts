@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /*
  * Plan Task C8: the Submissions tracker (spec 8.4, F20, E4). A writer logs the pieces sent to each venue,
@@ -36,10 +37,7 @@ async function newCollection(page: Page, isMobile: boolean) {
 }
 
 async function openSubmissions(page: Page) {
-  await page
-    .getByRole('navigation', { name: 'Project views' })
-    .getByRole('link', { name: 'Submissions' })
-    .click();
+  await openView(page, 'Submissions');
   await expect(page.getByRole('heading', { level: 2, name: 'Submissions' })).toBeVisible();
 }
 

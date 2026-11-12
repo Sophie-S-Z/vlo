@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /*
  * Plan Task D2 (spec section 10, F23): the AI mode badge on every project screen, the mode dialog that
@@ -94,7 +95,7 @@ test('the badge shows Pen on every project screen, and a change away from Pen ex
   await expect(badge(page)).toBeFocused();
   await page.reload();
   await expect(badge(page)).toHaveAccessibleName('AI mode: Reader');
-  await views(page).getByRole('link', { name: 'Progress', exact: true }).click();
+  await openView(page, 'Progress');
   // The Write screen stays up while Progress loads. The badge click must reach the Progress screen.
   await expect(views(page).getByRole('link', { name: 'Progress', exact: true })).toHaveAttribute(
     'aria-current',

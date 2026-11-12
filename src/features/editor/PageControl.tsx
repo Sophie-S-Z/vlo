@@ -2,6 +2,7 @@ import { FileText, Minus, Plus } from 'lucide-react';
 import { useId } from 'react';
 import { SCRIPT_STYLES, type PageFormat, type ScriptStyle } from '@/lib/db';
 import { Button } from '@/ui/button';
+import { ICON_BUTTON } from '@/ui/tip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { DEFAULT_LANGUAGE, LANGUAGES, languageLabel } from '@/lib/language';
@@ -56,10 +57,14 @@ export function PageControl({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" aria-label={`Page: ${label}, zoom ${String(zoom)} percent`}>
+        <Button
+          variant="ghost"
+          className={ICON_BUTTON}
+          aria-label={`Page: ${label}, zoom ${String(zoom)} percent`}
+          data-tool="page"
+          data-tip={zoom === 100 ? `Page: ${label}` : `Page: ${label}, ${String(zoom)}%`}
+        >
           <FileText aria-hidden="true" className="size-4" />
-          <span className="max-sm:sr-only">{label}</span>
-          {zoom !== 100 && <span className="tabular-nums text-xs text-muted">{zoom}%</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" aria-label="Page" className="grid w-[min(20rem,calc(100vw-1.5rem))] gap-4">

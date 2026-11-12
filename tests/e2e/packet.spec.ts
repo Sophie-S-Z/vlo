@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /* Plan Task J3 (roadmap F53): a submission packet is one zip, and Vlo logs it as sent. */
 
@@ -17,10 +18,7 @@ test('a packet saves the pieces and the texts in one zip, logs the row, and keep
   await expect(page.getByRole('textbox', { name: 'Poem 1' })).toBeFocused();
   await page.keyboard.type('Salt on the sill.');
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
-  await page
-    .getByRole('navigation', { name: 'Project views' })
-    .getByRole('link', { name: 'Submissions' })
-    .click();
+  await openView(page, 'Submissions');
 
   await page.getByRole('button', { name: 'Make a packet' }).click();
   const dialog = page.getByRole('dialog', { name: 'Make a packet' });

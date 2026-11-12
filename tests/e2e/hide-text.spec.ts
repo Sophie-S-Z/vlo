@@ -38,7 +38,8 @@ function looks(page: Page) {
 test('one press blurs the text, and the words and their count stay the same', async ({ page }) => {
   const scene = await novelWithTwoParagraphs(page);
   const button = page.getByRole('button', { name: 'Hide text' });
-  await expect(button).toHaveAttribute('aria-pressed', 'false');
+  // The quick button shows only while the text is hidden, so the tool row stays short (Phase 17).
+  await expect(button).toHaveCount(0);
   await page.keyboard.press(`${mod}+Shift+Period`);
   await expect(button).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-hide-text', 'blur');
@@ -54,6 +55,7 @@ test('one press blurs the text, and the words and their count stay the same', as
   await expect(page.locator('html')).toHaveAttribute('data-hide-text', 'blur');
   await button.click();
   await expect(page.locator('html')).not.toHaveAttribute('data-hide-text');
+  await expect(button).toHaveCount(0);
   expect((await looks(page)).every((l) => l.filter === 'none')).toBe(true);
 });
 

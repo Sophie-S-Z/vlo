@@ -48,6 +48,7 @@ import { countUnit } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { cn } from '@/ui/cn';
+import { ICON_BUTTON } from '@/ui/tip';
 import { withViewTransition } from '@/ui/motion';
 import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import type { CommandAction } from './CommandMenu';
@@ -59,6 +60,45 @@ import { setAiMode } from '@/features/ai/modes';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { recordFeature } from '@/features/usage/usage';
 import { ProjectMissing } from './ViewNotices';
+
+/** The tools that sit on the screen as icons, by their `data-tool` name, for the command menu. */
+const ITEM_TOOLS: readonly { id: string; label: string; keywords: readonly string[] }[] = [
+  {
+    id: 'insights',
+    label: 'Open Insights…',
+    keywords: ['statistics', 'readability', 'keywords', 'ai check', 'originality', 'grade', 'density'],
+  },
+  {
+    id: 'history',
+    label: 'Open History…',
+    keywords: ['snapshots', 'versions', 'restore', 'undo', 'compare', 'diff', 'backup'],
+  },
+  {
+    id: 'page',
+    label: 'Page format, zoom and language…',
+    keywords: ['pageless', 'letter', 'a4', 'zoom', 'language', 'paper', 'pages'],
+  },
+  {
+    id: 'scene',
+    label: 'Choose a scene around the page…',
+    keywords: ['backdrop', 'cozy', 'rain', 'cabin', 'background', 'scenery', 'mood'],
+  },
+  {
+    id: 'sound',
+    label: 'Ambient sound and music…',
+    keywords: ['rain', 'cafe', 'fire', 'noise', 'music', 'audio', 'headphones'],
+  },
+  {
+    id: 'timer',
+    label: 'Start a session timer…',
+    keywords: ['timer', 'stopwatch', 'pomodoro', 'session', 'minutes'],
+  },
+];
+
+/** Opens a tool's panel by pressing its button. A tool not on the screen, such as in a poem, does nothing. */
+function openTool(id: string): void {
+  document.querySelector<HTMLElement>(`[data-tool="${id}"]`)?.click();
+}
 
 /** Folder save also runs this often while the project is open, so a long session has a recent copy. */
 const FOLDER_SAVE_EVERY_MS = 10 * 60_000;
@@ -407,6 +447,18 @@ export function ProjectPage() {
       hint: shortcutLabel(HIDE_TEXT_KEYS),
       run: toggleHideText,
     },
+    // The item's own tools and the timer (Phase 17 decision S5). Each one opens its button's panel, so the
+    // command menu finds every tool on the screen by name.
+    ...ITEM_TOOLS.map((tool): CommandAction => ({
+      id: `tool-${tool.id}`,
+      label: tool.label,
+      keywords: tool.keywords,
+      run: () => {
+        afterMenu.current = () => {
+          openTool(tool.id);
+        };
+      },
+    })),
     {
       id: 'export',
       label: 'Export…',
@@ -686,9 +738,10 @@ export function ProjectPage() {
               })}
           tools={
             <>
+              {/* The way to every tool (decision S5): it looks like a search field and names its key. */}
               <Button
                 variant="ghost"
-                className="max-sm:min-w-11 max-sm:px-0"
+                className="mr-1 min-w-11 gap-2 border border-rule px-0 sm:min-w-44 sm:justify-start sm:px-3 pointer-fine:min-h-9"
                 aria-keyshortcuts="Control+K Meta+K"
                 onClick={() => {
                   setMenuOpen(true);
@@ -696,43 +749,48 @@ export function ProjectPage() {
               >
                 <Search aria-hidden="true" className="size-4" />
                 <span className="max-sm:sr-only">Search</span>
-              </Button>
-              <Button
-                variant="ghost"
-                className="max-sm:min-w-11 max-sm:px-0"
-                onClick={() => {
-                  setExportOpen(true);
-                }}
-              >
-                <Download aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">Export</span>
-              </Button>
-              <Button
-                variant="ghost"
-                className="max-sm:min-w-11 max-sm:px-0"
-                onClick={() => {
-                  setShareOpen(true);
-                }}
-              >
-                <Share2 aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">Share</span>
+                <kbd aria-hidden="true" className="ml-auto font-ui text-xs text-muted max-sm:hidden">
+                  {shortcutLabel('Mod-k')}
+                </kbd>
               </Button>
               <FocusControls
                 onFocusMode={() => {
                   changeFocusMode(true);
                 }}
               />
+              <Button
+                variant="ghost"
+                className={ICON_BUTTON}
+                data-tip="Export"
+                onClick={() => {
+                  setExportOpen(true);
+                }}
+              >
+                <Download aria-hidden="true" className="size-4" />
+                <span className="sr-only">Export</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className={ICON_BUTTON}
+                data-tip="Share"
+                onClick={() => {
+                  setShareOpen(true);
+                }}
+              >
+                <Share2 aria-hidden="true" className="size-4" />
+                <span className="sr-only">Share</span>
+              </Button>
             </>
           }
-          title={
+          title={(tools) => (
             <header className="min-w-0">
               <p className="text-sm text-muted">{template.label}</p>
-              <h1 className="mt-1 font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
+              <h1 className="mt-0.5 font-display text-3xl font-semibold [overflow-wrap:anywhere]">
                 {project.title}
               </h1>
-              <ViewTabs project={project} modeOpen={modeOpen} onModeOpenChange={setModeOpen} />
+              <ViewTabs project={project} modeOpen={modeOpen} onModeOpenChange={setModeOpen} tools={tools} />
             </header>
-          }
+          )}
           binder={
             <Binder
               project={project}

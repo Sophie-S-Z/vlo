@@ -4,6 +4,8 @@ import { safeStorage } from '@/app/preferences';
 import { useMediaQuery } from '@/app/useMediaQuery';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
+import { ICON_BUTTON } from '@/ui/tip';
+import { Tips } from '@/features/onboarding/Tips';
 import {
   Dialog,
   DialogClose,
@@ -24,7 +26,11 @@ function loadWidth(): number {
 }
 
 interface ProjectLayoutProps {
-  title: ReactNode;
+  /**
+   * The title and the view tabs. On a wide screen it gets the tool icons, so the tabs and the tools share one
+   * row (Phase 17 decision S1).
+   */
+  title: (tools: ReactNode) => ReactNode;
   binder: ReactNode;
   details: ReactNode;
   /** The manuscript column. Receives the chosen width in ch. */
@@ -64,6 +70,7 @@ export function ProjectLayout({
   onSheetCloseAutoFocus,
 }: ProjectLayoutProps) {
   const small = useMediaQuery('(max-width: 599px)');
+  const wide = useMediaQuery('(min-width: 1024px)');
   const [showBinder, setShowBinder] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [width, setWidth] = useState(loadWidth);
@@ -76,11 +83,41 @@ export function ProjectLayout({
   const right = !focusMode && !small && (showDetails || showAssistant);
   const rightWidth = showAssistant ? '22rem' : '16rem';
 
-  return (
-    <div className="grid gap-4">
-      {/* The title and its tabs take the whole row, as on every other project screen, so no tab hides. */}
-      {!focusMode && title}
-      <div className="flex flex-wrap items-center justify-end gap-2">
+  // One quiet row of icon tools (Phase 17 decision S1): the binder first, then the rest. Each icon names
+  // itself in a tooltip and keeps its name for the screen reader.
+  const toolRow = (
+    <div className="flex items-center gap-0.5 sm:gap-1">
+      {focusMode ? null : small ? (
+        <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" className={ICON_BUTTON} data-tip="Binder" data-tip-align="start">
+              <PanelLeft aria-hidden="true" className="size-4" />
+              <span className="sr-only">Binder</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="top-0 left-0 h-dvh max-h-dvh w-[min(22rem,calc(100vw-2rem))] translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0">
+            <DialogTitle className="sr-only">Binder</DialogTitle>
+            <DialogDescription className="sr-only">Pick an item to open, or reorder items.</DialogDescription>
+            {binder}
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Button
+          variant="ghost"
+          className={ICON_BUTTON}
+          data-tip={showBinder ? 'Hide binder' : 'Show binder'}
+          data-tip-align="start"
+          aria-expanded={showBinder}
+          aria-controls={binderId}
+          onClick={() => {
+            setShowBinder(!showBinder);
+          }}
+        >
+          <PanelLeft aria-hidden="true" className="size-4" />
+          <span className="sr-only">{showBinder ? 'Hide binder' : 'Show binder'}</span>
+        </Button>
+      )}
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-0.5 sm:gap-1">
         {timer}
         {focusMode ? (
           <Button variant="ghost" aria-keyshortcuts="Escape" onClick={onLeaveFocus}>
@@ -90,39 +127,12 @@ export function ProjectLayout({
         ) : (
           tools
         )}
-        {focusMode ? null : small ? (
-          <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" className="max-sm:min-w-11 max-sm:px-0">
-                <PanelLeft aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">Binder</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="top-0 left-0 h-dvh max-h-dvh w-[min(22rem,calc(100vw-2rem))] translate-x-0 translate-y-0 rounded-none border-y-0 border-l-0">
-              <DialogTitle className="sr-only">Binder</DialogTitle>
-              <DialogDescription className="sr-only">
-                Pick an item to open, or reorder items.
-              </DialogDescription>
-              {binder}
-            </DialogContent>
-          </Dialog>
-        ) : (
-          <Button
-            variant="ghost"
-            aria-expanded={showBinder}
-            aria-controls={binderId}
-            onClick={() => {
-              setShowBinder(!showBinder);
-            }}
-          >
-            <PanelLeft aria-hidden="true" className="size-4" />
-            {showBinder ? 'Hide binder' : 'Show binder'}
-          </Button>
-        )}
         {!focusMode && assistant !== undefined && (
           <Button
             variant="ghost"
-            className="max-sm:min-w-11 max-sm:px-0"
+            className={ICON_BUTTON}
+            data-tip={assistantOpen ? 'Hide the Assistant' : 'Assistant'}
+            data-tip-align="end"
             aria-expanded={assistantOpen}
             aria-controls={small ? undefined : assistantId}
             onClick={() => {
@@ -131,13 +141,15 @@ export function ProjectLayout({
             }}
           >
             <Bot aria-hidden="true" className="size-4" />
-            <span className="max-sm:sr-only">{assistantOpen ? 'Hide the Assistant' : 'Assistant'}</span>
+            <span className="sr-only">{assistantOpen ? 'Hide the Assistant' : 'Assistant'}</span>
           </Button>
         )}
         {!focusMode && (
           <Button
             variant="ghost"
-            className="max-sm:min-w-11 max-sm:px-0"
+            className={ICON_BUTTON}
+            data-tip={showDetails ? 'Hide details' : 'Show details'}
+            data-tip-align="end"
             aria-expanded={showDetails}
             aria-controls={detailsId}
             onClick={() => {
@@ -146,11 +158,19 @@ export function ProjectLayout({
             }}
           >
             <PanelRight aria-hidden="true" className="size-4" />
-            <span className="max-sm:sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
+            <span className="sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
           </Button>
         )}
       </div>
+    </div>
+  );
 
+  return (
+    <div className="grid gap-4">
+      {/* On a wide screen the tools join the tab row. Elsewhere, and in focus mode, they take a row of their own. */}
+      {!focusMode && title(wide ? toolRow : null)}
+      {(focusMode || !wide) && toolRow}
+      {!focusMode && <Tips />}
       <div
         className={cn(
           'grid gap-6',

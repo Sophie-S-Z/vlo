@@ -1,5 +1,5 @@
 import { Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useNavigate } from 'react-router';
 import type { Project } from '@/lib/db';
 import {
@@ -30,10 +30,24 @@ type Status =
 
 const dates = new Intl.DateTimeFormat(undefined, { dateStyle: 'long' });
 
-export function ImportBackup() {
+/** What a menu item calls to open the file picker of Import backup. */
+export interface ImportHandle {
+  open: () => void;
+}
+
+/**
+ * Import backup. With `trigger` false it draws no button, and the Library's Import menu opens the file
+ * picker through `ref` (Phase 17 decision S4).
+ */
+export function ImportBackup({ ref, trigger = true }: { ref?: Ref<ImportHandle>; trigger?: boolean }) {
   const navigate = useNavigate();
   const input = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<Status>({ step: 'idle' });
+  useImperativeHandle(ref, () => ({
+    open: () => {
+      input.current?.click();
+    },
+  }));
 
   async function store(backup: Backup, mode: ImportMode) {
     setStatus({ step: 'working' });
@@ -102,18 +116,20 @@ export function ImportBackup() {
           if (file) void read(file);
         }}
       />
-      <Button
-        type="button"
-        variant="ghost"
-        disabled={working}
-        aria-busy={working}
-        onClick={() => {
-          input.current?.click();
-        }}
-      >
-        <Upload aria-hidden="true" className="size-4" />
-        {working ? 'Importing…' : 'Import backup'}
-      </Button>
+      {trigger && (
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={working}
+          aria-busy={working}
+          onClick={() => {
+            input.current?.click();
+          }}
+        >
+          <Upload aria-hidden="true" className="size-4" />
+          {working ? 'Importing…' : 'Import backup'}
+        </Button>
+      )}
       <p aria-live="polite" className="sr-only">
         {working ? 'Importing the backup.' : ''}
       </p>

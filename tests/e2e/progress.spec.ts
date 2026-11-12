@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /*
  * Plan Task C9: Progress (spec 8.4, F21). The total words and sessions count up, the map has one tile per
@@ -25,10 +26,7 @@ async function novelWithWords(page: Page) {
 }
 
 async function openProgress(page: Page) {
-  await page
-    .getByRole('navigation', { name: 'Project views' })
-    .getByRole('link', { name: 'Progress' })
-    .click();
+  await openView(page, 'Progress');
   await expect(page.getByRole('heading', { level: 2, name: 'Map' })).toBeVisible();
 }
 

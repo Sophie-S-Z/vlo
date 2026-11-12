@@ -15,6 +15,7 @@ import { ScenePicker } from '@/features/scenes/ScenePicker';
 import { SoundControl } from '@/features/sound/SoundPanel';
 import { cleanScene, NO_SCENE, type SceneChoice } from '@/features/scenes/scenes';
 import { Button } from '@/ui/button';
+import { ICON_BUTTON } from '@/ui/tip';
 import { Segmented } from '@/ui/segmented';
 import { cn } from '@/ui/cn';
 import {
@@ -253,157 +254,169 @@ export function EditorPane({
           style={{ maxWidth }}
           data-script-style={kind === 'script' ? scriptStyle : undefined}
         >
-          {/* The title and its counts on one row, the item's tools on the next, with their icons in line
-              with the title. */}
-          <header className="mb-4 grid gap-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h2 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{item.title}</h2>
-              <div className="flex items-center gap-x-4">
-                <WordCount
-                  words={item.wordCount}
-                  unit={countUnit(language)}
-                  lines={kind === 'poem' ? (item.lineCount ?? 0) : undefined}
-                />
-                <SaveStatus state={save} />
-              </div>
-            </div>
-            <div className="-ml-4 flex flex-wrap items-center">
-              <PageControl
-                page={page}
-                onPage={(next) => onSettings?.({ page: next })}
-                zoom={zoom}
-                onZoom={(next) => {
-                  setWritingPrefs({ zoom: next });
-                }}
-                pages={pages}
-                language={language}
-                onLanguage={(next) => onSettings?.({ language: next })}
-                script={
-                  kind === 'script'
-                    ? { style: scriptStyle, onStyle: (next) => onSettings?.({ scriptStyle: next }) }
-                    : undefined
-                }
+          {/* One row (Phase 17 decision S2): the title, then its counts and the item's quiet icon tools. */}
+          <header className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <h2 className="min-w-0 font-display text-2xl font-semibold [overflow-wrap:anywhere]">
+              {item.title}
+            </h2>
+            <div className="flex flex-wrap items-center justify-end gap-x-3">
+              <WordCount
+                words={item.wordCount}
+                unit={countUnit(language)}
+                lines={kind === 'poem' ? (item.lineCount ?? 0) : undefined}
               />
-              {!beside && (
-                <>
-                  <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />
-                  <SoundControl scene={scene} />
-                </>
-              )}
-              <Dialog open={insightsOpen} onOpenChange={setInsightsOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" disabled={!editor}>
-                    <ChartNoAxesColumn aria-hidden="true" className="size-4" />
-                    <span className="max-sm:sr-only">Insights</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent
-                  className="top-0 right-0 left-auto h-dvh max-h-dvh w-[min(36rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 content-start overflow-y-auto rounded-none border-y-0 border-r-0"
-                  onCloseAutoFocus={(event) => {
-                    const range = showRange.current;
-                    showRange.current = null;
-                    if (!range || !editor || editor.isDestroyed) return;
-                    event.preventDefault();
-                    editor.chain().focus().setTextSelection(range).scrollIntoView().run();
+              <SaveStatus state={save} />
+              <div className="-mr-2 flex flex-wrap items-center">
+                <PageControl
+                  page={page}
+                  onPage={(next) => onSettings?.({ page: next })}
+                  zoom={zoom}
+                  onZoom={(next) => {
+                    setWritingPrefs({ zoom: next });
                   }}
-                >
-                  <DialogClose asChild>
+                  pages={pages}
+                  language={language}
+                  onLanguage={(next) => onSettings?.({ language: next })}
+                  script={
+                    kind === 'script'
+                      ? { style: scriptStyle, onStyle: (next) => onSettings?.({ scriptStyle: next }) }
+                      : undefined
+                  }
+                />
+                {!beside && (
+                  <>
+                    <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />
+                    <SoundControl scene={scene} />
+                  </>
+                )}
+                <Dialog open={insightsOpen} onOpenChange={setInsightsOpen}>
+                  <DialogTrigger asChild>
                     <Button
                       variant="ghost"
-                      aria-label="Close insights"
-                      className="absolute top-4 right-4 px-3"
+                      className={ICON_BUTTON}
+                      data-tip="Insights"
+                      data-tool="insights"
+                      disabled={!editor}
                     >
-                      <X aria-hidden="true" className="size-4" />
+                      <ChartNoAxesColumn aria-hidden="true" className="size-4" />
+                      <span className="sr-only">Insights</span>
                     </Button>
-                  </DialogClose>
-                  <div className="grid gap-1 pr-10">
-                    <DialogTitle>Insights</DialogTitle>
-                    <DialogDescription>
-                      Statistics, readability, keywords, an AI writing check and an originality check for{' '}
-                      {item.title}. Everything except the web search runs on this device.
-                    </DialogDescription>
-                  </div>
-                  {editor && (
-                    <Suspense fallback={<p className="text-muted">Loading insights.</p>}>
-                      <AnalysisPanel
-                        editor={editor}
-                        kind={kind}
-                        itemId={item.id}
-                        projectId={item.projectId}
-                        onShow={(from, to) => {
-                          showRange.current = { from, to };
-                          setInsightsOpen(false);
-                        }}
-                      />
-                    </Suspense>
-                  )}
-                </DialogContent>
-              </Dialog>
-              <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" disabled={!editor || !open}>
-                    <History aria-hidden="true" className="size-4" />
-                    <span className="max-sm:sr-only">History</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="top-0 right-0 left-auto h-dvh max-h-dvh w-[min(36rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 content-start rounded-none border-y-0 border-r-0">
-                  <DialogClose asChild>
+                  </DialogTrigger>
+                  <DialogContent
+                    className="top-0 right-0 left-auto h-dvh max-h-dvh w-[min(36rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 content-start overflow-y-auto rounded-none border-y-0 border-r-0"
+                    onCloseAutoFocus={(event) => {
+                      const range = showRange.current;
+                      showRange.current = null;
+                      if (!range || !editor || editor.isDestroyed) return;
+                      event.preventDefault();
+                      editor.chain().focus().setTextSelection(range).scrollIntoView().run();
+                    }}
+                  >
+                    <DialogClose asChild>
+                      <Button
+                        variant="ghost"
+                        aria-label="Close insights"
+                        className="absolute top-4 right-4 px-3"
+                      >
+                        <X aria-hidden="true" className="size-4" />
+                      </Button>
+                    </DialogClose>
+                    <div className="grid gap-1 pr-10">
+                      <DialogTitle>Insights</DialogTitle>
+                      <DialogDescription>
+                        Statistics, readability, keywords, an AI writing check and an originality check for{' '}
+                        {item.title}. Everything except the web search runs on this device.
+                      </DialogDescription>
+                    </div>
+                    {editor && (
+                      <Suspense fallback={<p className="text-muted">Loading insights.</p>}>
+                        <AnalysisPanel
+                          editor={editor}
+                          kind={kind}
+                          itemId={item.id}
+                          projectId={item.projectId}
+                          onShow={(from, to) => {
+                            showRange.current = { from, to };
+                            setInsightsOpen(false);
+                          }}
+                        />
+                      </Suspense>
+                    )}
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+                  <DialogTrigger asChild>
                     <Button
                       variant="ghost"
-                      aria-label="Close history"
-                      className="absolute top-4 right-4 px-3"
+                      className={ICON_BUTTON}
+                      data-tip="History"
+                      data-tool="history"
+                      data-tip-align="end"
+                      disabled={!editor || !open}
                     >
-                      <X aria-hidden="true" className="size-4" />
+                      <History aria-hidden="true" className="size-4" />
+                      <span className="sr-only">History</span>
                     </Button>
-                  </DialogClose>
-                  {/* Outside the lazy panel, so the dialog has its name while the panel loads. */}
-                  <div className="grid gap-1 pr-10">
-                    <DialogTitle>History</DialogTitle>
-                    <DialogDescription>
-                      {historyTab === 'snapshots'
-                        ? `Vlo saves a snapshot of ${item.title} after every ${String(snapshotEveryMinutes)} minutes of writing. Restoring one saves the current text first.`
-                        : `Named versions of ${item.title}. A switch keeps the text in the editor as a version.`}
-                    </DialogDescription>
-                  </div>
-                  <Segmented
-                    label="Show"
-                    value={historyTab}
-                    options={[
-                      { value: 'snapshots', label: 'Snapshots' },
-                      { value: 'versions', label: 'Versions' },
-                    ]}
-                    onChange={setHistoryTab}
-                  />
-                  {editor && open && (
-                    <Suspense fallback={<p className="text-muted">Loading {historyTab}.</p>}>
-                      {historyTab === 'snapshots' ? (
-                        <HistoryPanel
-                          item={item}
-                          kind={kind}
-                          editor={editor}
-                          doc={open.doc}
-                          currentText={currentText}
-                          onRestored={(message) => {
-                            setNotice(message);
-                            setHistoryOpen(false);
-                          }}
-                        />
-                      ) : (
-                        <VersionsPanel
-                          item={item}
-                          kind={kind}
-                          editor={editor}
-                          doc={open.doc}
-                          onSwitched={(message) => {
-                            setNotice(message);
-                            setHistoryOpen(false);
-                          }}
-                        />
-                      )}
-                    </Suspense>
-                  )}
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent className="top-0 right-0 left-auto h-dvh max-h-dvh w-[min(36rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 content-start rounded-none border-y-0 border-r-0">
+                    <DialogClose asChild>
+                      <Button
+                        variant="ghost"
+                        aria-label="Close history"
+                        className="absolute top-4 right-4 px-3"
+                      >
+                        <X aria-hidden="true" className="size-4" />
+                      </Button>
+                    </DialogClose>
+                    {/* Outside the lazy panel, so the dialog has its name while the panel loads. */}
+                    <div className="grid gap-1 pr-10">
+                      <DialogTitle>History</DialogTitle>
+                      <DialogDescription>
+                        {historyTab === 'snapshots'
+                          ? `Vlo saves a snapshot of ${item.title} after every ${String(snapshotEveryMinutes)} minutes of writing. Restoring one saves the current text first.`
+                          : `Named versions of ${item.title}. A switch keeps the text in the editor as a version.`}
+                      </DialogDescription>
+                    </div>
+                    <Segmented
+                      label="Show"
+                      value={historyTab}
+                      options={[
+                        { value: 'snapshots', label: 'Snapshots' },
+                        { value: 'versions', label: 'Versions' },
+                      ]}
+                      onChange={setHistoryTab}
+                    />
+                    {editor && open && (
+                      <Suspense fallback={<p className="text-muted">Loading {historyTab}.</p>}>
+                        {historyTab === 'snapshots' ? (
+                          <HistoryPanel
+                            item={item}
+                            kind={kind}
+                            editor={editor}
+                            doc={open.doc}
+                            currentText={currentText}
+                            onRestored={(message) => {
+                              setNotice(message);
+                              setHistoryOpen(false);
+                            }}
+                          />
+                        ) : (
+                          <VersionsPanel
+                            item={item}
+                            kind={kind}
+                            editor={editor}
+                            doc={open.doc}
+                            onSwitched={(message) => {
+                              setNotice(message);
+                              setHistoryOpen(false);
+                            }}
+                          />
+                        )}
+                      </Suspense>
+                    )}
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
           </header>
           <p role="status" className={notice ? 'mb-3 text-sm text-muted' : 'sr-only'}>
