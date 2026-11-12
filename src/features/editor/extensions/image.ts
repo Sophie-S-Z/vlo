@@ -3,6 +3,7 @@ import { Fragment, Slice, type Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { NodeSelection, Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { dropPoint } from '@tiptap/pm/transform';
 import type { EditorView } from '@tiptap/pm/view';
+import { yUndoPluginKey } from '@tiptap/y-tiptap';
 import { db, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import {
@@ -361,6 +362,7 @@ export function insertImageFiles(
   const type = editor.schema.nodes[IMAGE];
   if (!type) return false;
   const ids = files.map(() => newId());
+  newUndoStep(editor.state);
   if (pos === null) {
     let chain = editor.chain().focus();
     for (const id of ids) chain = chain.insertImage({ id });
@@ -375,11 +377,20 @@ export function insertImageFiles(
   const first = ids.length > 1 ? imagePos(editor.state.doc, ids[0] ?? '') : null;
   if (first !== null)
     editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, first)));
+  newUndoStep(editor.state);
   files.forEach((file, i) => {
     storeImageFile(projectId, file, ids[i] ?? '');
   });
   openPanel({ editor, panel: 'image', anchor: 'caret' });
   return true;
+}
+
+/**
+ * Ends the current undo step. The text history joins changes made close together, so without this one
+ * Undo after a new image or a drag would also take back the typing just before it.
+ */
+function newUndoStep(state: EditorState): void {
+  yUndoPluginKey.getState(state)?.undoManager.stopCapturing();
 }
 
 /** A copy of each image row that a paste or a drop from another place names, under a new id. */
@@ -435,7 +446,15 @@ export const ImageInput = Extension.create<ImageInputOptions>({
         key: new PluginKey('imageInput'),
         props: {
           handleDrop: (view: EditorView, event: DragEvent, _slice: Slice, moved: boolean) => {
-            if (moved) return false;
+            if (moved) {
+              // ProseMirror moves the dragged content in one transaction just after this call, and that
+              // move is an undo step of its own.
+              newUndoStep(view.state);
+              queueMicrotask(() => {
+                newUndoStep(view.state);
+              });
+              return false;
+            }
             const files = imageFiles(event.dataTransfer?.files);
             if (files.length === 0) return false;
             const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
