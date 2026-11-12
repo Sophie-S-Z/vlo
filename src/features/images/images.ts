@@ -5,6 +5,7 @@ import { db, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
 import { prepareImage } from './resize';
+import { sweepKey } from './sweepKey';
 
 /*
  * The images in the text (Phase 16, Task G1). Each image is a row of the `images` table. The item's
@@ -172,11 +173,6 @@ export async function sweepImages(projectId: string): Promise<number> {
   const unused = old.filter((row) => !used.has(row.id)).map((row) => row.id);
   await db.images.bulkDelete(unused);
   return unused.length;
-}
-
-/** The key of the time of a project's last sweep, in `appMeta`. */
-export function sweepKey(projectId: string): string {
-  return `imageSweep:${projectId}`;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { clock } from '@/lib/clock';
 import { cleanDayStart, dayStartKey } from '@/features/editor/stats/dayStart';
-import { sweepKey } from '@/features/images/images';
+import { sweepKey } from '@/features/images/sweepKey';
 import { db, viewTables, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
