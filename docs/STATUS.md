@@ -656,8 +656,21 @@ Last update: 2026-11-12
     node copies its row under a new id. Checks: unit tests for the size, the node, the backup round trip,
     a damaged row, a copy, the project delete and the sweep; browser tests for a drop, a drag with Undo,
     the arrow keys, a paste, Decorative, the / menu with a file chooser and Hide the text, with axe.
-  - Not yet: exports (G-B), share links, sync and images between the stanzas of a poem (G-C). Until G-B,
-    an export leaves each image out.
+  - G-B (Task G3): each export reads the image rows by id on the main thread and sends the bytes to the
+    export worker. Word embeds each image at its share of the text width, with the alt text and the
+    caption as its description and title. PDF draws each image, at most 85% of the text height, with its
+    caption below it; a PDF from Vlo holds no alt text, and the notice says so. EPUB holds each image as
+    `OEBPS/images/image-N.jpg` or `.png`, with `alt`, `role="presentation"` for a decorative image, and
+    a `figcaption`. Markdown with images comes as a zip with an `images` folder. Standard manuscript
+    format, web copies, Fountain, Final Draft and share links write "[Image: caption]" (or the alt text,
+    or "[Image]"). An image that is not on the device gets that line in every format. Share-safe export
+    swaps a private name in the alt text and the caption, and the name check counts it. The export notice
+    names each image with no alt text that is not decorative. The walkaway zip keeps one `images` folder
+    for each project, and a backup's readable Markdown points at its image files. Checks: 12 unit tests in
+    `tests/unit/image-export.test.ts`, the share-safe test, EPUBCheck on an EPUB with images, and
+    LibreOffice opens a Word file with images.
+  - Not yet: share links with the images, sync and images between the stanzas of a poem (G-C). Until
+    G-C, a share link shows "[Image: caption]" in place of each image.
 - Phase 15 (plan `docs/plans/phase-15.md`, roadmap 2 "Proof and reach", F68 and F70). The product owner
   took F69, Spanish app text, out of the phase on 2026-11-11.
   - O1 (F70): CI runs EPUBCheck on each EPUB that the tests make (`tests/unit/epubcheck.test.ts`), 9 in

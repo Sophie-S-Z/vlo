@@ -16,6 +16,7 @@ import {
   bookPoetry,
   item,
   loadPublicFile,
+  photoDoc,
   poemUpdate,
   project,
   proseUpdate,
@@ -159,6 +160,7 @@ const EPUBS: [string, () => Promise<Uint8Array>][] = [
     },
   ],
   ['citations', async () => (await toEpub(cited(), options)).bytes],
+  ['images', async () => (await toEpub(photoDoc(), options)).bytes],
   ['200,000-word book', async () => (await toEpub(longBook(), options)).bytes],
 ];
 

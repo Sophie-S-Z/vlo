@@ -6,8 +6,15 @@ import { DEFAULT_FONT } from '@/features/editor/format/fonts';
 import { projectDef } from '@/features/library/templates';
 import type { Backup } from '@/features/backup/file';
 import { exportFileName } from './build';
-import { toMarkdown } from './markdown';
-import type { Block, ExportDoc, ExportSection, HeadingBlock } from './model';
+import { imagePaths, toMarkdown } from './markdown';
+import {
+  imageNames,
+  type Block,
+  type ExportDoc,
+  type ExportImage,
+  type ExportSection,
+  type HeadingBlock,
+} from './model';
 import { itemBlocks, noteCounter, updateToJson } from './read';
 
 /*
@@ -20,7 +27,7 @@ import { itemBlocks, noteCounter, updateToJson } from './read';
 
 const STYLE =
   'body{max-width:40rem;margin:2rem auto;padding:0 1rem;font:1.125rem/1.6 Georgia,serif;color:#1f1d1a;background:#fffdf8}' +
-  'h1,h2,h3,h4{line-height:1.25}a{color:#7a3b12}hr{border:0;text-align:center}hr::after{content:"* * *"}';
+  'h1,h2,h3,h4{line-height:1.25}a{color:#7a3b12}img{max-width:100%;height:auto}hr{border:0;text-align:center}hr::after{content:"* * *"}';
 
 // Markdown export escapes the writer's text, so only the tags it writes itself, such as <u>, are HTML.
 const markdown = new MarkdownIt({ html: true });
@@ -88,6 +95,16 @@ function researchFiles(zip: JSZip, backup: Backup): void {
   }
 }
 
+/** The bytes of each image of a project, by id, as an export reads them (Phase 16). */
+function imagesOf(backup: Backup): Record<string, ExportImage> {
+  const out: Record<string, ExportImage> = {};
+  for (const { info, data } of backup.images) {
+    if (info.type !== 'image/jpeg' && info.type !== 'image/png') continue;
+    out[info.id] = { type: info.type, width: info.width, height: info.height, data: new Uint8Array(data) };
+  }
+  return out;
+}
+
 function projectFiles(zip: JSZip, backup: Backup): void {
   const base = {
     font: backup.project.settings.font ?? DEFAULT_FONT,
@@ -95,20 +112,34 @@ function projectFiles(zip: JSZip, backup: Backup): void {
     language: cleanLanguage(backup.project.settings.language) ?? DEFAULT_LANGUAGE,
     ...(backup.project.authorName ? { author: backup.project.authorName } : {}),
   };
+  const images = imagesOf(backup);
   const sections: ExportSection[] = [];
+  const files: { path: string; doc: ExportDoc }[] = [];
   for (const row of rows(backup)) {
     const level = Math.min(row.depth + 2, 4) as HeadingBlock['level'];
     sections.push({ id: row.path, title: row.title, form: null, blocks: [heading(level, row.title)] });
     if (row.body === null) continue;
     sections.push({ id: `${row.path}#text`, title: row.title, form: 'prose', blocks: row.body });
-    const doc: ExportDoc = {
-      ...base,
-      title: row.title,
-      sections: [{ id: row.path, title: row.title, form: 'prose', blocks: row.body }],
-    };
-    zip.file(row.path, toMarkdown(doc));
+    files.push({
+      path: row.path,
+      doc: {
+        ...base,
+        title: row.title,
+        sections: [{ id: row.path, title: row.title, form: 'prose', blocks: row.body }],
+      },
+    });
   }
-  const whole: ExportDoc = { ...base, title: backup.project.title, sections };
+  const whole: ExportDoc = { ...base, title: backup.project.title, sections, images };
+  // One "images" folder for the project. A file in a folder of the binder reaches it with "../".
+  const names = imageNames(whole);
+  for (const { path, doc } of files) {
+    const prefix = '../'.repeat(path.split('/').length - 1);
+    zip.file(path, toMarkdown(doc, imagePaths(doc, names, prefix)));
+  }
+  for (const [id, name] of names) {
+    const image = images[id];
+    if (image) zip.file(`images/${name}`, image.data, { compression: 'STORE' });
+  }
   zip.file('index.html', page(backup.project.title, markdown.render(toMarkdown(whole)), base.language));
   researchFiles(zip, backup);
 }

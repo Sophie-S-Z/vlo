@@ -1,5 +1,6 @@
 import fontkit from '@pdf-lib/fontkit';
-import type { PDFDocument, PDFFont } from 'pdf-lib';
+import type { PDFDocument, PDFFont, PDFImage } from 'pdf-lib';
+import type { ExportImage } from '../model';
 import { DEFAULT_FONT, localFontName } from '@/features/editor/format/fonts';
 import list from '../pdf-fonts.json';
 
@@ -173,6 +174,8 @@ export function evenGlyphs(sample: Uint8Array): void {
 /** The faces of an export, embedded on first use. */
 export class FontSet {
   private readonly faces = new Map<string, Promise<Face>>();
+  /** One embedded image for each image of the text (Phase 16). */
+  private readonly images = new Map<ExportImage, Promise<PDFImage>>();
   /** One embedded font for each file, so a drawn bold shares the regular font. */
   private readonly embedded = new Map<string, Promise<PDFFont>>();
 
@@ -212,6 +215,16 @@ export class FontSet {
   }
 
   /** The face for a font in a style. A missing italic or bold file gives a drawn italic or bold. */
+  /** The image as the PDF file embeds it, once for all its pages. */
+  embedImage(image: ExportImage): Promise<PDFImage> {
+    let embedded = this.images.get(image);
+    if (!embedded) {
+      embedded = image.type === 'image/png' ? this.pdf.embedPng(image.data) : this.pdf.embedJpg(image.data);
+      this.images.set(image, embedded);
+    }
+    return embedded;
+  }
+
   face(value: string | undefined, bold: boolean, italic: boolean): Promise<Face> {
     const id = this.resolve(value);
     const key = `${id}|${String(bold)}|${String(italic)}`;

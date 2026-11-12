@@ -4,6 +4,7 @@ import { clock } from '@/lib/clock';
 import { db, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
+import { IMAGE } from './attrs';
 import { prepareImage } from './resize';
 import { sweepKey, unusedKey } from './sweepKey';
 
@@ -13,8 +14,7 @@ import { sweepKey, unusedKey } from './sweepKey';
  * alignment. The bytes never go in the document.
  */
 
-/** The node name of an image in an item's document. */
-export const IMAGE = 'image';
+export { IMAGE };
 
 /**
  * An image row with no node in any item, snapshot or version stays this long before the sweep removes

@@ -1,11 +1,14 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
 
 /*
  * Images in the text (Phase 16, Tasks G1 and G2). A file dropped on the text goes in at the pointer, a
  * pasted image goes in at the caret, a drag moves an image and Undo puts it back. The image panel asks
- * for the alt text. Vlo stores each image at most 2,400 pixels on its long side.
+ * for the alt text. Vlo stores each image at most 2,400 pixels on its long side. Each export reads the
+ * stored image (Task G3).
  */
 
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -221,4 +224,43 @@ test('the / menu adds an image from a file, and Hide the text blurs it', async (
   await page.keyboard.press(`${mod}+Shift+Period`);
   const filter = await scene.locator('.vlo-image-frame').evaluate((frame) => getComputedStyle(frame).filter);
   expect(filter).toMatch(/^blur\(/);
+});
+
+/** Runs the export in the open dialog and gives the downloaded file's name and bytes. */
+async function exportFile(page: Page, format: RegExp): Promise<{ name: string; bytes: Buffer }> {
+  await page.getByRole('button', { name: 'Export' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Export' });
+  await dialog.getByRole('radio', { name: format }).click();
+  const download = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Export', exact: true }).click();
+  const file = await download;
+  const bytes = await readFile(await file.path());
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  return { name: file.suggestedFilename(), bytes };
+}
+
+test('Markdown and Word exports hold the stored image with its alt text', async ({ page }) => {
+  const scene = await sceneWithThreeParagraphs(page);
+  await dropOnParagraph(page, scene, 0);
+  const panel = page.getByRole('dialog', { name: 'Image' });
+  await panel.getByLabel('Alt text').fill('Fishing boats at the harbour wall');
+  await panel.getByRole('button', { name: 'Done' }).click();
+  await expect(scene.getByRole('img', { name: /Fishing boats/ })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
+
+  const markdown = await exportFile(page, /Markdown/);
+  expect(markdown.name).toBe('Scene 1.zip');
+  const zip = await JSZip.loadAsync(markdown.bytes);
+  const text = (await zip.file('Scene 1.md')?.async('string')) ?? '';
+  expect(text).toContain('The harbour at dawn.\n\n![Fishing boats at the harbour wall](images/image-1.jpg)');
+  const stored = await zip.file('images/image-1.jpg')?.async('uint8array');
+  // The file is the JPEG that Vlo stored, not the PNG that was dropped.
+  expect([...(stored ?? new Uint8Array()).subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+
+  const word = await JSZip.loadAsync((await exportFile(page, /Word/)).bytes);
+  expect(Object.keys(word.files).filter((name) => name.startsWith('word/media/'))).toHaveLength(1);
+  expect((await word.file('word/document.xml')?.async('string')) ?? '').toContain(
+    'descr="Fishing boats at the harbour wall"',
+  );
 });

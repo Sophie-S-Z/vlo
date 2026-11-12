@@ -9,7 +9,7 @@ import { scriptExtensions } from '@/features/editor/extensions/script';
 import type { ScriptRole } from '@/features/editor/scriptRoles';
 import { parsePoemText, poemDataToJSON } from '@/features/editor/poemText';
 import { buildExportDoc, type ExportScope } from '@/features/export/build';
-import type { ExportDoc } from '@/features/export/model';
+import type { ExportDoc, ExportImage, ImageBlock } from '@/features/export/model';
 import type { EditorForm } from '@/features/library/templates';
 import type { BookSettings, Item, ItemKind, Project, Template } from '@/lib/db';
 import { YFRAGMENT } from '@/lib/ydocs';
@@ -299,4 +299,41 @@ export function withFsType(bytes: Uint8Array, fsType: number): Uint8Array {
     }
   }
   throw new Error('The font has no OS/2 table.');
+}
+
+/** The image fixtures of Phase 16: a JPEG photo and a PNG with transparent pixels. */
+export const JPEG = new Uint8Array(readFileSync('tests/fixtures/images/harbour.jpg'));
+export const PNG = new Uint8Array(readFileSync('tests/fixtures/images/seal.png'));
+
+export const JPEG_IMAGE: ExportImage = { type: 'image/jpeg', width: 40, height: 30, data: JPEG };
+export const IMAGES: Record<string, ExportImage> = {
+  harbour: JPEG_IMAGE,
+  seal: { type: 'image/png', width: 20, height: 20, data: PNG },
+};
+
+export function imageNode(attrs: Partial<Omit<ImageBlock, 'type'>> & { id: string }) {
+  return {
+    type: 'image',
+    attrs: { alt: '', caption: '', decorative: false, width: 100, align: 'center', ...attrs },
+  };
+}
+
+const paragraph = (text: string) => ({ type: 'paragraph', content: [{ type: 'text', text }] });
+
+/** A memory with a captioned photo, a decorative seal and a photo that is not on this device. */
+export function photoDoc(images: Record<string, ExportImage> = IMAGES): ExportDoc {
+  const doc = singleDoc(
+    {
+      type: 'doc',
+      content: [
+        paragraph('The boats came in at dawn.'),
+        imageNode({ id: 'harbour', alt: 'Boats in the harbour', caption: 'The harbour at dawn', width: 75 }),
+        paragraph('A seal on the letter.'),
+        imageNode({ id: 'seal', decorative: true, width: 33, align: 'left' }),
+        imageNode({ id: 'gone', alt: 'A lost photo' }),
+      ],
+    },
+    'prose',
+  );
+  return { ...doc, images };
 }

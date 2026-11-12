@@ -65,6 +65,29 @@ describe('share-safe export', () => {
     expect(count(after, 'Teo')).toBe(count(before, 'Teo') + 1);
   });
 
+  test('swaps a name in the alt text and the caption of an image, and the name check counts it', () => {
+    const image = {
+      type: 'image',
+      attrs: {
+        id: 'img-1',
+        alt: 'Rosa on the pier',
+        caption: 'Teo took this one',
+        width: 100,
+        align: 'center',
+      },
+    };
+    const doc = buildExportDoc({
+      project: project('memoir'),
+      items: [item('m1', 'memory', 'The pier')],
+      scope: { kind: 'item', itemId: 'm1' },
+      updates: new Map([['m1', updateOf({ type: 'doc', content: [image] }, 'prose')]]),
+    });
+    const block = shareSafe(doc, PEOPLE, true).sections[0]?.blocks.find((b) => b.type === 'image');
+    expect(block).toMatchObject({ alt: 'Mae on the pier', caption: 'Sol took this one' });
+    const names = nameCheck(doc, PEOPLE).unmarked.map((n) => n.name);
+    expect(names).toEqual(expect.arrayContaining(['Rosa', 'Teo']));
+  });
+
   test('keeps the text as written when the switch is off or the list is empty', () => {
     const doc = memoirDoc();
     expect(shareSafe(doc, PEOPLE, false)).toBe(doc);

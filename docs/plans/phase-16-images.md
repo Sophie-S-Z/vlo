@@ -49,22 +49,22 @@
 
 **Files:** Create `src/features/editor/extensions/image.ts`, `src/features/images/images.ts`, `src/features/images/resize.ts`, `tests/unit/images.test.ts`. Modify `src/lib/db.ts` (version 15, table `images`), `src/features/editor/docSchema.ts`, `src/features/backup/backup.ts`, `src/features/backup/file.ts` (backup version 13, `images/<id>` files).
 
-- [ ] Tests first: an image round trips through a backup with the same bytes; the resize keeps the shape and makes the long side 2,400 px; a backup with a damaged image row fails the check; deleting a project deletes its images.
-- [ ] The node renders the image from a `blob:` address, with a caption and the alt text. Commit.
+- [x] Tests first: an image round trips through a backup with the same bytes; the resize keeps the shape and makes the long side 2,400 px; a backup with a damaged image row fails the check; deleting a project deletes its images.
+- [x] The node renders the image from a `blob:` address, with a caption and the alt text. Commit.
 
 ### Task G2: Drop, paste and drag, pull request G-A
 
 **Files:** Modify `src/features/editor/extensions/image.ts`, `src/features/editor/toolbar/` (Insert image), `src/features/editor/commands/registry.ts` (`/image`). Create `tests/e2e/images.spec.ts`.
 
-- [ ] Tests first: a file dropped on the second paragraph goes after it; a drag moves an image above the first paragraph; Undo puts it back; a paste of an image from the clipboard goes at the caret; the alt text dialog has no serious axe issue.
-- [ ] A keyboard way to move an image: Alt+Up and Alt+Down move the selected image block. Commit.
+- [x] Tests first: a file dropped on the second paragraph goes after it; a drag moves an image above the first paragraph; Undo puts it back; a paste of an image from the clipboard goes at the caret; the alt text dialog has no serious axe issue.
+- [x] A keyboard way to move an image: Alt+Up and Alt+Down move the selected image block. Commit.
 
 ### Task G3: Exports, pull request G-B
 
 **Files:** Modify `src/features/export/model.ts`, `docx.ts`, `pdf/`, `epub.ts`, `markdown.ts`, `manuscript.ts`, `safeTree.ts`. Extend the export tests and `tests/unit/epubcheck.test.ts`.
 
-- [ ] Tests first: Word, PDF and EPUB each hold the image bytes and the alt text; Markdown gives a zip with the files; manuscript format writes "[Image: caption]"; LibreOffice opens the Word file; EPUBCheck passes.
-- [ ] Commit.
+- [x] Tests first: Word, PDF and EPUB each hold the image bytes and the alt text; Markdown gives a zip with the files; manuscript format writes "[Image: caption]"; LibreOffice opens the Word file; EPUBCheck passes. (A PDF from Vlo has no tags, so it holds no alt text. The export notice says so, and the caption stays below the image.)
+- [x] Commit.
 
 ### Task G4: Share links and sync, pull request G-C, and the Gate
 

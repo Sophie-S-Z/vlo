@@ -8,13 +8,16 @@ import { headerText, roundedWords, type ManuscriptSetup } from '../manuscript';
 import type { BookSettings } from '@/lib/db';
 import {
   footnotesOf,
+  imageStandIn,
   repeatsTitle,
   runsText,
   textBlocks,
   type Align,
   type Block,
   type ExportDoc,
+  type ExportImage,
   type HeadingBlock,
+  type ImageBlock,
   type Run,
   type RunStyle,
 } from '../model';
@@ -146,6 +149,8 @@ interface Settings {
   blockGap: number;
   manuscript: boolean;
   book?: BookSettings;
+  /** The height of the text area, so a tall image fits on one page. */
+  textHeight: number;
 }
 
 const FLEURON = '\u2766';
@@ -180,6 +185,8 @@ class Layout {
   private afterOpening = false;
   private chapters = 0;
 
+  private readonly images: Readonly<Record<string, ExportImage>>;
+
   constructor(
     private readonly fonts: FontSet,
     doc: ExportDoc,
@@ -188,6 +195,58 @@ class Layout {
     private readonly bodyFont: string,
   ) {
     for (const note of footnotesOf(doc)) this.notes.set(note.number, note.note);
+    this.images = doc.images ?? {};
+  }
+
+  /**
+   * An image at its share of the text width, at its place, with its caption below it (decision G5). In
+   * standard manuscript format, or when the image is not on this device, a line names the image.
+   */
+  private async imageRows(block: ImageBlock, place: { left: number; right: number }): Promise<Row[]> {
+    const { spacing, blockGap, manuscript, textSize, textWidth, textHeight } = this.settings;
+    const source = this.images[block.id];
+    // A line in italic, or upright in standard manuscript format, which has one style for every word.
+    const line = (text: string, size: number) =>
+      this.paragraph([{ type: 'text', text, style: {} }], {
+        left: place.left,
+        right: place.right,
+        align: 'center',
+        spacing,
+        base: { font: this.bodyFont, size, italic: !manuscript },
+      });
+    if (!source || manuscript) {
+      const rows = await line(imageStandIn(block), textSize);
+      const [first] = rows;
+      if (first) first.spaceBefore = Math.max(first.spaceBefore, blockGap);
+      return rows;
+    }
+    const embedded = await this.fonts.embedImage(source);
+    const avail = textWidth - place.left - place.right;
+    let width = (avail * block.width) / 100;
+    let height = (width * source.height) / source.width;
+    const tallest = textHeight * 0.85;
+    if (height > tallest) {
+      width = (width * tallest) / height;
+      height = tallest;
+    }
+    const x =
+      place.left +
+      (block.align === 'left' ? 0 : block.align === 'right' ? avail - width : (avail - width) / 2);
+    const caption = block.caption ? await line(block.caption, textSize * 0.85) : [];
+    const [captionTop] = caption;
+    if (captionTop) captionTop.spaceBefore = textSize * 0.4;
+    return [
+      {
+        height,
+        spaceBefore: blockGap,
+        keepWithNext: caption.length > 0,
+        notes: [],
+        draw: (d, top) => {
+          d.image({ source, embedded }, x, top - height, width, height);
+        },
+      },
+      ...caption,
+    ];
   }
 
   async face(font: string | undefined, bold: boolean, italic: boolean): Promise<Face> {
@@ -619,6 +678,8 @@ class Layout {
           },
         ];
       }
+      case 'image':
+        return this.imageRows(block, place);
       case 'quote': {
         const inner = { left: place.left + 24, right: place.right + 24 };
         this.last = 'quote';
@@ -1066,6 +1127,7 @@ async function layOutOnce(
     blockGap: book ? leading(textSize, spacing) / 2 : gap,
     manuscript: manuscript !== undefined,
     ...(book ? { book } : {}),
+    textHeight: pageHeight - margins.top - margins.bottom,
   };
   const layout = new Layout(fonts, doc, settings, toMathml, bodyFont);
   const textTop = pageHeight - margins.top;

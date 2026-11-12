@@ -6,7 +6,7 @@
  */
 
 import { countUnit, countWords } from '@/lib/wordcount';
-import type { Block, ExportDoc, Run, RunStyle } from './model';
+import { imageStandIn, type Block, type ExportDoc, type Run, type RunStyle } from './model';
 
 export interface ManuscriptDetails {
   /** The writer's name as it goes on the first page and the byline. */
@@ -116,6 +116,13 @@ function plainBlocks(blocks: readonly Block[]): Block[] {
         return {
           type: 'stanza',
           lines: block.lines.map((line) => ({ ...line, runs: plainRuns(line.runs) })),
+        };
+      // An agent asks for the text alone, so each image becomes a line that names it (decision G5).
+      case 'image':
+        return {
+          type: 'paragraph',
+          align: 'center',
+          runs: [{ type: 'text', text: imageStandIn(block), style: {} }],
         };
       default:
         return block;

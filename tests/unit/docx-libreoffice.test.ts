@@ -6,7 +6,18 @@ import JSZip from 'jszip';
 import { afterAll, describe, expect, test } from 'vitest';
 import { buildExportDoc } from '@/features/export/build';
 import { toDocx } from '@/features/export/docx';
-import { item, POEM_TEXT, poemUpdate, project, proseUpdate, RICH_PROSE, singleDoc } from './export-fixtures';
+import {
+  item,
+  JPEG,
+  photoDoc,
+  PNG,
+  POEM_TEXT,
+  poemUpdate,
+  project,
+  proseUpdate,
+  RICH_PROSE,
+  singleDoc,
+} from './export-fixtures';
 
 /*
  * The Word file opens in a second word processor (plan Task B3 to B6). LibreOffice reads each file by
@@ -114,4 +125,19 @@ describe.runIf(hasLibreOffice)('Word export in LibreOffice', () => {
     },
     180_000,
   );
+
+  test('LibreOffice opens the images of a Word file with their alt text and caption (Phase 16)', async () => {
+    writeFileSync(join(dir, 'photos.docx'), await toDocx(photoDoc()));
+    convert([join(dir, 'photos.docx')], 'odt');
+    const odt = await JSZip.loadAsync(readFileSync(join(dir, 'photos.odt')));
+    const pictures = Object.keys(odt.files).filter((name) => name.startsWith('Pictures/'));
+    const stored = await Promise.all(
+      pictures.map((name) => odt.file(name)?.async('uint8array') ?? Promise.resolve(undefined)),
+    );
+    expect(stored).toEqual(expect.arrayContaining([JPEG, PNG]));
+    const content = (await odt.file('content.xml')?.async('string')) ?? '';
+    expect(content).toContain('Boats in the harbour');
+    expect(content).toContain('The harbour at dawn');
+    expect(content).toContain('[Image: A lost photo]');
+  }, 180_000);
 });

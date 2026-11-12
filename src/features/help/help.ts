@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 20,
+  version: 21,
   date: '2026-11-12',
   guide: [
     {
@@ -48,6 +48,8 @@ export const HELP = {
         'Vlo asks for the alt text: what the image shows, for a reader who cannot see it. Choose Decorative when the image adds nothing that the words do not say.',
         'Drag the image to move it. Or select it and press Alt with the Up or Down arrow key. Press Enter on a selected image to change its alt text, caption, size or place.',
         'Vlo keeps a copy of at most 2,400 pixels on the long side, on this device. The copy holds no camera data, such as the place of a photo. Backups keep each image.',
+        'Word, PDF and EPUB exports hold each image with its caption. Word and EPUB also hold the alt text. A Markdown export with images comes as a zip file with an images folder.',
+        'Standard manuscript format, web copies and script files put a line such as “[Image: The harbour]” in place of each image. The export notice names each image with no alt text.',
       ],
     },
     {

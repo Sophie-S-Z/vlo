@@ -1,11 +1,22 @@
 import type { NoteContent } from '@/features/editor/format/notes';
-import { footnotesOf, repeatsTitle, type Block, type ExportDoc, type Run, type RunStyle } from './model';
+import {
+  footnotesOf,
+  imageNames,
+  imageStandIn,
+  repeatsTitle,
+  type Block,
+  type ExportDoc,
+  type Run,
+  type RunStyle,
+} from './model';
 
 /*
  * Markdown export (spec section 9). Poem lines keep every space: each leading space becomes U+00A0, each
  * line ends with a backslash hard break, and a blank line separates stanzas. Footnotes use [^1].
  * Equations keep $...$ and $$...$$. Markdown has no color, font or size, so those runs keep their text.
  * Underline, highlight, superscript and subscript use the HTML tags that most Markdown readers show.
+ * An image is `![alt](images/image-1.jpg)` with its caption in italics below it, and the export is then
+ * a zip with the images folder (decision G5). An image that is not on the device stays as "[Image: ...]".
  */
 
 const NBSP = ' ';
@@ -58,7 +69,7 @@ function poemLine(runs: readonly Run[]): string {
   return guardLineStart(NBSP.repeat(lead) + rest);
 }
 
-function blockMarkdown(block: Block, depth = 0): string {
+function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth = 0): string {
   const indent = '   '.repeat(depth);
   switch (block.type) {
     case 'paragraph':
@@ -69,9 +80,16 @@ function blockMarkdown(block: Block, depth = 0): string {
       return '***';
     case 'math':
       return `$$${block.latex}$$`;
+    case 'image': {
+      const path = paths.get(block.id);
+      if (path === undefined) return escapeMarkdown(imageStandIn(block));
+      const alt = block.decorative ? '' : escapeMarkdown(block.alt);
+      const image = `![${alt}](${path})`;
+      return block.caption === '' ? image : `${image}\\\n*${escapeMarkdown(block.caption)}*`;
+    }
     case 'quote':
       return block.blocks
-        .map((b) => blockMarkdown(b))
+        .map((b) => blockMarkdown(b, paths))
         .join('\n\n')
         .split('\n')
         .map((line) => (line === '' ? '>' : `> ${line}`))
@@ -80,7 +98,7 @@ function blockMarkdown(block: Block, depth = 0): string {
       return block.items
         .map((item, i) => {
           const marker = block.ordered ? `${String(block.start + i)}. ` : '- ';
-          const body = item.map((b) => blockMarkdown(b, depth + 1)).join('\n\n');
+          const body = item.map((b) => blockMarkdown(b, paths, depth + 1)).join('\n\n');
           const [first = '', ...rest] = body.split('\n');
           const pad = ' '.repeat(marker.length);
           return `${indent}${marker}${first.trimStart()}${rest.map((l) => (l === '' ? '' : `\n${indent}${pad}${l.trimStart()}`)).join('')}`;
@@ -110,14 +128,26 @@ function noteMarkdown(note: NoteContent): string {
     .join('');
 }
 
+/**
+ * The address of each image from the Markdown file: a file in the "images" folder beside it, or
+ * `prefix` before that folder, such as "../" for a file one folder down.
+ */
+export function imagePaths(
+  doc: ExportDoc,
+  names: ReadonlyMap<string, string> = imageNames(doc),
+  prefix = '',
+): Map<string, string> {
+  return new Map([...names].map(([id, name]) => [id, `${prefix}images/${name}`]));
+}
+
 /** The Markdown text of an export, with a title line and the notes at the end. */
-export function toMarkdown(doc: ExportDoc): string {
+export function toMarkdown(doc: ExportDoc, paths: ReadonlyMap<string, string> = imagePaths(doc)): string {
   const parts: string[] = [`# ${escapeMarkdown(doc.title)}`];
   if (doc.author) parts.push(`*${escapeMarkdown(doc.author)}*`);
   for (const section of doc.sections) {
     for (const block of section.blocks) {
       if (repeatsTitle(doc, section, block)) continue;
-      parts.push(blockMarkdown(block));
+      parts.push(blockMarkdown(block, paths));
     }
   }
   const notes = footnotesOf(doc);
@@ -125,4 +155,25 @@ export function toMarkdown(doc: ExportDoc): string {
     parts.push(notes.map((n) => `[^${String(n.number)}]: ${noteMarkdown(n.note)}`).join('\n'));
   }
   return `${parts.filter((p) => p !== '').join('\n\n')}\n`;
+}
+
+/**
+ * The Markdown export: the text alone, or a zip with the text and an images folder when the text holds
+ * an image that is on this device.
+ */
+export async function markdownFile(
+  doc: ExportDoc,
+  name: string,
+): Promise<{ bytes: Uint8Array; zip: boolean }> {
+  const names = imageNames(doc);
+  const text = new TextEncoder().encode(toMarkdown(doc, imagePaths(doc, names)));
+  if (names.size === 0) return { bytes: text, zip: false };
+  const { default: JSZip } = await import('jszip');
+  const zip = new JSZip();
+  zip.file(`${name}.md`, text);
+  for (const [id, file] of names) {
+    const image = doc.images?.[id];
+    if (image) zip.file(`images/${file}`, image.data, { compression: 'STORE' });
+  }
+  return { bytes: await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }), zip: true };
 }

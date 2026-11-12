@@ -29,7 +29,7 @@ import {
 } from 'pdf-lib';
 import type { TextFill } from '@/features/editor/format/fill';
 import type { Face } from './fonts';
-import type { Box, Sink } from './sink';
+import type { Box, PlacedImage, Sink } from './sink';
 
 /*
  * Low-level drawing on one PDF page: text in any face with a drawn bold or italic, rules, boxes, gradient
@@ -218,6 +218,10 @@ export class Drawer implements Sink {
     const key = PDFName.of(`VloSh${String(this.shadings)}`);
     dict.set(key, context.register(shading));
     return key;
+  }
+
+  image(image: PlacedImage, x: number, y: number, width: number, height: number): void {
+    this.page.drawImage(image.embedded, { x, y, width, height });
   }
 
   rect(x: number, y: number, width: number, height: number, color: Rgb): void {
