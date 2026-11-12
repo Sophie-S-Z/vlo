@@ -95,10 +95,34 @@ test('US05: a double-click on a linked card opens its scene in under 1 s', async
   await page.getByRole('button', { name: 'Cards from scenes' }).click();
   await expect(card(page, 'Scene 1')).toBeVisible();
 
-  const started = Date.now();
+  // The page times the open itself, from the first press to the scene's editor on screen. A clock in the test
+  // also counts each wait between its checks, which can add half a second to a fast open.
+  await page.evaluate(() => {
+    const timed = window as unknown as { vloOpened?: Promise<number> };
+    timed.vloOpened = new Promise<number>((resolve) => {
+      let pressed = 0;
+      document.addEventListener(
+        'pointerdown',
+        () => {
+          pressed = performance.now();
+        },
+        { capture: true, once: true },
+      );
+      const check = () => {
+        const editor = document.querySelector('[role="textbox"][aria-label="Scene 1"]');
+        if (pressed > 0 && editor && editor.getBoundingClientRect().height > 0)
+          resolve(performance.now() - pressed);
+        else requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    });
+  });
   await card(page, 'Scene 1').locator('h3').dblclick();
   await expect(page.getByRole('textbox', { name: 'Scene 1' })).toBeVisible();
-  expect(Date.now() - started).toBeLessThan(1000);
+  const opened = await page.evaluate(
+    () => (window as unknown as { vloOpened?: Promise<number> }).vloOpened ?? Promise.resolve(Infinity),
+  );
+  expect(opened).toBeLessThan(1000);
   // The address names the card, so the scene editor takes its transition name.
   expect(new URL(page.url()).searchParams.get('card')).not.toBeNull();
 });
