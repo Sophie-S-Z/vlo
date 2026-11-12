@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
 /** The views that sit in the More menu of the tab row (Phase 17 decision S3), unless one is on show. */
-const MORE_VIEWS = ['Outline', 'Codex', 'Feedback', 'Book', 'Submissions', 'Progress'];
+const MORE_VIEWS = ['Workshop', 'Outline', 'Codex', 'Feedback', 'Book', 'Submissions', 'Progress'];
 
 /**
  * Opens a project view by its name. Write and the views of the template are tabs. The other views sit in

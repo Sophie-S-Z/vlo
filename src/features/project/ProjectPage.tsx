@@ -60,6 +60,7 @@ import { setAiMode } from '@/features/ai/modes';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { recordFeature } from '@/features/usage/usage';
 import { ProjectMissing } from './ViewNotices';
+import { workshopTools } from '@/features/workshop/tools';
 
 /** The tools that sit on the screen as icons, by their `data-tool` name, for the command menu. */
 const ITEM_TOOLS: readonly { id: string; label: string; keywords: readonly string[] }[] = [
@@ -679,6 +680,15 @@ export function ProjectPage() {
         void navigate(`/p/${project.id}/progress`);
       },
     },
+    // The Workshop tools of the project's modes (Phase 17 decision D1), each one by its name.
+    ...workshopTools(project.templates).map((tool) => ({
+      id: `workshop-${tool.id}`,
+      label: `Open ${tool.label} in the Workshop`,
+      keywords: ['workshop', ...tool.keywords],
+      run: () => {
+        void navigate(`/p/${project.id}/workshop?tool=${tool.id}`);
+      },
+    })),
     ...(series
       ? [
           {

@@ -1,6 +1,7 @@
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { hasTemplate } from '@/features/library/templates';
+import { workshopHint, workshopTools } from '@/features/workshop/tools';
 import { Link, useLocation } from 'react-router';
 import { ModeBadge } from '@/features/ai/ModeBadge';
 import type { Project } from '@/lib/db';
@@ -61,6 +62,19 @@ const moreViews: readonly MoreTab[] = [
   },
 ];
 
+/** The Workshop (Phase 17 decision D1) leads the More menu when the project's modes have tools in it. */
+function workshopView(project: Project): MoreTab[] {
+  if (workshopTools(project.templates).length === 0) return [];
+  return [
+    {
+      label: 'Workshop',
+      to: '/workshop',
+      active: (path) => path.endsWith('/workshop'),
+      hint: workshopHint(project.templates),
+    },
+  ];
+}
+
 /**
  * Write and the views of the templates show as tabs. The other views go in the More menu, so the row stays
  * short. The view on show always has its tab.
@@ -81,12 +95,14 @@ function tabsFor(project: Project, path: string, search: URLSearchParams): { tab
         '/sequences',
         '/submissions',
         '/progress',
+        '/workshop',
       ].some((end) => path.endsWith(end)),
   };
-  const shown = moreViews.filter((tab) => tab.active(path, search));
+  const views = [...workshopView(project), ...moreViews];
+  const shown = views.filter((tab) => tab.active(path, search));
   return {
     tabs: [write, ...viewsOf(project), ...shown],
-    more: moreViews.filter((tab) => !tab.active(path, search)),
+    more: views.filter((tab) => !tab.active(path, search)),
   };
 }
 
@@ -185,7 +201,10 @@ export function ViewTabs({
               <DropdownMenuContent align="start" className="w-72">
                 {more.map((tab) => (
                   <DropdownMenuItem key={tab.label} asChild>
-                    <Link to={`/p/${project.id}${tab.to}`} className="grid gap-0.5 text-text no-underline">
+                    <Link
+                      to={`/p/${project.id}${tab.to}`}
+                      className="grid content-center gap-0.5 py-2 text-text no-underline"
+                    >
                       <span className="font-medium">{tab.label}</span>
                       <span className="text-xs text-muted">{tab.hint}</span>
                     </Link>
