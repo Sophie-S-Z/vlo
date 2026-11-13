@@ -27,10 +27,10 @@ import {
   MAX_SERIES_TITLE,
   moveBook,
   renameSeries,
-  seriesTimeline,
   setStyleSheet,
   styleRule,
 } from './series';
+import { seriesTimeline } from './timeline';
 import { SeriesTimeline } from './SeriesTimeline';
 
 /*

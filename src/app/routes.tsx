@@ -2,7 +2,6 @@ import { redirect, type RouteObject } from 'react-router';
 import { LibraryPage } from '@/features/library/LibraryPage';
 import { needsOnboarding } from '@/features/onboarding/firstVisit';
 import { WelcomePage } from '@/features/onboarding/WelcomePage';
-import { SettingsPage } from '@/features/settings/SettingsPage';
 import { AppShell } from './AppShell';
 import { NotFound } from './NotFound';
 import { RouteError } from './RouteError';
@@ -90,7 +89,10 @@ export const routes: RouteObject[] = [
         path: 'series/:seriesId',
         lazy: async () => ({ Component: (await import('@/features/series/SeriesPage')).SeriesPage }),
       },
-      { path: 'settings', element: <SettingsPage /> },
+      {
+        path: 'settings',
+        lazy: async () => ({ Component: (await import('@/features/settings/SettingsPage')).SettingsPage }),
+      },
       // A pairing link for sync (F49). The fragment holds the space, so the page takes it once.
       {
         path: 'pair',

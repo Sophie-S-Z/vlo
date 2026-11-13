@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { inReadingOrder } from '@/features/codex/codex';
-import { seriesTimeline } from '@/features/series/series';
+import { seriesTimeline } from '@/features/series/timeline';
 import type { Item } from '@/lib/db';
 
 /* Roadmap 2 F67, plan Task N5, Review Focus 4: the scenes of a series on one timeline. */
