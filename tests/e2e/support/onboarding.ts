@@ -10,6 +10,10 @@ export async function skipOnboarding(page: Page) {
     // The first-use tips line (Phase 17) stays closed here; tips.spec.ts tests it.
     if (localStorage.getItem('vlo:tips') === null)
       localStorage.setItem('vlo:tips', JSON.stringify({ closed: true, index: 0 }));
+    // The daily count (Phase 18) is on for a real writer. Here it stays off, so the network tests see only
+    // what they test; accounts.spec.ts tests the count.
+    if (localStorage.getItem('vlo:daily-count') === null)
+      localStorage.setItem('vlo:daily-count', JSON.stringify({ off: true }));
   });
   await page.goto('/welcome');
   await page.getByRole('button', { name: 'Skip' }).click();

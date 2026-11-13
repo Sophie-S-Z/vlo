@@ -14,6 +14,9 @@ import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { UsageSettings } from '@/features/usage/UsageSettings';
+import { DailyCountSetting } from '@/features/account/DailyCountSetting';
+import { sharingReady } from '@/features/share/rpc';
+import { Link } from 'react-router';
 import { SpeechSettings } from '@/features/voice/SpeechSettings';
 
 // Sync loads with Settings only when it opens, so the first screen stays small.
@@ -50,9 +53,9 @@ function ThemeSwatch({ theme }: { theme: ResolvedTheme }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section className="border-t border-rule py-6">
+    <section id={id} className="border-t border-rule py-6">
       <h2 className="font-display text-2xl font-semibold">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
@@ -259,14 +262,34 @@ export function SettingsPage() {
           <SafariSteps closable={false} className="mt-4" />
         </Section>
 
-        <Section title="Devices">
+        {sharingReady() && (
+          <Section title="Account">
+            <p className="text-muted">
+              Sign in to keep every project the same on your phone, your laptop and any other device. Your
+              writing stays locked with your own passphrase.
+            </p>
+            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+              <Link to="/account" className="underline">
+                Sign in and sync
+              </Link>
+              <Link to="/send-feedback" state={{ from: '/settings' }} className="underline">
+                Send feedback to the makers of Vlo
+              </Link>
+            </p>
+          </Section>
+        )}
+
+        <Section title="Devices" id="devices">
           <Suspense fallback={<p className="text-sm text-muted">Loading your devices.</p>}>
             <DevicesSection />
           </Suspense>
         </Section>
 
         <Section title="Usage counts">
-          <UsageSettings />
+          <div className="grid gap-6">
+            <DailyCountSetting />
+            <UsageSettings />
+          </div>
         </Section>
       </div>
     </div>

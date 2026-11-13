@@ -118,6 +118,21 @@ export const routes: RouteObject[] = [
         path: 'verify',
         lazy: async () => ({ Component: (await import('@/features/authorship/VerifyPage')).VerifyPage }),
       },
+      // Accounts, sync on every device, feedback to the owner and the owner page (Phase 18).
+      {
+        path: 'account',
+        lazy: async () => ({ Component: (await import('@/features/account/AccountPage')).AccountPage }),
+      },
+      {
+        path: 'send-feedback',
+        lazy: async () => ({
+          Component: (await import('@/features/account/SendFeedbackPage')).SendFeedbackPage,
+        }),
+      },
+      {
+        path: 'owner',
+        lazy: async () => ({ Component: (await import('@/features/account/OwnerPage')).OwnerPage }),
+      },
       {
         path: 'help',
         lazy: async () => ({ Component: (await import('@/features/help/HelpPage')).HelpPage }),

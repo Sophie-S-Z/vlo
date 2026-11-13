@@ -1,6 +1,6 @@
 # Vlo
 
-Vlo is a writing app for novels, memoirs and poetry that keeps every word in the writer's own browser. It works offline, needs no account, and sends nothing unless the writer asks for an AI request, a share link, a weekly usage report or a WordPress.com draft.
+Vlo is a writing app for novels, memoirs and poetry that keeps every word in the writer's own browser. It works offline and needs no account to write. An optional account syncs every project between a writer's devices, sealed with the writer's own passphrase, so no server reads a word. Vlo sends nothing else unless the writer asks for an AI request, a share link, feedback, a weekly usage report or a WordPress.com draft, apart from an anonymous daily count that Settings can turn off.
 
 Writers: the user guide is the Help page in the app (`/help`, `src/features/help/help.ts`). The privacy page is `/privacy`.
 
@@ -10,7 +10,7 @@ Writers: the user guide is the Help page in the app (`/help`, `src/features/help
 2. Run `npm ci`.
 3. Run `npm run dev` and open the address that Vite prints.
 
-Sharing and usage counts need a Supabase project. Without the two values of `.env.example`, the build shows "Sharing is not set up in this build." and sends nothing. `docs/sharing-setup.md` gives the steps.
+Sharing, sync, accounts, feedback and usage counts need a Supabase project. Without the two values of `.env.example`, the build shows "Sharing is not set up in this build." and sends nothing. `docs/sharing-setup.md` and `docs/accounts-setup.md` give the steps. The owner page is at `/owner`.
 
 ## Scripts
 
@@ -36,7 +36,7 @@ Before a push, run `typecheck`, `lint`, `format:check`, `test`, `build` and `siz
 - `src/lib`: shared code, such as the database (`db.ts`), the item documents (`ydocs.ts`), the network module (`net.ts`) and the private-name code (`privacy.ts`).
 - `src/ui`: shared interface pieces.
 - `tests/unit`: Vitest tests. `tests/e2e`: Playwright tests, named after the user story they prove where one exists. `tests/fixtures`: the poem, memoir and novel fixtures and the 100,000-word generator.
-- `supabase/migrations`: the SQL for share links and usage counts.
+- `supabase/migrations`: the SQL for share links, sync, sprint rooms, accounts, the daily count, feedback and the owner page.
 
 ## Rules for every change
 

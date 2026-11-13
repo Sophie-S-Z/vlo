@@ -1,3 +1,4 @@
+import { sharingReady } from '@/features/share/rpc';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { sweepImagesDaily } from '@/features/images/images';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
@@ -715,6 +716,27 @@ export function ProjectPage() {
         void navigate('/settings');
       },
     },
+    // Phase 18: sync on every device and feedback to the makers of Vlo.
+    ...(sharingReady()
+      ? [
+          {
+            id: 'account',
+            label: 'Sign in and sync your devices',
+            keywords: ['account', 'sync', 'phone', 'laptop'],
+            run: () => {
+              void navigate('/account');
+            },
+          },
+          {
+            id: 'send-feedback',
+            label: 'Send feedback',
+            keywords: ['suggestion', 'idea', 'problem', 'bug'],
+            run: () => {
+              void navigate('/send-feedback', { state: { from: '/p' } });
+            },
+          },
+        ]
+      : []),
     ...(activeEditor
       ? commandsFor(activeEditor.form, project.templates).map((cmd): CommandAction => ({
           id: cmd.id,

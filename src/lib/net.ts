@@ -56,6 +56,11 @@ export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
   usage: supabaseHosts(),
   sync: supabaseHosts(),
   room: supabaseHosts(),
+  // Phase 18: the account (Supabase Auth), the anonymous daily count and feedback to the owner reach only
+  // the Supabase project of this build too.
+  account: supabaseHosts(),
+  ping: supabaseHosts(),
+  feedback: supabaseHosts(),
   // The web part of the originality check, only when the writer presses its button: short phrases go to
   // Wikipedia's search and to OpenAlex, a free index of research papers. Neither needs a key.
   originality: ['en.wikipedia.org', 'api.openalex.org'],

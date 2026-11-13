@@ -8,8 +8,8 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 11,
-  date: '2026-11-12',
+  version: 12,
+  date: '2026-11-13',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
@@ -19,7 +19,7 @@ export const PRIVACY = {
     'A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.',
     'The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.',
     'The network log stays in this browser.',
-    'Vlo loads no third-party script, font, analytics or tracking pixel. No Vlo account exists.',
+    'Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync, and the server never gets a word of your writing.',
   ],
   leaves: {
     ai: {
@@ -53,7 +53,7 @@ export const PRIVACY = {
     },
     sync: {
       title: 'Sync between your devices',
-      when: 'Only after you turn on sync in Settings, and only between the devices that you pair.',
+      when: 'Only after you turn on sync, on the Account page or in Settings, and only between the devices that you sign in on or pair.',
       sends:
         'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
     },
@@ -74,6 +74,24 @@ export const PRIVACY = {
       when: 'Only when you choose "Save as a draft on WordPress.com" in Publish, in a build that offers it.',
       sends:
         'The title, the excerpt and the text of the post, with the access token that WordPress.com gave when you signed in, to the WordPress.com site that you picked. Vlo saves the post as a draft. The token stays in the tab until you close it. Every other platform in Publish gets only what you copy and paste.',
+    },
+    account: {
+      title: 'Your account',
+      when: 'Only when you sign in, while you stay signed in, and when you sign out or delete the account.',
+      sends:
+        'Your email address and the 6-digit code, or the sign-in that Google gives. For sync, the account keeps the sync key locked with your sync passphrase. The passphrase never leaves the device, so the server cannot open the key or read a word. Delete my account removes the account, the sync and every sealed copy.',
+    },
+    ping: {
+      title: 'The daily count',
+      when: 'Once a day while the switch in Settings is on. It is on until you turn it off.',
+      sends:
+        'A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer) and whether Vlo is installed. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. Never text, a title or a name, and no cookie. Turning it off forgets the random id.',
+    },
+    feedback: {
+      title: 'Feedback to the makers of Vlo',
+      when: 'Only when you press Send feedback.',
+      sends:
+        'What you type, the kind of feedback, a rating if you pick one, a reply address if you type one, the screen that you came from, the kind of device and the Vlo version. When you are signed in, your account goes with it. No text of your projects goes.',
     },
   } satisfies Record<NetPurpose, { title: string; when: string; sends: string }>,
   contact: {

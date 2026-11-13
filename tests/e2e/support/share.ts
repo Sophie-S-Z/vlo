@@ -1,6 +1,7 @@
 import { randomBytes, webcrypto } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import type { BrowserContext, Route } from '@playwright/test';
+import { FakeAccounts } from '../../fixtures/fakeAccounts';
 import { FakeSyncRelay } from '../../fixtures/syncRelay';
 
 /* A fake Supabase project and sealed share bundles for the reader view tests (spec section 11). */
@@ -28,13 +29,35 @@ interface Fake {
   /** The sync relay of migration 0005 (F49). */
   sync: FakeSyncRelay;
   calls: { name: string; body: Record<string, unknown> }[];
+  /** Supabase Auth and the functions of migration 0008 (Phase 18). */
+  accounts?: FakeAccounts;
 }
+
+const AUTH = 'https://vlo-test.supabase.co/auth/v1/';
 
 /** A fake Supabase project for every page of the context. Two contexts can share one project. */
 export async function fakeSupabase(
   context: BrowserContext,
   fake: Fake = { shares: new Map(), sync: new FakeSyncRelay(), calls: [] },
 ): Promise<Fake> {
+  const accounts = (fake.accounts ??= new FakeAccounts(fake.sync));
+  await context.route(`${AUTH}**`, async (route: Route) => {
+    const request = route.request();
+    if (request.method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: CORS });
+      return;
+    }
+    const path = new URL(request.url()).pathname.split('/').at(-1) ?? '';
+    const body = (request.postDataJSON() ?? {}) as Record<string, unknown>;
+    const bearer = (request.headers().authorization ?? '').replace(/^Bearer /, '');
+    fake.calls.push({ name: `auth:${path}`, body });
+    const [status, value] = accounts.auth(path, body, bearer);
+    await route.fulfill({
+      status,
+      headers: { ...CORS, 'content-type': 'application/json' },
+      ...(status === 204 ? {} : { body: JSON.stringify(value) }),
+    });
+  });
   await context.route(`${RPC}*`, async (route: Route) => {
     const request = route.request();
     if (request.method() === 'OPTIONS') {
@@ -121,6 +144,18 @@ export async function fakeSupabase(
         return;
       }
       default: {
+        let answer: { value: unknown } | undefined;
+        try {
+          const bearer = (request.headers().authorization ?? '').replace(/^Bearer /, '');
+          answer = accounts.call(name, body, bearer);
+        } catch (error) {
+          await reply(400, { code: 'P0001', message: (error as Error).message });
+          return;
+        }
+        if (answer) {
+          await reply(200, answer.value);
+          return;
+        }
         if (!name.includes('sync')) {
           await reply(404, { message: 'unknown' });
           return;
