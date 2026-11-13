@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 22,
+  version: 23,
   date: '2026-11-12',
   guide: [
     {
@@ -27,7 +27,19 @@ export const HELP = {
         'In the Library, choose New project.',
         'Pick one or more shapes: Novel, Memoir, Poetry collection, Open writing or Script.',
         'Choose Create project. The first item opens, ready for your words.',
-        'For a fast note, choose Quick note in the Library. The note goes into the Inbox folder at the top of the project.',
+        'For a fast note, choose Quick note (the notebook icon) in the Library. The note goes into the Inbox folder at the top of the project.',
+        'To bring in a backup or writing from Word, Markdown or Scrivener, choose Import in the Library.',
+      ],
+    },
+    {
+      title: 'Find the tools',
+      steps: [
+        'Vlo shows few tools at a time, so the page stays calm. Every tool is still there.',
+        'Point at an icon, or move to it with Tab, to see its name.',
+        'Press Ctrl+K (Cmd+K on a Mac), or choose Search, and type what you want: a tool such as Insights, History or Sound, a view such as the Codex, or an item.',
+        'Type / in the text for headings, lists, footnotes, images, citations and more. Select words for a small menu of styles, links and comments.',
+        'The More tab next to the views holds the Outline, the Codex, Feedback, Book, Submissions and Progress.',
+        'A tip line above the text names one of these ways at a time. Close it when you know them. Settings, Writing, can show the tips again.',
       ],
     },
     {
@@ -143,7 +155,7 @@ export const HELP = {
     {
       title: 'Hide the text from people near you',
       steps: [
-        'Choose Hide text next to the timer, or press Ctrl+Shift+. (Command+Shift+. on a Mac). Press it again to show the text.',
+        'Choose Focus, then Hide the text, or press Ctrl+Shift+. (Command+Shift+. on a Mac). While the text is hidden, an eye button next to the timer shows it again.',
         'In the Focus menu, pick Blur the words or Cover the words with bars.',
         'Turn on Keep my paragraph clear to read only the paragraph that you type in. When you leave the text, it hides too.',
         'Only the screen changes. Your words, the word count and each export stay the same, and a screen reader still reads the text.',
@@ -206,7 +218,7 @@ export const HELP = {
         'Every project has the Codex: its characters, places, things and lore, with other names and a note.',
         'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
         'Exports and shares leave the Codex out. Only the Reader panel of the Assistant sends the notes of the names in its text.',
-        'At the Simple tool level, open the Outline and the Codex from the command menu.',
+        'Open the Outline and the Codex from the More tab, or from the command menu.',
       ],
     },
     {

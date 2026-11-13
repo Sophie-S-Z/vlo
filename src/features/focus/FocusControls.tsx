@@ -1,5 +1,6 @@
 import { Focus } from 'lucide-react';
 import { Button } from '@/ui/button';
+import { ICON_BUTTON } from '@/ui/tip';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -20,9 +21,9 @@ export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="max-sm:min-w-11 max-sm:px-0">
+        <Button variant="ghost" className={ICON_BUTTON} data-tip="Focus and Hide the text" data-tool="focus">
           <Focus aria-hidden="true" className="size-4" />
-          <span className="max-sm:sr-only">Focus</span>
+          <span className="sr-only">Focus</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

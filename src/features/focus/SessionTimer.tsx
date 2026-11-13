@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/ui/alert-dialog';
 import { Button } from '@/ui/button';
+import { ICON_BUTTON } from '@/ui/tip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -222,9 +223,9 @@ export function SessionTimer({
       {running === null ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="max-sm:min-w-11 max-sm:px-0">
+            <Button variant="ghost" className={ICON_BUTTON} data-tip="Timer" data-tool="timer">
               <Timer aria-hidden="true" className="size-4" />
-              <span className="max-sm:sr-only">Timer</span>
+              <span className="sr-only">Timer</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

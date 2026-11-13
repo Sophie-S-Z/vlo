@@ -1,14 +1,14 @@
-import { LayoutGrid, List, NotebookPen } from 'lucide-react';
+import { ChevronDown, LayoutGrid, List, NotebookPen, Upload } from 'lucide-react';
 import { ToggleGroup } from 'radix-ui';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { startTransition, useState } from 'react';
+import { startTransition, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FolderAllow } from '@/features/backup/FolderAllow';
-import { ImportBackup } from '@/features/backup/ImportBackup';
+import { ImportBackup, type ImportHandle } from '@/features/backup/ImportBackup';
 import { ImportWriting } from '@/features/import/ImportWriting';
 import { downloadBackup } from '@/features/backup/downloadBackup';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
@@ -19,6 +19,8 @@ import { clock } from '@/lib/clock';
 import { db, type Project, type Series } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
+import { ICON_BUTTON } from '@/ui/tip';
 import { DeleteDialog } from './DeleteDialog';
 import { NewProjectDialog } from './NewProjectDialog';
 import { ProjectCard, type LibraryLayout } from './ProjectCard';
@@ -46,6 +48,8 @@ export function LibraryPage() {
   const library = useLibrary();
   const motion = useMotionAllowed();
   const [layout, setLayout] = useState<LibraryLayout>(loadLayout);
+  const backupRef = useRef<ImportHandle>(null);
+  const writingRef = useRef<ImportHandle>(null);
 
   const changeLayout = (next: LibraryLayout) => {
     try {
@@ -123,12 +127,42 @@ export function LibraryPage() {
               </ToggleGroup.Item>
             </ToggleGroup.Root>
           )}
-          <ImportBackup />
-          <ImportWriting />
-          <Button asChild variant="ghost">
+          {/* Three quiet ways in, behind one menu (Phase 17 decision S4), then the main action. */}
+          <ImportBackup ref={backupRef} trigger={false} />
+          <ImportWriting ref={writingRef} trigger={false} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost">
+                <Upload aria-hidden="true" className="size-4" />
+                Import
+                <ChevronDown aria-hidden="true" className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuItem
+                className="grid gap-0.5"
+                onSelect={() => {
+                  backupRef.current?.open();
+                }}
+              >
+                <span className="font-medium">Import backup</span>
+                <span className="text-xs text-muted">A .vlo.zip file that Vlo made</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="grid gap-0.5"
+                onSelect={() => {
+                  writingRef.current?.open();
+                }}
+              >
+                <span className="font-medium">Import writing</span>
+                <span className="text-xs text-muted">Word, Markdown, Fountain, text or Scrivener</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button asChild variant="ghost" className={ICON_BUTTON} data-tip="Quick note">
             <Link to="/capture">
               <NotebookPen aria-hidden="true" className="size-4" />
-              Quick note
+              <span className="sr-only">Quick note</span>
             </Link>
           </Button>
           <NewProjectDialog />

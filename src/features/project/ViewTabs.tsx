@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { hasTemplate } from '@/features/library/templates';
 import { Link, useLocation } from 'react-router';
 import { ModeBadge } from '@/features/ai/ModeBadge';
-import { useWritingPrefs } from '@/features/editor/writingPrefs';
 import type { Project } from '@/lib/db';
 import { cn } from '@/ui/cn';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 
 /*
  * The project's view tabs (plan decision D5): Write, then the views of the template, then Submissions and
@@ -35,7 +36,36 @@ const feedback: Tab = { label: 'Feedback', to: '/feedback', active: (path) => pa
 /** The Book screen (F51) is for every template too, with the same rule. */
 const book: Tab = { label: 'Book', to: '/book', active: (path) => path.endsWith('/book') };
 
-function tabsFor(project: Project, full: boolean, path: string): Tab[] {
+/** A view with a line that says what it is for, in the More menu. */
+interface MoreTab extends Tab {
+  hint: string;
+}
+
+/** The views behind the More menu (Phase 17 decision S3), in menu order. */
+const moreViews: readonly MoreTab[] = [
+  { ...outline, hint: 'Synopses and labels of every item, in one list' },
+  { ...codex, hint: 'Characters, places and things, and where each one shows' },
+  { ...feedback, hint: 'Notes from your readers, in one place' },
+  { ...book, hint: 'The look of the printed book, page by page' },
+  {
+    label: 'Submissions',
+    to: '/submissions',
+    active: (path) => path.endsWith('/submissions'),
+    hint: 'Where you sent the work, and the answers',
+  },
+  {
+    label: 'Progress',
+    to: '/progress',
+    active: (path) => path.endsWith('/progress'),
+    hint: 'Words each day, goals and streaks',
+  },
+];
+
+/**
+ * Write and the views of the templates show as tabs. The other views go in the More menu, so the row stays
+ * short. The view on show always has its tab.
+ */
+function tabsFor(project: Project, path: string, search: URLSearchParams): { tabs: Tab[]; more: MoreTab[] } {
   const write: Tab = {
     label: 'Write',
     to: '',
@@ -53,15 +83,11 @@ function tabsFor(project: Project, full: boolean, path: string): Tab[] {
         '/progress',
       ].some((end) => path.endsWith(end)),
   };
-  // Every template has Submissions and Progress (spec 8.4), after its own views.
-  const shared: Tab[] = [
-    { label: 'Submissions', to: '/submissions', active: (path) => path.endsWith('/submissions') },
-    { label: 'Progress', to: '/progress', active: (path) => path.endsWith('/progress') },
-  ];
-  const tools = [outline, codex, feedback, book].filter(
-    (tab) => full || tab.active(path, new URLSearchParams()),
-  );
-  return [write, ...viewsOf(project), ...tools, ...shared];
+  const shown = moreViews.filter((tab) => tab.active(path, search));
+  return {
+    tabs: [write, ...viewsOf(project), ...shown],
+    more: moreViews.filter((tab) => !tab.active(path, search)),
+  };
 }
 
 /** The views of the project's templates, between Write and the shared views. Open writing has none. */
@@ -94,17 +120,19 @@ export function ViewTabs({
   project,
   modeOpen,
   onModeOpenChange,
+  tools,
 }: {
   project: Project;
+  /** The Write screen's tool icons, which share this row on a wide screen. */
+  tools?: ReactNode;
   /** The mode dialog, when the screen also opens it from its command menu. */
   modeOpen?: boolean;
   onModeOpenChange?: (open: boolean) => void;
 }) {
   const location = useLocation();
   const [ownModeOpen, setOwnModeOpen] = useState(false);
-  const full = useWritingPrefs().toolLevel === 'full';
-  const tabs = tabsFor(project, full, location.pathname);
   const search = new URLSearchParams(location.search);
+  const { tabs, more } = tabsFor(project, location.pathname, search);
   const listRef = useRef<HTMLUListElement>(null);
 
   // On a phone the row scrolls, so bring the tab of this screen into view. Only the row scrolls, never
@@ -142,8 +170,33 @@ export function ViewTabs({
               </li>
             );
           })}
+          <li className="shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex min-h-11 items-center gap-1 border-b-2 border-transparent px-3 text-sm font-medium whitespace-nowrap text-muted hover:text-text focus-visible:outline-offset-[-2px] data-[state=open]:text-text"
+                >
+                  More
+                  <ChevronDown aria-hidden="true" className="size-3.5" />
+                  <span className="sr-only"> views</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-72">
+                {more.map((tab) => (
+                  <DropdownMenuItem key={tab.label} asChild>
+                    <Link to={`/p/${project.id}${tab.to}`} className="grid gap-0.5 text-text no-underline">
+                      <span className="font-medium">{tab.label}</span>
+                      <span className="text-xs text-muted">{tab.hint}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </li>
         </ul>
       </nav>
+      {tools}
       <ModeBadge
         project={project}
         open={modeOpen ?? ownModeOpen}

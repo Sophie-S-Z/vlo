@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /*
  * Plan Task D1: the network log (spec section 10, F25, US09). A Pen mode session of typing, search, export,
@@ -113,7 +114,7 @@ test('US09: a 60 second Pen session sends no request off the app, and the log sa
   await page.keyboard.press('Escape');
 
   for (const view of ['Board', 'Plot Grid', 'Submissions', 'Progress', 'Write']) {
-    await views(page).getByRole('link', { name: view, exact: true }).click();
+    await openView(page, view);
     await expect(views(page).getByRole('link', { name: view, exact: true })).toHaveAttribute(
       'aria-current',
       'page',

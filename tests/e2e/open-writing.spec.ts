@@ -23,16 +23,18 @@ test('open writing starts on Page 1, and its binder adds folders, pages and note
   await expect(page.getByRole('heading', { level: 1, name: 'Untitled writing' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Page 1' })).toBeVisible();
   await page.getByRole('textbox', { name: 'Page 1' }).pressSequentially('Dear Ada,');
-  // Open writing has no views of its own: only Write and the views of every project.
-  await expect(tabs(page)).toHaveText([
-    'Write',
-    'Outline',
-    'Codex',
-    'Feedback',
-    'Book',
-    'Submissions',
-    'Progress',
+  // Open writing has no views of its own: only Write, and the views of every project in the More menu.
+  await expect(tabs(page)).toHaveText(['Write']);
+  await page.getByRole('button', { name: 'More views' }).click();
+  await expect(page.getByRole('menuitem')).toHaveText([
+    /^Outline/,
+    /^Codex/,
+    /^Feedback/,
+    /^Book/,
+    /^Submissions/,
+    /^Progress/,
   ]);
+  await page.keyboard.press('Escape');
 
   await binder(page).getByRole('button', { name: 'Add to binder' }).click();
   await expect(page.getByRole('menuitem')).toHaveText(['Folder', 'Page', 'Note']);
@@ -57,19 +59,8 @@ test('a mix of novel and memoir gets the starters, the binder kinds and the view
   await dialog.getByRole('button', { name: 'Create project' }).click();
 
   await expect(page.getByRole('heading', { level: 2, name: 'Scene 1' })).toBeVisible();
-  await expect(tabs(page)).toHaveText([
-    'Write',
-    'Board',
-    'Plot Grid',
-    'Timeline',
-    'People',
-    'Outline',
-    'Codex',
-    'Feedback',
-    'Book',
-    'Submissions',
-    'Progress',
-  ]);
+  // The views of both templates are tabs. The views of every project sit in the More menu.
+  await expect(tabs(page)).toHaveText(['Write', 'Board', 'Plot Grid', 'Timeline', 'People']);
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }).click();
   await expect(page.getByRole('list', { name: 'Projects' }).getByText('Novel + Memoir')).toBeVisible();
 });

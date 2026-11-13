@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { BUNDLE, fakeSupabase, shareOf } from './support/share';
+import { openView } from './support/views';
 
 /*
  * Phase 6 Task F2 (spec section 12): axe on every route in each theme, and a visible focus ring on every
@@ -47,7 +48,7 @@ async function eachRoute(page: Page, visit: (route: string) => Promise<void>) {
   const project = await newMixedProject(page);
   await visit(project);
   for (const view of VIEWS) {
-    await page.getByRole('navigation', { name: 'Project views' }).getByRole('link', { name: view }).click();
+    await openView(page, view);
     await expect(page.getByRole('link', { name: view })).toHaveAttribute('aria-current', 'page');
     await visit(`${project} ${view}`);
   }

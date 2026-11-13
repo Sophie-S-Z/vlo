@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /* Plan Task H5 (roadmap F42): the Codex. codex.test.ts and views-data.test.ts hold the backup round trip. */
 
@@ -19,7 +20,7 @@ test('a Codex entry marks its names in the text, shows on the cursor, and counts
   await expect(scene(page)).toBeFocused();
   await page.keyboard.type("Mira rowed out. Mi's oar broke.");
 
-  await views(page).getByRole('link', { name: 'Codex' }).click();
+  await openView(page, 'Codex');
   await expect(page.getByRole('heading', { level: 2, name: 'Codex' })).toBeVisible();
   await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
   await page.getByRole('button', { name: 'Add entry' }).click();
@@ -68,7 +69,7 @@ test('F65: a change at Scene 2 shows on the cursor in Scene 2, and not in Scene 
   await expect(second).toBeFocused();
   await page.keyboard.type('Mira waits.');
 
-  await views(page).getByRole('link', { name: 'Codex' }).click();
+  await openView(page, 'Codex');
   await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
   await page.getByRole('button', { name: 'Add entry' }).click();
   await page.getByRole('textbox', { name: 'Note' }).fill('Ferry pilot.');

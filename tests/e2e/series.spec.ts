@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /* Plan Task K8 (roadmap F59): a series of books. series.test.ts holds the backup and the leave rules. */
 
 const scene = (page: Page) => page.getByRole('textbox', { name: 'Scene 1' });
-const views = (page: Page) => page.getByRole('navigation', { name: 'Project views' });
 
 async function novel(page: Page, title: string, text: string) {
   await page.getByRole('button', { name: 'New project' }).click();
@@ -63,7 +63,7 @@ test('a series orders its books, shares a Codex entry and marks the forms its st
 
   // Salt shares its entry, and Tide shows it.
   await books.getByRole('button', { name: 'Salt', exact: true }).click();
-  await views(page).getByRole('link', { name: 'Codex' }).click();
+  await openView(page, 'Codex');
   await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
   await page.getByRole('button', { name: 'Add entry' }).click();
   await page.getByRole('switch', { name: 'Share with the series' }).click();
@@ -83,7 +83,7 @@ test('a series orders its books, shares a Codex entry and marks the forms its st
   await expect(page.locator('[data-vlo-cursor-note]')).toHaveText(
     'The series style sheet uses "grey" for "gray".',
   );
-  await views(page).getByRole('link', { name: 'Codex' }).click();
+  await openView(page, 'Codex');
   await expect(
     page.getByRole('navigation', { name: 'Codex entries' }).getByRole('button', { name: 'Mira' }),
   ).toBeVisible();

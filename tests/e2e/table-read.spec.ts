@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /* Plan Task K3 (roadmap F58): a table read gives each Codex character a voice. dialogue.test.ts holds the rules. */
 
@@ -55,7 +56,7 @@ test('F58: a table read reads each quote in its character’s voice, and keeps t
   await expect(scene(page)).toBeFocused();
   await page.keyboard.type('“Row,” said Mira. The oar broke.');
 
-  await page.getByRole('navigation', { name: 'Project views' }).getByRole('link', { name: 'Codex' }).click();
+  await openView(page, 'Codex');
   await page.getByRole('textbox', { name: 'Name' }).fill('Mira');
   await page.getByRole('button', { name: 'Add entry' }).click();
   await expect(page.getByRole('heading', { level: 3, name: 'Mira' })).toBeVisible();

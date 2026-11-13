@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /* Plan Task H1 (roadmap F40): the Outline view for every template, with labels and index cards. */
 
@@ -21,7 +22,7 @@ async function novelOutline(page: Page, isMobile: boolean) {
   await page.getByRole('menuitem', { name: 'Add Scene inside' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'Scene 2' })).toBeVisible();
   if (isMobile) await page.keyboard.press('Escape');
-  await views(page).getByRole('link', { name: 'Outline' }).click();
+  await openView(page, 'Outline');
   await expect(page.getByRole('heading', { level: 2, name: 'Outline' })).toBeVisible();
 }
 

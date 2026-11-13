@@ -4,6 +4,12 @@ Last update: 2026-11-12
 
 ## Done
 
+- Phase 17 (plan `docs/plans/phase-17.md`), from the beta tester's feedback:
+  - Q-A, a quieter screen: one row of icon tools with tooltips (on a wide screen, in the tab row), the item
+    tools on the title row, a More menu for the views that are not tabs, one Import menu in the Library, a
+    first-use tip line, and command-menu entries for Insights, History, Page, Scene, Sound and the timer.
+    Every tool keeps its accessible name. The quick Hide text button shows only while the text is hidden.
+
 - Phase 6 (plan `docs/plans/phase-6.md`): pull request #18 merged on 2026-11-08.
   - F1: the architecture review (`docs/architecture-review-phase-6.md`). Fixed: the web originality check
     left real names in its search phrases; export and Share fell back to the people list in their props on a
@@ -1046,6 +1052,7 @@ Last update: 2026-11-12
 | 2026-11-09 | Phase 9 plan approved: decisions R1 to R9 as recommended.                        |
 | 2026-11-10 | Phase 10 plan approved: decisions J1 to J7 as recommended.                       |
 | 2026-11-10 | Phase 11 plan approved: decisions K1 to K9 as recommended.                       |
+| 2026-11-12 | Phase 17 from beta feedback: S1 to S5, M1 to M3, P1 and D1 as recommended.       |
 
 ## Spec changes
 

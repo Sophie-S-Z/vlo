@@ -3,6 +3,7 @@ import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useId } from 'react';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Button } from '@/ui/button';
+import { ICON_BUTTON } from '@/ui/tip';
 import { cn } from '@/ui/cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { NO_SCENE, SCENES, type SceneChoice } from './scenes';
@@ -27,9 +28,14 @@ export function ScenePicker({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" aria-label={`Scene: ${label}`}>
+        <Button
+          variant="ghost"
+          className={ICON_BUTTON}
+          aria-label={`Scene: ${label}`}
+          data-tool="scene"
+          data-tip={`Scene: ${label}`}
+        >
           <Sunset aria-hidden="true" className="size-4" />
-          <span className="max-sm:sr-only">{scene === NO_SCENE ? 'Scene' : label}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent

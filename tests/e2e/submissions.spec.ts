@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /*
  * Plan Task C8: the Submissions tracker (spec 8.4, F20, E4). A writer logs the pieces sent to each venue,
@@ -36,10 +37,7 @@ async function newCollection(page: Page, isMobile: boolean) {
 }
 
 async function openSubmissions(page: Page) {
-  await page
-    .getByRole('navigation', { name: 'Project views' })
-    .getByRole('link', { name: 'Submissions' })
-    .click();
+  await openView(page, 'Submissions');
   await expect(page.getByRole('heading', { level: 2, name: 'Submissions' })).toBeVisible();
 }
 
@@ -230,9 +228,12 @@ test('every template has the Submissions tab, and the command palette opens it',
     await dialog.getByRole('checkbox', { name: template }).click();
     await dialog.getByRole('button', { name: 'Create project' }).click();
     const tabs = page.getByRole('navigation', { name: 'Project views' }).getByRole('link');
-    await expect(tabs.nth(-2)).toHaveText('Submissions');
-    await expect(tabs.last()).toHaveText('Progress');
     await expect(tabs.first()).toHaveAttribute('aria-current', 'page');
+    // Submissions and Progress end the More menu of every template (Phase 17 decision S3).
+    await page.getByRole('button', { name: 'More views' }).click();
+    await expect(page.getByRole('menuitem').nth(-2)).toHaveText(/^Submissions/);
+    await expect(page.getByRole('menuitem').last()).toHaveText(/^Progress/);
+    await page.keyboard.press('Escape');
   }
   await page.keyboard.press('ControlOrMeta+k');
   const menu = page.getByRole('dialog', { name: 'Command menu' });

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding } from './support/onboarding';
+import { openView } from './support/views';
 
 /* Plan Task K7 (roadmap F60, Review Focus 5): sprints, the sprint room and the month challenge. */
 
@@ -132,10 +133,7 @@ test('a month challenge shows the words of each day of the month', async ({ page
   await newNovel(page);
   await page.keyboard.type('One two three four five six.');
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
-  await page
-    .getByRole('navigation', { name: 'Project views' })
-    .getByRole('link', { name: 'Progress' })
-    .click();
+  await openView(page, 'Progress');
 
   const section = page.getByRole('region', { name: 'Month challenge' });
   await section.getByLabel('Words this month').fill('1000');

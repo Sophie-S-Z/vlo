@@ -1,5 +1,6 @@
 import { FileInput } from 'lucide-react';
-import { useId, useRef, useState, type RefObject } from 'react';
+import { useId, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
+import type { ImportHandle } from '@/features/backup/ImportBackup';
 import { useNavigate } from 'react-router';
 import { TemplatePicker, useTemplatePick } from '@/features/library/TemplatePicker';
 import { importTextKind, projectDef } from '@/features/library/templates';
@@ -49,9 +50,18 @@ function summary(nodes: readonly ImportNode[]) {
   return { texts, words, indented, script };
 }
 
-export function ImportWriting() {
+/**
+ * With `trigger` false it draws no button, and the Library's Import menu opens the dialog through `ref`
+ * (Phase 17 decision S4).
+ */
+export function ImportWriting({ ref, trigger = true }: { ref?: Ref<ImportHandle>; trigger?: boolean }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  useImperativeHandle(ref, () => ({
+    open: () => {
+      setOpen(true);
+    },
+  }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<ImportSource | null>(null);
@@ -158,12 +168,14 @@ export function ImportWriting() {
   const losesRoles = counts?.script === true && textForm !== 'script';
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogTrigger asChild>
-        <Button type="button" variant="ghost">
-          <FileInput aria-hidden="true" className="size-4" />
-          Import writing
-        </Button>
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger asChild>
+          <Button type="button" variant="ghost">
+            <FileInput aria-hidden="true" className="size-4" />
+            Import writing
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl">
         <DialogTitle>Import writing</DialogTitle>
         <DialogDescription>

@@ -136,7 +136,7 @@ test('a file that is not a backup gets a clear message', async ({ page }, testIn
   );
   await error.getByRole('button', { name: 'OK' }).click();
   await expect(error).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Import backup' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Import', exact: true })).toBeEnabled();
 });
 
 test('after a change with no folder save, the Library asks for a backup, and one press makes it', async ({

@@ -24,7 +24,8 @@ async function showBinder(page: Page, isMobile: boolean) {
 
 async function openImport(page: Page) {
   await skipOnboarding(page);
-  await page.getByRole('button', { name: 'Import writing' }).click();
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await page.getByRole('menuitem', { name: /^Import writing/ }).click();
   await expect(dialog(page)).toBeVisible();
 }
 

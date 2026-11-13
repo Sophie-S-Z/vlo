@@ -7,6 +7,9 @@ export async function skipOnboarding(page: Page) {
   await page.addInitScript(() => {
     if (localStorage.getItem('vlo:writing') === null)
       localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full' }));
+    // The first-use tips line (Phase 17) stays closed here; tips.spec.ts tests it.
+    if (localStorage.getItem('vlo:tips') === null)
+      localStorage.setItem('vlo:tips', JSON.stringify({ closed: true, index: 0 }));
   });
   await page.goto('/welcome');
   await page.getByRole('button', { name: 'Skip' }).click();
