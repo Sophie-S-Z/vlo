@@ -29,7 +29,20 @@ export type RpcName =
   // Sprint rooms (F60, migration 0006).
   | 'room_create'
   | 'room_join'
-  | 'room_post';
+  | 'room_post'
+  // Accounts, the daily count, feedback and the owner page (Phase 18, migration 0008).
+  | 'vault_get'
+  | 'vault_put'
+  | 'vault_delete'
+  | 'delete_my_account'
+  | 'daily_count'
+  | 'send_feedback'
+  | 'is_owner'
+  | 'owner_summary'
+  | 'owner_daily'
+  | 'owner_accounts'
+  | 'owner_feedback'
+  | 'owner_set_feedback';
 
 export type ShareErrorKind =
   'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'busy' | 'server';
@@ -60,7 +73,7 @@ export function sharingReady(): boolean {
   return supabaseUrl() !== '' && anonKey() !== '';
 }
 
-function anonKey(): string {
+export function anonKey(): string {
   return (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ?? '';
 }
 
@@ -76,14 +89,23 @@ function kindOf(message: string): ShareErrorKind {
   // Sprint rooms (migration 0006): an old or wrong code, and a full room.
   if (message.includes('unknown room')) return 'unavailable';
   if (message.includes('room full')) return 'limit';
+  // Phase 18 (migration 0008): no session, not the owner, and the feedback limit of an install.
+  if (message.includes('not signed in') || message.includes('not owner')) return 'unavailable';
+  if (message.includes('feedback limit')) return 'limit';
+  if (message.includes('message too large')) return 'too-large';
   return 'server';
 }
 
-/** Calls one Supabase function with named arguments and gives its JSON answer. */
+/**
+ * Calls one Supabase function with named arguments and gives its JSON answer. `token` is the access token
+ * of a signed-in writer (Phase 18), and the function reads the account from it. With none, the call goes
+ * as the anon role.
+ */
 export async function rpc<T>(
   name: RpcName,
   args: Record<string, unknown>,
-  purpose: 'share' | 'usage' | 'sync' | 'room',
+  purpose: 'share' | 'usage' | 'sync' | 'room' | 'account' | 'ping' | 'feedback',
+  token?: string,
 ): Promise<T> {
   if (!sharingReady()) throw new ShareError('not-set-up');
   const key = anonKey();
@@ -92,7 +114,13 @@ export async function rpc<T>(
     response = await vloFetch(`${supabaseUrl()}/rest/v1/rpc/${name}`, {
       purpose,
       method: 'POST',
-      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      headers: {
+        apikey: key,
+        // A publishable key (`sb_publishable_…`) is not a JWT, so Supabase refuses it as a bearer token. With
+        // one, a call with no account sends the key in `apikey` only, and the gateway adds the anon role.
+        ...(token || !key.startsWith('sb_') ? { Authorization: `Bearer ${token ?? key}` } : {}),
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(args),
     });
   } catch {

@@ -1,6 +1,9 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigation } from 'react-router';
+import { readSession } from '@/features/account/session';
 import { SafetyBadge } from '@/features/backup/SafetyBadge';
+import { sharingReady } from '@/features/share/rpc';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
 import { UpdatePrompt } from './UpdatePrompt';
@@ -23,6 +26,8 @@ export function AppShell() {
   const firstPath = useRef(true);
   // A screen's code loads on its first visit. While it loads, a line at the top shows that Vlo is working.
   const loading = useNavigation().state === 'loading';
+  // Accounts (Phase 18): the header says "Sign in" until this device has an account, then "Account".
+  const signedIn = useLiveQuery(async () => (await readSession().catch(() => null)) !== null, [], false);
 
   // After moving to another screen, focus goes to its heading, so a screen reader starts there. When the
   // new screen already put focus inside the page, such as the editor, it stays.
@@ -80,6 +85,13 @@ export function AppShell() {
                     Settings
                   </NavLink>
                 </li>
+                {sharingReady() && (
+                  <li>
+                    <NavLink to="/account" className={navClass}>
+                      {signedIn ? 'Account' : 'Sign in'}
+                    </NavLink>
+                  </li>
+                )}
               </ul>
             </nav>
           </div>
@@ -111,6 +123,9 @@ export function AppShell() {
           <p className="flex flex-wrap gap-x-4 gap-y-2">
             <Link to="/help" className={FOOTER_LINK}>
               Help
+            </Link>
+            <Link to="/send-feedback" state={{ from: pathname }} className={FOOTER_LINK}>
+              Send feedback
             </Link>
             <Link to="/privacy" className={FOOTER_LINK}>
               Privacy

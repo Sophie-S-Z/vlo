@@ -39,10 +39,14 @@ export function readPairing(hash: string): Pairing {
   };
 }
 
-async function saveSpace(pairing: Pairing, deviceName: string): Promise<SyncSpace> {
+/**
+ * A device that joins with an account (Phase 18) keeps one device id for each space, so a sign-out and a
+ * new sign-in reuse its blobs on the relay and do not count as a new device.
+ */
+async function saveSpace(pairing: Pairing, deviceName: string, deviceId?: string): Promise<SyncSpace> {
   const space: SyncSpace = {
     ...pairing,
-    deviceId: crypto.randomUUID().replace(/-/g, ''),
+    deviceId: deviceId ?? crypto.randomUUID().replace(/-/g, ''),
     deviceName: deviceName.trim() || 'A device',
     cursor: '',
     pushedAt: 0,
@@ -56,11 +60,11 @@ async function saveSpace(pairing: Pairing, deviceName: string): Promise<SyncSpac
 }
 
 /** Makes a new sync space with this device in it (the first device). */
-export async function startSpace(deviceName: string): Promise<SyncSpace> {
+export async function startSpace(deviceName: string, deviceId?: string): Promise<SyncSpace> {
   const key = (await newShareKey()).text;
   const token = newOwnerToken();
   const spaceId = await rpc<string>('create_sync_space', { p_token: token }, 'sync');
-  return saveSpace({ spaceId, key, token }, deviceName);
+  return saveSpace({ spaceId, key, token }, deviceName, deviceId);
 }
 
 /** Each device of the space, oldest first, with the time of its last change. */
@@ -83,9 +87,17 @@ export async function listDevices(
 }
 
 /** Joins the space of a pairing link. The relay checks the token first. */
-export async function joinSpace(pairing: Pairing, deviceName: string): Promise<SyncSpace> {
+export async function joinSpace(pairing: Pairing, deviceName: string, deviceId?: string): Promise<SyncSpace> {
   await listDevices(pairing);
-  return saveSpace(pairing, deviceName);
+  return saveSpace(pairing, deviceName, deviceId);
+}
+
+/**
+ * Forgets the space on this device only (Phase 18 sign-out). This device's blobs stay on the relay, so the
+ * other devices keep its work, and a new sign-in with the same device id takes them up again.
+ */
+export function forgetSpace(): Promise<void> {
+  return withSyncLock(() => db.appMeta.delete(SYNC_META));
 }
 
 /** Runs a relay call, and goes on when the space is gone already. */

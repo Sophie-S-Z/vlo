@@ -13,6 +13,7 @@ import {
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
+import { guessDeviceName } from './deviceName';
 import { PairDialog } from './PairDialog';
 import { leaveSync, listDevices, startSpace, stopSyncEverywhere, syncErrorText } from './pairing';
 import { BLOCKED_TEXT, readSpace, syncedText, type SyncSpace } from './space';
@@ -22,12 +23,7 @@ import { BLOCKED_TEXT, readSpace, syncedText, type SyncSpace } from './space';
  * The engine loads only when the writer syncs now, so Settings stays small.
  */
 
-/** A name for a new device from the kind of browser, which the writer can change. */
-export function guessDeviceName(agent = navigator.userAgent): string {
-  if (/iPad|Tablet/i.test(agent)) return 'Tablet';
-  if (/iPhone|Android|Mobile/i.test(agent)) return 'Phone';
-  return 'Computer';
-}
+export { guessDeviceName };
 
 /** The field for this device's name, as the first device and the pair page ask for it. */
 export function DeviceNameField({ value, onChange }: { value: string; onChange: (name: string) => void }) {
@@ -220,10 +216,10 @@ export function DevicesSection() {
   return (
     <div className="grid gap-3">
       <p className="text-muted">
-        Sync keeps your projects the same on your phone and your computers, with no account. Vlo seals each
-        project, text and research file with a key that only your devices have. The sync server keeps the
-        sealed copies, and it cannot read a word, a title or a name. Snapshots, sound files, share links and
-        settings stay on each device.
+        Sync keeps your projects the same on your phone and your computers. Sign in on the Account page, or
+        pair your devices here with a link and no account. Vlo seals each project, text and research file with
+        a key that only your devices have. The sync server keeps the sealed copies, and it cannot read a word,
+        a title or a name. Snapshots, sound files, share links and settings stay on each device.
       </p>
       {space ? (
         <Syncing space={space} pairing={pairing} onPairing={setPairing} say={setMessage} />

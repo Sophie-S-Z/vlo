@@ -34,8 +34,11 @@ test('Privacy lists what stays and each purpose that can leave, with its hosts',
     'Sprint rooms',
     'Public timestamps',
     'Drafts on WordPress.com',
+    'Your account',
+    'The daily count',
+    'Feedback to the makers of Vlo',
   ]);
   await expect(page.getByText('en.wikipedia.org, api.openalex.org')).toBeVisible();
   // The test build has a fake Supabase project.
-  await expect(page.getByText('vlo-test.supabase.co')).toHaveCount(4);
+  await expect(page.getByText('vlo-test.supabase.co')).toHaveCount(7);
 });

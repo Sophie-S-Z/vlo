@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 11, 12 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 12, 13 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -12,7 +12,7 @@ Version 11, 12 November 2026. The app shows these words at `/privacy` (`src/feat
 - A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.
 - The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.
 - The network log stays in this browser.
-- Vlo loads no third-party script, font, analytics or tracking pixel. No Vlo account exists.
+- Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync between your devices.
 
 ## What can leave, and when
 
@@ -48,9 +48,9 @@ Up to 6 short phrases from the open item. A phrase that holds a private name sta
 
 ### Sync between your devices
 
-Only after you turn on sync in Settings, and only between the devices that you pair.
+Only after you turn on sync, on the Account page or in Settings, and only between the devices that you sign in on or pair.
 
-Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.
+Your projects, encrypted in the browser: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. With a pairing link, only your devices have the key, and the server sees sizes, times and a random id for each device, never a title or a word. With an account, your account keeps the key on the server too.
 
 ### Sprint rooms
 
@@ -69,6 +69,24 @@ One SHA-256 hash of the record, mixed with random bytes, to two free OpenTimesta
 Only when you choose "Save as a draft on WordPress.com" in Publish, in a build that offers it.
 
 The title, the excerpt and the text of the post, with the access token that WordPress.com gave when you signed in, to the WordPress.com site that you picked. Vlo saves the post as a draft. The token stays in the tab until you close it. Every other platform in Publish gets only what you copy and paste.
+
+### Your account
+
+Only when you sign in, while you stay signed in, and when you sign out or delete the account.
+
+Your email address and the 6-digit code, or the sign-in that Google gives. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the key, the sync and every sealed copy.
+
+### The daily count
+
+Once a day while the switch in Settings is on. It is on until you turn it off.
+
+A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer) and whether Vlo is installed. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. Never text, a title or a name, and no cookie. Turning it off forgets the random id.
+
+### Feedback to the makers of Vlo
+
+Only when you press Send feedback.
+
+What you type, the kind of feedback, a rating if you pick one, a reply address if you type one, the screen that you came from, the kind of device and the Vlo version. When you are signed in, your account goes with it. No text of your projects goes.
 
 ## Contact
 

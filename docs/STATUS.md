@@ -1,8 +1,24 @@
 # Vlo status
 
-Last update: 2026-11-12
+Last update: 2026-11-13
 
 ## Done
+
+- Phase 18 (plan `docs/plans/phase-18.md`, ADR 0009), from a beta tester's feedback and the product owner's ask:
+  - Accounts: `/account` signs in with a 6-digit email code, and with Google in a build with
+    `VITE_AUTH_GOOGLE`. Supabase Auth through its REST paths, purpose `account`, with no new package.
+  - Sync with the account: a sign-in turns sync on. The first device makes the account's sync space, and each
+    next device joins it with no passphrase (the product owner's choice). The account keeps the sync key; the
+    relay keeps cipher text. Sign out (this device stops sync and keeps its projects) and Delete my account.
+    The pairing link stays.
+  - The daily count (purpose `ping`): once a UTC day, a random install id, the version, the kind of device and
+    whether Vlo is installed. On by default, with a switch in Settings under Usage counts.
+  - Send feedback (`/send-feedback`, purpose `feedback`): from the footer, Settings, Help and the command menu.
+  - The owner page (`/owner`): tiles, a 30-day chart with a table view, breakdowns, every account, and a
+    feedback inbox with a status, a note and a CSV download. Only accounts in `app_owners`.
+  - Migration 0008 with PGlite tests; `accounts.spec.ts` (two devices, the daily count, feedback and the owner
+    page); privacy version 12; Help; `docs/accounts-setup.md`.
+  - Open: the live Supabase project, custom SMTP, Google sign-in and the owner row (`docs/accounts-setup.md`).
 
 - Phase 17 (plan `docs/plans/phase-17.md`), from the beta tester's feedback:
   - Q-A, a quieter screen: one row of icon tools with tooltips (on a wide screen, in the tab row), the item
