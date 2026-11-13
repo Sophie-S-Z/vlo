@@ -265,8 +265,7 @@ export function SettingsPage() {
         {sharingReady() && (
           <Section title="Account">
             <p className="text-muted">
-              Sign in to keep every project the same on your phone, your laptop and any other device. Your
-              writing stays locked with your own passphrase.
+              Sign in to keep every project the same on your phone, your laptop and any other device.
             </p>
             <p className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
               <Link to="/account" className="underline">

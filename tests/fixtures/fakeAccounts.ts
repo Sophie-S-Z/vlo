@@ -20,10 +20,7 @@ interface User {
 interface Vault {
   space_id: string;
   token: string;
-  wrapped: string;
-  iv: string;
-  salt: string;
-  rounds: number;
+  key: string;
   updated_at: string;
 }
 
@@ -128,10 +125,7 @@ export class FakeAccounts {
         this.vaults.set(id, {
           space_id: String(body.p_space),
           token: String(body.p_token),
-          wrapped: String(body.p_wrapped),
-          iv: String(body.p_iv),
-          salt: String(body.p_salt),
-          rounds: Number(body.p_rounds),
+          key: String(body.p_key),
           updated_at: new Date().toISOString(),
         });
         return { value: true };

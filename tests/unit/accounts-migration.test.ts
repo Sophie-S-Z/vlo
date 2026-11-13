@@ -22,9 +22,8 @@ const MIGRATIONS = [
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
-const IV = 'AAAAAAAAAAAAAAAA';
-const WRAPPED = 'A'.repeat(64);
-const SALT = `${'B'.repeat(22)}==`;
+/** A sync key of the shape that Vlo makes: 32 bytes in base64url. */
+const KEY = T('sync-key');
 const ALICE = '00000000-0000-4000-8000-00000000000a';
 const BOB = '00000000-0000-4000-8000-00000000000b';
 let db: PGlite;
@@ -89,7 +88,7 @@ async function newSpace(token = T('space')): Promise<string> {
 }
 
 const putVault = (who: string, space: string, token = T('space')) =>
-  as(who, 'select public.vault_put($1, $2, $3, $4, $5, 600000)', [space, token, WRAPPED, IV, SALT]);
+  as(who, 'select public.vault_put($1, $2, $3)', [space, token, KEY]);
 
 const count = (who: string, install: string, device = 'phone', installed = false) =>
   as(who, "select public.daily_count($1, '0.1.0', $2, $3)", [install, device, installed]);
@@ -105,11 +104,8 @@ describe('sync vaults (decision A1)', () => {
   test('an account saves and reads its own vault, and another account sees none of it', async () => {
     const space = await newSpace();
     await putVault(ALICE, space);
-    const [mine] = await as<{ space_id: string; wrapped: string; rounds: number }>(
-      ALICE,
-      'select * from public.vault_get()',
-    );
-    expect(mine).toMatchObject({ space_id: space, wrapped: WRAPPED, rounds: 600000 });
+    const [mine] = await as<{ space_id: string; key: string }>(ALICE, 'select * from public.vault_get()');
+    expect(mine).toMatchObject({ space_id: space, key: KEY });
     expect(await as(BOB, 'select * from public.vault_get()')).toEqual([]);
   });
 
@@ -118,17 +114,8 @@ describe('sync vaults (decision A1)', () => {
     await expect(putVault(ALICE, space, T('wrong'))).rejects.toThrow('unknown space');
     await expect(putVault('anon', space)).rejects.toThrow(/permission denied/);
     await expect(
-      as(ALICE, 'select public.vault_put($1, $2, $3, $4, $5, 600000)', [
-        space,
-        T('space'),
-        'short',
-        IV,
-        SALT,
-      ]),
-    ).rejects.toThrow('bad wrapped key');
-    await expect(
-      as(ALICE, 'select public.vault_put($1, $2, $3, $4, $5, 1000)', [space, T('space'), WRAPPED, IV, SALT]),
-    ).rejects.toThrow('bad rounds');
+      as(ALICE, 'select public.vault_put($1, $2, $3)', [space, T('space'), 'short']),
+    ).rejects.toThrow('bad key');
   });
 
   test('a vault goes with its space, and vault_delete keeps the space', async () => {

@@ -7,10 +7,10 @@ Last update: 2026-11-13
 - Phase 18 (plan `docs/plans/phase-18.md`, ADR 0009), from a beta tester's feedback and the product owner's ask:
   - Accounts: `/account` signs in with a 6-digit email code, and with Google in a build with
     `VITE_AUTH_GOOGLE`. Supabase Auth through its REST paths, purpose `account`, with no new package.
-  - Sync with the account: the first device turns on sync with a sync passphrase, and each next device signs
-    in and types it. The account keeps the sync key wrapped with PBKDF2-SHA256 (600,000 rounds) and AES-GCM,
-    so the server still cannot read a word. Change the passphrase, I forgot the passphrase, sign out (this
-    device stops sync and keeps its projects) and Delete my account. The pairing link stays.
+  - Sync with the account: a sign-in turns sync on. The first device makes the account's sync space, and each
+    next device joins it with no passphrase (the product owner's choice). The account keeps the sync key; the
+    relay keeps cipher text. Sign out (this device stops sync and keeps its projects) and Delete my account.
+    The pairing link stays.
   - The daily count (purpose `ping`): once a UTC day, a random install id, the version, the kind of device and
     whether Vlo is installed. On by default, with a switch in Settings under Usage counts.
   - Send feedback (`/send-feedback`, purpose `feedback`): from the footer, Settings, Help and the command menu.

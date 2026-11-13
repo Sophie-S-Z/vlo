@@ -71,7 +71,7 @@ To add another owner, run the same SQL with their email. To remove one, delete t
 ## What the owner sees, and what the owner never sees
 
 - The owner sees: the number of accounts, devices that opened Vlo each day, the kind of each device, versions, accounts that sync, each account's email, start date and last active day, the weekly usage reports that writers chose to send, and every feedback message.
-- The owner never sees: a project, a title, a name or a word of writing. The sync server holds only sealed copies, and the key of each account is locked with the writer's own passphrase.
+- The owner page never shows a project, a title, a name or a word of writing. The sync server holds sealed copies. The key of each account is in `sync_vaults`, as the product owner chose (ADR 0009), so keep the database password and the service key private.
 
 ## Keep the free project awake
 

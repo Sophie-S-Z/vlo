@@ -583,7 +583,7 @@ function Dashboard() {
       )}
       <p className="text-sm text-muted">
         Days are in UTC. A device is one browser on one device; a writer with a phone and a laptop counts as
-        two devices and one account. Vlo shows no project, title or word here, because the server has none.
+        two devices and one account. This page shows no project, title or word of writing.
       </p>
     </div>
   );

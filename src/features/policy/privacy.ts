@@ -19,7 +19,7 @@ export const PRIVACY = {
     'A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.',
     'The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.',
     'The network log stays in this browser.',
-    'Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync, and the server never gets a word of your writing.',
+    'Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync between your devices.',
   ],
   leaves: {
     ai: {
@@ -55,7 +55,7 @@ export const PRIVACY = {
       title: 'Sync between your devices',
       when: 'Only after you turn on sync, on the Account page or in Settings, and only between the devices that you sign in on or pair.',
       sends:
-        'Your projects, encrypted in the browser with a key that only your devices have: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. The server sees sizes, times and a random id for each device, never a title or a word.',
+        'Your projects, encrypted in the browser: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. With a pairing link, only your devices have the key, and the server sees sizes, times and a random id for each device, never a title or a word. With an account, your account keeps the key on the server too.',
     },
     room: {
       title: 'Sprint rooms',
@@ -79,7 +79,7 @@ export const PRIVACY = {
       title: 'Your account',
       when: 'Only when you sign in, while you stay signed in, and when you sign out or delete the account.',
       sends:
-        'Your email address and the 6-digit code, or the sign-in that Google gives. For sync, the account keeps the sync key locked with your sync passphrase. The passphrase never leaves the device, so the server cannot open the key or read a word. Delete my account removes the account, the sync and every sealed copy.',
+        'Your email address and the 6-digit code, or the sign-in that Google gives. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the key, the sync and every sealed copy.',
     },
     ping: {
       title: 'The daily count',

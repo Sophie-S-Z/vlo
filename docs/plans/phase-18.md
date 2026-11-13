@@ -37,10 +37,10 @@ Facts that shape the work:
 
 | # | Topic | Recommendation used | Other choice |
 | --- | --- | --- | --- |
-| A1 | Privacy of synced writing | The sync key stays sealed. The account keeps the sync key wrapped with a key from the writer's sync passphrase (PBKDF2-SHA256, 600,000 rounds). Nobody on the server can read a word. | The server keeps the key, and a new device needs only the sign-in. |
-| A2 | Sign-in | A 6-digit email code, and Google when the build sets `VITE_AUTH_GOOGLE`. No password. | Email only, or Apple too. |
-| A3 | User counts | An anonymous daily count, on by default, with a switch in Settings: a random install id, the day, the app version, the kind of device, and whether Vlo is installed. A signed-in device adds its account id, so the owner sees when each account was last active. | Accounts and opt-in reports only. |
-| A4 | The Supabase project | A new free project "Vlo", made with the connector. | The owner makes it. |
+| A1 | Privacy of synced writing | **Product owner's choice (2026-11-13):** account sign-in only. The account keeps the sync key on the server, and a new device needs only the sign-in. The relay keeps cipher text. | A sync passphrase that locks the key, so nobody on the server can read a word. |
+| A2 | Sign-in | **Product owner's choice:** a 6-digit email code, and Google when the build sets `VITE_AUTH_GOOGLE`. No password. | Email only, or Apple too. |
+| A3 | User counts | **Product owner's choice:** an anonymous daily count, on by default, with a switch in Settings: a random install id, the day, the app version, the kind of device, and whether Vlo is installed. A signed-in device adds its account id, so the owner sees when each account was last active. | Accounts and opt-in reports only. |
+| A4 | The Supabase project | **Product owner's choice:** a new free project "Vlo", made with the connector. | The owner makes it. |
 | A5 | Feedback | A "Send feedback" page: a kind (idea, problem, praise, question), the message, an optional 1 to 5 rating, and an optional reply address. A signed-in writer's account goes with it. | A link to GitHub issues only. |
 | A6 | The owner page | `/owner`, for accounts in `app_owners` only. Overview, People and Feedback. It shows counts, dates and feedback, never a project, title or word. | A Supabase dashboard only. |
 | A7 | Deleting an account | Settings has "Delete my account". The account, its sealed key, its sync space and its link to the daily count and feedback go. The projects stay on each device. | Ask the owner by email. |
@@ -49,7 +49,7 @@ Facts that shape the work:
 
 ### Task A1: The database (migration 0008)
 
-- `sync_vaults`: one row for each account: the sync space, its token, and the sync key wrapped with the passphrase key, with its salt and rounds.
+- `sync_vaults`: one row for each account: the sync space, its token and the sync key.
 - `app_pings`: one row for each install and day.
 - `app_feedback`: one row for each message, with a status (new, read, planned, done) and a note of the owner.
 - `app_owners`: the accounts that can open the owner page.
@@ -64,9 +64,9 @@ Facts that shape the work:
 
 ### Task A3: Sync with the account
 
-- First device: "Turn on sync" makes the space (or uses the space of this device) and saves the wrapped key in the account.
-- Next device: sign in, type the passphrase, and the device joins the space. Its own projects merge in.
-- "Change the passphrase" wraps the key again. "Forgot the passphrase" starts a new space from this device.
+- First device: the sign-in turns sync on. It makes the space (or uses the space of this device) and saves it in the account.
+- Next device: the sign-in joins the space. Its own projects merge in.
+- A device that syncs with a pairing link asks before it moves to the account's space.
 - The pairing link stays for a writer with no account.
 
 ### Task A4: Send feedback
@@ -83,5 +83,5 @@ Facts that shape the work:
 
 - New purposes `account`, `ping` and `feedback` on the privacy page (version 12) and in `docs/privacy.md`.
 - Help: "Use Vlo on all your devices" and "Send feedback".
-- ADR 0009: accounts and the sealed sync key.
+- ADR 0009: accounts and sync with an account.
 - `docs/accounts-setup.md`: SMTP, Google and the owner row.

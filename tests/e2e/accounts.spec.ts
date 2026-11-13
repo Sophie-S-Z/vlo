@@ -12,7 +12,6 @@ import { fakeSupabase } from './support/share';
 // Playwright routes the fake Supabase requests only with no service worker, as in the reader tests.
 test.use({ serviceWorkers: 'block' });
 
-const PASSPHRASE = 'salt on the harbour wall';
 const projects = (page: Page) => page.getByRole('list', { name: 'Projects' }).getByRole('listitem');
 
 async function signIn(page: Page, email: string) {
@@ -56,26 +55,16 @@ test('a writer signs in on a laptop and a phone, and both keep every project', a
 
   await signIn(laptop, 'mira@example.com');
   expect(await seriousIssues(laptop)).toEqual([]);
+  // A sign-in turns sync on by itself.
   const sync = laptop.getByRole('region', { name: 'Sync on all your devices' });
-  await sync.getByLabel('Sync passphrase').fill('short');
-  await sync.getByLabel('Type the passphrase again').fill('short');
-  await sync.getByRole('button', { name: 'Turn on sync' }).click();
-  await expect(sync.getByRole('status')).toContainText('at least 8');
-  await sync.getByLabel('Sync passphrase').fill(PASSPHRASE);
-  await sync.getByLabel('Type the passphrase again').fill(PASSPHRASE);
-  await sync.getByRole('button', { name: 'Turn on sync' }).click();
   await expect(sync.getByRole('status')).toHaveText(
     'Sync is on. Sign in on your other devices with the same email.',
   );
   await expect(sync).toContainText('This device syncs with your account.');
   await syncNow(laptop);
-
-  // The server keeps the key sealed: the passphrase and the raw key never reach it.
-  const vault = [...(fake.accounts?.vaults.values() ?? [])][0];
-  expect(vault?.rounds).toBe(600_000);
-  const sent = JSON.stringify(fake.calls);
-  expect(sent).not.toContain(PASSPHRASE);
-  expect(sent).not.toContain('harbour');
+  expect(fake.accounts?.vaults.size).toBe(1);
+  // The relay gets sealed copies only.
+  expect(JSON.stringify(fake.calls.filter((c) => c.name === 'sync_put'))).not.toContain('harbour');
 
   const phoneContext = await browser.newContext();
   await fakeSupabase(phoneContext, fake);
@@ -84,14 +73,6 @@ test('a writer signs in on a laptop and a phone, and both keep every project', a
   await newProject(phone, true, 'Gulls on the wall');
   await signIn(phone, 'mira@example.com');
   const phoneSync = phone.getByRole('region', { name: 'Sync on all your devices' });
-  await expect(phoneSync).toContainText('Your account has sync.');
-  await phoneSync.getByLabel('Sync passphrase').fill('the wrong passphrase');
-  await phoneSync.getByRole('button', { name: 'Sync this device' }).click();
-  await expect(phoneSync.getByRole('status')).toHaveText(
-    'This passphrase is not the one of your account. Try again.',
-  );
-  await phoneSync.getByLabel('Sync passphrase').fill(PASSPHRASE);
-  await phoneSync.getByRole('button', { name: 'Sync this device' }).click();
   await expect(phoneSync.getByRole('status')).toHaveText(
     'This device syncs now. Your projects come to the Library.',
   );

@@ -1,12 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
-import { DeviceNameField, guessDeviceName } from '@/features/sync/DevicesSection';
+import { guessDeviceName } from '@/features/sync/deviceName';
 import { syncErrorText } from '@/features/sync/pairing';
 import { syncedText } from '@/features/sync/space';
 import { clock } from '@/lib/clock';
-import { CryptoError } from '@/lib/crypto';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +19,7 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import {
   accountSyncState,
-  changePassphrase,
   joinAccountSync,
-  restartAccountSync,
   stopAccountSyncHere,
   turnOnAccountSync,
   type AccountSyncState,
@@ -40,18 +37,16 @@ import {
   verifyCode,
 } from './auth';
 import { readSession, type AccountSession } from './session';
-import { passphraseProblem } from './vault';
 
 /*
- * The account page (Phase 18, Tasks A2 and A3). Sign in with an email code or Google, then turn on sync
- * with a passphrase, or type the passphrase on a new device. Every project stays on the device in each
- * step, and the page never sends a word of text.
+ * The account page (Phase 18, Tasks A2 and A3). Sign in with an email code or Google, and sync turns on:
+ * the first device makes the account's sync, and each next device joins it. Every project stays on the
+ * device in each step.
  */
 
 /** The writer's text for a failed call of this page. */
 export function accountErrorText(error: unknown): string {
   if (error instanceof AuthError) return error.message;
-  if (error instanceof CryptoError) return 'This passphrase is not the one of your account. Try again.';
   return syncErrorText(error);
 }
 
@@ -86,8 +81,8 @@ function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   return (
     <div className="grid max-w-md gap-4">
       <p>
-        Sign in to keep your projects the same on your phone, your laptop and any other device. Vlo sends a
-        6-digit code to your email. You need no password.
+        Sign in to keep your projects the same on your phone, your laptop and any other device. Every project
+        comes with you, finished or in progress. Vlo sends a 6-digit code to your email. You need no password.
       </p>
       {!sent ? (
         <form
@@ -189,217 +184,75 @@ function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   );
 }
 
-function PassphraseFields({
-  confirm,
-  value,
-  again,
-  onChange,
-  onAgain,
-}: {
-  confirm: boolean;
-  value: string;
-  again: string;
-  onChange: (text: string) => void;
-  onAgain: (text: string) => void;
-}) {
-  const id = useId();
-  return (
-    <div className="grid max-w-sm gap-3">
-      <div className="grid gap-1.5">
-        <Label htmlFor={`${id}-pass`}>Sync passphrase</Label>
-        <Input
-          id={`${id}-pass`}
-          type="password"
-          autoComplete={confirm ? 'new-password' : 'current-password'}
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-        />
-      </div>
-      {confirm && (
-        <div className="grid gap-1.5">
-          <Label htmlFor={`${id}-again`}>Type the passphrase again</Label>
-          <Input
-            id={`${id}-again`}
-            type="password"
-            autoComplete="new-password"
-            value={again}
-            onChange={(event) => {
-              onAgain(event.target.value);
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-const PASSPHRASE_NOTE =
-  'The passphrase locks your writing before it leaves this device. Nobody else can read it, the owner of Vlo included. Keep it safe: Vlo cannot show it again.';
+/** The states that turn on by themselves after a sign-in: nothing else syncs on this device. */
+const AUTOMATIC: readonly AccountSyncState['kind'][] = ['off', 'adopt', 'join'];
 
 function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () => void }) {
-  const [passphrase, setPassphrase] = useState('');
-  const [again, setAgain] = useState('');
-  const [name, setName] = useState(() => guessDeviceName());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const [mode, setMode] = useState<'normal' | 'change' | 'restart'>('normal');
+  const tried = useRef(false);
 
-  async function run(task: () => Promise<string>, check = true) {
-    const problem = check ? passphraseProblem(passphrase, again) : '';
-    if (problem) {
-      setMessage(problem);
-      return;
-    }
-    setBusy(true);
-    setMessage('');
-    try {
-      const done = await task();
-      setPassphrase('');
-      setAgain('');
-      setMode('normal');
-      setMessage(done);
-      onChange();
-    } catch (error) {
-      setMessage(accountErrorText(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const fields = (confirm: boolean) => (
-    <PassphraseFields
-      confirm={confirm}
-      value={passphrase}
-      again={again}
-      onChange={setPassphrase}
-      onAgain={setAgain}
-    />
+  const connect = useCallback(
+    async (current: AccountSyncState) => {
+      setBusy(true);
+      setMessage('');
+      try {
+        const name = guessDeviceName();
+        if (current.kind === 'join' || current.kind === 'move') await joinAccountSync(current.vault, name);
+        else await turnOnAccountSync(name);
+        setMessage(
+          current.kind === 'off' || current.kind === 'adopt'
+            ? 'Sync is on. Sign in on your other devices with the same email.'
+            : 'This device syncs now. Your projects come to the Library.',
+        );
+        onChange();
+      } catch (error) {
+        setMessage(accountErrorText(error));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [onChange],
   );
 
+  // A sign-in turns sync on, unless this device syncs with another set of devices: that asks first.
+  useEffect(() => {
+    if (tried.current || !AUTOMATIC.includes(state.kind)) return;
+    tried.current = true;
+    void connect(state);
+  }, [state, connect]);
+
   let body: React.ReactNode;
-  if (mode === 'restart')
+  if (state.kind === 'on')
     body = (
       <>
         <p>
-          Start sync again with a new passphrase. This device sends all its projects. Each other device asks
-          for the new passphrase, and then sends its projects too, so no device loses a word.
+          This device syncs with your account. {syncedText(state.space.syncedAt, clock.now())}. Sign in on
+          another device with the same email, and every project goes there too.
         </p>
-        {fields(true)}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              void run(async () => {
-                await restartAccountSync(passphrase, name);
-                return 'Sync started again with the new passphrase.';
-              });
-            }}
-          >
-            Start again
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setMode('normal');
-            }}
-          >
-            Cancel
+        <div>
+          <Button asChild variant="outline">
+            <Link to="/settings#devices">See your devices</Link>
           </Button>
         </div>
       </>
     );
-  else if (mode === 'change')
-    body = (
-      <>
-        {fields(true)}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              void run(async () => {
-                await changePassphrase(passphrase);
-                return 'The new passphrase works now. Use it on your next device.';
-              });
-            }}
-          >
-            Save the new passphrase
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setMode('normal');
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
-      </>
-    );
-  else if (state.kind === 'off' || state.kind === 'adopt')
+  else if (state.kind === 'move')
     body = (
       <>
         <p>
-          {state.kind === 'adopt'
-            ? 'This device syncs with a pairing link now. Give that sync to your account, and each device where you sign in can join it.'
-            : 'Turn on sync, then sign in on your other devices. Each device gets every project, finished or in progress.'}
+          This device syncs with another set of devices now, through a pairing link. Move it to your account?
+          Its projects stay here and go to your other devices too.
         </p>
-        <p className="text-sm text-muted">{PASSPHRASE_NOTE}</p>
-        {state.kind === 'off' && <DeviceNameField value={name} onChange={setName} />}
-        {fields(true)}
         <div>
           <Button
             type="button"
             disabled={busy}
             onClick={() => {
-              void run(async () => {
-                await turnOnAccountSync(passphrase, name);
-                return 'Sync is on. Sign in on your other devices with the same email.';
-              });
+              void connect(state);
             }}
           >
-            Turn on sync
-          </Button>
-        </div>
-      </>
-    );
-  else if (state.kind === 'join' || state.kind === 'move')
-    body = (
-      <>
-        <p>
-          {state.kind === 'move'
-            ? 'This device syncs with another set of devices now. Type your passphrase to move it to your account. Its projects stay here and go to your other devices.'
-            : 'Your account has sync. Type your sync passphrase, and your projects come to this device. The projects of this device go to your other devices too.'}
-        </p>
-        <DeviceNameField value={name} onChange={setName} />
-        {fields(false)}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={busy || passphrase === ''}
-            onClick={() => {
-              void run(async () => {
-                await joinAccountSync(state.vault, passphrase, name);
-                return 'This device syncs now. Your projects come to the Library.';
-              }, false);
-            }}
-          >
-            Sync this device
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setMessage('');
-              setMode('restart');
-            }}
-          >
-            I forgot the passphrase
+            Sync this device with my account
           </Button>
         </div>
       </>
@@ -408,24 +261,22 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
     body = (
       <>
         <p>
-          This device syncs with your account. {syncedText(state.space.syncedAt, clock.now())}. Sign in on
-          another device with the same email to add it.
+          {busy
+            ? 'Turning on sync for this device.'
+            : 'Sync did not start. Check the connection, then try again.'}
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setMessage('');
-              setMode('change');
-            }}
-          >
-            Change the passphrase
-          </Button>
-          <Button asChild variant="ghost">
-            <Link to="/settings#devices">See your devices</Link>
-          </Button>
-        </div>
+        {!busy && (
+          <div>
+            <Button
+              type="button"
+              onClick={() => {
+                void connect(state);
+              }}
+            >
+              Try again
+            </Button>
+          </div>
+        )}
       </>
     );
 

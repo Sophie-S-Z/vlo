@@ -2,9 +2,9 @@
 --
 -- Supabase Auth keeps the accounts in auth.users. Each table below has row level security with no
 -- policies, as in the migrations before, so only the functions of this file reach the tables. A function
--- for a signed-in writer reads the account from auth.uid(), never from an argument. The server never gets a
--- word of text: the sync key in a vault is wrapped with a key that comes from the writer's passphrase on
--- the device.
+-- for a signed-in writer reads the account from auth.uid(), never from an argument. The relay still holds
+-- cipher text only. The product owner chose sign-in with no passphrase (decision A1), so the account keeps
+-- the sync key here, and a new device needs only the sign-in. No function of the owner page reads it.
 
 -- The accounts that can open the owner page. The product owner adds a row in the SQL editor
 -- (docs/accounts-setup.md). No function adds one.
@@ -13,16 +13,13 @@ create table public.app_owners (
   created_at timestamptz not null default now()
 );
 
--- The sync space of an account, and its sync key wrapped with AES-GCM under a key from the passphrase
--- (PBKDF2-SHA256). The space token opens the relay, which holds cipher text only.
+-- The sync space of an account: its id, the token that opens the relay, and the 32-byte sync key in
+-- base64url. Only the account itself reads its row, through vault_get.
 create table public.sync_vaults (
   user_id uuid primary key references auth.users (id) on delete cascade,
   space_id uuid not null references public.sync_spaces (id) on delete cascade,
   token text not null,
-  wrapped text not null,
-  iv text not null,
-  salt text not null,
-  rounds int not null,
+  key text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -88,34 +85,28 @@ end $$;
 ------------------------------------------------------------------------------------------------------------
 
 create or replace function public.vault_get()
-returns table (space_id uuid, token text, wrapped text, iv text, salt text, rounds int, updated_at timestamptz)
+returns table (space_id uuid, token text, key text, updated_at timestamptz)
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_uid uuid := vlo_account();
 begin
   return query
-  select v.space_id, v.token, v.wrapped, v.iv, v.salt, v.rounds, v.updated_at
+  select v.space_id, v.token, v.key, v.updated_at
   from sync_vaults v where v.user_id = v_uid;
 end $$;
 
--- Saves the account's sync space and wrapped key. The caller must hold the space token, so an account
--- cannot point at a space of another writer.
-create or replace function public.vault_put(
-  p_space uuid, p_token text, p_wrapped text, p_iv text, p_salt text, p_rounds int
-) returns boolean
+-- Saves the account's sync space and key. The caller must hold the space token, so an account cannot
+-- point at a space of another writer.
+create or replace function public.vault_put(p_space uuid, p_token text, p_key text) returns boolean
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_uid uuid := vlo_account();
 begin
-  -- A 32-byte key with its 16-byte tag in base64 is 64 characters. A 16-byte salt is 24.
-  if p_wrapped is null or p_wrapped !~ '^[A-Za-z0-9+/]{64}$' then raise exception 'bad wrapped key'; end if;
-  if p_iv is null or p_iv !~ '^[A-Za-z0-9+/]{16}$' then raise exception 'bad iv'; end if;
-  if p_salt is null or p_salt !~ '^[A-Za-z0-9+/]{22}==$' then raise exception 'bad salt'; end if;
-  if p_rounds is null or p_rounds < 100000 or p_rounds > 10000000 then raise exception 'bad rounds'; end if;
+  -- A 32-byte key in base64url is 43 characters.
+  if p_key is null or p_key !~ '^[A-Za-z0-9_-]{43}$' then raise exception 'bad key'; end if;
   if not sync_open(p_space, p_token) then raise exception 'unknown space'; end if;
-  insert into sync_vaults (user_id, space_id, token, wrapped, iv, salt, rounds)
-  values (v_uid, p_space, p_token, p_wrapped, p_iv, p_salt, p_rounds)
+  insert into sync_vaults (user_id, space_id, token, key)
+  values (v_uid, p_space, p_token, p_key)
   on conflict (user_id) do update
-    set space_id = excluded.space_id, token = excluded.token, wrapped = excluded.wrapped,
-        iv = excluded.iv, salt = excluded.salt, rounds = excluded.rounds, updated_at = now();
+    set space_id = excluded.space_id, token = excluded.token, key = excluded.key, updated_at = now();
   return true;
 end $$;
 

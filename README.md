@@ -1,6 +1,6 @@
 # Vlo
 
-Vlo is a writing app for novels, memoirs and poetry that keeps every word in the writer's own browser. It works offline and needs no account to write. An optional account syncs every project between a writer's devices, sealed with the writer's own passphrase, so no server reads a word. Vlo sends nothing else unless the writer asks for an AI request, a share link, feedback, a weekly usage report or a WordPress.com draft, apart from an anonymous daily count that Settings can turn off.
+Vlo is a writing app for novels, memoirs and poetry that keeps every word in the writer's own browser. It works offline and needs no account to write. An optional account syncs every project between a writer's devices. Vlo sends nothing else unless the writer asks for an AI request, a share link, feedback, a weekly usage report or a WordPress.com draft, apart from an anonymous daily count that Settings can turn off.
 
 Writers: the user guide is the Help page in the app (`/help`, `src/features/help/help.ts`). The privacy page is `/privacy`.
 

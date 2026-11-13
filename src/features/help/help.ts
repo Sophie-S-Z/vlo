@@ -135,12 +135,11 @@ export const HELP = {
       title: 'Use Vlo on all your devices',
       needsSharing: true,
       steps: [
-        'Choose Sign in at the top of the screen, type your email, then type the 6-digit code from the email.',
-        'Choose Turn on sync and pick a sync passphrase. It locks your writing, so nobody else can read it.',
-        'On your phone or another computer, open Vlo, sign in with the same email, and type the passphrase.',
+        'Choose Sign in at the top of the screen, type your email, then type the 6-digit code from the email. Sync turns on.',
+        'On your phone or another computer, open Vlo and sign in with the same email.',
         'Every project comes to the new device, finished or in progress. A change on one device goes to the others.',
-        'Forgot the passphrase? On a device that syncs, choose Change the passphrase. With no such device, choose I forgot the passphrase.',
-        'Sign out on a device that is not yours. Delete my account is on the Account page.',
+        'Words that two devices write offline both stay.',
+        'Sign out on a device that is not yours. It keeps its projects and stops sync. Delete my account is on the Account page.',
       ],
     },
     {
