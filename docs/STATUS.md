@@ -4,6 +4,21 @@ Last update: 2026-11-13
 
 ## Done
 
+- Hardening pass (2026-11-13), from two code reviews of the Phase 17 code and of backup, import and History:
+  - Fixed: the command menu did not open the timer; a Workshop tool lost its work when the project changed;
+    a closed WordPress.com sign-in window held Publish for 10 minutes; new essay and article sections had
+    no working title; the WordPress file kept control characters that XML forbids; a References page lost
+    a title of the writer's own, such as Bibliography; the WordPress file name dropped titles in other
+    scripts; Spine kept the sentence rules of the first language.
+  - Fixed: two projects with one title wrote over each other's folder backups; an edit during a backup
+    counted as backed up; an import could wipe the text of an item already on the device; a backup with a
+    snapshot interval of 0 or wrong memory themes went in; History could compare a snapshot with itself;
+    Versions counted the words of notes and kept old errors.
+  - The Settings page and the Codex matcher load on demand. Initial JavaScript: 221,647 bytes gzip (was
+    231,554, budget 250,000).
+  - Measured and left as it is: a folder save of the 100,000-word project spends 44 to 71 ms on the
+    readable copies, in one task every 10 minutes.
+
 - Phase 18 (plan `docs/plans/phase-18.md`, ADR 0009), from a beta tester's feedback and the product owner's ask:
   - Accounts: `/account` signs in with a 6-digit email code, and with Google in a build with
     `VITE_AUTH_GOOGLE`. Supabase Auth through its REST paths, purpose `account`, with no new package.
