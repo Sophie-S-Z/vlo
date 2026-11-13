@@ -8,13 +8,15 @@ import { requestPersistence } from '@/lib/storage';
 import { recountItems } from '@/lib/wordcount';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { dropBook } from '@/features/series/series';
-import { cleanTemplates, misfits, projectDef, type StarterItem } from './templates';
+import { cleanTemplates, misfits, projectDef, TEMPLATES, type StarterItem } from './templates';
 
 export interface NewProjectInput {
   title: string;
   /** One or more templates. The project gets the binder kinds and the views of each. */
   templates: readonly Template[];
   authorName?: string;
+  /** The structure to start each template from, by template (Phase 17 decision M2). */
+  structures?: Partial<Record<Template, string>>;
 }
 
 function cleanTitle(title: string): string {
@@ -50,6 +52,15 @@ export async function createProject(
   const now = clock.now();
   const project = newProject(input, now);
   const def = projectDef(project.templates);
+  // Each template starts from its chosen structure, or from its own starter items.
+  const picked = input.structures ?? {};
+  // The structures load only for a project that starts from one, so the Library page stays small.
+  const { structureFor } =
+    Object.keys(picked).length > 0 ? await import('./structures') : { structureFor: () => undefined };
+  const chosen = project.templates.map((t) => structureFor(t, picked[t]));
+  const starters = project.templates.flatMap((t, i) => chosen[i]?.items ?? TEMPLATES[t].starter);
+  const citeStyle = chosen.find((s) => s?.citeStyle)?.citeStyle;
+  if (citeStyle) project.settings.citeStyle = citeStyle;
 
   const items: Item[] = [];
   const add = (starters: StarterItem[], parentId: string | null) => {
@@ -68,14 +79,18 @@ export async function createProject(
         wordCount: 0,
         createdAt: now,
         updatedAt: now,
+        ...(starter.guide ? { guide: starter.guide } : {}),
+        ...(starter.words ? { words: starter.words } : {}),
+        ...(starter.role ? { role: starter.role } : {}),
+        ...(starter.workingTitle ? { workingTitle: true as const } : {}),
       };
       items.push(item);
       if (starter.children) add(starter.children, item.id);
     }
   };
-  add(def.starter, null);
+  add(starters, null);
 
-  const first = items.find((i) => def.editorKind(i.kind) !== null);
+  const first = items.find((i) => def.editorKind(i.kind) !== null && i.role === undefined);
   if (!first) throw new Error(`Template ${project.templates.join('+')} has no writable starter item.`);
 
   const isFirstProject = (await db.projects.count()) === 0;

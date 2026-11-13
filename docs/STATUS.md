@@ -9,6 +9,12 @@ Last update: 2026-11-12
     tools on the title row, a More menu for the views that are not tabs, one Import menu in the Library, a
     first-use tip line, and command-menu entries for Insights, History, Page, Scene, Sound and the timer.
     Every tool keeps its accessible name. The quick Hide text button shows only while the text is hidden.
+  - Q-B, three new modes: Essay, Article and Research paper, each with structures to start from (about 20,
+    such as IMRaD, literature review, lab report, annotated bibliography, five-paragraph, braided and
+    application essays, how-to, op-ed and interview). Each section can carry a guide and a word range that
+    show above the text and never export. A References page lists the sources in the project's style, takes
+    a BibTeX or CSL JSON import, and sets where the list goes in an export. Add to binder has a Section with
+    a guide menu. Cite a source works in the new modes. Backup format 14 keeps guide, words and role.
 
 - Phase 6 (plan `docs/plans/phase-6.md`): pull request #18 merged on 2026-11-08.
   - F1: the architecture review (`docs/architecture-review-phase-6.md`). Fixed: the web originality check
