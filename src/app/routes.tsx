@@ -80,6 +80,11 @@ export const routes: RouteObject[] = [
         path: 'p/:projectId/progress',
         lazy: async () => ({ Component: (await import('@/features/progress/ProgressPage')).ProgressPage }),
       },
+      // The Workshop (Phase 17 decision D1): deeper tools for each writing mode.
+      {
+        path: 'p/:projectId/workshop',
+        lazy: async () => ({ Component: (await import('@/features/workshop/WorkshopPage')).WorkshopPage }),
+      },
       // A series of books (F59): its books, shared Codex and style sheet.
       {
         path: 'series/:seriesId',

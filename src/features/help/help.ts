@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 25,
+  version: 26,
   date: '2026-11-12',
   guide: [
     {
@@ -80,6 +80,17 @@ export const HELP = {
         'Pick a form above the poem: sonnet, villanelle, ghazal, haiku, pantoum or sestina.',
         'Vlo lists each line that breaks the form: the line count, the rhyme, a refrain, an end word or the syllables. Choose a note to go to its line.',
         'Rhyme and syllables are checked in English. The lines, stanzas, refrains and end words are checked in every language.',
+      ],
+    },
+    {
+      title: 'Use the Workshop',
+      steps: [
+        'A poetry collection, an essay, an article and a research paper have a Workshop. Choose More next to the view tabs, then Workshop.',
+        'Erasure: pick a poem or paste a text, then choose the words to keep. The kept words stay where they stood, and Make the poem saves the result as a new poem.',
+        'Golden shovel: type a line that you borrow and its poet. Each word of the line ends one line of your poem, in order.',
+        'Echoes lists the words that come back from poem to poem. Line endings shows where each line of a poem ends: on a pause, running on, or on a small word.',
+        'Spine lists the first sentence of each paragraph of an essay, an article or a paper. Read in order, those sentences should make the argument.',
+        'An article has Headlines, to compare headline ideas by their length. A research paper has Citation check, which counts the citations of each source and lists the sources that the text does not cite.',
       ],
     },
     {

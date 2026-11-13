@@ -20,6 +20,12 @@ Last update: 2026-11-12
     a copy with only what its editor keeps, the title and subtitle as their own copies, the steps to paste,
     what the platform changes, and its length limits. WordPress also gets an import file (WXR). A build with
     `VITE_WPCOM_CLIENT_ID` can save a draft on WordPress.com (`docs/publish-setup.md`, purpose `publish`).
+  - Q-D, the Workshop (`/p/<id>/workshop`, first in the More menu): deeper tools for each mode. A poetry
+    collection gets Erasure (keep words of a poem or a pasted text, each at its column, then make a new
+    poem), Golden shovel (a borrowed line gives the end words), Echoes (the words that come back from poem
+    to poem) and Line endings (pause, run-on or small word, line by line). Essays, articles and papers get
+    Spine (the first sentence of each paragraph). Articles get Headlines, and papers get Citation check.
+    Each tool has a command in the command menu. The logic is in `src/features/workshop/*.ts`.
 
 - Phase 6 (plan `docs/plans/phase-6.md`): pull request #18 merged on 2026-11-08.
   - F1: the architecture review (`docs/architecture-review-phase-6.md`). Fixed: the web originality check
