@@ -22,14 +22,7 @@ import {
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
-import {
-  leaveSeries,
-  MAX_SERIES_TITLE,
-  moveBook,
-  renameSeries,
-  setStyleSheet,
-  styleRule,
-} from './series';
+import { leaveSeries, MAX_SERIES_TITLE, moveBook, renameSeries, setStyleSheet, styleRule } from './series';
 import { seriesTimeline } from './timeline';
 import { SeriesTimeline } from './SeriesTimeline';
 

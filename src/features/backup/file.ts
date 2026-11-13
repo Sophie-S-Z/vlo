@@ -252,7 +252,9 @@ function checkProject(value: unknown): Project {
   if (value.lastBackupAt !== undefined) count(value, 'lastBackupAt', what);
   const settings = value.settings;
   if (!isObject(settings)) fail(`${DAMAGED} ${what} has no settings.`);
-  count(settings, 'snapshotEveryMinutes', 'The project settings');
+  // At 0 minutes, a snapshot would follow each pause in the typing.
+  if (count(settings, 'snapshotEveryMinutes', 'The project settings') < 1)
+    fail(`${DAMAGED} The project settings are wrong.`);
   if (typeof settings.aliasAiRequests !== 'boolean' || typeof settings.streaksEnabled !== 'boolean')
     fail(`${DAMAGED} The project settings are wrong.`);
   if (!Array.isArray(settings.restDays) || !settings.restDays.every((d) => typeof d === 'number'))
@@ -431,7 +433,15 @@ function checkItems(rows: Json[], projectId: string): Item[] {
       fail(`${DAMAGED} ${what} has a wrong working title switch.`);
     count(row, 'createdAt', what);
     count(row, 'updatedAt', what);
-    if (row.memory !== undefined && !isObject(row.memory)) fail(`${DAMAGED} ${what} has a wrong memory.`);
+    if (row.memory !== undefined) {
+      const memory = row.memory;
+      if (!isObject(memory)) fail(`${DAMAGED} ${what} has a wrong memory.`);
+      // An older backup can have no themes. The timeline reads them as a list.
+      const themes = memory.themes;
+      if (themes !== undefined && !(Array.isArray(themes) && themes.every((t) => typeof t === 'string')))
+        fail(`${DAMAGED} ${what} has a wrong memory.`);
+      for (const key of ['date', 'dateEnd', 'lifeStageId']) optionalText(memory, key, what);
+    }
   }
   // Every parent is an item of the backup, and no item is its own ancestor.
   const parents = new Map(rows.map((row) => [row.id as string, row.parentId as string | null]));

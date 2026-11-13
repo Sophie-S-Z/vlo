@@ -223,6 +223,26 @@ describe('Backup round trip', () => {
     }
   });
 
+  test('an import whose items are here already leaves their text as it is', async () => {
+    const { project, scenes } = await novelWithText();
+    const { bytes } = await backUpProject(project.id, { music: false });
+    const scene = scenes[0]?.id ?? '';
+    await writeItemUpdate(scene, proseUpdate(['Newer words.']), clock.now());
+    const newer = await textOf(scene);
+    expect(newer).toContain('Newer words.');
+    // The project row goes, and its items stay, as after a sync that is only half done.
+    await db.projects.delete(project.id);
+    await expect(importBackup(await readBackup(bytes), 'same')).rejects.toThrow(/Import it as a copy/);
+    expect(await textOf(scene)).toBe(newer);
+  });
+
+  test('the backup time is the time before the reads, so an edit during the reads counts as after it', async () => {
+    const { project } = await novelWithText();
+    const now = vi.spyOn(clock, 'now');
+    now.mockReturnValueOnce(1000).mockReturnValue(9000);
+    expect((await collectBackup(project.id, { music: false })).createdAt).toBe(1000);
+  });
+
   test('a copy keeps each kept continuity mark (F66), with the new entry and scene ids', async () => {
     const { project, scenes } = await novelWithText();
     const scene = scenes[0];
@@ -512,6 +532,21 @@ describe('Reading a backup', () => {
       ['a version name of no text', (m) => (row(m, 'items').versionName = 42), /has no versionName/],
       ['an empty version name', (m) => (row(m, 'items').versionName = ' '), /has a wrong version name/],
       ['a wrong story date', (m) => (row(m, 'items').storyDate = '1994-13'), /has a wrong story date/],
+      [
+        'memory themes as one text',
+        (m) => (row(m, 'items').memory = { themes: 'sea' }),
+        /has a wrong memory/,
+      ],
+      [
+        'a memory date of no text',
+        (m) => (row(m, 'items').memory = { themes: [], date: 1994 }),
+        /has a wrong date/,
+      ],
+      [
+        'a snapshot after every 0 minutes',
+        (m) => ((m.project as { settings: Record<string, unknown> }).settings.snapshotEveryMinutes = 0),
+        /The project settings are wrong/,
+      ],
       [
         'a wrong day of words',
         (m) => {
