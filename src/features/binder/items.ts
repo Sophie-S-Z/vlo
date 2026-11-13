@@ -30,7 +30,7 @@ export async function addItem(
   parentId: string | null,
   kind: ItemKind,
   title: string,
-  extra: Pick<Item, 'guide' | 'words' | 'role'> = {},
+  extra: Pick<Item, 'guide' | 'words' | 'role' | 'workingTitle'> = {},
 ): Promise<Item> {
   const now = clock.now();
   return db.transaction('rw', db.items, db.projects, async () => {
@@ -53,6 +53,7 @@ export async function addItem(
       ...(extra.guide ? { guide: extra.guide } : {}),
       ...(extra.words ? { words: extra.words } : {}),
       ...(extra.role ? { role: extra.role } : {}),
+      ...(extra.workingTitle ? { workingTitle: true as const } : {}),
     };
     await db.items.add(item);
     await touchProject(projectId, now);

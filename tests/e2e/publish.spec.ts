@@ -119,7 +119,7 @@ test('WordPress gets an import file and, with an app id, a draft on WordPress.co
   const download = page.waitForEvent('download');
   await dialog.getByRole('button', { name: 'WordPress import file' }).click();
   const file = await download;
-  expect(file.suggestedFilename()).toBe('night-ferry-wordpress.xml');
+  expect(file.suggestedFilename()).toBe('Night Ferry for WordPress.xml');
   const path = await file.path();
   const { readFile } = await import('node:fs/promises');
   const xml = await readFile(path, 'utf8');

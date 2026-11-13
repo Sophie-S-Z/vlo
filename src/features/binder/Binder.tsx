@@ -24,7 +24,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
-import { SECTION_LIBRARY } from '@/features/library/structures';
+import { SECTION_LIBRARY, sectionsHaveWorkingTitles } from '@/features/library/structures';
 import { BinderItem, INDENT_PX, type BinderItemActions, type BinderMove } from './BinderItem';
 import { labelOf } from '@/features/outline/outline';
 import { ItemDialogs, type ItemAction } from './ItemDialogs';
@@ -74,6 +74,7 @@ function describeMove(nodes: readonly FlatNode[], item: Item, placement: Placeme
 
 export function Binder({ project, items, openItemId, onOpen, onOpenBeside, research }: BinderProps) {
   const template = useMemo(() => projectDef(project.templates), [project.templates]);
+  const untitled = sectionsHaveWorkingTitles(project.templates);
   const nodes = useMemo(() => flattenTree(items), [items]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -140,7 +141,13 @@ export function Binder({ project, items, openItemId, onOpen, onOpenBeside, resea
 
   async function add(parentId: string | null, kind: ItemKind) {
     const label = template.kindLabel[kind] ?? kind;
-    const item = await addItem(project.id, parentId, kind, await nextTitle(project.id, kind, label));
+    const item = await addItem(
+      project.id,
+      parentId,
+      kind,
+      await nextTitle(project.id, kind, label),
+      kind === 'page' && untitled ? { workingTitle: true } : {},
+    );
     setMessage(`Added ${item.title}.`);
     if (template.editorKind(kind) !== null) onOpen(item.id);
   }
@@ -149,7 +156,7 @@ export function Binder({ project, items, openItemId, onOpen, onOpenBeside, resea
     const item = await addItem(project.id, null, 'page', section.title, {
       ...(section.guide ? { guide: section.guide } : {}),
       ...(section.words ? { words: section.words } : {}),
-      ...(section.role ? { role: section.role } : {}),
+      ...(section.role ? { role: section.role } : untitled ? { workingTitle: true as const } : {}),
     });
     setMessage(`Added ${item.title}.`);
     onOpen(item.id);

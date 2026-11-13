@@ -112,7 +112,9 @@ describe('the chain and the record file', () => {
     write(other, 'Elsewhere.');
     await flushEntry('p2');
     const file = await recordText();
-    expect(file).not.toMatch(/Harbour|Mira|ledger|p1|Elsewhere/);
+    expect(file).not.toMatch(/Harbour|Mira|ledger|Elsewhere/);
+    // A key, a hash or a signature can hold "p1" by chance, so look for the id only where it stands alone.
+    expect(file).not.toMatch(/(?<![\w+/-])p1(?![\w+/=-])/);
     expect((JSON.parse(file) as { entries: unknown[] }).entries).toHaveLength(1);
     expect((await db.authorship.where('projectId').equals('p2').first())?.seq).toBe(0);
   });

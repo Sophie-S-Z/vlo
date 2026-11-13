@@ -5,6 +5,8 @@
  * the writer picks. The HTML goes in a Classic block, which the block editor can convert to blocks.
  */
 
+import { xmlChars } from '@/features/export/xml';
+
 export interface WxrPost {
   title: string;
   /** The excerpt, or ''. */
@@ -16,7 +18,7 @@ export interface WxrPost {
 
 /** CDATA cannot hold "]]>", so the text splits there into two CDATA sections. */
 function cdata(text: string): string {
-  return `<![CDATA[${text.replace(/]]>/g, ']]]]><![CDATA[>')}]]>`;
+  return `<![CDATA[${xmlChars(text).replace(/]]>/g, ']]]]><![CDATA[>')}]]>`;
 }
 
 /** A time as WordPress stores it: "2026-11-12 09:30:00", in UTC. */

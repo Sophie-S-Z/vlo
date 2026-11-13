@@ -6,14 +6,19 @@
  * - Headline lab: the headline ideas of an article, each with its length.
  */
 
-let sentences: Intl.Segmenter | null = null;
+const segmenters = new Map<string, Intl.Segmenter>();
 
 /** The first sentence of a paragraph. */
 export function firstSentence(paragraph: string, language?: string): string {
   const text = paragraph.replace(/\s+/g, ' ').trim();
   if (text === '') return '';
   try {
-    sentences ??= new Intl.Segmenter(language, { granularity: 'sentence' });
+    const key = language ?? '';
+    let sentences = segmenters.get(key);
+    if (!sentences) {
+      sentences = new Intl.Segmenter(language, { granularity: 'sentence' });
+      segmenters.set(key, sentences);
+    }
     const first = sentences.segment(text)[Symbol.iterator]().next().value?.segment ?? text;
     return first.trim();
   } catch {

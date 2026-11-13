@@ -2,7 +2,7 @@ import { flattenTree } from '@/features/binder/tree';
 import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
-import { inText, LIST_TITLES, reference, sortReferences } from '@/features/cite/styles';
+import { inText, listTitle, reference, sortReferences } from '@/features/cite/styles';
 import type { BookSettings, CiteStyle, Item, Project, Source } from '@/lib/db';
 import {
   runsOf,
@@ -116,15 +116,14 @@ function isScript(sections: readonly ExportSection[]): boolean {
 }
 
 /**
- * Gives each citation the in-text form of the style, and returns the reference list of the cited sources
+ * Gives each citation the in-text form of the style, and returns the cited sources
  * and the count of citations whose source is gone.
  */
 function citeSections(
   sections: readonly ExportSection[],
   sources: readonly Source[],
   style: CiteStyle,
-  language: string,
-): { list: ExportSection | null; missing: number } {
+): { cited: Source[] | null; missing: number } {
   // When two sources have one key, the first one is cited, as in the editor.
   const byKey = new Map([...sources].reverse().map((s) => [s.key, s]));
   const cited = new Set<Source>();
@@ -136,16 +135,20 @@ function citeSections(
     else missing += 1;
     run.text = inText(source, run.cite.page, style);
   }
-  if (cited.size === 0) return { list: null, missing };
-  return { missing, list: referenceList([...cited], style, language) };
+  return { missing, cited: cited.size > 0 ? [...cited] : null };
 }
 
 /** The id of the place that a References page keeps for the list, until the list is known. */
 const REFERENCES_SLOT = 'references-slot';
 
-/** The reference list of `sources`, under the title of the style. */
-function referenceList(sources: readonly Source[], style: CiteStyle, language: string): ExportSection {
-  const title = LIST_TITLES[style];
+/** The reference list of `sources`, under the title of its page or of the style. */
+function referenceList(
+  sources: readonly Source[],
+  style: CiteStyle,
+  language: string,
+  pageTitle?: string,
+): ExportSection {
+  const title = listTitle(style, pageTitle);
   return {
     id: 'references',
     title,
@@ -218,22 +221,18 @@ export function buildExportDoc({
       ? `${project.title}, ${scope.name}`
       : (scoped?.title ?? project.title);
   const language = cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE;
-  const cites = sources
-    ? citeSections(sections, sources, project.settings.citeStyle ?? 'apa', language)
-    : null;
+  const style = project.settings.citeStyle ?? 'apa';
+  const cites = sources ? citeSections(sections, sources, style) : null;
   const slot = sections.findIndex((s) => s.id === REFERENCES_SLOT);
   if (slot >= 0) {
     // The References page takes the list of the cited sources, or of every source when none is cited.
-    const list =
-      cites?.list ??
-      (sources && sources.length > 0
-        ? referenceList(sources, project.settings.citeStyle ?? 'apa', language)
-        : null);
-    if (list) sections.splice(slot, 1, list);
+    const listed = cites?.cited ?? sources ?? [];
+    const pageTitle = sections[slot]?.title;
+    if (listed.length > 0) sections.splice(slot, 1, referenceList(listed, style, language, pageTitle));
     else sections.splice(slot, 1);
     for (let i = sections.length - 1; i >= 0; i -= 1)
       if (sections[i]?.id === REFERENCES_SLOT) sections.splice(i, 1);
-  } else if (cites?.list) sections.push(cites.list);
+  } else if (cites?.cited) sections.push(referenceList(cites.cited, style, language));
   return {
     title,
     ...(project.authorName ? { author: project.authorName } : {}),

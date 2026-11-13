@@ -177,6 +177,15 @@ describe('the WordPress import file', () => {
     expect(post?.getElementsByTagName('wp:status')[0]?.textContent).toBe('draft');
     expect(post?.getElementsByTagName('wp:post_date')[0]?.textContent).toBe('2026-11-12 09:30:00');
   });
+
+  test('a form feed or a vertical tab from a paste leaves the file well formed', () => {
+    const xml = toWxr({ title: 'Page\fbreak', excerpt: 'a\vb', html: '<p>one\u0001two</p>', at: 0 });
+    const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+    expect(parsed.querySelector('parsererror')).toBeNull();
+    expect(parsed.getElementsByTagName('item')[0]?.getElementsByTagName('title')[0]?.textContent).toBe(
+      'Pagebreak',
+    );
+  });
 });
 
 describe('a draft on WordPress.com', () => {
