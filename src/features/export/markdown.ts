@@ -69,13 +69,13 @@ function poemLine(runs: readonly Run[]): string {
   return guardLineStart(NBSP.repeat(lead) + rest);
 }
 
-function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth = 0): string {
+function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth = 0, shift = 0): string {
   const indent = '   '.repeat(depth);
   switch (block.type) {
     case 'paragraph':
       return guardLineStart(inline(block.runs, { poem: false }));
     case 'heading':
-      return `${'#'.repeat(block.level)} ${inline(block.runs, { poem: false })}`;
+      return `${'#'.repeat(Math.min(block.level + shift, 6))} ${inline(block.runs, { poem: false })}`;
     case 'sceneBreak':
       return '***';
     case 'math':
@@ -89,7 +89,7 @@ function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth =
     }
     case 'quote':
       return block.blocks
-        .map((b) => blockMarkdown(b, paths))
+        .map((b) => blockMarkdown(b, paths, 0, shift))
         .join('\n\n')
         .split('\n')
         .map((line) => (line === '' ? '>' : `> ${line}`))
@@ -98,7 +98,7 @@ function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth =
       return block.items
         .map((item, i) => {
           const marker = block.ordered ? `${String(block.start + i)}. ` : '- ';
-          const body = item.map((b) => blockMarkdown(b, paths, depth + 1)).join('\n\n');
+          const body = item.map((b) => blockMarkdown(b, paths, depth + 1, shift)).join('\n\n');
           const [first = '', ...rest] = body.split('\n');
           const pad = ' '.repeat(marker.length);
           return `${indent}${marker}${first.trimStart()}${rest.map((l) => (l === '' ? '' : `\n${indent}${pad}${l.trimStart()}`)).join('')}`;
@@ -155,6 +155,32 @@ export function toMarkdown(doc: ExportDoc, paths: ReadonlyMap<string, string> = 
     parts.push(notes.map((n) => `[^${String(n.number)}]: ${noteMarkdown(n.note)}`).join('\n'));
   }
   return `${parts.filter((p) => p !== '').join('\n\n')}\n`;
+}
+
+/**
+ * The Markdown of a post for a web platform (Phase 17 Publish): no title line, because each platform has a
+ * title field, and headings one level down, so a part is "##". An image stays as "[Image: ...]", because
+ * a paste takes no file. `notes` "list" ends the text with a numbered list for a site with no footnotes.
+ */
+export function toMarkdownBody(doc: ExportDoc, notes: 'gfm' | 'list'): string {
+  const parts: string[] = [];
+  for (const section of doc.sections) {
+    for (const block of section.blocks) {
+      if (repeatsTitle(doc, section, block)) continue;
+      parts.push(blockMarkdown(block, new Map(), 0, 1));
+    }
+  }
+  const list = footnotesOf(doc);
+  let body = parts.filter((p) => p !== '').join('\n\n');
+  if (list.length > 0 && notes === 'gfm')
+    body += `\n\n${list.map((n) => `[^${String(n.number)}]: ${noteMarkdown(n.note)}`).join('\n')}`;
+  if (notes === 'list') {
+    // A marker that the writer typed is escaped as "\[^", so only the note markers change.
+    body = body.replace(/(?<!\\)\[\^(\d+)\]/g, '[$1]');
+    if (list.length > 0)
+      body += `\n\n---\n\n${list.map((n) => `${String(n.number)}. ${noteMarkdown(n.note)}`).join('\n')}`;
+  }
+  return `${body}\n`;
 }
 
 /**

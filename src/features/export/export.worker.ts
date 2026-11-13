@@ -1,4 +1,6 @@
 /// <reference lib="webworker" />
+import type { PostBody } from '@/features/publish/copy';
+import type { PlatformId } from '@/features/publish/platforms';
 import type { BookSettings } from '@/lib/db';
 import type { NameCheck } from '@/lib/privacy';
 import { checkOwnFonts, type FontCheck, type FontSwap } from './fontCheck';
@@ -26,7 +28,9 @@ export type ExportMessage =
   | { type: 'make' }
   | { type: 'lay'; book: BookSettings }
   | { type: 'draw'; from: number; to: number }
-  | { type: 'epub'; book: BookSettings; fontBase: string };
+  | { type: 'epub'; book: BookSettings; fontBase: string }
+  /** The body of a post for one platform (Phase 17 Publish). */
+  | { type: 'post'; platform: PlatformId };
 
 export type ExportResponse =
   | { type: 'prepared'; ownFonts: string[]; names: NameCheck }
@@ -35,6 +39,7 @@ export type ExportResponse =
   | { type: 'laid'; pages: number; size: readonly [number, number] }
   | { type: 'drawn'; svgs: string[] }
   | { type: 'html'; html: string }
+  | { type: 'post'; body: PostBody }
   | { type: 'error'; message: string };
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -83,6 +88,16 @@ async function handle(message: ExportMessage): Promise<void> {
       type: 'html',
       html: await epubPreview({ ...prepared.doc, book: message.book }, message.fontBase),
     });
+    return;
+  }
+  if (message.type === 'post') {
+    const [{ postBody }, { platformById }] = await Promise.all([
+      import('@/features/publish/copy'),
+      import('@/features/publish/platforms'),
+    ]);
+    const platform = platformById(message.platform);
+    if (!platform) throw new Error(`Vlo has no platform ${message.platform}.`);
+    reply({ type: 'post', body: postBody(prepared.doc, platform) });
     return;
   }
   const file = await makeExport(prepared, fonts);

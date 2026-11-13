@@ -9,6 +9,8 @@ import { localFontName } from '@/features/editor/format/fonts';
 import type { ExportMessage, ExportResponse } from './export.worker';
 import type { FontSwap } from './fontCheck';
 import type { ExportFile, ExportRequest } from './run';
+import type { PostBody } from '@/features/publish/copy';
+import type { PlatformId } from '@/features/publish/platforms';
 
 /*
  * The main-thread side of an export. It reads each item's stored Yjs document, which only the page can
@@ -118,6 +120,13 @@ export class ExportJob {
     const response = await this.send({ type: 'epub', book, fontBase });
     if (response.type !== 'html') throw new Error('The export worker made no preview.');
     return response.html;
+  }
+
+  /** The body of a post for one platform (Phase 17 Publish). */
+  async post(platform: PlatformId): Promise<PostBody> {
+    const response = await this.send({ type: 'post', platform });
+    if (response.type !== 'post') throw new Error('The export worker made no post.');
+    return response.body;
   }
 
   /** Makes the file. */

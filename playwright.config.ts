@@ -19,7 +19,12 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npm run preview',
     // A fake Supabase project: the share and usage tests answer its RPC paths with page.route.
-    env: { VITE_SUPABASE_URL: 'https://vlo-test.supabase.co', VITE_SUPABASE_ANON_KEY: 'test-anon-key' },
+    env: {
+      VITE_SUPABASE_URL: 'https://vlo-test.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+      // A fake WordPress.com app: publish.spec.ts answers its sign-in and API with page.route.
+      VITE_WPCOM_CLIENT_ID: '12345',
+    },
     url: 'http://localhost:4173',
     reuseExistingServer: !isCI,
     timeout: 120_000,

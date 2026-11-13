@@ -68,6 +68,9 @@ export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
     'bob.btc.calendar.opentimestamps.org',
     'mempool.space',
   ],
+  // A draft on WordPress.com (Phase 17 Publish), only when the writer presses its button in a build with a
+  // WordPress.com app id.
+  publish: ['public-api.wordpress.com'],
 };
 
 /** The most entries the log keeps. The oldest go first. */

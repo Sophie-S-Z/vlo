@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 24,
+  version: 25,
   date: '2026-11-12',
   guide: [
     {
@@ -139,8 +139,18 @@ export const HELP = {
         'Pick Word, PDF, EPUB or Markdown, and this item or the whole project.',
         'A novel can use standard manuscript format. Poems keep every space and indent in each format.',
         'For Google Docs, export to Word, then open the file in Google Drive.',
-        'To post on Substack, Medium, a blog or AO3, pick Web copy, then Copy. Each line break and indent stays.',
+        'To post on Substack, Medium, WordPress or another site, use Publish (the paper plane icon).',
         'For a printed book, open Book. Pick the trim size and the chapter style, and add a dedication or other pages. The preview shows each printed page, or the e-book on a reader or a phone. Then choose Export the book.',
+      ],
+    },
+    {
+      title: 'Publish to Substack, WordPress and other sites',
+      steps: [
+        'In a project, choose Publish (the paper plane icon), or search for Publish with Ctrl+K.',
+        'Pick the site, such as Substack, Medium, WordPress, Ghost, AO3, Wattpad, DEV or Reddit, and this item or the whole project.',
+        'Copy the title, the subtitle and the text, one at a time, and paste each one where the steps say. Each copy keeps what the site can show: poem lines, indents, headings and notes.',
+        'For a WordPress site of your own, download the WordPress import file. In WordPress, choose Tools, Import, WordPress, and pick the file. The post comes in as a draft.',
+        'Nothing leaves this device until you paste it. In a memoir, Use the aliases puts the alias in place of each real name that you marked.',
       ],
     },
     {

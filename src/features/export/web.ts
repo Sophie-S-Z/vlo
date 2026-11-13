@@ -21,6 +21,23 @@ import {
 
 export type WebTarget = 'blog' | 'ao3';
 
+/** How a platform's editor takes the HTML (Phase 17 Publish). The default suits a blog and AO3. */
+export interface WebOptions {
+  /**
+   * The tag of a heading at each export level: 1 for a part, 2 for an item title, more for a heading in
+   * the text. "strong" makes a bold paragraph, for an editor with no headings.
+   */
+  heading?: (level: number) => 'h2' | 'h3' | 'h4' | 'strong';
+  /** Keeps center and right alignment. An editor that drops it gets plain paragraphs. */
+  align?: boolean;
+}
+
+const DEFAULT_OPTIONS: Required<WebOptions> = {
+  // Each site's own title is the h1, so parts and chapters start at h2.
+  heading: (level) => (level <= 1 ? 'h2' : level === 2 ? 'h3' : 'h4'),
+  align: true,
+};
+
 const NBSP = '\u00a0';
 
 function escapeHtml(text: string): string {
@@ -75,32 +92,34 @@ function inline(runs: readonly Run[], spaces: Spaces | null): string {
   return out;
 }
 
-function alignAttr(align: string | undefined): string {
-  return align === 'center' || align === 'right' ? ` align="${align}"` : '';
-}
-
-function blockHtml(block: Block): string {
+function blockHtml(block: Block, options: Required<WebOptions>): string {
+  const alignAttr = (align: string | undefined) =>
+    options.align && (align === 'center' || align === 'right') ? ` align="${align}"` : '';
+  const center = alignAttr('center');
   switch (block.type) {
     case 'paragraph':
       return `<p${alignAttr(block.align)}>${inline(block.runs, null)}</p>`;
     case 'heading': {
-      // Each site's own title is the h1, so parts and chapters start at h2.
-      const level = Math.min(block.level + 1, 4);
-      return `<h${String(level)}${alignAttr(block.align)}>${inline(block.runs, null)}</h${String(level)}>`;
+      const tag = options.heading(block.level);
+      if (tag === 'strong')
+        return `<p${alignAttr(block.align)}><strong>${inline(block.runs, null)}</strong></p>`;
+      return `<${tag}${alignAttr(block.align)}>${inline(block.runs, null)}</${tag}>`;
     }
     case 'sceneBreak':
-      return '<p align="center">*&#160;&#160;*&#160;&#160;*</p>';
+      return `<p${center}>*&#160;&#160;*&#160;&#160;*</p>`;
     case 'math':
-      return `<p align="center">${escapeHtml(`$$${block.latex}$$`)}</p>`;
+      return `<p${center}>${escapeHtml(`$$${block.latex}$$`)}</p>`;
     // A site takes no image from the clipboard, so the copy names the image where it stands.
     case 'image':
-      return `<p align="center"><i>${escapeHtml(imageStandIn(block))}</i></p>`;
+      return `<p${center}><i>${escapeHtml(imageStandIn(block))}</i></p>`;
     case 'quote':
-      return `<blockquote>${block.blocks.map(blockHtml).join('')}</blockquote>`;
+      return `<blockquote>${block.blocks.map((b) => blockHtml(b, options)).join('')}</blockquote>`;
     case 'list': {
       const tag = block.ordered ? 'ol' : 'ul';
       const start = block.ordered && block.start !== 1 ? ` start="${String(block.start)}"` : '';
-      const items = block.items.map((item) => `<li>${item.map(blockHtml).join('')}</li>`).join('');
+      const items = block.items
+        .map((item) => `<li>${item.map((b) => blockHtml(b, options)).join('')}</li>`)
+        .join('');
       return `<${tag}${start}>${items}</${tag}>`;
     }
     case 'stanza':
@@ -126,11 +145,12 @@ function noteHtml(note: NoteContent): string {
 }
 
 /** The HTML of a web copy: the blocks in reading order, then the notes as a numbered list. */
-export function toWebHtml(doc: ExportDoc): string {
+export function toWebHtml(doc: ExportDoc, options: WebOptions = {}): string {
+  const full = { ...DEFAULT_OPTIONS, ...options };
   const parts: string[] = [];
   for (const section of doc.sections) {
     for (const block of section.blocks) {
-      if (!repeatsTitle(doc, section, block)) parts.push(blockHtml(block));
+      if (!repeatsTitle(doc, section, block)) parts.push(blockHtml(block, full));
     }
   }
   const notes = footnotesOf(doc);
