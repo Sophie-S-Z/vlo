@@ -34,16 +34,14 @@ describe('the Help page', () => {
     for (const section of HELP.guide) expect(section.steps.length).toBeLessThanOrEqual(6);
   });
 
-  it('shows the sharing steps only in a build with a Supabase project (plan decision T3)', () => {
-    // The committed .env names the live project. A build with no project (VITE_SUPABASE_URL='') leaves
-    // the steps out.
-    const ready = HOSTS.share.length > 0;
+  it('leaves out the sharing steps in a build with no Supabase project (plan decision T3)', () => {
+    expect(HOSTS.share).toEqual([]);
     render(
       <MemoryRouter>
         <HelpPage />
       </MemoryRouter>,
     );
     expect(screen.getByRole('heading', { level: 2, name: 'Export' })).toBeTruthy();
-    expect(screen.queryByRole('heading', { level: 2, name: 'Share for reading' }) !== null).toBe(ready);
+    expect(screen.queryByRole('heading', { level: 2, name: 'Share for reading' })).toBeNull();
   });
 });
