@@ -84,6 +84,13 @@ export function LinkPanel({ editor, onDone }: { editor: Editor; onDone: () => vo
             Remove link
           </Button>
         )}
+        {/^(https?|mailto):/i.test(current) && (
+          <Button asChild variant="ghost">
+            <a href={current} target="_blank" rel="noreferrer">
+              Open link
+            </a>
+          </Button>
+        )}
         <Button type="submit">Save</Button>
       </div>
     </form>
