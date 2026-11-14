@@ -124,6 +124,16 @@ async function lastStatus(): Promise<FolderStatus | undefined> {
 }
 
 describe('Folder save', () => {
+  test('two projects with one title save to two folders, so neither writes over the other', async () => {
+    const first = await novel();
+    const second = await novel();
+    expect(await saveToFolder(first.id)).toBe(true);
+    expect(await saveToFolder(second.id)).toBe(true);
+    expect([...(folder?.folders.keys() ?? [])].sort()).toEqual(
+      [`Salt Year (${first.id.slice(0, 8)})`, `Salt Year (${second.id.slice(0, 8)})`].sort(),
+    );
+  });
+
   test('writes the backup and a Markdown copy to a subfolder named after the project', async () => {
     const project = await novel();
     vi.spyOn(clock, 'now').mockReturnValue(project.updatedAt + 1000);

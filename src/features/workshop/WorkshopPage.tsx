@@ -35,12 +35,11 @@ export function useTextItems(project: Project | null, items: readonly Item[]): T
       .map((node) => node.item)
       .filter((item) => def.editorKind(item.kind) !== null && item.role === undefined);
   }, [project, items]);
-  const result = useLiveQuery(async () => {
+  // While the query runs again after a change, the last list stays. A tool that unmounts loses its work.
+  return useLiveQuery(async () => {
     const texts = await db.itemTexts.bulkGet(ordered.map((i) => i.id));
-    return { ordered, list: ordered.map((item, i) => ({ item, text: withoutNotes(texts[i]?.text ?? '') })) };
+    return ordered.map((item, i) => ({ item, text: withoutNotes(texts[i]?.text ?? '') }));
   }, [ordered]);
-  // While the query runs again for new items, the last result is for the old list, so it does not count.
-  return result?.ordered === ordered ? result.list : undefined;
 }
 
 export function WorkshopPage() {

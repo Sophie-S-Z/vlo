@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useSources } from '@/features/cite/sources';
+import { ReferenceEntry } from '@/features/cite/ReferenceEntry';
 import { CITE_STYLE_LABELS, reference, sortReferences } from '@/features/cite/styles';
 import { projectDef } from '@/features/library/templates';
 import { renameProject } from '@/features/library/projects';
@@ -201,13 +202,17 @@ export function HeadlineTool({ project }: { project: Project }) {
 
 /**
  * The citation counts of the sections. The documents live in their own databases, outside a live query,
- * so the counts read them again each time the list of sections or their text changes.
+ * so the counts read them again each time the list of sections or their text changes. A change to an item
+ * that leaves each text as it was, such as a word count, reads nothing.
  */
-function useCitationCounts(sectionIds: string[]): Map<string, number> | undefined {
+function useCitationCounts(sections: readonly TextItem[]): Map<string, number> | undefined {
   const [counts, setCounts] = useState<Map<string, number>>();
+  const signature = sections.map((t) => `${t.item.id}\u0000${t.text}`).join('\u0001');
   useEffect(() => {
     const run = { live: true };
-    void citationCounts(sectionIds).then(
+    const ids =
+      signature === '' ? [] : signature.split('\u0001').map((part) => part.split('\u0000')[0] ?? '');
+    void citationCounts(ids).then(
       (next) => {
         if (run.live) setCounts(next);
       },
@@ -218,15 +223,14 @@ function useCitationCounts(sectionIds: string[]): Map<string, number> | undefine
     return () => {
       run.live = false;
     };
-  }, [sectionIds]);
+  }, [signature]);
   return counts;
 }
 
 export function CitationTool({ project, texts }: { project: Project; texts: TextItem[] }) {
   const sources = useSources(project.id);
   const style = project.settings.citeStyle ?? 'apa';
-  const sectionIds = useMemo(() => sectionsOf(project, texts).map((t) => t.item.id), [project, texts]);
-  const counts = useCitationCounts(sectionIds);
+  const counts = useCitationCounts(sectionsOf(project, texts));
   if (sources === undefined || counts === undefined)
     return <p className="text-muted">Loading the sources.</p>;
   if (sources.length === 0 && counts.size === 0)
@@ -240,14 +244,7 @@ export function CitationTool({ project, texts }: { project: Project; texts: Text
   const uncited = sorted.filter((s) => (counts.get(s.key) ?? 0) === 0);
   const keys = new Set(sources.map((s) => s.key));
   const lost = [...counts].filter(([key]) => !keys.has(key));
-  const entry = (source: (typeof sources)[number]) =>
-    reference(source, style).map((run, i) =>
-      run.type !== 'text' ? null : run.style.italic ? (
-        <i key={i}>{run.text}</i>
-      ) : (
-        <span key={i}>{run.text}</span>
-      ),
-    );
+  const entry = (source: (typeof sources)[number]) => <ReferenceEntry runs={reference(source, style)} />;
   return (
     <div className="grid gap-6">
       <p role="status">

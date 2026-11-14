@@ -1,7 +1,7 @@
 import { Download, ExternalLink, Send } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { sourcesFor } from '@/features/cite/sources';
-import { folderOf, type ExportScope } from '@/features/export/build';
+import { exportFileName, folderOf, type ExportScope } from '@/features/export/build';
 import type { ExportRequest } from '@/features/export/run';
 import { ExportJob } from '@/features/export/startExport';
 import { hasTemplate, projectDef } from '@/features/library/templates';
@@ -44,6 +44,7 @@ type Built = { step: 'working' } | { step: 'ready'; body: PostBody } | { step: '
 
 type Draft =
   | { step: 'idle' }
+  | { step: 'signing' }
   | { step: 'saving' }
   | { step: 'saved'; url: string }
   | { step: 'failed'; message: string };
@@ -64,17 +65,6 @@ function keepPlatform(id: PlatformId): void {
   } catch {
     // The choice is a convenience. Without storage, the dialog still works.
   }
-}
-
-/** A file name for the WordPress import file, from the post title. */
-function fileName(title: string): string {
-  const base = title
-    .normalize('NFKD')
-    .replace(/[^\w\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .toLowerCase();
-  return `${base === '' ? 'post' : base.slice(0, 60)}-wordpress.xml`;
 }
 
 interface PublishDialogProps {
@@ -101,6 +91,8 @@ export function PublishDialog({ open, onOpenChange, project, items, currentItemI
   const [title, setTitle] = useState<string | null>(null);
   const [subtitle, setSubtitle] = useState('');
   const [draft, setDraft] = useState<Draft>({ step: 'idle' });
+  // Each press of Save as a draft counts, so an answer for an earlier press changes nothing.
+  const draftAttempt = useRef(0);
   const clientId = wpcomClientId();
 
   const scopeOf = (choice: ScopeChoice): ExportScope =>
@@ -195,16 +187,23 @@ export function PublishDialog({ open, onOpenChange, project, items, currentItemI
 
   async function saveDraft() {
     if (!ready) return;
-    setDraft({ step: 'saving' });
+    const attempt = ++draftAttempt.current;
     try {
-      const token = heldToken() ?? (await connectWpcom(clientId));
+      let token = heldToken();
+      if (!token) {
+        setDraft({ step: 'signing' });
+        token = await connectWpcom(clientId);
+        if (attempt !== draftAttempt.current) return;
+      }
+      setDraft({ step: 'saving' });
       const saved = await saveWpcomDraft(token, {
         title: shownTitle.trim(),
         html: ready.body.html,
         excerpt: subtitle.trim(),
       });
-      setDraft({ step: 'saved', url: saved.editUrl });
+      if (attempt === draftAttempt.current) setDraft({ step: 'saved', url: saved.editUrl });
     } catch (error) {
+      if (attempt !== draftAttempt.current) return;
       setDraft({
         step: 'failed',
         message: error instanceof Error ? error.message : 'WordPress.com did not save the draft.',
@@ -364,7 +363,11 @@ export function PublishDialog({ open, onOpenChange, project, items, currentItemI
                       html: ready.body.html,
                       at: clock.now(),
                     });
-                    downloadBytes(fileName(shownTitle), 'application/xml', new TextEncoder().encode(xml));
+                    downloadBytes(
+                      `${exportFileName(shownTitle)} for WordPress.xml`,
+                      'application/xml',
+                      new TextEncoder().encode(xml),
+                    );
                   }}
                 >
                   <Download aria-hidden="true" className="size-4" />
@@ -409,13 +412,15 @@ export function PublishDialog({ open, onOpenChange, project, items, currentItemI
                 )}
               </div>
               <p role="status" className="text-sm text-muted">
-                {draft.step === 'saving'
-                  ? 'Saving the draft on WordPress.com.'
-                  : draft.step === 'saved'
-                    ? 'WordPress.com has the draft.'
-                    : draft.step === 'failed'
-                      ? draft.message
-                      : ''}
+                {draft.step === 'signing'
+                  ? 'Sign in to WordPress.com in its window. If you closed the window, press the button again.'
+                  : draft.step === 'saving'
+                    ? 'Saving the draft on WordPress.com.'
+                    : draft.step === 'saved'
+                      ? 'WordPress.com has the draft.'
+                      : draft.step === 'failed'
+                        ? draft.message
+                        : ''}
               </p>
             </div>
           )}

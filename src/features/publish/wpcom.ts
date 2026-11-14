@@ -60,6 +60,7 @@ export function readFragment(fragment: string, state: string, now: number): Wpco
 }
 
 let held: WpcomToken | null = null;
+let stopWaiting: (() => void) | null = null;
 
 /** The token of this tab, while it works. */
 export function heldToken(now = Date.now()): WpcomToken | null {
@@ -75,6 +76,9 @@ export function forgetToken(): void {
  * the browser blocks the window.
  */
 export function connectWpcom(clientId: string): Promise<WpcomToken> {
+  // The site's opener policy cuts the link to the window, so Vlo cannot see the writer close it. A new
+  // sign-in replaces the one that waits.
+  stopWaiting?.();
   const state = crypto.randomUUID();
   const popup = window.open(authorizeUrl(clientId, state), 'vlo-wpcom', 'popup,width=600,height=760');
   if (!popup)
@@ -86,6 +90,7 @@ export function connectWpcom(clientId: string): Promise<WpcomToken> {
     const stop = (error?: Error, token?: WpcomToken) => {
       channel.close();
       window.clearTimeout(timer);
+      stopWaiting = null;
       if (token) resolve(token);
       else reject(error ?? new Error('WordPress.com did not answer.'));
     };
@@ -93,6 +98,9 @@ export function connectWpcom(clientId: string): Promise<WpcomToken> {
     const timer = window.setTimeout(() => {
       stop(new Error('The sign-in took too long. Try again.'));
     }, 600_000);
+    stopWaiting = () => {
+      stop(new Error('A new sign-in started.'));
+    };
     channel.onmessage = (event: MessageEvent<unknown>) => {
       if (typeof event.data !== 'string') return;
       const params = new URLSearchParams(event.data.replace(/^#/, ''));

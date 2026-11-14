@@ -71,6 +71,12 @@ export async function saveToFolder(projectId: string): Promise<boolean> {
   if (!folder || (await folderPermission(folder)) !== 'granted') return false;
   const backup = await collectBackup(projectId, { music: false });
   const names = folderFileNames(backup.project.title, new Date(backup.createdAt));
+  // Two projects with one title would write over each other's files, so each gets its own folder.
+  const name = names.folder;
+  const twins = await db.projects
+    .filter((p) => p.id !== projectId && exportFileName(p.title) === name)
+    .count();
+  if (twins > 0) names.folder = `${name} (${projectId.slice(0, 8)})`;
   const markdown = toMarkdown(
     buildExportDoc({
       project: backup.project,

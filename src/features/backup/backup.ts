@@ -3,7 +3,7 @@ import { db, readViewRows, viewTables, type Item, type Project } from '@/lib/db'
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { recountItems } from '@/lib/wordcount';
-import { READ_AT_ONCE, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
+import { inBatches, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
 import { deleteProject } from '@/features/library/projects';
 import { holdsText } from '@/features/library/templates';
 import { remapNameMarks } from '@/features/people/markAll';
@@ -26,15 +26,10 @@ import {
  * one transaction, so a failed import leaves no half project in the Library.
  */
 
-async function inBatches<T, R>(values: readonly T[], run: (value: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = [];
-  for (let i = 0; i < values.length; i += READ_AT_ONCE)
-    out.push(...(await Promise.all(values.slice(i, i + READ_AT_ONCE).map(run))));
-  return out;
-}
-
 /** Reads a project, its rows, its text, its research files and, if asked, the writer's music. */
 export async function collectBackup(projectId: string, options: { music: boolean }): Promise<Backup> {
+  // The time before the reads: an edit while Vlo reads counts as after the backup, so the next save has it.
+  const createdAt = clock.now();
   const rows = await db.transaction(
     'r',
     [
@@ -92,7 +87,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     })),
   );
   return {
-    createdAt: clock.now(),
+    createdAt,
     project,
     items: rows.items,
     snapshots: rows.snapshots,
@@ -268,6 +263,10 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
 async function storeBackup(backup: Backup): Promise<void> {
   const now = clock.now();
   const written: string[] = [];
+  // An item of the backup that is here already must keep its text, so nothing is written.
+  const here = await db.items.bulkGet(backup.items.map((item) => item.id));
+  if (here.some((item) => item !== undefined))
+    throw new Error('This device has items of this backup already. Import it as a copy.');
   try {
     await inBatches([...backup.updates], async ([itemId, update]) => {
       // A database left from an earlier delete must not merge into the backup's text.

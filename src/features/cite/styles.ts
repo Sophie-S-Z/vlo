@@ -1,5 +1,6 @@
 import type { CiteStyle, Source, SourceName } from '@/lib/db';
 import type { Run } from '@/features/export/model';
+import { xmlText } from '@/features/export/xml';
 
 /*
  * Vlo's own citation formatter (roadmap 2 decision R3, plan Tasks M6 and M7): the in-text citation and
@@ -63,6 +64,27 @@ export const LIST_TITLES: Readonly<Record<CiteStyle, string>> = {
   mla: 'Works Cited',
   chicago: 'References',
 };
+
+/**
+ * The title of the reference list on a page. A page called "References" or "Works Cited" takes the title
+ * of the style, so a change of style changes it. A title of the writer's own, such as "Bibliography", stays.
+ */
+export function listTitle(style: CiteStyle, pageTitle?: string): string {
+  const own = pageTitle?.trim();
+  return own && !Object.values(LIST_TITLES).includes(own) ? own : LIST_TITLES[style];
+}
+
+/** An entry as plain text, for a copy. */
+export function entryText(runs: readonly Run[]): string {
+  return runs.map((r) => (r.type === 'text' ? r.text : '')).join('');
+}
+
+/** An entry as HTML, for a rich copy: titles in italics. */
+export function entryHtml(runs: readonly Run[]): string {
+  return runs
+    .map((r) => (r.type !== 'text' ? '' : r.style.italic ? `<i>${xmlText(r.text)}</i>` : xmlText(r.text)))
+    .join('');
+}
 
 /** A piece of an entry: plain text, or a title in italics. */
 type Part = string | { italic: string };

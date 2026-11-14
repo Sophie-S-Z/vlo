@@ -1,6 +1,4 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { codexMatcher, type ReadingItem } from '@/features/codex/codex';
-import { compareDates } from '@/features/timeline/dates';
 import { clock } from '@/lib/clock';
 import { db, type Series, type StyleRule } from '@/lib/db';
 import { newId } from '@/lib/ids';
@@ -83,6 +81,8 @@ export async function moveBook(seriesId: string, from: number, to: number): Prom
  * so no name loses its entry. When the last book leaves, the series and its shared entries go.
  */
 export async function leaveSeries(projectId: string): Promise<void> {
+  // The Codex matcher loads here, out of the Library's first load. It must load before the transaction.
+  const { codexMatcher } = await import('@/features/codex/codex');
   await db.transaction('rw', db.series, db.codex, db.itemTexts, async () => {
     const series = await seriesOf(projectId);
     if (!series) return;
@@ -148,19 +148,4 @@ export async function renameSeries(seriesId: string, title: string): Promise<voi
   await change(seriesId, (series) => {
     series.title = clean;
   });
-}
-
-/**
- * The scenes of a series on one timeline (F67): the dated scenes by story date, then the undated scenes.
- * A partial date sorts at its middle, as on the Memory Timeline. The sort is stable, so scenes with one
- * date and the undated scenes keep their reading order.
- */
-export function seriesTimeline(order: readonly ReadingItem[]): {
-  dated: ReadingItem[];
-  undated: ReadingItem[];
-} {
-  const dated = order
-    .filter(({ item }) => item.storyDate !== undefined)
-    .sort((a, b) => compareDates(a.item.storyDate ?? '', b.item.storyDate ?? ''));
-  return { dated, undated: order.filter(({ item }) => item.storyDate === undefined) };
 }

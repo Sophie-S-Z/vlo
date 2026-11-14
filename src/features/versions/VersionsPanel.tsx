@@ -5,6 +5,7 @@ import type * as Y from 'yjs';
 import { formatWords } from '@/features/library/format';
 import { useManuscript } from '@/features/editor/manuscript';
 import { db, MAX_VERSION_NAME, type Item, type ItemVersion } from '@/lib/db';
+import { withoutNotes } from '@/features/editor/format/notes';
 import { countUnit, countWords } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
@@ -197,6 +198,7 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
   const run = async (action: () => Promise<void>, fallback: string) => {
     setBusy(true);
     setDeleted(null);
+    setMessage('');
     try {
       await action();
     } catch (error) {
@@ -270,10 +272,10 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
           <Button
             variant="ghost"
             onClick={() => {
-              void undoDelete(deleted).then(() => {
+              void run(async () => {
+                await undoDelete(deleted);
                 setMessage(`“${deleted.name}” is back.`);
-                setDeleted(null);
-              });
+              }, 'Vlo could not bring the version back. Try again.');
             }}
           >
             Undo
@@ -307,8 +309,8 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
                 <p className="grid">
                   <span className="font-medium">{version.name}</span>
                   <span className="text-xs text-muted tabular-nums">
-                    {formatWords(countWords(version.text, language), countUnit(language))}, saved{' '}
-                    {formatTime.format(version.updatedAt)}
+                    {formatWords(countWords(withoutNotes(version.text), language), countUnit(language))},
+                    saved {formatTime.format(version.updatedAt)}
                   </span>
                 </p>
               )}

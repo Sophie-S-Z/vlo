@@ -5,7 +5,7 @@ import { holdsText } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { matchNames, type PrivatePerson } from '@/lib/privacy';
-import { docFromUpdate, openItemDoc, READ_AT_ONCE, readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
+import { docFromUpdate, inBatches, openItemDoc, readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
 import { personIdOf, PRIVATE_NAME } from './markName';
 
 /*
@@ -170,22 +170,18 @@ async function eachDoc(
   ids: readonly string[],
   step: (id: string, doc: Y.Doc) => Promise<void>,
 ): Promise<void> {
-  for (let i = 0; i < ids.length; i += READ_AT_ONCE) {
-    await Promise.all(
-      ids.slice(i, i + READ_AT_ONCE).map(async (id) => {
-        const open = openItemDoc(id);
-        try {
-          await open.ready;
-          // A newer Vlo saved this item. This build leaves it as it is.
-          if (docSchema(open.doc) > DOC_SCHEMA) return;
-          await step(id, open.doc);
-          await open.confirmSaved(clock.now());
-        } finally {
-          await open.close();
-        }
-      }),
-    );
-  }
+  await inBatches(ids, async (id) => {
+    const open = openItemDoc(id);
+    try {
+      await open.ready;
+      // A newer Vlo saved this item. This build leaves it as it is.
+      if (docSchema(open.doc) > DOC_SCHEMA) return;
+      await step(id, open.doc);
+      await open.confirmSaved(clock.now());
+    } finally {
+      await open.close();
+    }
+  });
 }
 
 /**

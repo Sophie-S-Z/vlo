@@ -207,6 +207,15 @@ describe('the References page in an export', () => {
     expect(doc.sections[1]?.blocks).toHaveLength(1 + sources.length);
   });
 
+  test('a page with a title of its own keeps it over the title of the style', () => {
+    const base = request(true);
+    const { doc } = prepareExport({
+      ...base,
+      items: base.items.map((i) => (i.id === 'r' ? { ...i, title: 'Bibliography' } : i)),
+    });
+    expect(doc.sections.map((s) => s.title)).toEqual(['Introduction', 'Bibliography', 'Appendix']);
+  });
+
   test('a section with a working title gives no heading, so the sections read as one piece', () => {
     const base = request(false);
     const { doc } = prepareExport({

@@ -422,8 +422,13 @@ const HEADINGS: Readonly<Record<string, readonly string[]>> = {
   listicle: ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'],
 };
 
+/** An essay or an article reads as one piece, so a new section there has a working title too. */
+export function sectionsHaveWorkingTitles(templates: readonly Template[]): boolean {
+  return templates.some((t) => t === 'essay' || t === 'article');
+}
+
 function withWorkingTitles(structure: Structure): Structure {
-  if (structure.template !== 'essay' && structure.template !== 'article') return structure;
+  if (!sectionsHaveWorkingTitles([structure.template])) return structure;
   const keep = HEADINGS[structure.id] ?? [];
   const mark = (item: StarterItem): StarterItem => ({
     ...item,

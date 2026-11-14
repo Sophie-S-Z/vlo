@@ -97,9 +97,18 @@ const ITEM_TOOLS: readonly { id: string; label: string; keywords: readonly strin
   },
 ];
 
-/** Opens a tool's panel by pressing its button. A tool not on the screen, such as in a poem, does nothing. */
+/**
+ * Opens a tool's panel by pressing its button. A tool not on the screen, such as in a poem, does nothing.
+ * A menu button (the timer) opens on a key and not on a click, so it gets the Down Arrow key.
+ */
 function openTool(id: string): void {
-  document.querySelector<HTMLElement>(`[data-tool="${id}"]`)?.click();
+  const button = document.querySelector<HTMLElement>(`[data-tool="${id}"]`);
+  if (button?.getAttribute('aria-haspopup') === 'menu') {
+    button.focus();
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  } else {
+    button?.click();
+  }
 }
 
 /** Folder save also runs this often while the project is open, so a long session has a recent copy. */

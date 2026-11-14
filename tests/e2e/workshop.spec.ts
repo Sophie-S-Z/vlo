@@ -103,6 +103,10 @@ test('an article finds the Workshop from the command menu, with its spine and he
   await ideas.getByRole('button', { name: 'Use as the title' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('The last ferry');
   await expect(ideas).toContainText('This is the title now.');
+  // The rename reaches the page, and the tool stays open with its message.
+  await expect(page.getByRole('status').filter({ hasText: 'The title is now' })).toContainText(
+    'The last ferry',
+  );
 
   await tool(page, 'Spine').click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Ferries shaped the coast' })).toHaveText(

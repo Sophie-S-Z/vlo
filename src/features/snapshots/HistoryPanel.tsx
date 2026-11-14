@@ -159,6 +159,8 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
                 checked={snapshot.id === pickedId}
                 onChange={() => {
                   setPickedId(snapshot.id);
+                  // A snapshot never compares with itself, so the compare goes back to the current text.
+                  if (snapshot.id === compareId) setCompareId(CURRENT);
                   setMessage('');
                 }}
                 className="size-4 accent-[var(--color-accent)]"

@@ -124,6 +124,14 @@ test('the session timer ends with a gentle prompt and no penalty', async ({ page
   );
 });
 
+test('the command menu opens the timer menu', async ({ page }) => {
+  await newNovel(page);
+  await page.keyboard.press('ControlOrMeta+k');
+  await page.getByRole('combobox').fill('session timer');
+  await page.getByRole('option', { name: 'Start a session timer…' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Write for 10 minutes' })).toBeVisible();
+});
+
 test('the stopwatch counts up with no time limit and shows the words of the session', async ({ page }) => {
   await page.clock.install();
   await newNovel(page);
