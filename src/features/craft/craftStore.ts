@@ -3,27 +3,25 @@ import { db } from '@/lib/db';
 import type { PoemForm } from './forms';
 
 /*
- * The Craft switch of the open poem (spec 8.3, plan Task C7). Each poem keeps its own switch in its item
- * row, off by default. The editor's More tools menu, the command menu and the labels read it here.
+ * The Craft switch of each open poem (spec 8.3, plan Task C7). Each poem keeps its own switch in its item
+ * row, off by default. In a split view (F39) two poems are open, so a menu reads the poem of its own editor.
  */
 
-export interface CraftState {
-  /** The open poem of a poetry collection, or null on other screens. */
-  itemId: string | null;
-  on: boolean;
-}
-
-let state: CraftState = { itemId: null, on: false };
+let poems: ReadonlyMap<string, boolean> = new Map();
 const listeners = new Set<() => void>();
 
-export function getCraft(): CraftState {
-  return state;
+/** The switch of an open poem of a poetry collection, or undefined when that poem is not open. */
+export function craftOf(itemId: string): boolean | undefined {
+  return poems.get(itemId);
 }
 
-/** The writing screen calls this with the open poem and its stored switch. */
-export function setCraftItem(itemId: string | null, on: boolean): void {
-  if (itemId === state.itemId && on === state.on) return;
-  state = { itemId, on: itemId !== null && on };
+/** The writing screen calls this with an open poem and its stored switch, and with null when it closes. */
+export function setCraftPoem(itemId: string, on: boolean | null): void {
+  if (on === null ? !poems.has(itemId) : poems.get(itemId) === on) return;
+  const next = new Map(poems);
+  if (on === null) next.delete(itemId);
+  else next.set(itemId, on);
+  poems = next;
   for (const listener of listeners) listener();
 }
 
@@ -34,14 +32,15 @@ export function subscribeCraft(listener: () => void): () => void {
   };
 }
 
-export function useCraft(): CraftState {
-  return useSyncExternalStore(subscribeCraft, getCraft, getCraft);
+export function useCraftOf(itemId: string): boolean | undefined {
+  const read = () => poems.get(itemId);
+  return useSyncExternalStore(subscribeCraft, read, read);
 }
 
 /** Turns the poem's Craft labels on or off, and keeps the choice with the poem. */
 export async function setCraftLabels(itemId: string, on: boolean): Promise<void> {
   // The store changes first, so the menu and the labels answer at once.
-  if (state.itemId === itemId) setCraftItem(itemId, on);
+  if (poems.has(itemId)) setCraftPoem(itemId, on);
   await db.items.update(itemId, { craft: on });
 }
 

@@ -15,7 +15,12 @@ test('a Hebrew poem reads from right to left and keeps its hanging indent on the
   await expect(poem).toBeFocused();
 
   await page.getByRole('button', { name: /^Page:/ }).click();
-  await page.getByLabel('Language of the writing').selectOption('he');
+  const language = page.getByLabel('Language of the writing');
+  await language.focus();
+  await language.selectOption('he');
+  // The editor builds again for the new language, and the focus stays in the Page control.
+  await expect(page.locator('[dir="rtl"] .ProseMirror')).toBeAttached();
+  await expect(language).toBeFocused();
   await page.keyboard.press('Escape');
 
   await poem.click();

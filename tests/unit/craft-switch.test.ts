@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { getCraft, setCraftItem, setCraftLabels } from '@/features/craft/craftStore';
+import { craftOf, setCraftLabels, setCraftPoem } from '@/features/craft/craftStore';
 import { createProject } from '@/features/library/projects';
 import { db } from '@/lib/db';
 
@@ -13,7 +13,6 @@ beforeEach(async () => {
   });
 });
 afterEach(async () => {
-  setCraftItem(null, false);
   Reflect.deleteProperty(navigator, 'storage');
   await db.delete();
 });
@@ -23,16 +22,21 @@ test('a poem starts with the labels off, and the switch stays with that poem onl
   const [poem] = await db.items.where('projectId').equals(project.id).toArray();
   if (!poem) throw new Error('The collection has no poem.');
   expect(poem.craft).toBeUndefined();
-  setCraftItem(poem.id, poem.craft === true);
-  expect(getCraft()).toEqual({ itemId: poem.id, on: false });
+  setCraftPoem(poem.id, poem.craft === true);
+  // A second poem is open beside the first (F39).
+  setCraftPoem('beside', false);
+  expect(craftOf(poem.id)).toBe(false);
 
   await setCraftLabels(poem.id, true);
-  expect(getCraft().on).toBe(true);
+  expect(craftOf(poem.id)).toBe(true);
+  expect(craftOf('beside')).toBe(false);
   expect((await db.items.get(poem.id))?.craft).toBe(true);
 
-  // Another screen has no open poem, so its switch reads off.
-  setCraftItem(null, true);
-  expect(getCraft()).toEqual({ itemId: null, on: false });
+  // A closed poem has no switch here, and its stored switch still changes.
+  setCraftPoem(poem.id, null);
+  setCraftPoem('beside', null);
+  expect(craftOf(poem.id)).toBeUndefined();
   await setCraftLabels(poem.id, false);
+  expect(craftOf(poem.id)).toBeUndefined();
   expect((await db.items.get(poem.id))?.craft).toBe(false);
 });

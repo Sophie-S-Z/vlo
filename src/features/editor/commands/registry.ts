@@ -58,7 +58,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Template } from '@/lib/db';
-import { getCraft, setCraftLabels } from '@/features/craft/craftStore';
+import { craftOf, setCraftLabels } from '@/features/craft/craftStore';
+import { craftItemOf } from '@/features/craft/craftSwitch';
 import { showsAliases } from '@/features/people/aliasPreview';
 import { getNames, setShowAliases } from '@/features/people/nameStore';
 import { getCodex, setShowCodexNames } from '@/features/codex/codexStore';
@@ -938,13 +939,17 @@ export const COMMANDS: readonly EditorCommand[] = [
     forms: POEM,
     templates: ['poetry'],
     keywords: ['syllables', 'stress', 'meter', 'scansion', 'rhyme', 'craft panel'],
-    run: () => {
-      const { itemId, on } = getCraft();
-      if (itemId === null) return false;
+    run: (e) => {
+      const itemId = craftItemOf(e);
+      const on = itemId === undefined ? undefined : craftOf(itemId);
+      if (itemId === undefined || on === undefined) return false;
       void setCraftLabels(itemId, !on).catch(() => undefined);
       return true;
     },
-    isActive: () => getCraft().on,
+    isActive: (e) => {
+      const itemId = craftItemOf(e);
+      return itemId !== undefined && craftOf(itemId) === true;
+    },
   },
   {
     kind: 'run',
