@@ -118,9 +118,16 @@ describe('the outgoing hosts (architecture review after Phase 4)', () => {
   test('connect-src lists exactly the hosts of the network module', async () => {
     const { HOSTS } = await import('@/lib/net');
     const local = (host: string) => host.startsWith('localhost:');
-    const expected = Object.values(HOSTS)
-      .flat()
-      .map((host) => `${local(host) ? 'http' : 'https'}://${host}`);
+    // The unit tests run with no Supabase project (vitest.config.ts), so the project host comes from the
+    // committed .env, as in the real build.
+    const env = /^VITE_SUPABASE_URL=(.+)$/m.exec(readFileSync('.env', 'utf8'))?.[1]?.trim() ?? '';
+    const supabase = env === '' ? [] : [new URL(env).origin];
+    const expected = [
+      ...Object.values(HOSTS)
+        .flat()
+        .map((host) => `${local(host) ? 'http' : 'https'}://${host}`),
+      ...supabase,
+    ];
     expect([...connectSrc()].sort()).toEqual(["'self'", ...new Set(expected)].sort());
   });
 
