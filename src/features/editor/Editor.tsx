@@ -281,7 +281,7 @@ export function Editor({
   const layoutKey = [stack, writing.letterSpacing, writing.wordSpacing, writing.lineHeight].join('|');
 
   return (
-    <div className="grid gap-3" data-vlo-editor="" style={rootStyle}>
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3" data-vlo-editor="" style={rootStyle}>
       {/* The toolbar, the find bar and the read aloud bar stay at the top while the text scrolls. */}
       <div className="sticky top-0 z-10 -mx-1 grid bg-bg">
         <Toolbar editor={editor} kind={kind} templates={templates} />
