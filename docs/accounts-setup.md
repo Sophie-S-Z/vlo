@@ -8,7 +8,20 @@ Run `supabase/migrations/0008_accounts.sql` in the SQL Editor, as for the other 
 
 ## 2. Send the sign-in emails with your own mail server (required)
 
-The built-in Supabase mail sends only to the members of your Supabase team, and only a few emails each hour. Real writers need a mail server. Resend is free for 3,000 emails a month.
+The built-in Supabase mail sends only to the members of your Supabase team, and only a few emails each hour. Real writers need a mail server. Choose one of the two below.
+
+### Option A: a Gmail address, with no domain
+
+Gmail sends up to about 500 emails a day. Writers see the Gmail address as the sender.
+
+1. In the Google account, turn on 2-Step Verification (https://myaccount.google.com/security).
+2. Open https://myaccount.google.com/apppasswords, type the name `Vlo Supabase`, then choose Create. Copy the 16-letter password.
+3. In Supabase, open Authentication, then Emails, then SMTP Settings. Turn on custom SMTP, and type: host `smtp.gmail.com`, port `465`, username and sender email the Gmail address, password the app password, sender name `Vlo`.
+4. Open Authentication, then Rate Limits. Set "Emails sent per hour" to at least 100.
+
+### Option B: Resend, on your own domain
+
+Resend is free for 3,000 emails a month.
 
 1. Make an account at https://resend.com and add your domain. Resend shows the DNS records to add.
 2. In Resend, make an API key with "Sending access".
