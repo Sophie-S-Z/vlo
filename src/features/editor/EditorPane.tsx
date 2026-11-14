@@ -32,7 +32,7 @@ import { Editor } from './Editor';
 import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
 import { cleanPageFormat, PAGE_SIZES } from './format/page';
-import { docBody, docText, refreshItemText, writeItemText } from './itemText';
+import { docParts, docText, refreshItemText, writeItemText } from './itemText';
 import { ManuscriptContext, type ManuscriptSettings } from './manuscript';
 import { PageControl } from './PageControl';
 import { SaveStatus } from './SaveStatus';
@@ -169,8 +169,9 @@ export function EditorPane({
       confirm: () => open.confirmSaved(clock.now()),
       onPause: async () => {
         const doc = latest.current;
-        if (doc)
-          await writeItemText(target, docText(doc, kind), kind, docBody(doc, kind), languageNow.current);
+        if (!doc) return;
+        const { text, body } = docParts(doc, kind);
+        await writeItemText(target, text, kind, body, languageNow.current);
       },
       onState: setSave,
     });

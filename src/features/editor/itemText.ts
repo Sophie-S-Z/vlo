@@ -16,7 +16,10 @@ import type { EditorForm } from '@/features/library/templates';
  */
 export function docBody(source: ProseMirrorNode, kind: EditorForm): string {
   // Waiting suggestions count as accepted (decision R2), so a deleted word is not in the text.
-  const doc = acceptedDoc(source);
+  return bodyOf(acceptedDoc(source), kind);
+}
+
+function bodyOf(doc: ProseMirrorNode, kind: EditorForm): string {
   if (kind === 'poem') return poemDataToText(poemDataFromDoc(doc));
   return doc.textBetween(0, doc.content.size, '\n\n', leafText);
 }
@@ -36,11 +39,17 @@ export function docNotes(doc: ProseMirrorNode): NoteContent[] {
  * a note and a readable backup keeps it.
  */
 export function docText(doc: ProseMirrorNode, kind: EditorForm): string {
-  const body = docBody(doc, kind);
+  return docParts(doc, kind).text;
+}
+
+/** The plain text of `docText` and the writing of `docBody`, from one pass over the accepted document. */
+export function docParts(source: ProseMirrorNode, kind: EditorForm): { text: string; body: string } {
+  const doc = acceptedDoc(source);
+  const body = bodyOf(doc, kind);
   const notes = notesBlock(docNotes(doc));
-  if (notes === '') return body;
-  if (kind === 'poem') return `${body}\n${notes}\n`;
-  return body === '' ? notes : `${body}\n\n${notes}`;
+  if (notes === '') return { text: body, body };
+  if (kind === 'poem') return { text: `${body}\n${notes}\n`, body };
+  return { text: body === '' ? notes : `${body}\n\n${notes}`, body };
 }
 
 /**
@@ -94,9 +103,9 @@ export async function refreshItemText(
   kind: EditorForm,
   language?: string,
 ): Promise<void> {
-  const text = docText(doc, kind);
+  const { text, body } = docParts(doc, kind);
   // An empty editor can be one that has not drawn its document yet, so it never replaces a stored copy.
   if (text === '') return;
   const stored = await db.itemTexts.get(item.id);
-  if (stored?.text !== text) await writeItemText(item, text, kind, docBody(doc, kind), language);
+  if (stored?.text !== text) await writeItemText(item, text, kind, body, language);
 }

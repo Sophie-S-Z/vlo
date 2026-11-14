@@ -46,6 +46,21 @@ test('a tab that closes says goodbye on pagehide, and says hello again when rest
   });
 });
 
+test('a tab that closed while this page was in the back-forward cache is not counted after it comes back', async () => {
+  const a = tab('item-5');
+  // A tab of the same build that answers once, then closes with no goodbye that this page can hear.
+  const gone = new BroadcastChannel(`vlo-item-item-5-s${String(DOC_SCHEMA)}`);
+  gone.postMessage({ type: 'here', tab: 'gone-tab' });
+  await vi.waitFor(() => {
+    expect(lastPeers(a.onPeers)).toBe(1);
+  });
+  gone.close();
+  window.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+  await vi.waitFor(() => {
+    expect(lastPeers(a.onPeers)).toBe(0);
+  });
+});
+
 test('a Phase 1 tab is counted as an older version and never gets or gives edits', async () => {
   const onVersions = vi.fn<(v: OtherVersions) => void>();
   const doc = new Y.Doc();

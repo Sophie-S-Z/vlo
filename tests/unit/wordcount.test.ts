@@ -60,6 +60,14 @@ describe('count rule 2 (Ellipsus comparison, October 2026)', () => {
     expect(countWords('東京-大阪', 'ja')).toBe(4);
     expect(countWords('e-mail 我爱', 'zh')).toBe(3);
   });
+
+  test('an address in Japanese or Chinese text ends at the next Han or kana character', () => {
+    // 詳しくは (4) + the address (1) + を見てください (7) = 12, and the full stop counts nothing.
+    expect(countWords('詳しくはhttps://example.comを見てください。', 'ja')).toBe(12);
+    // 連絡は (3) + the address (1) + までお願いします (8) = 12.
+    expect(countWords('連絡はtaro@example.comまでお願いします。', 'ja')).toBe(12);
+    expect(countWords('网址www.vlo.app。谢谢', 'zh')).toBe(5);
+  });
 });
 
 describe('countUnit', () => {

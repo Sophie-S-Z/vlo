@@ -99,6 +99,12 @@ export function shareWithTabs(
   };
   const onPageShow = (event: PageTransitionEvent) => {
     if (!event.persisted) return;
+    // A tab that closed while this page was in the cache said goodbye to no one here, so each tab counts
+    // again from its answer to the hello.
+    peers.clear();
+    others.clear();
+    onPeers(0);
+    reportOthers();
     post({ type: 'hello', tab });
     announce('hello');
   };
