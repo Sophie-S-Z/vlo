@@ -1,5 +1,6 @@
 import { anonKey, rpc, sharingReady } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
+import { withLock } from '@/lib/lock';
 import { toBase64Url } from '@/lib/crypto';
 import { supabaseUrl, vloFetch } from '@/lib/net';
 import { forgetSession, readSession, saveSession, type AccountSession } from './session';
@@ -11,12 +12,13 @@ import { forgetSession, readSession, saveSession, type AccountSession } from './
  */
 
 export type AuthErrorKind =
-  'not-set-up' | 'offline' | 'bad-code' | 'too-many' | 'mail' | 'signed-out' | 'server';
+  'not-set-up' | 'offline' | 'bad-code' | 'bad-email' | 'too-many' | 'mail' | 'signed-out' | 'server';
 
 const MESSAGES: Record<AuthErrorKind, string> = {
   'not-set-up': 'Accounts are not set up in this build.',
   offline: 'Vlo could not reach the account server. Check the connection, then try again.',
   'bad-code': 'This code is wrong or too old. Ask for a new code.',
+  'bad-email': 'The account server did not take this email address. Check it, then try again.',
   'too-many': 'Vlo asked for too many codes. Wait a minute, then try again.',
   mail: 'The account server could not send the email. Try again later.',
   'signed-out': 'You are signed out. Sign in again.',
@@ -71,12 +73,23 @@ async function auth(path: string, body: unknown, token?: string): Promise<unknow
   const code = [fields.error_code, fields.code, fields.error, fields.msg]
     .filter((v) => typeof v === 'string')
     .join(' ');
-  if (response.status === 429 || /rate.?limit/i.test(code)) throw new AuthError('too-many');
-  if (/otp_expired|invalid|expired|not.?found|refresh_token/i.test(code) || response.status === 403)
-    throw new AuthError(path.startsWith('token') && !path.includes('pkce') ? 'signed-out' : 'bad-code');
-  if (/email|smtp|not_authorized/i.test(code) && path === 'otp') throw new AuthError('mail');
-  if (response.status === 401) throw new AuthError('signed-out');
-  throw new AuthError('server');
+  throw new AuthError(refusal(path, response.status, code));
+}
+
+/**
+ * What a refused request of an /auth/v1 path means. Only a refusal of the request itself (a 4xx) can
+ * sign the device out or call a code wrong. A fault of the server (a 5xx) never does.
+ */
+export function refusal(path: string, status: number, code: string): AuthErrorKind {
+  if (status === 429 || /rate.?limit/i.test(code)) return 'too-many';
+  if (path === 'otp') {
+    // The server answers a failed email with a 5xx, or with a refusal of the address for its mail.
+    if (status >= 500 || /smtp|not_authorized|sending/i.test(code)) return 'mail';
+    return /email|invalid/i.test(code) ? 'bad-email' : 'server';
+  }
+  if (status >= 500) return 'server';
+  if (status >= 400) return path.startsWith('token') && !path.includes('pkce') ? 'signed-out' : 'bad-code';
+  return 'server';
 }
 
 interface TokenAnswer {
@@ -149,7 +162,7 @@ export async function finishGoogle(code: string): Promise<AccountSession> {
 
 /** A refresh runs once at a time on this device, so two tabs never spend one refresh token twice. */
 function withAccountLock<T>(fn: () => Promise<T>): Promise<T> {
-  return 'locks' in navigator ? navigator.locks.request('vlo-account', fn) : fn();
+  return withLock('vlo-account', fn);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { refusal } from '@/features/account/auth';
 import { sendDailyCount } from '@/features/account/dailyCount';
 import { installId, readDailyCount, setDailyCountOn } from '@/features/account/dailyCountState';
 import { feedbackCsv, ranked, type OwnerFeedback } from '@/features/account/owner';
@@ -58,5 +59,28 @@ describe('feedback (decisions A5 and A6)', () => {
       ['b', 1],
       ['c', 1],
     ]);
+  });
+});
+
+describe('a refused sign-in request', () => {
+  it('signs out only when the server refuses the refresh token itself', () => {
+    expect(refusal('token?grant_type=refresh_token', 400, 'refresh_token_not_found')).toBe('signed-out');
+    expect(refusal('token?grant_type=refresh_token', 403, '')).toBe('signed-out');
+    // A fault of the server keeps the session, whatever its message says.
+    expect(refusal('token?grant_type=refresh_token', 500, 'token not found in cache')).toBe('server');
+    expect(refusal('token?grant_type=refresh_token', 503, '')).toBe('server');
+  });
+
+  it('calls a code wrong only on the code paths', () => {
+    expect(refusal('verify', 403, 'otp_expired Token has expired or is invalid')).toBe('bad-code');
+    expect(refusal('token?grant_type=pkce', 400, 'invalid flow state')).toBe('bad-code');
+    expect(refusal('verify', 502, '')).toBe('server');
+  });
+
+  it('names a refused address or a failed email when Vlo asks for a code', () => {
+    expect(refusal('otp', 400, 'email_address_invalid')).toBe('bad-email');
+    expect(refusal('otp', 400, 'email_address_not_authorized')).toBe('mail');
+    expect(refusal('otp', 500, 'Error sending magic link email')).toBe('mail');
+    expect(refusal('otp', 429, 'over_email_send_rate_limit')).toBe('too-many');
   });
 });

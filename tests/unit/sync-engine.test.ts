@@ -209,6 +209,31 @@ describe('push', () => {
     expect(await mine('file:r1')).toBeUndefined();
   });
 
+  test('a device that joins again with its old id sends the deletes it made while it was away', async () => {
+    // Before the sign-out, this device put project p2 on the relay.
+    await db.projects.add(novel('p2'));
+    await db.items.add({ ...item('s2', 'scene', 'Gulls'), projectId: 'p2' });
+    await writeItemUpdate('s2', proseUpdate(['The gulls.']), 0);
+    now = 2000;
+    await syncOnce();
+    expect(((await mine('rows:p2')) as RowsBlob).rows.some((v) => v.table === 'projects' && v.row)).toBe(
+      true,
+    );
+    // Signed out, it deletes p2. On the next sign-in it joins with the same id and a new record.
+    now = 3000;
+    await db.transaction('rw', db.projects, db.items, async () => {
+      await db.items.delete('s2');
+      await db.projects.delete('p2');
+    });
+    await db.appMeta.put({ key: SYNC_META, value: { ...(await space()), pushedAt: 0, cursor: '' } });
+    now = 4000;
+    await syncOnce();
+    const blob = (await mine('rows:p2')) as RowsBlob;
+    expect(blob.rows.find((v) => v.table === 'projects' && v.id === 'p2')).toMatchObject({ at: 3000 });
+    expect(blob.rows.find((v) => v.table === 'projects' && v.id === 'p2')?.row).toBeUndefined();
+    expect(await mine('text:s2')).toBeUndefined();
+  });
+
   // Review Focus 3: a memoir real name goes to the relay only in sealed blobs.
   test('a real name in a person, a deleted word and a comment reaches the relay only sealed', async () => {
     await db.people.add({

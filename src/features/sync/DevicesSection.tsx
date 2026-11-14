@@ -15,6 +15,7 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { guessDeviceName } from './deviceName';
 import { PairDialog } from './PairDialog';
+import { pauseAccountSyncHere } from '@/features/account/accountSync';
 import { leaveSync, listDevices, startSpace, stopSyncEverywhere, syncErrorText } from './pairing';
 import { BLOCKED_TEXT, readSpace, syncedText, type SyncSpace } from './space';
 
@@ -159,6 +160,8 @@ function Syncing({ space, pairing, onPairing, say }: SyncingProps) {
           onClick={() => {
             void act(async () => {
               await leaveSync(space);
+              // The account keeps its sync, so the Account page must not turn it on here again by itself.
+              await pauseAccountSyncHere();
               return 'Sync stopped on this device. Your projects stay here.';
             });
           }}

@@ -2,7 +2,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
-import { docBody, docText } from '@/features/editor/itemText';
+import { docParts, docText } from '@/features/editor/itemText';
 import { dayStartKey } from '@/features/editor/stats/dayStart';
 import { sendToTabs } from '@/features/editor/tabSync';
 import { editorSchemas } from '@/features/import/tree';
@@ -14,7 +14,7 @@ import { fromBase64, toBase64, type Sealed } from '@/lib/crypto';
 import { db, type ItemKind, type Project } from '@/lib/db';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { countLines, countWords } from '@/lib/wordcount';
-import { docFromUpdate, encodeDoc, openItemDoc, readItemUpdate, YFRAGMENT } from '@/lib/ydocs';
+import { docFromUpdate, encodeDoc, inBatches, openItemDoc, readItemUpdate, YFRAGMENT } from '@/lib/ydocs';
 import {
   blobKey,
   MAX_SYNC_FILE,
@@ -99,8 +99,9 @@ async function localVersions(projectId: string): Promise<Map<string, Version>> {
 }
 
 async function dropBlobs({ space, keys }: Sync, names: string[]): Promise<void> {
-  for (const name of names)
-    await call('sync_drop', space, { p_device: space.deviceId, p_key: await blobKey(keys, name) });
+  await inBatches(names, async (name) =>
+    call('sync_drop', space, { p_device: space.deviceId, p_key: await blobKey(keys, name) }),
+  );
 }
 
 /**
@@ -124,23 +125,29 @@ const blobNames = (versions: readonly Pick<Version, 'table' | 'id'>[]) =>
 
 /**
  * Sends the blobs of each project that changed since the last push, and the blobs that the last pull
- * changed. The first push sends every project. `started` is the time that the round started.
+ * changed. The first push sends every project, and each delete of this device. A device that joins again
+ * with its old id may have blobs on the relay from before, so a delete made while it was away must reach
+ * them. `started` is the time that the round started.
  */
 async function push(sync: Sync, started: number): Promise<number> {
   const { space, keys } = sync;
   const from = space.deviceName;
   const first = space.pushedAt === 0;
   const again = new Set(first ? [] : space.resend);
-  const changes = first
-    ? []
-    : await db.syncClock
-        .where('at')
-        .aboveOrEqual(space.pushedAt)
-        .filter((e) => !e.remote)
-        .toArray();
+  const changes = await db.syncClock
+    .where('at')
+    .aboveOrEqual(first ? 0 : space.pushedAt)
+    .filter((e) => !e.remote && (!first || e.gone === true))
+    .toArray();
   const fresh = new Set(changes.filter((e) => !e.gone).map((e) => e.key));
   const projectIds = first
-    ? [...(await db.projects.toCollection().primaryKeys()), ...(await db.series.toCollection().primaryKeys())]
+    ? [
+        ...new Set([
+          ...(await db.projects.toCollection().primaryKeys()),
+          ...(await db.series.toCollection().primaryKeys()),
+          ...changes.map((e) => e.projectId),
+        ]),
+      ]
     : [
         ...new Set([
           ...changes.map((e) => e.projectId),
@@ -365,14 +372,14 @@ async function applyText(blob: TextBlob): Promise<boolean> {
     await open.close();
   }
   // The other device counted these words on its own day, so this count does not add them to today.
-  const counted = docBody(doc, form);
+  const { text, body: counted } = docParts(doc, form);
   const { language } = project.settings;
   await remoteTransaction(db, [db.items, db.itemTexts], async () => {
     if (!(await db.items.get(item.id))) return;
     await db.itemTexts.put({
       itemId: item.id,
       projectId: item.projectId,
-      text: docText(doc, form),
+      text,
       updatedAt: clock.now(),
     });
     await db.items.update(item.id, {

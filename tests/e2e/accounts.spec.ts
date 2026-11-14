@@ -85,6 +85,18 @@ test('a writer signs in on a laptop and a phone, and both keep every project', a
     await expect(projects(page).getByRole('link', { name: /Untitled collection/ })).toBeVisible();
   }
 
+  // Stop sync on the laptop in Settings: the Account page keeps it off until the writer asks again.
+  await laptop.goto('/settings');
+  await laptop.getByRole('button', { name: 'Stop sync on this device' }).click();
+  await expect(laptop.getByRole('status').filter({ hasText: 'Sync stopped on this device' })).toBeVisible();
+  await laptop.goto('/account');
+  await expect(sync).toContainText('You stopped sync on this device in Settings.');
+  await laptop.goto('/settings');
+  await expect(laptop.getByRole('button', { name: 'Sync my writing' })).toBeVisible();
+  await laptop.goto('/account');
+  await sync.getByRole('button', { name: 'Sync this device with my account' }).click();
+  await expect(sync).toContainText('This device syncs with your account.');
+
   // Sign out on the phone: it stops sync and keeps both projects.
   await phone.goto('/account');
   await phone.getByRole('button', { name: 'Sign out' }).click();
