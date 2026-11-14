@@ -45,7 +45,10 @@ Last update: 2026-11-14
     feedback inbox with a status, a note and a CSV download. Only accounts in `app_owners`.
   - Migration 0008 with PGlite tests; `accounts.spec.ts` (two devices, the daily count, feedback and the owner
     page); privacy version 12; Help; `docs/accounts-setup.md`.
-  - Open: the live Supabase project, custom SMTP, Google sign-in and the owner row (`docs/accounts-setup.md`).
+  - Done on 2026-11-14: the live Supabase project `dcfpdiyxfweyuhdkktau` has migrations 0001 to 0008. The
+    committed `.env` names it with its publishable key, and `vercel.json` allows its host. The security
+    advisor shows only the expected notes: closed tables with no policies, and the app's own RPCs.
+  - Open: custom SMTP, Google sign-in and the owner row (`docs/accounts-setup.md`).
 
 - Phase 17 (plan `docs/plans/phase-17.md`), from the beta tester's feedback:
   - Q-A, a quieter screen: one row of icon tools with tooltips (on a wide screen, in the tab row), the item

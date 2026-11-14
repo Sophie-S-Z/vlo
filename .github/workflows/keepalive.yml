@@ -28,10 +28,17 @@ jobs:
             echo "The repository secret SUPABASE_ANON_KEY is empty." >&2
             exit 1
           fi
+          # A publishable key (sb_publishable_...) is not a JWT, so it goes in apikey only. A legacy anon key
+          # goes in both headers.
+          auth=()
+          case "${SUPABASE_ANON_KEY}" in
+            sb_*) ;;
+            *) auth=(--header "Authorization: Bearer ${SUPABASE_ANON_KEY}") ;;
+          esac
           answer=$(curl --silent --show-error --fail --max-time 30 \
             --request POST "${SUPABASE_URL%/}/rest/v1/rpc/ping" \
             --header "apikey: ${SUPABASE_ANON_KEY}" \
-            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "${auth[@]}" \
             --header "Content-Type: application/json" \
             --data '{}')
           if [ "${answer}" != "1" ]; then
