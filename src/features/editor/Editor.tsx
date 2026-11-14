@@ -181,7 +181,7 @@ export function Editor({
         HeldSelection,
         ReadAloudMark,
         AliasPreview,
-        CraftSwitch,
+        CraftSwitch.configure({ itemId }),
         StyleCheck.configure({ form: kind, english }),
         CodexNames,
         ContinuityCheck.configure({ itemId, english }),
@@ -209,7 +209,6 @@ export function Editor({
       // Poems run no input rules, so "1." or "- " stays as typed. Smart punctuation is the one opt-in rule.
       enableInputRules: kind === 'prose' ? true : smart ? ['typography'] : false,
       enablePasteRules: kind === 'prose',
-      autofocus: focusOnOpen ? 'end' : false,
       // The tool surfaces read editor state on their own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
       editorProps: { attributes: editorAttributes(label, kind, helpId, writing.showAiText) },
@@ -244,6 +243,25 @@ export function Editor({
     onEditor?.(editor);
     return () => onEditor?.(null);
   }, [editor, onEditor]);
+
+  // The text takes the focus when its item opens. A setting that builds the editor again, such as the
+  // language, leaves the focus where it was, so a writer in the details panel stays there.
+  const focused = useRef(focusOnOpen);
+  useEffect(() => {
+    if (focused.current) editor.commands.focus('end');
+    const onFocus = () => {
+      focused.current = true;
+    };
+    const onBlur = () => {
+      focused.current = false;
+    };
+    editor.on('focus', onFocus);
+    editor.on('blur', onBlur);
+    return () => {
+      editor.off('focus', onFocus);
+      editor.off('blur', onBlur);
+    };
+  }, [editor]);
 
   // The command menu runs format commands on the open editor. In a split view (F39) the editor whose text
   // has focus is the active one, and a pane that opens beside waits for focus.
@@ -281,7 +299,7 @@ export function Editor({
   const layoutKey = [stack, writing.letterSpacing, writing.wordSpacing, writing.lineHeight].join('|');
 
   return (
-    <div className="grid gap-3" data-vlo-editor="" style={rootStyle}>
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3" data-vlo-editor="" style={rootStyle}>
       {/* The toolbar, the find bar and the read aloud bar stay at the top while the text scrolls. */}
       <div className="sticky top-0 z-10 -mx-1 grid bg-bg">
         <Toolbar editor={editor} kind={kind} templates={templates} />

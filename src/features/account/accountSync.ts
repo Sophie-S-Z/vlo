@@ -1,4 +1,5 @@
-import { forgetSpace, joinSpace, leaveSync, startSpace } from '@/features/sync/pairing';
+import { ShareError } from '@/features/share/rpc';
+import { forgetSpace, joinSpace, leaveSync, listDevices, startSpace } from '@/features/sync/pairing';
 import { readSpace, type SyncSpace } from '@/features/sync/space';
 import { db } from '@/lib/db';
 import { accountRpc } from './auth';
@@ -25,6 +26,7 @@ export interface Vault {
  * - `adopt`: the account has no sync, and this device syncs with a pairing link.
  * - `on`: this device syncs with the account's space.
  * - `join`: the account has sync, and this device does not sync.
+ * - `paused`: the account has sync, and the writer stopped sync on this device in Settings.
  * - `move`: the account has sync, and this device syncs with another space.
  */
 export type AccountSyncState =
@@ -32,6 +34,7 @@ export type AccountSyncState =
   | { kind: 'adopt'; space: SyncSpace }
   | { kind: 'on'; space: SyncSpace; vault: Vault }
   | { kind: 'join'; vault: Vault }
+  | { kind: 'paused'; vault: Vault }
   | { kind: 'move'; space: SyncSpace; vault: Vault };
 
 export async function readVault(): Promise<Vault | null> {
@@ -42,7 +45,7 @@ export async function readVault(): Promise<Vault | null> {
 export async function accountSyncState(): Promise<AccountSyncState> {
   const [vault, space] = await Promise.all([readVault(), readSpace()]);
   if (!vault) return space ? { kind: 'adopt', space } : { kind: 'off' };
-  if (!space) return { kind: 'join', vault };
+  if (!space) return (await accountSyncPaused()) ? { kind: 'paused', vault } : { kind: 'join', vault };
   return space.spaceId === vault.space_id ? { kind: 'on', space, vault } : { kind: 'move', space, vault };
 }
 
@@ -74,6 +77,29 @@ export async function turnOnAccountSync(deviceName: string): Promise<void> {
   const space = current ?? (await startSpace(deviceName));
   await rememberDevice(space);
   await saveVault(space);
+  await db.appMeta.delete(PAUSED);
+}
+
+/** The relay keeps the blobs of at most this many devices in a space (migration 0005). */
+const MAX_DEVICES = 5;
+
+/**
+ * Set when the writer stops sync on this device in Settings. The account keeps its sync, so the Account
+ * page must not turn it on here again by itself. A new sign-in or the writer's own press clears it.
+ */
+const PAUSED = 'account-sync-paused';
+
+export async function pauseAccountSyncHere(): Promise<void> {
+  await db.appMeta.put({ key: PAUSED, value: true });
+}
+
+export async function accountSyncPaused(): Promise<boolean> {
+  return (await db.appMeta.get(PAUSED))?.value === true;
+}
+
+/** A new sign-in turns sync on again (decision A1). */
+export async function clearAccountSyncPause(): Promise<void> {
+  await db.appMeta.delete(PAUSED);
 }
 
 /**
@@ -83,12 +109,16 @@ export async function turnOnAccountSync(deviceName: string): Promise<void> {
 export async function joinAccountSync(vault: Vault, deviceName: string): Promise<void> {
   const current = await readSpace();
   if (current?.spaceId === vault.space_id) return;
-  if (current) await leaveSync(current);
-  await joinSpace(
-    { spaceId: vault.space_id, key: vault.key, token: vault.token },
-    deviceName,
-    await deviceIdFor(vault.space_id),
-  );
+  const deviceId = await deviceIdFor(vault.space_id);
+  if (current) {
+    // The account's space must take this device before it leaves its pairing group, or it syncs with no one.
+    const devices = await listDevices({ spaceId: vault.space_id, token: vault.token });
+    if (!devices.some((d) => d.device === deviceId) && devices.length >= MAX_DEVICES)
+      throw new ShareError('limit');
+    await leaveSync(current);
+  }
+  await joinSpace({ spaceId: vault.space_id, key: vault.key, token: vault.token }, deviceName, deviceId);
+  await db.appMeta.delete(PAUSED);
 }
 
 /** On sign-out, this device stops sync and keeps its projects. Its sealed copies stay for the others. */

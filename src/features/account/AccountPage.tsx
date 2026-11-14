@@ -19,6 +19,7 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import {
   accountSyncState,
+  clearAccountSyncPause,
   joinAccountSync,
   stopAccountSyncHere,
   turnOnAccountSync,
@@ -126,6 +127,7 @@ function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
             event.preventDefault();
             void run(async () => {
               await verifyCode(email, code);
+              await clearAccountSyncPause();
               onSignedIn();
             });
           }}
@@ -198,7 +200,8 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
       setMessage('');
       try {
         const name = guessDeviceName();
-        if (current.kind === 'join' || current.kind === 'move') await joinAccountSync(current.vault, name);
+        if (current.kind === 'join' || current.kind === 'move' || current.kind === 'paused')
+          await joinAccountSync(current.vault, name);
         else await turnOnAccountSync(name);
         setMessage(
           current.kind === 'off' || current.kind === 'adopt'
@@ -233,6 +236,23 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
         <div>
           <Button asChild variant="outline">
             <Link to="/settings#devices">See your devices</Link>
+          </Button>
+        </div>
+      </>
+    );
+  else if (state.kind === 'paused')
+    body = (
+      <>
+        <p>You stopped sync on this device in Settings. Your other devices still sync with your account.</p>
+        <div>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              void connect(state);
+            }}
+          >
+            Sync this device with my account
           </Button>
         </div>
       </>
@@ -409,9 +429,11 @@ export function AccountPage() {
 
   useEffect(() => {
     if (!returned.code) return;
-    finishGoogle(returned.code).catch((error: unknown) => {
-      setMessage(accountErrorText(error));
-    });
+    finishGoogle(returned.code)
+      .then(clearAccountSyncPause)
+      .catch((error: unknown) => {
+        setMessage(accountErrorText(error));
+      });
   }, [returned.code]);
 
   let body: React.ReactNode;

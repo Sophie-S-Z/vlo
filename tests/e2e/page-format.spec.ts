@@ -107,3 +107,22 @@ test('page zoom scales the pageless text and stays on this device', async ({ pag
   await page.getByRole('dialog', { name: 'Page' }).getByRole('button', { name: 'Reset' }).click();
   await expect.poll(size).toBeCloseTo(base, 1);
 });
+
+test('the sheet shrinks when the details panel opens beside it', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'A phone shows the text without pages.');
+  await page.setViewportSize({ width: 1075, height: 672 });
+  await newNovel(page);
+  await page.getByRole('button', { name: 'Hide binder' }).click();
+  await choosePage(page, 'Letter');
+  await page.getByRole('button', { name: 'Show details' }).click();
+
+  const details = page.getByRole('complementary', { name: 'Details' });
+  await expect(details).toBeVisible();
+  await expect
+    .poll(async () => {
+      const sheet = await page.locator('[data-vlo-sheet]').boundingBox();
+      const panel = await details.boundingBox();
+      return sheet && panel ? panel.x - (sheet.x + sheet.width) : -1;
+    })
+    .toBeGreaterThan(0);
+});

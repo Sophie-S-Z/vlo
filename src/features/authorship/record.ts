@@ -2,6 +2,7 @@ import { projectTotals } from '@/features/focus/sessions';
 import { clock } from '@/lib/clock';
 import { db, type AuthorshipEntry } from '@/lib/db';
 import { newId } from '@/lib/ids';
+import { withLock } from '@/lib/lock';
 import { signingKey } from './keys';
 import { stamp } from './ots';
 import {
@@ -37,7 +38,6 @@ interface Pending {
 export const ENTRY_EVERY = 10 * 60_000;
 
 const pending = new Map<string, Pending>();
-let queue: Promise<unknown> = Promise.resolve();
 
 /** Adds the characters of one change of the writer. */
 export function noteChange(projectId: string, source: Source, added: number, deleted: number): void {
@@ -56,13 +56,7 @@ export function noteChange(projectId: string, source: Source, added: number, del
 
 /** Runs `task` after each earlier write of this tab, and alone among this browser's tabs. */
 function serial<T>(task: () => Promise<T>): Promise<T> {
-  const locked = () =>
-    typeof navigator !== 'undefined' && 'locks' in navigator
-      ? navigator.locks.request('vlo-authorship', task)
-      : task();
-  const run = queue.then(locked, locked);
-  queue = run.catch(() => undefined);
-  return run;
+  return withLock('vlo-authorship', task);
 }
 
 /** Adds an entry with the counts since the entry before, if the writer changed anything. */

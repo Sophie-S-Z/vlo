@@ -10,6 +10,7 @@ import { TextFillMark } from './textFill';
 import { PRIVATE_NAME } from '@/features/people/markName';
 import { AI_ORIGIN } from '../format/aiOrigin';
 import { COMMENT } from './comment';
+import { SUGGESTION } from '../format/suggestion';
 
 /* Formats beyond StarterKit. Inline formats apply to prose and poems; block formats to prose only. */
 
@@ -120,6 +121,8 @@ export const BlockStyle = Extension.create({
   },
 });
 
+const KEPT_MARKS = new Set([PRIVATE_NAME, AI_ORIGIN, COMMENT, SUGGESTION]);
+
 /** Mod-\ clears marks; in prose it also resets the block styles of the selected blocks. */
 export const ClearFormatting = Extension.create<{ blocks: boolean }>({
   name: 'clearFormatting',
@@ -137,9 +140,9 @@ export const ClearFormatting = Extension.create<{ blocks: boolean }>({
           let next = chain().command(({ tr, state }) => {
             for (const range of tr.selection.ranges) {
               for (const type of Object.values(state.schema.marks)) {
-                // A private name, the AI mark and a comment are facts about the text, not formats.
-                if (type.name !== PRIVATE_NAME && type.name !== AI_ORIGIN && type.name !== COMMENT)
-                  tr.removeMark(range.$from.pos, range.$to.pos, type);
+                // A private name, the AI mark, a comment and a tracked change are facts about the text,
+                // not formats. Clearing a tracked change would accept or undo it with no review.
+                if (!KEPT_MARKS.has(type.name)) tr.removeMark(range.$from.pos, range.$to.pos, type);
               }
             }
             return true;

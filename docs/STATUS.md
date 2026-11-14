@@ -1,8 +1,20 @@
 # Vlo status
 
-Last update: 2026-11-13
+Last update: 2026-11-14
 
 ## Done
+
+- Second hardening pass (2026-11-14), from a code review of the editor and sync code and a beta tester's
+  screenshot:
+  - Fixed: a Letter or A4 sheet covered the left part of the details panel when the panel opened beside
+    it; in a split view the More tools menu of the right pane acted on the Craft labels of the left poem;
+    a language change moved the focus out of the Page control into the editor.
+  - Fixed: Clear formatting dropped tracked changes; a tab back from the back-forward cache counted old
+    tabs; an address in Chinese or Japanese text took in the characters after it.
+  - Fixed: a device that joined its space again did not send the deletes it made while away; "Stop sync on
+    this device" did not hold with an account; a device left its pairing group before a full space refused
+    it; a refused email address showed a server error. One lock helper in `src/lib/lock.ts`.
+  - New: "Open link" in the Link panel, as Word and Google Docs offer.
 
 - Hardening pass (2026-11-13), from two code reviews of the Phase 17 code and of backup, import and History:
   - Fixed: the command menu did not open the timer; a Workshop tool lost its work when the project changed;
@@ -956,10 +968,9 @@ Last update: 2026-11-13
   - H10: the private-name leak test now holds a comment with real names, and every export leaves it out.
     The Codex is in no export request. Initial JavaScript: 216 KB gzip. No new package, so
     `docs/licenses.md` does not change.
-  - Known small issues for later: a language change builds the editors again, so the focus goes to the
-    left pane. In the right pane, the Craft switch can show the state of the left poem until the right
-    pane gets the focus. The AI share in Insights and the "Import writing" style read count words in every
-    language.
+  - Known small issue for later: the AI share in Insights and the "Import writing" style read count words
+    in every language. (The focus after a language change and the Craft switch of the right pane are fixed
+    on 2026-11-14.)
 - Phase 7 (plan `docs/plans/phase-7.md`, the roadmap's safety features F31 to F38, chosen on 2026-11-09).
   The product owner approved decisions P1 to P7 as recommended. Pull request #20 (G-A) merged with Tasks G1
   to G3:

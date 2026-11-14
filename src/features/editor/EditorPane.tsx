@@ -3,7 +3,7 @@ import type { Editor as TiptapEditor } from '@tiptap/react';
 import { ChartNoAxesColumn, History, X } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StatsBar } from '@/features/analysis/StatsBar';
-import { getCraft, setCraftItem, useCraft } from '@/features/craft/craftStore';
+import { setCraftPoem, useCraftOf } from '@/features/craft/craftStore';
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
@@ -32,7 +32,7 @@ import { Editor } from './Editor';
 import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
 import { cleanPageFormat, PAGE_SIZES } from './format/page';
-import { docBody, docText, refreshItemText, writeItemText } from './itemText';
+import { docParts, docText, refreshItemText, writeItemText } from './itemText';
 import { ManuscriptContext, type ManuscriptSettings } from './manuscript';
 import { PageControl } from './PageControl';
 import { SaveStatus } from './SaveStatus';
@@ -135,31 +135,18 @@ export function EditorPane({
     };
   }, [editor]);
 
-  // The Craft switch of the open poem (spec 8.3). Only a poem of a poetry collection has one. In a split
-  // view the switch acts on the pane whose text has focus, and each poem shows its own labels.
+  // The Craft switch of the open poem (spec 8.3). Only a poem of a poetry collection has one.
   const craftable = kind === 'poem' && (templates?.includes('poetry') ?? false);
   const craft = item.craft === true;
-  const craftState = useCraft();
-  const labels = craftable && (craftState.itemId === id ? craftState.on : craft);
+  const stored = useCraftOf(id);
+  const labels = craftable && (stored ?? craft);
   useEffect(() => {
-    if (!beside || getCraft().itemId === id) setCraftItem(craftable ? id : null, craft);
-  }, [beside, craftable, id, craft]);
-  useEffect(() => {
-    if (!editor) return;
-    const take = () => {
-      setCraftItem(craftable ? id : null, craft);
-    };
-    editor.on('focus', take);
+    if (!craftable) return;
+    setCraftPoem(id, craft);
     return () => {
-      editor.off('focus', take);
+      setCraftPoem(id, null);
     };
-  }, [editor, craftable, id, craft]);
-  useEffect(
-    () => () => {
-      if (getCraft().itemId === id) setCraftItem(null, false);
-    },
-    [id],
-  );
+  }, [craftable, id, craft]);
 
   // A save reads the language when it runs, so a change of language does not end the save tracker.
   const languageNow = useRef(language);
@@ -182,8 +169,9 @@ export function EditorPane({
       confirm: () => open.confirmSaved(clock.now()),
       onPause: async () => {
         const doc = latest.current;
-        if (doc)
-          await writeItemText(target, docText(doc, kind), kind, docBody(doc, kind), languageNow.current);
+        if (!doc) return;
+        const { text, body } = docParts(doc, kind);
+        await writeItemText(target, text, kind, body, languageNow.current);
       },
       onState: setSave,
     });

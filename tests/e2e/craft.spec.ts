@@ -203,3 +203,33 @@ test('F56: a form check names what breaks the form, and the form stays with the 
   await expect(page.getByRole('combobox', { name: 'Form' })).toHaveValue('pantoum', { timeout: 20_000 });
   expect(await seriousIssues(page)).toEqual([]);
 });
+
+test('in a split view the More tools menu of each pane turns on the labels of its own poem', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'The split view needs a screen 1024 px wide.');
+  await newPoem(page);
+  const binder = page.getByRole('navigation', { name: 'Binder' });
+  await binder.getByRole('button', { name: 'Add to binder' }).click();
+  await page.getByRole('menuitem', { name: 'Poem' }).click();
+  const left = page.getByRole('textbox', { name: 'Poem 2' });
+  await expect(left).toBeFocused();
+  await binder.getByRole('button', { name: 'Options for Poem 1' }).click();
+  await page.getByRole('menuitem', { name: 'Open beside' }).click();
+  const pane = page.getByRole('region', { name: 'Beside' });
+  await expect(pane.getByRole('textbox', { name: 'Poem 1' })).toBeVisible();
+
+  // The left poem keeps the focus, and the menu of the right pane acts on the right poem.
+  await pane.getByRole('button', { name: 'More tools' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Craft labels' }).click();
+  await expect(pane.getByTestId('craft-labels')).toBeVisible();
+  await expect(layer(page)).toHaveCount(1);
+  await pane.getByRole('button', { name: 'More tools' }).click();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Craft labels' })).toBeChecked();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  const leftEditor = page.locator('[data-vlo-editor]').filter({ has: left });
+  await leftEditor.getByRole('button', { name: 'More tools' }).click();
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Craft labels' })).not.toBeChecked();
+});

@@ -15,8 +15,14 @@ export function countUnit(language: string | undefined): CountUnit {
 // Han, hiragana and katakana, with the marks that go with them, such as ー and 々.
 const CJK = /[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}]/gu;
 
-// A web address or an email address is one word, as in Word, Scrivener and Google Docs.
-const ADDRESS = /\b(?:https?:\/\/|www\.)\S+|[^\s@]+@[^\s@]+\.[^\s@]+/giu;
+// A web address or an email address is one word, as in Word, Scrivener and Google Docs. Chinese and
+// Japanese put no space around an address, so a Han or kana character, or CJK or full-width punctuation
+// such as 。 or ），ends it.
+const NOT_IN_ADDRESS = String.raw`\s\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}\u3000-\u303f\uff00-\uffef`;
+const ADDRESS = new RegExp(
+  String.raw`\b(?:https?:\/\/|www\.)[^${NOT_IN_ADDRESS}]+|[^${NOT_IN_ADDRESS}@]+@[^${NOT_IN_ADDRESS}@]+\.[^${NOT_IN_ADDRESS}@]+`,
+  'giu',
+);
 // A hyphen or a slash between two letters or digits joins them into one word: "well-known", "and/or".
 // A double hyphen or a dash with spaces still splits, because it stands for a dash.
 const JOINER = /(?<=[\p{L}\p{N}\p{M}])[-\u2010\u2011/](?=[\p{L}\p{N}])/gu;

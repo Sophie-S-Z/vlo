@@ -8,7 +8,7 @@ import { clock } from '@/lib/clock';
 import type { Item } from '@/lib/db';
 import { openItemDoc, YFRAGMENT } from '@/lib/ydocs';
 import { DOC_SCHEMA, docSchema, stampDocSchema } from './docSchema';
-import { docBody, docText, writeItemText } from './itemText';
+import { docParts, docText, writeItemText } from './itemText';
 import { sendToTabs } from './tabSync';
 import type { EditorForm } from '@/features/library/templates';
 
@@ -55,7 +55,8 @@ export async function changeStoredDoc(
     open.doc.off('update', keep);
     await open.confirmSaved(clock.now());
     sendToTabs(item.id, Y.mergeUpdates(updates));
-    await writeItemText(item, docText(tr.doc, form), form, docBody(tr.doc, form), language);
+    const { text, body } = docParts(tr.doc, form);
+    await writeItemText(item, text, form, body, language);
     return true;
   } finally {
     await open.close();

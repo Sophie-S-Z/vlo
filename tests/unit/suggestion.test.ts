@@ -107,6 +107,20 @@ describe('track changes', () => {
     expect(changes(editor)).toEqual([{ kind: 'insert', text: ' fa', pass: 1 }]);
   });
 
+  test('Clear formatting keeps each tracked change for review', () => {
+    const editor = withText('Mira ran.');
+    caret(editor, 4);
+    type(editor, ' fast');
+    caret(editor, 13);
+    backspace(editor);
+    editor.commands.selectAll();
+    editor.commands.clearFormatting();
+    expect(changes(editor)).toEqual([
+      { kind: 'insert', text: ' fast', pass: 1 },
+      { kind: 'delete', text: 'n', pass: 1 },
+    ]);
+  });
+
   test('typing over selected words strikes them and inserts the new words after them', () => {
     const editor = withText('Mira ran.');
     const { doc } = editor.state;

@@ -1,3 +1,4 @@
+import { withLock } from '@/lib/lock';
 import { db } from '@/lib/db';
 
 /*
@@ -90,7 +91,7 @@ export async function dropped(spaceId: string, names: readonly string[]): Promis
 
 /** Runs `fn` while no sync round runs in a tab of this device. */
 export function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
-  return 'locks' in navigator ? navigator.locks.request('vlo-sync', fn) : fn();
+  return withLock('vlo-sync', fn);
 }
 
 /** "Synced just now", "Synced 5 min ago", "Synced 3 h ago" or "Synced on 9 November". */
