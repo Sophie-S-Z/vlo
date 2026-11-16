@@ -37,6 +37,7 @@ import {
   signOut,
   verifyCode,
 } from './auth';
+import { isOwner } from './owner';
 import { readSession, type AccountSession } from './session';
 
 /*
@@ -316,6 +317,20 @@ function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedO
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // The link to the owner page shows only to an owner. The server checks again on that page.
+  const [owner, setOwner] = useState(false);
+  useEffect(() => {
+    let live = true;
+    isOwner().then(
+      (yes) => {
+        if (live) setOwner(yes);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const load = useCallback(() => {
     accountSyncState().then(setState, (error: unknown) => {
@@ -342,6 +357,13 @@ function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedO
         Signed in as <span className="font-semibold">{session.email || 'your account'}</span>
         {session.provider === 'google' ? ' with Google' : ''}.
       </p>
+      {owner && (
+        <div>
+          <Button asChild>
+            <Link to="/owner">Open the owner page</Link>
+          </Button>
+        </div>
+      )}
       {state ? <SyncPanel state={state} onChange={load} /> : <Status text={message} />}
       <section aria-labelledby="account-heading" className="grid gap-3 border-t border-rule pt-6">
         <h2 id="account-heading" className="font-display text-2xl font-semibold">
