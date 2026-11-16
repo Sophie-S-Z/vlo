@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { refusal } from '@/features/account/auth';
 import { sendDailyCount, writingNumbers } from '@/features/account/dailyCount';
 import { installId, readDailyCount, setDailyCountOn } from '@/features/account/dailyCountState';
-import { feedbackCsv, ranked, type OwnerFeedback } from '@/features/account/owner';
+import { benchmarks, feedbackCsv, ranked, type OwnerDay, type OwnerFeedback } from '@/features/account/owner';
 import { placeOf } from '@/features/account/sendFeedback';
 import { createProject } from '@/features/library/projects';
 import { db } from '@/lib/db';
@@ -77,6 +77,25 @@ describe('feedback (decisions A5 and A6)', () => {
       ['b', 1],
       ['c', 1],
     ]);
+  });
+});
+
+describe('the daily benchmarks of the owner page', () => {
+  it('gives today, yesterday, an average day of the 4 weeks before today and the best day', () => {
+    const day = (words: number): OwnerDay => ({
+      day: '2026-11-16',
+      devices: 0,
+      accounts: 0,
+      writers: 0,
+      words,
+      new_devices: 0,
+      new_accounts: 0,
+      feedback: 0,
+    });
+    const days = [day(5000), ...Array.from({ length: 28 }, () => day(100)), day(30), day(40)];
+    // The 28 days before today are 27 days of 100 and yesterday. The best day is older than those.
+    expect(benchmarks(days, 'words')).toEqual({ today: 40, yesterday: 30, average: 98, best: 5000 });
+    expect(benchmarks([], 'words')).toEqual({ today: 0, yesterday: 0, average: 0, best: 0 });
   });
 });
 

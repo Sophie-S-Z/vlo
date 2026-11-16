@@ -200,15 +200,20 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
   await expect(owner.getByRole('heading', { level: 1, name: 'Owner' })).toBeVisible();
   await expect(owner.getByText('Accounts', { exact: true })).toBeVisible();
   await expect(owner.getByRole('heading', { name: 'Words written today' })).toBeVisible();
+  await expect(owner.getByRole('table', { name: 'Today against other days' })).toContainText(
+    'Average day, last 4 weeks',
+  );
   await expect(owner.getByText(/^Live\. Updated at/)).toBeVisible();
   await owner.getByRole('button', { name: 'Devices', exact: true }).click();
   await expect(owner.getByRole('slider', { name: /^Devices that opened Vlo each day\./ })).toBeVisible();
   expect(await seriousIssues(owner)).toEqual([]);
   await owner.getByRole('button', { name: 'Show as a table' }).click();
-  await expect(owner.getByRole('table')).toContainText('Signed-in accounts');
+  await expect(owner.getByRole('table', { name: 'Devices that opened Vlo each day' })).toContainText(
+    'Signed-in accounts',
+  );
 
   await owner.getByRole('button', { name: /^People/ }).click();
-  await expect(owner.getByRole('table')).toContainText('owner@example.com');
+  await expect(owner.getByRole('table', { name: 'Accounts' })).toContainText('owner@example.com');
 
   await owner.getByRole('button', { name: /^Feedback \(1 new\)/ }).click();
   const item = owner.getByRole('list', { name: 'Feedback' }).getByRole('listitem');
