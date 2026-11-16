@@ -1,0 +1,254 @@
+/*
+ * The Library: a private archive. Each project is a folio in a fine tray, with its own seal (Sigil.tsx).
+ * Light from the pointer touches the rim of a folio. Calm mode and reduced motion stop every animation and
+ * transition here (tokens.css), and the page stays complete without them.
+ */
+
+/* Seal lines stay one pixel wide at every size. The tick ring keeps its drawn length. */
+.vlo-sigil :where(circle, polygon):not(.vlo-sigil-ticks) {
+  vector-effect: non-scaling-stroke;
+}
+
+/* The large seal of the masthead turns once in three minutes. Only `rotate` changes, so it stays on the
+   compositor. */
+.vlo-orrery {
+  animation: vlo-turn 180s linear infinite;
+}
+
+@keyframes vlo-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* A still pool of celadon light behind the masthead. It stays inside the page width. */
+.vlo-masthead {
+  position: relative;
+  isolation: isolate;
+}
+
+.vlo-masthead::before {
+  content: '';
+  position: absolute;
+  top: -3rem;
+  right: 0;
+  z-index: -1;
+  width: min(40rem, 100%);
+  height: 20rem;
+  pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--accent) 12%, transparent), transparent);
+}
+
+/* Small capitals over a heading or a title. */
+.vlo-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* A hairline with a small diamond at its centre. The two halves draw out from the diamond. */
+.vlo-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vlo-rule::before,
+.vlo-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to var(--rule-to, right), transparent, var(--rule) 35%);
+  animation: vlo-draw 1.2s var(--ease-reveal) both;
+}
+
+.vlo-rule::before {
+  transform-origin: right;
+}
+
+.vlo-rule::after {
+  --rule-to: left;
+  transform-origin: left;
+}
+
+@keyframes vlo-draw {
+  from {
+    scale: 0 1;
+  }
+}
+
+.vlo-diamond {
+  width: 6px;
+  height: 6px;
+  rotate: 45deg;
+  border: 1px solid var(--accent);
+}
+
+/* The layout switch. A thumb slides under the chosen side. */
+.vlo-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  width: calc(50% - 2px);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--text) 10%, transparent),
+    0 1px 2px rgb(11 14 20 / 0.12);
+  transition: translate 0.45s var(--ease-out);
+}
+
+.vlo-toggle[data-layout='list']::before {
+  translate: 100% 0;
+}
+
+/* A folio: an outer tray with a hairline, and an inner sheet with a soft top highlight. */
+.vlo-folio {
+  --folio-radius: 1.25rem;
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--folio-radius);
+  padding: 5px;
+  background: color-mix(in oklch, var(--text) 3%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--text) 8%, transparent);
+  transition: translate 0.6s var(--ease-out);
+}
+
+.vlo-folio-core {
+  position: relative;
+  isolation: isolate;
+  border-radius: calc(var(--folio-radius) - 5px);
+  background: var(--surface);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--text) 6%, transparent),
+    0 1px 2px rgb(11 14 20 / 0.06);
+  transition: background-color 0.4s var(--ease-out);
+}
+
+/* The rim catches the light where the pointer is. A keyboard focus lights the top edge. */
+.vlo-folio::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: radial-gradient(
+    16rem circle at var(--mx, 50%) var(--my, 0%),
+    color-mix(in oklch, var(--accent) 80%, transparent),
+    transparent 70%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+
+/* A faint glow on the sheet follows the same light. */
+.vlo-folio-core::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    28rem circle at var(--mx, 50%) var(--my, 0%),
+    color-mix(in oklch, var(--accent) 7%, transparent),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+
+.vlo-folio .vlo-sigil {
+  transition: rotate 1.4s var(--ease-out);
+}
+
+/* The open mark in the corner of a folio. */
+.vlo-folio-go {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  transition:
+    translate 0.5s var(--ease-out),
+    background-color 0.3s var(--ease-out),
+    color 0.3s var(--ease-out);
+}
+
+.vlo-folio:focus-within::before,
+.vlo-folio:focus-within .vlo-folio-core::before {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .vlo-folio:hover::before,
+  .vlo-folio:hover .vlo-folio-core::before {
+    opacity: 1;
+  }
+
+  .vlo-folio[data-layout='grid']:hover {
+    translate: 0 -3px;
+  }
+
+  .vlo-folio:hover .vlo-sigil {
+    rotate: 60deg;
+  }
+
+  .vlo-folio:hover .vlo-folio-go {
+    translate: 2px -2px;
+    background-color: var(--accent);
+    color: var(--on-accent);
+    box-shadow: none;
+  }
+}
+
+/* The most recent project's large seal, faint behind its title. */
+.vlo-folio-mark {
+  position: absolute;
+  top: 50%;
+  right: 2.5rem;
+  width: 10rem;
+  height: 10rem;
+  translate: 0 -50%;
+  pointer-events: none;
+  opacity: 0.18;
+}
+
+/* In the list, a folio is a ruled row in a ledger. */
+.vlo-folio[data-layout='list'] {
+  --folio-radius: 0.875rem;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.vlo-folio[data-layout='list'] .vlo-folio-core {
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (hover: hover) {
+  .vlo-folio[data-layout='list']:hover .vlo-folio-core {
+    background: var(--surface);
+  }
+}
+
+/* A quiet notice, such as the backup reminder: a pale celadon wash with a celadon hairline. */
+.vlo-notice {
+  background: color-mix(in oklch, var(--accent) 5%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 28%, transparent);
+}

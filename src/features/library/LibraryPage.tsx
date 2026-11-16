@@ -1,7 +1,7 @@
-import { ChevronDown, LayoutGrid, List, NotebookPen, Upload } from 'lucide-react';
+import { ChevronDown, Hourglass, LayoutGrid, List, NotebookPen, Upload } from 'lucide-react';
 import { ToggleGroup } from 'radix-ui';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { startTransition, useRef, useState } from 'react';
+import { startTransition, useRef, useState, type PointerEvent } from 'react';
 import { Link } from 'react-router';
 import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
@@ -17,16 +17,19 @@ import { SafariSteps } from '@/features/backup/SafariSteps';
 import { SeriesDialog } from '@/features/series/SeriesDialog';
 import { clock } from '@/lib/clock';
 import { db, type Project, type Series } from '@/lib/db';
+import { countUnit } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 import { ICON_BUTTON } from '@/ui/tip';
 import { DeleteDialog } from './DeleteDialog';
+import { formatWords } from './format';
 import { NewProjectDialog } from './NewProjectDialog';
 import { ProjectCard, type LibraryLayout } from './ProjectCard';
 import { RenameDialog } from './RenameDialog';
 import { TemplatesDialog } from './TemplatesDialog';
-import { useLibrary } from './useLibrary';
+import { Sigil } from './Sigil';
+import { useLibrary, type LibraryProject } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { WeeklyReport } from '@/features/usage/WeeklyReport';
 
@@ -41,7 +44,29 @@ function loadLayout(): LibraryLayout {
 }
 
 const toggleClass =
-  'inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-muted hover:text-text data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:shadow-sm';
+  'relative z-10 inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-4 text-sm text-muted transition-colors hover:text-text data-[state=on]:text-text';
+
+/** "6 projects · 158,164 words". The total shows only when every project counts the same unit (F38). */
+function summary(projects: LibraryProject[]): string {
+  const count = projects.length === 1 ? '1 project' : `${String(projects.length)} projects`;
+  const units = new Set(projects.map(({ project }) => countUnit(project.settings.language)));
+  const [unit] = units;
+  if (units.size !== 1 || unit === undefined) return count;
+  return `${count} · ${formatWords(
+    projects.reduce((sum, { wordCount }) => sum + wordCount, 0),
+    unit,
+  )}`;
+}
+
+/** The rim light of a card follows a mouse. Touch and pen leave it at rest. */
+function followPointer(event: PointerEvent<HTMLUListElement>) {
+  if (event.pointerType !== 'mouse' || !(event.target instanceof Element)) return;
+  const folio = event.target.closest<HTMLElement>('.vlo-folio');
+  if (!folio) return;
+  const box = folio.getBoundingClientRect();
+  folio.style.setProperty('--mx', `${String(event.clientX - box.left)}px`);
+  folio.style.setProperty('--my', `${String(event.clientY - box.top)}px`);
+}
 
 export function LibraryPage() {
   useDocumentTitle('Library');
@@ -104,68 +129,91 @@ export function LibraryPage() {
 
   return (
     <section className="grain">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="font-display text-4xl font-semibold">Library</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          {library.status === 'ready' && library.projects.length > 0 && (
+      <div className="vlo-masthead grid gap-5">
+        <Sigil
+          seed="Vlo Library"
+          className="vlo-orrery pointer-events-none absolute -top-4 right-2 hidden size-52 text-accent-text opacity-20 md:block"
+        />
+        <p className="vlo-eyebrow flex items-center gap-2.5">
+          <span aria-hidden="true" className="vlo-diamond" />
+          Your private library
+        </p>
+        <h1 className="font-display text-6xl leading-[0.95] font-light tracking-[-0.03em] [font-variation-settings:'SOFT'_100,'WONK'_1] sm:text-8xl">
+          Library
+        </h1>
+        {library.status === 'ready' && library.projects.length > 0 && (
+          <p className="font-manuscript text-lg text-muted italic tabular-nums">
+            {summary(library.projects)}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          {library.status === 'ready' && library.projects.length > 0 ? (
             <ToggleGroup.Root
               type="single"
               aria-label="Layout"
               value={layout}
+              data-layout={layout}
               onValueChange={(value) => {
                 if (value === 'grid' || value === 'list') changeLayout(value);
               }}
-              className="inline-flex rounded-lg border border-rule bg-bg p-0.5"
+              className="vlo-toggle relative grid grid-cols-2 rounded-full p-0.5 ring-1 ring-rule"
             >
               <ToggleGroup.Item value="grid" className={toggleClass}>
-                <LayoutGrid aria-hidden="true" className="size-4" />
+                <LayoutGrid aria-hidden="true" strokeWidth={1.5} className="size-4" />
                 Grid
               </ToggleGroup.Item>
               <ToggleGroup.Item value="list" className={toggleClass}>
-                <List aria-hidden="true" className="size-4" />
+                <List aria-hidden="true" strokeWidth={1.5} className="size-4" />
                 List
               </ToggleGroup.Item>
             </ToggleGroup.Root>
+          ) : (
+            <span />
           )}
-          {/* Three quiet ways in, behind one menu (Phase 17 decision S4), then the main action. */}
-          <ImportBackup ref={backupRef} trigger={false} />
-          <ImportWriting ref={writingRef} trigger={false} />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost">
-                <Upload aria-hidden="true" className="size-4" />
-                Import
-                <ChevronDown aria-hidden="true" className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <DropdownMenuItem
-                className="grid gap-0.5"
-                onSelect={() => {
-                  backupRef.current?.open();
-                }}
-              >
-                <span className="font-medium">Import backup</span>
-                <span className="text-xs text-muted">A .vlo.zip file that Vlo made</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="grid gap-0.5"
-                onSelect={() => {
-                  writingRef.current?.open();
-                }}
-              >
-                <span className="font-medium">Import writing</span>
-                <span className="text-xs text-muted">Word, Markdown, Fountain, text or Scrivener</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button asChild variant="ghost" className={ICON_BUTTON} data-tip="Quick note">
-            <Link to="/capture">
-              <NotebookPen aria-hidden="true" className="size-4" />
-              <span className="sr-only">Quick note</span>
-            </Link>
-          </Button>
-          <NewProjectDialog />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Three quiet ways in, behind one menu (Phase 17 decision S4), then the main action. */}
+            <ImportBackup ref={backupRef} trigger={false} />
+            <ImportWriting ref={writingRef} trigger={false} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="rounded-full">
+                  <Upload aria-hidden="true" strokeWidth={1.5} className="size-4" />
+                  Import
+                  <ChevronDown aria-hidden="true" strokeWidth={1.5} className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuItem
+                  className="grid gap-0.5"
+                  onSelect={() => {
+                    backupRef.current?.open();
+                  }}
+                >
+                  <span className="font-medium">Import backup</span>
+                  <span className="text-xs text-muted">A .vlo.zip file that Vlo made</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="grid gap-0.5"
+                  onSelect={() => {
+                    writingRef.current?.open();
+                  }}
+                >
+                  <span className="font-medium">Import writing</span>
+                  <span className="text-xs text-muted">Word, Markdown, Fountain, text or Scrivener</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button asChild variant="ghost" className={cn(ICON_BUTTON, 'rounded-full')} data-tip="Quick note">
+              <Link to="/capture">
+                <NotebookPen aria-hidden="true" strokeWidth={1.5} className="size-4" />
+                <span className="sr-only">Quick note</span>
+              </Link>
+            </Button>
+            <NewProjectDialog />
+          </div>
+        </div>
+        <div aria-hidden="true" className="vlo-rule mt-4">
+          <span className="vlo-diamond" />
         </div>
       </div>
 
@@ -174,22 +222,35 @@ export function LibraryPage() {
       {due.length > 0 && (
         <section
           aria-labelledby="backup-reminder"
-          className="mt-8 grid gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-5"
+          className="vlo-notice mt-10 grid gap-4 rounded-[1.25rem] p-5 sm:p-6"
         >
-          <h2 id="backup-reminder" className="font-display text-xl font-semibold">
-            Time for a backup
-          </h2>
-          <p className="text-sm text-muted">
-            {due.length === 1 ? 'This project has' : 'These projects have'} work that is not in a backup file.
-            Browsers can clear the data of a website, and a backup file keeps a copy of your work.
-          </p>
-          <ul className="grid gap-2">
+          <div className="flex items-start gap-3">
+            <Hourglass
+              aria-hidden="true"
+              strokeWidth={1.25}
+              className="mt-1 size-5 shrink-0 text-accent-text"
+            />
+            <div className="grid gap-1">
+              <h2 id="backup-reminder" className="font-display text-xl font-medium">
+                Time for a backup
+              </h2>
+              <p className="text-sm text-muted">
+                {due.length === 1 ? 'This project has' : 'These projects have'} work that is not in a backup
+                file. Browsers can clear the data of a website, and a backup file keeps a copy of your work.
+              </p>
+            </div>
+          </div>
+          <ul className="flex flex-wrap gap-2 sm:pl-8">
             {due.map(({ project }) => (
-              <li key={project.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                <span className="font-medium [overflow-wrap:anywhere]">{project.title}</span>
+              <li
+                key={project.id}
+                className="flex max-w-full min-w-0 items-center gap-3 rounded-full bg-surface py-1 pr-1 pl-4 ring-1 ring-rule"
+              >
+                <span className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{project.title}</span>
                 <Button
                   type="button"
                   variant="outline"
+                  className="min-h-9 shrink-0 rounded-full px-3.5"
                   aria-label={`Back up ${project.title}`}
                   disabled={quick.busy !== null}
                   onClick={() => void backUpNow(project)}
@@ -222,25 +283,31 @@ export function LibraryPage() {
       )}
 
       {library.status === 'ready' && library.projects.length === 0 && (
-        <div className="mt-8 rounded-[var(--radius-card)] border border-rule bg-surface p-6">
-          <p className="font-manuscript text-xl">Your projects will live here, on this device.</p>
-          <p className="mt-3 text-muted">
-            Vlo keeps every manuscript in this browser. No Vlo server receives your text.
-          </p>
-          <p className="mt-4 text-sm">
-            <a href={MARKETING_URL} rel="noreferrer">
-              Read more about Vlo
-            </a>
-          </p>
+        <div className="vlo-folio mt-10">
+          <div className="vlo-folio-core grid justify-items-center gap-3 px-6 py-14 text-center">
+            <Sigil seed="A first page" className="size-20 text-accent-text opacity-80" />
+            <p className="mt-4 font-display text-3xl font-light tracking-[-0.01em]">
+              Your projects will live here, on this device.
+            </p>
+            <p className="max-w-md text-muted">
+              Vlo keeps every manuscript in this browser. No Vlo server receives your text.
+            </p>
+            <p className="mt-2 text-sm">
+              <a href={MARKETING_URL} rel="noreferrer">
+                Read more about Vlo
+              </a>
+            </p>
+          </div>
         </div>
       )}
 
       {library.status === 'ready' && library.projects.length > 0 && (
         <ul
           aria-label="Projects"
+          onPointerMove={followPointer}
           className={cn(
-            'vlo-stagger mt-8 grid',
-            layout === 'grid' ? 'gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'gap-2',
+            'vlo-stagger mt-10 grid',
+            layout === 'grid' ? 'gap-5 sm:grid-cols-2 lg:grid-cols-3' : 'divide-y divide-rule/70',
           )}
         >
           {library.projects.map(({ project, wordCount }, index) => (
@@ -250,6 +317,7 @@ export function LibraryPage() {
               wordCount={wordCount}
               layout={layout}
               index={index}
+              featured={index === 0}
               now={now}
               onBackUp={() => {
                 setBackingUp(project);
@@ -273,20 +341,21 @@ export function LibraryPage() {
       )}
 
       {series.length > 0 && (
-        <section aria-labelledby="library-series" className="mt-10 grid gap-3">
-          <h2 id="library-series" className="font-display text-2xl font-semibold">
+        <section aria-labelledby="library-series" className="mt-16 grid gap-4">
+          <h2 id="library-series" className="font-display text-3xl font-light tracking-[-0.01em]">
             Series
           </h2>
-          <ul className="grid gap-2">
+          <ul className="divide-y divide-rule border-y border-rule">
             {series.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-baseline gap-x-3">
+              <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-4">
+                <Sigil seed={s.id} className="size-7 shrink-0 text-accent-text" />
                 <Link
                   to={`/series/${s.id}`}
-                  className="font-display text-lg font-semibold [overflow-wrap:anywhere]"
+                  className="min-w-0 flex-1 font-display text-xl font-medium text-text no-underline [overflow-wrap:anywhere] hover:underline"
                 >
                   {s.title}
                 </Link>
-                <span className="text-sm text-muted">
+                <span className="vlo-eyebrow">
                   {s.projectIds.length === 1 ? '1 book' : `${String(s.projectIds.length)} books`}
                 </span>
               </li>

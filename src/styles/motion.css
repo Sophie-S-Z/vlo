@@ -40,15 +40,16 @@ html[data-focus-mode='true'] [data-chrome] {
   display: none;
 }
 
-/* Library cards rise into place one after another, 30 ms apart. */
+/* Library cards rise out of a soft blur into place one after another, 45 ms apart. */
 .vlo-stagger > * {
-  animation: vlo-rise 0.5s var(--ease-reveal) both;
-  animation-delay: calc(min(var(--i, 0), 12) * 30ms);
+  animation: vlo-rise 0.8s var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 45ms);
 }
 
 @keyframes vlo-rise {
   from {
-    transform: translateY(16px);
+    transform: translateY(20px);
+    filter: blur(6px);
     opacity: 0;
   }
 }
