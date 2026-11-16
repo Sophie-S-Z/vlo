@@ -77,7 +77,7 @@ Vlo asks for a code, because a link in an email opens the browser and not the in
    select id from auth.users where email = 'you@example.com';
    ```
 
-3. Open `/owner` in Vlo. You see the counts, the accounts and the feedback.
+3. Open the Account page in Vlo and press **Open the owner page**. Only an owner sees the button. You see the counts, the accounts and the feedback.
 
 To add another owner, run the same SQL with their email. To remove one, delete their row from `app_owners`.
 

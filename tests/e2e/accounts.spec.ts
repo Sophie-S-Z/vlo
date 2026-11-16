@@ -187,11 +187,17 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
   await owner.goto('/owner');
   await expect(owner.getByText('with the owner account to see who uses Vlo.')).toBeVisible();
   await signIn(owner, 'owner@example.com');
+  const ownerLink = owner.getByRole('link', { name: 'Open the owner page' });
+  await expect(owner.getByText('Signed in as owner@example.com')).toBeVisible();
+  await expect(ownerLink).toHaveCount(0);
   await owner.goto('/owner');
   await expect(owner.getByText('This page is for the owner of Vlo.')).toBeVisible();
 
+  // An owner finds the page from the Account page.
   fake.accounts?.makeOwner('owner@example.com');
-  await owner.reload();
+  await owner.goto('/account');
+  await ownerLink.click();
+  await expect(owner.getByRole('heading', { level: 1, name: 'Owner' })).toBeVisible();
   await expect(owner.getByText('Accounts', { exact: true })).toBeVisible();
   await expect(owner.getByRole('heading', { name: 'Words written today' })).toBeVisible();
   await expect(owner.getByText(/^Live\. Updated at/)).toBeVisible();
