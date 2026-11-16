@@ -10,25 +10,28 @@ import { db, type Item, type Snapshot } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { YFRAGMENT, docFromUpdate } from '@/lib/ydocs';
 import type { EditorForm } from '@/features/library/templates';
+import { pack, snapshotState } from './packing';
 
 export const BEFORE_RESTORE = 'Before restore';
 
 type ItemRef = Pick<Item, 'id' | 'projectId'>;
 
-/** Saves the item's whole Yjs state and its plain text. */
+/** Saves the item's whole Yjs state, in gzip, and its plain text. */
 export async function takeSnapshot(
   item: ItemRef,
   doc: Y.Doc,
   text: string,
   label?: string,
 ): Promise<Snapshot> {
+  // The state is read before the first await, so it matches `text`.
+  const state = Y.encodeStateAsUpdate(doc);
   const snapshot: Snapshot = {
     id: newId(),
     projectId: item.projectId,
     itemId: item.id,
     ...(label ? { label } : {}),
     createdAt: clock.now(),
-    state: Y.encodeStateAsUpdate(doc),
+    ...(await pack(state)),
     text,
   };
   await db.snapshots.add(snapshot);
@@ -65,8 +68,9 @@ export async function restoreSnapshot(
 ): Promise<void> {
   const snapshot = await db.snapshots.get(snapshotId);
   if (snapshot?.itemId !== item.id) throw new Error('Vlo could not find that snapshot.');
+  const state = await snapshotState(snapshot);
   await takeSnapshot(item, doc, docText(editor.state.doc, kind), BEFORE_RESTORE);
-  applyState(editor, snapshot.state);
+  applyState(editor, state);
 }
 
 /**

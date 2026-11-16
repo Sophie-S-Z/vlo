@@ -12,6 +12,7 @@ import {
   snapshotsOf,
   takeSnapshot,
 } from '@/features/snapshots/snapshots';
+import { snapshotState, unpackSnapshot } from '@/features/snapshots/packing';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { YFRAGMENT, docFromUpdate } from '@/lib/ydocs';
@@ -44,7 +45,7 @@ afterEach(async () => {
   await db.delete();
 });
 
-test('a snapshot stores the Yjs state and the text', async () => {
+test('a snapshot stores the Yjs state in gzip and the text', async () => {
   mount('prose');
   editor.commands.setContent('<p>The tide goes out.</p>');
   const snapshot = await takeSnapshot(item, doc, 'The tide goes out.', 'First draft');
@@ -54,9 +55,37 @@ test('a snapshot stores the Yjs state and the text', async () => {
     projectId: 'project-1',
     label: 'First draft',
     text: 'The tide goes out.',
+    packed: true,
   });
-  const copy = docFromUpdate(stored?.state ?? new Uint8Array());
+  if (!stored) throw new Error('The snapshot is not stored.');
+  const copy = docFromUpdate(await snapshotState(stored));
   expect(copy.getXmlFragment(YFRAGMENT).toJSON()).toContain('The tide goes out.');
+});
+
+test('a backup copy of a snapshot holds the plain Yjs state', async () => {
+  mount('prose');
+  editor.commands.setContent('<p>Salt on the glass.</p>');
+  const stored = await takeSnapshot(item, doc, 'Salt on the glass.');
+  const plain = await unpackSnapshot(stored);
+  expect(plain.packed).toBeUndefined();
+  expect(plain.state).toEqual(Y.encodeStateAsUpdate(doc));
+  expect(plain.state.length).toBeGreaterThan(0);
+});
+
+test('a snapshot from before packing still restores', async () => {
+  mount('prose');
+  editor.commands.setContent('<p>Old words.</p>');
+  await db.snapshots.add({
+    id: 'old',
+    projectId: item.projectId,
+    itemId: item.id,
+    createdAt: 1,
+    state: Y.encodeStateAsUpdate(doc),
+    text: 'Old words.',
+  });
+  editor.commands.setContent('<p>New words.</p>');
+  await restoreSnapshot(item, editor, doc, 'old', 'prose');
+  expect(editor.getText()).toBe('Old words.');
 });
 
 test('snapshotsOf lists an item’s snapshots newest first', async () => {

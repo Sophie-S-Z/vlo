@@ -4,7 +4,7 @@ import { sweepKey, unusedKey } from '@/features/images/sweepKey';
 import { db, viewTables, type Item, type Project, type Template } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderBetween } from '@/lib/order';
-import { requestPersistence } from '@/lib/storage';
+import { recordPersistence } from '@/lib/storage';
 import { recountItems } from '@/lib/wordcount';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { dropBook } from '@/features/series/series';
@@ -103,15 +103,6 @@ export async function createProject(
   if (isFirstProject) void recordPersistence();
 
   return { project, firstItemId: first.id };
-}
-
-async function recordPersistence(): Promise<void> {
-  try {
-    const answer = await requestPersistence();
-    await db.appMeta.put({ key: 'persistence', value: answer });
-  } catch {
-    // With no stored answer, Settings still shows what the browser reports now.
-  }
 }
 
 /**

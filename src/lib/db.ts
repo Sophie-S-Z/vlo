@@ -223,7 +223,9 @@ export interface Snapshot {
   itemId: string;
   label?: string;
   createdAt: number;
+  /** The item's whole Yjs state. When `packed` is true, it is in gzip, which takes about half the space. */
   state: Uint8Array;
+  packed?: true;
   text: string;
 }
 

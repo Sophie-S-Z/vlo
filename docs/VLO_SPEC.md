@@ -256,7 +256,7 @@ interface Item {
 
 interface LifeStage { id: string; projectId: string; name: string; start: string; end: string; color: string; order: string }
 interface Sequence { id: string; projectId: string; name: string; itemIds: string[]; createdAt: number }
-interface Snapshot { id: string; projectId: string; itemId: string; label?: string; createdAt: number; state: Uint8Array; text: string }
+interface Snapshot { id: string; projectId: string; itemId: string; label?: string; createdAt: number; state: Uint8Array; packed?: true; text: string } // packed: state is in gzip; a backup holds the plain state
 interface Card { id: string; projectId: string; itemId?: string; title: string; note?: string; x: number; y: number; color: string }
 interface Thread { id: string; projectId: string; name: string; color: string; order: string }
 interface CardLink { id: string; projectId: string; fromCardId: string; toCardId: string; threadId?: string }
@@ -402,7 +402,7 @@ Every export applies private-name aliases when the writer picks "Share-safe expo
 - Full-project backup: one `.vlo.zip` file with `project.json` (all Dexie rows for the project), one `items/<id>.yjs` per item (Yjs update), one `items/<id>.md` per item (readable copy) and `snapshots/` (Yjs updates).
 - Import creates a new project, or replaces an existing project with the same id after a confirm.
 - Show the last backup date on every project card. After 7 days without a backup, show a reminder.
-- Request persistent storage with `navigator.storage.persist()` when the writer creates the first project. Show the result and the storage estimate in Settings.
+- Request persistent storage with `navigator.storage.persist()` when the writer creates the first project. While the browser declines, ask again when Vlo starts, at most once a week, and at once after the writer installs Vlo as an app. Show the result and the storage estimate in Settings.
 - On Safari, show steps to install Vlo as a web app, because Safari can delete site data after 7 days without a visit.
 - F29 (Chromium only): the writer picks a folder with `showDirectoryPicker`. Vlo writes the backup zip and Markdown copies there after each session.
 

@@ -9,6 +9,7 @@ import { holdsText } from '@/features/library/templates';
 import { remapNameMarks } from '@/features/people/markAll';
 import { sceneKey } from '@/features/codex/continuity';
 import { remapImageIds } from '@/features/images/images';
+import { unpackSnapshot } from '@/features/snapshots/packing';
 import { copyViews } from './views';
 import {
   backupFileName,
@@ -90,7 +91,7 @@ export async function collectBackup(projectId: string, options: { music: boolean
     createdAt,
     project,
     items: rows.items,
-    snapshots: rows.snapshots,
+    snapshots: await Promise.all(rows.snapshots.map(unpackSnapshot)),
     versions: rows.versions,
     sessions: rows.sessions,
     authorship: rows.authorship,
