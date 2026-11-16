@@ -153,6 +153,16 @@ export function total(days: readonly OwnerDay[], key: DayKey, n: number, skip = 
   return days.slice(Math.max(0, days.length - skip - n), days.length - skip).reduce((s, d) => s + d[key], 0);
 }
 
+/** One measure today, yesterday, on an average day of the 4 weeks before today, and on the best day. */
+export function benchmarks(days: readonly OwnerDay[], key: DayKey) {
+  return {
+    today: days.at(-1)?.[key] ?? 0,
+    yesterday: days.at(-2)?.[key] ?? 0,
+    average: Math.round(total(days, key, 28, 1) / 28),
+    best: days.reduce((b, d) => Math.max(b, d[key]), 0),
+  };
+}
+
 /** The change from `before` to `now` in percent, or null when `before` is 0. */
 export function change(now: number, before: number): number | null {
   return before === 0 ? null : Math.round(((now - before) / before) * 100);

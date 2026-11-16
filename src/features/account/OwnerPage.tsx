@@ -15,6 +15,7 @@ import { Textarea } from '@/ui/textarea';
 import { accountErrorText } from './AccountPage';
 import { accountsReady } from './auth';
 import {
+  benchmarks,
   change,
   feedbackCsv,
   insights,
@@ -236,7 +237,7 @@ function OverTime({ days }: { days: OwnerDay[] }) {
       </div>
       {table ? (
         <div className="max-h-96 overflow-auto">
-          <table className="w-full min-w-[40rem] text-sm">
+          <table aria-labelledby="owner-time" className="w-full min-w-[40rem] text-sm">
             <thead className="sticky top-0 bg-bg">
               <tr className="text-left text-muted">
                 <th className="py-1 pr-4 font-medium">Day</th>
@@ -271,6 +272,63 @@ function OverTime({ days }: { days: OwnerDay[] }) {
           unit={def?.unit ?? ''}
         />
       )}
+    </section>
+  );
+}
+
+/** The daily benchmarks: each measure today against yesterday, an average day and the best day. */
+function Daily({ days }: { days: OwnerDay[] }) {
+  return (
+    <section aria-labelledby="owner-daily" className="grid content-start gap-3">
+      <h2 id="owner-daily" className="text-lg font-semibold">
+        Today against other days
+      </h2>
+      <div className="overflow-x-auto">
+        <table aria-labelledby="owner-daily" className="w-full min-w-[40rem] text-sm">
+          <thead>
+            <tr className="text-left text-muted">
+              <th className="py-2 pr-4 font-medium">Measure</th>
+              <th className="py-2 pr-4 font-medium">Today</th>
+              <th className="py-2 pr-4 font-medium">Yesterday</th>
+              <th className="py-2 pr-4 font-medium">Average day, last 4 weeks</th>
+              <th className="py-2 pr-4 font-medium">Best day of the year</th>
+              <th className="py-2 font-medium">Today against an average day</th>
+            </tr>
+          </thead>
+          <tbody className="tabular-nums">
+            {MEASURES.map(({ value, label }) => {
+              const b = benchmarks(days, value);
+              const share = b.average === 0 ? null : b.today / b.average;
+              return (
+                <tr key={value} className="border-t border-rule">
+                  <th scope="row" className="py-2 pr-4 text-left font-medium">
+                    {label}
+                  </th>
+                  <td className="py-2 pr-4 font-semibold">{n(b.today)}</td>
+                  <td className="py-2 pr-4">{n(b.yesterday)}</td>
+                  <td className="py-2 pr-4">{n(b.average)}</td>
+                  <td className="py-2 pr-4">{n(b.best)}</td>
+                  <td className="py-2">
+                    {share === null ? (
+                      <span className="text-muted">No average yet</span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <span aria-hidden="true" className="h-1.5 w-20 overflow-hidden rounded-full bg-rule">
+                          <span
+                            className="block h-full rounded-full bg-accent transition-[width] duration-700 motion-reduce:transition-none"
+                            style={{ width: `${String(Math.min(100, Math.max(share * 100, 1)))}%` }}
+                          />
+                        </span>
+                        {String(Math.round(share * 100))}%
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -333,6 +391,7 @@ function Overview({ summary, days }: { summary: OwnerSummary; days: OwnerDay[] }
           trend={spark('feedback')}
         />
       </dl>
+      <Daily days={days} />
       <OverTime days={days} />
       <div className="grid gap-10 lg:grid-cols-[3fr_2fr]">
         <section aria-labelledby="owner-year" className="grid content-start gap-3">
@@ -430,7 +489,7 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
         device and word counts.
       </p>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[56rem] text-sm">
+        <table aria-label="Accounts" className="w-full min-w-[56rem] text-sm">
           <thead>
             <tr className="text-left text-muted">
               <th className="py-2 pr-4 font-medium">Email</th>
