@@ -91,67 +91,79 @@ test('Vlo opens offline, including deep links and unknown paths', async ({ page,
   await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
 });
 
+/** True while a new version waits for its turn, or while the page reloads to take it. */
+const waiting = (page: Page) =>
+  page
+    .evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting != null)
+    .catch(() => true);
+
+/** A changed service worker file is a new version of Vlo. */
+async function release(page: Page) {
+  writeFileSync(
+    'dist/sw.js',
+    `${readFileSync('dist/sw.js', 'utf8')}\n// next version ${String(Date.now())}\n`,
+  );
+  await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    await registration?.update();
+  });
+}
+
 // Both tests below edit dist/sw.js on disk, so they must never run at the same time.
 test.describe('service worker updates', () => {
   test.describe.configure({ mode: 'serial' });
 
-  test('a new version waits for the writer and never reloads by itself', async ({ page }, testInfo) => {
+  test('a new version waits while the writer works, then loads by itself on the next visit', async ({
+    page,
+  }, testInfo) => {
     // This test edits the built service worker on disk, so only one project may run it.
     test.skip(testInfo.project.name !== 'chromium', 'Runs once, in the chromium project.');
     await waitForControl(page);
+    // The writer starts to work, so the tab must not reload under them.
+    await page.getByRole('heading', { level: 1 }).click();
     await page.evaluate(() => {
       (window as unknown as { __marker: boolean }).__marker = true;
     });
-    const swPath = 'dist/sw.js';
-    const original = readFileSync(swPath, 'utf8');
+    const original = readFileSync('dist/sw.js', 'utf8');
     try {
-      // A changed service worker file is a new version of Vlo.
-      writeFileSync(swPath, `${original}\n// next version ${String(Date.now())}\n`);
-      await page.evaluate(async () => {
-        const registration = await navigator.serviceWorker.getRegistration();
-        await registration?.update();
-      });
-      const updateButton = page.getByRole('button', { name: 'Reload to update' });
-      await expect(updateButton).toBeVisible({ timeout: 15_000 });
+      await release(page);
+      await expect.poll(() => waiting(page), { timeout: 15_000 }).toBe(true);
       await page.waitForTimeout(1_000);
       expect(await page.evaluate(() => (window as unknown as { __marker?: boolean }).__marker)).toBe(true);
+      await expect(page.getByText('A new version of Vlo is ready.')).toHaveCount(0);
+
+      // The next visit finds the waiting version and loads it with no notice.
+      await page.reload();
+      await expect.poll(() => waiting(page), { timeout: 15_000 }).toBe(false);
       await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
     } finally {
-      writeFileSync(swPath, original);
+      writeFileSync('dist/sw.js', original);
     }
   });
 
-  test('updating in one tab never reloads another tab', async ({ context }, testInfo) => {
+  test('an update never reloads another tab where the writer works', async ({ context }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Runs once, in the chromium project.');
     const writing = await context.newPage();
-    const other = await context.newPage();
     await waitForControl(writing);
-    await waitForControl(other);
+    // The other tab only loads Vlo. No click or key reaches it.
+    const other = await context.newPage();
+    await other.goto('/');
+    await expect.poll(() => other.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+    await writing.getByRole('heading', { level: 1 }).click();
     await writing.evaluate(() => {
       (window as unknown as { __marker: boolean }).__marker = true;
     });
-    const swPath = 'dist/sw.js';
-    const original = readFileSync(swPath, 'utf8');
+    const original = readFileSync('dist/sw.js', 'utf8');
     try {
-      writeFileSync(swPath, `${original}\n// next version ${String(Date.now())}\n`);
-      await other.evaluate(async () => {
-        const registration = await navigator.serviceWorker.getRegistration();
-        await registration?.update();
-      });
-      await expect(other.getByRole('button', { name: 'Reload to update' })).toBeVisible({ timeout: 15_000 });
-      await expect(writing.getByRole('button', { name: 'Reload to update' })).toBeVisible({
-        timeout: 15_000,
-      });
-
-      const otherReloaded = other.waitForEvent('load');
-      await other.getByRole('button', { name: 'Reload to update' }).click();
+      // The other tab is untouched, so it takes the new version and reloads by itself.
+      const otherReloaded = other.waitForEvent('load', { timeout: 15_000 });
+      await release(other);
       await otherReloaded;
-
-      await expect(writing.getByText('Vlo was updated in another tab.')).toBeVisible({ timeout: 15_000 });
+      await expect.poll(() => waiting(other), { timeout: 15_000 }).toBe(false);
       await writing.waitForTimeout(1_000);
       expect(await writing.evaluate(() => (window as unknown as { __marker?: boolean }).__marker)).toBe(true);
     } finally {
-      writeFileSync(swPath, original);
+      writeFileSync('dist/sw.js', original);
     }
   });
 });

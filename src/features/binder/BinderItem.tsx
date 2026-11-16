@@ -128,7 +128,9 @@ export const BinderItem = memo(function BinderItem({
           ref={setActivatorNodeRef}
           type="button"
           aria-label={`Move ${item.title}`}
-          className="inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted hover:text-text active:cursor-grabbing"
+          data-tip="Drag to move"
+          data-tip-align="start"
+          className="vlo-tip inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted hover:text-text active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
@@ -181,7 +183,9 @@ export const BinderItem = memo(function BinderItem({
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={`Options for ${item.title}`}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted hover:bg-bg hover:text-text"
+            data-tip="Options"
+            data-tip-align="end"
+            className="vlo-tip inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted hover:bg-bg hover:text-text"
           >
             <Ellipsis aria-hidden="true" className="size-4" />
           </DropdownMenuTrigger>

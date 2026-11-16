@@ -37,11 +37,11 @@ async function walkThrough(page: Page) {
   await expect(projects(page)).toHaveCount(6);
   await expectNoMotion(page, 'Library');
 
-  await page.getByRole('radio', { name: 'List' }).click();
-  await expect(page.getByRole('radio', { name: 'List' })).toHaveAttribute('aria-checked', 'true');
-  await expectNoMotion(page, 'shelf to list');
+  await page.getByRole('radio', { name: 'Stack' }).click();
+  await expect(page.getByRole('radio', { name: 'Stack' })).toHaveAttribute('aria-checked', 'true');
+  await expectNoMotion(page, 'shelf to stack');
   await page.getByRole('radio', { name: 'Shelf' }).click();
-  await expectNoMotion(page, 'list to shelf');
+  await expectNoMotion(page, 'stack to shelf');
 
   await page.getByRole('button', { name: 'New project' }).click();
   await expect(page.getByRole('dialog', { name: 'New project' })).toBeVisible();
@@ -76,7 +76,7 @@ test('US14: Calm mode stops all motion even when the system allows it', async ({
   await walkThrough(page);
 });
 
-test('with motion allowed, the books rise onto the shelf and morph between shelf and list, and the theme spreads', async ({
+test('with motion allowed, the books rise onto the shelf and settle into the stack, and the theme spreads', async ({
   page,
   browserName,
 }) => {
@@ -90,8 +90,14 @@ test('with motion allowed, the books rise onto the shelf and morph between shelf
   );
   expect(rising).toBeGreaterThan(0);
 
-  await page.getByRole('radio', { name: 'List' }).click();
-  await expect.poll(() => page.evaluate(() => window.__viewTransitions)).toBeGreaterThanOrEqual(1);
+  await page.getByRole('radio', { name: 'Stack' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getAnimations().filter((a) => (a as CSSAnimation).animationName === 'vlo-drop').length,
+      ),
+    )
+    .toBeGreaterThan(0);
 
   const before = await page.evaluate(() => window.__viewTransitions);
   await page.getByRole('link', { name: 'Settings' }).click();

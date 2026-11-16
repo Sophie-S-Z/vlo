@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { ArrowUpRight } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigation } from 'react-router';
 import { readSession } from '@/features/account/session';
@@ -6,7 +7,6 @@ import { SafetyBadge } from '@/features/backup/SafetyBadge';
 import { sharingReady } from '@/features/share/rpc';
 import { cn } from '@/ui/cn';
 import { MARKETING_URL } from './links';
-import { UpdatePrompt } from './UpdatePrompt';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -15,7 +15,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   );
 
 // Footer links are chrome, so they stay quiet next to the page's own links.
-const FOOTER_LINK = 'text-muted underline hover:text-text';
+const FOOTER_LINK = 'text-muted no-underline transition-colors hover:text-text';
 
 export function AppShell() {
   const mainRef = useRef<HTMLElement>(null);
@@ -67,7 +67,9 @@ export function AppShell() {
         <div className={cn('mx-auto flex items-center justify-between gap-4 px-4 py-2', width)}>
           <NavLink
             to="/"
-            className="font-display text-2xl font-semibold text-text no-underline [font-variation-settings:'SOFT'_50,'opsz'_72]"
+            data-tip="Your library"
+            data-tip-align="start"
+            className="vlo-tip font-display text-2xl font-semibold text-text no-underline [font-variation-settings:'SOFT'_50,'opsz'_72]"
           >
             Vlo
           </NavLink>
@@ -109,34 +111,53 @@ export function AppShell() {
       <footer data-chrome className="border-t border-rule">
         <div
           className={cn(
-            'mx-auto flex flex-wrap items-center justify-between gap-2 px-4 py-4 text-sm text-muted',
+            'mx-auto grid gap-3 px-4 py-6 text-sm text-muted sm:flex sm:items-center sm:justify-between',
             width,
           )}
         >
           <p>
             Your writing stays on this device.{' '}
-            <Link to="/network" className={FOOTER_LINK}>
+            <Link
+              to="/network"
+              className="text-muted underline decoration-rule underline-offset-4 hover:text-text hover:decoration-current"
+            >
               See the network log
             </Link>
           </p>
-          <UpdatePrompt />
-          <p className="flex flex-wrap gap-x-4 gap-y-2">
-            <Link to="/help" className={FOOTER_LINK}>
-              Help
-            </Link>
-            <Link to="/send-feedback" state={{ from: pathname }} className={FOOTER_LINK}>
-              Send feedback
-            </Link>
-            <Link to="/privacy" className={FOOTER_LINK}>
-              Privacy
-            </Link>
-            <Link to="/ai-policy" className={FOOTER_LINK}>
-              AI policy
-            </Link>
-            <a href={MARKETING_URL} rel="noreferrer" className={FOOTER_LINK}>
-              About Vlo
-            </a>
-          </p>
+          <nav aria-label="Footer">
+            <ul className="flex flex-wrap gap-x-5 gap-y-2">
+              <li>
+                <Link to="/help" className={FOOTER_LINK}>
+                  Help
+                </Link>
+              </li>
+              <li>
+                <Link to="/send-feedback" state={{ from: pathname }} className={FOOTER_LINK}>
+                  Send feedback
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className={FOOTER_LINK}>
+                  Privacy
+                </Link>
+              </li>
+              <li>
+                <Link to="/ai-policy" className={FOOTER_LINK}>
+                  AI policy
+                </Link>
+              </li>
+              <li>
+                <a
+                  href={MARKETING_URL}
+                  rel="noreferrer"
+                  className={cn(FOOTER_LINK, 'inline-flex items-center gap-1')}
+                >
+                  Vlo website
+                  <ArrowUpRight aria-hidden="true" strokeWidth={1.75} className="size-3.5" />
+                </a>
+              </li>
+            </ul>
+          </nav>
         </div>
       </footer>
     </div>

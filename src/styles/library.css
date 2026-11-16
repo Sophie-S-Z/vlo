@@ -1,23 +1,8 @@
 /*
- * The Library: a shelf of books, one for each project (Bookshelf.tsx, BookSpine.tsx). Calm mode and reduced
- * motion stop every animation and transition here (tokens.css). The books keep their poses, so the shelf
- * stays complete without motion.
+ * The Library: a shelf of books, one for each project (Bookshelf.tsx, BookSpine.tsx), and the same books in
+ * a stack (BookStack.tsx). Calm mode and reduced motion stop every animation and transition here
+ * (tokens.css). The books keep their poses, so the shelf stays complete without motion.
  */
-
-/* Seal lines stay one pixel wide at every size. The tick ring keeps its drawn length. */
-.vlo-sigil :where(circle, polygon):not(.vlo-sigil-ticks) {
-  vector-effect: non-scaling-stroke;
-}
-
-/* Small capitals in the label face, over a heading or a title. */
-.vlo-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.22em;
-  line-height: 1.4;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 
 /* A slow haze of warm light drifts behind the masthead. Only `translate` changes. */
 .vlo-haze {
@@ -87,6 +72,63 @@
 
 /* ---------------------------------------------------------------- The shelf */
 
+/* The pose of a book is a set of typed values, so each one eases on its own. The turn that follows the
+   scroll (--ry) changes at once, and only the hover and the opening move with time. */
+@property --ry {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --turn {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --tilt {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --pull {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --lift {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --shift {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* Walnut with a fine grain, for the bookends, the plank and the base of the stack. */
+:root {
+  --wood: #7a4e2d;
+  --wood-grain:
+    repeating-linear-gradient(
+      var(--grain, 90deg),
+      transparent 0 3px,
+      rgb(40 20 6 / 0.16) 3px 4px,
+      transparent 4px 9px,
+      rgb(255 214 170 / 0.07) 9px 10px
+    ),
+    repeating-linear-gradient(
+      calc(var(--grain, 90deg) - 3deg),
+      transparent 0 17px,
+      rgb(40 20 6 / 0.2) 17px 18px,
+      transparent 18px 29px
+    );
+}
+
 /* The shelf runs the full width of the window. The shell clips the width of a scroll bar. */
 .vlo-shelf-wrap {
   position: relative;
@@ -114,21 +156,21 @@
   display: none;
 }
 
-/* Two celadon bookends hold the row. A short row sits between them in the middle; a long row starts at the
+/* Two wooden bookends hold the row. A short row sits between them in the middle; a long row starts at the
    left and scrolls. */
 .vlo-shelf::before,
 .vlo-shelf::after {
   content: '';
   flex: none;
-  width: 34px;
-  height: 168px;
-  border-radius: 3px 48px 2px 2px;
+  width: 30px;
+  height: 172px;
+  border-radius: 4px 28px 2px 2px;
   background:
-    linear-gradient(90deg, rgb(0 0 0 / 0.28), transparent 22%, rgb(255 255 255 / 0.18) 55%, rgb(0 0 0 / 0.2)),
-    radial-gradient(90% 40% at 30% 8%, rgb(255 255 255 / 0.5), transparent 70%), #8fbf9b;
+    linear-gradient(90deg, rgb(0 0 0 / 0.3), transparent 24%, rgb(255 236 210 / 0.14) 58%, rgb(0 0 0 / 0.26)),
+    var(--wood-grain), linear-gradient(to bottom, #93633d, var(--wood));
   box-shadow:
-    inset 0 0 0 1px rgb(20 35 26 / 0.3),
-    inset -3px 0 0 rgb(255 255 255 / 0.12),
+    inset 0 1px 0 rgb(255 236 210 / 0.25),
+    inset 0 0 0 1px rgb(30 15 4 / 0.35),
     0 10px 18px -10px rgb(11 14 20 / 0.6);
 }
 
@@ -142,35 +184,30 @@
   margin-inline: 8px auto;
 }
 
-/* The plank under the books, with a soft shadow on the wall below it. */
+/* The plank under the books, with a lit front edge and a soft shadow on the wall below it. */
 .vlo-shelf-plank {
+  --grain: 0deg;
   position: absolute;
   inset: auto 0 calc(3.25rem - 14px);
   height: 14px;
   pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--text) 16%, var(--bg)),
-    color-mix(in srgb, var(--text) 8%, var(--bg)) 30%,
-    color-mix(in srgb, var(--text) 4%, var(--bg))
-  );
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--text) 22%, transparent),
-    0 18px 28px -14px rgb(11 14 20 / 0.45);
+  background:
+    linear-gradient(to bottom, rgb(255 236 210 / 0.22), transparent 30%, rgb(0 0 0 / 0.28)),
+    var(--wood-grain), var(--wood);
+  box-shadow: 0 18px 28px -14px rgb(11 14 20 / 0.5);
   mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
 }
 
 .vlo-book {
-  --pull: 0px;
-  --lift: 0px;
-  --tilt: var(--lean);
   position: relative;
   flex: none;
   width: var(--w);
   height: var(--h);
   transform-style: preserve-3d;
-  animation: vlo-shelve 0.9s var(--ease-out) both;
-  animation-delay: calc(min(var(--i, 0), 24) * 35ms);
+  /* A book that goes back keeps its place in front until it is back in the row. */
+  transition: z-index 0s linear 0.4s;
+  animation: vlo-shelve 0.9s var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 24) * 30ms);
 }
 
 /* Books rise onto the plank one after another. Only the transform moves, so each book keeps its depth. */
@@ -181,8 +218,9 @@
 }
 
 .vlo-book :where(.vlo-book-spine, .vlo-book-cover, .vlo-book-back) {
-  animation: vlo-fade 0.9s var(--ease-out) both;
-  animation-delay: calc(min(var(--i, 0), 24) * 35ms);
+  transition: opacity 0.4s var(--ease-out);
+  animation: vlo-fade 0.9s var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 24) * 30ms);
 }
 
 @keyframes vlo-fade {
@@ -207,25 +245,31 @@
 }
 
 .vlo-book-body {
+  --tilt: var(--lean);
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
   transform-origin: 50% 100%;
-  transform: rotateY(var(--ry, 0deg)) translateY(var(--lift)) translateZ(calc(var(--depth) + var(--pull)))
-    rotateZ(var(--tilt));
-  transition: transform 0.7s var(--ease-out);
+  transform: translateX(var(--shift)) rotateY(var(--ry)) translateY(var(--lift))
+    translateZ(calc(var(--depth) + var(--pull))) rotateY(var(--turn)) rotateZ(var(--tilt));
+  transition:
+    --pull 0.4s var(--ease-out),
+    --lift 0.4s var(--ease-out),
+    --tilt 0.4s var(--ease-out);
 }
 
 /* Hover or focus pulls the book forward and up, and stands it straight. */
 .vlo-book:hover,
 .vlo-book:focus-within {
   z-index: 200 !important;
+  transition-delay: 0s;
 }
 
 .vlo-book:focus-within .vlo-book-body {
   --pull: 72px;
   --lift: -24px;
   --tilt: 0deg;
+  transition-duration: 0.5s;
 }
 
 @media (hover: hover) {
@@ -233,23 +277,33 @@
     --pull: 72px;
     --lift: -24px;
     --tilt: 0deg;
+    transition-duration: 0.5s;
   }
 }
 
-/* A click takes the book off the shelf and turns its front cover to the writer. The rest of the shelf
-   steps back. */
+/* A click takes the book off the shelf and turns its front cover to the writer. Each part of the pose
+   eases from where the hover left it, so the book never jumps. The rest of the shelf steps back. */
 .vlo-book[data-opening] {
   z-index: 300 !important;
+  transition-delay: 0s;
 }
 
 .vlo-book[data-opening] .vlo-book-body {
-  transform: translateY(-32px) translateZ(240px) translateX(-90px) rotateY(-90deg);
-  transition-duration: 0.52s;
+  --ry: 0deg;
+  --shift: -90px;
+  --lift: -36px;
+  --pull: 180px;
+  --turn: -90deg;
+  --tilt: 0deg;
+  transition-property: --ry, --shift, --lift, --pull, --turn, --tilt;
+  transition-duration: 0.56s;
+  transition-timing-function: var(--ease-in-out);
 }
 
-.vlo-shelf[data-opening] .vlo-book:not([data-opening]) {
-  opacity: 0.35;
-  transition: opacity 0.4s var(--ease-out);
+.vlo-shelf[data-opening]
+  .vlo-book:not([data-opening])
+  :where(.vlo-book-spine, .vlo-book-cover, .vlo-book-back) {
+  opacity: 0.3;
 }
 
 /* The spine: cloth color, foil bands, lettering, and a light that wraps around its round back. */
@@ -352,13 +406,6 @@
   letter-spacing: 0.14em;
 }
 
-.vlo-book-mark {
-  flex: none;
-  width: min(calc(var(--w) - 14px), 22px);
-  height: min(calc(var(--w) - 14px), 22px);
-  opacity: 0.85;
-}
-
 /* The front cover, hinged on the right edge of the spine. A book on the left of the shelf shows it. */
 .vlo-book-cover {
   position: absolute;
@@ -392,15 +439,15 @@
 }
 
 .vlo-book-cover-kind::before,
-.vlo-book-cover-title::before {
+.vlo-book-cover-title::before,
+.vlo-book-cover-imprint::before {
   content: attr(data-text);
 }
 
 .vlo-book-cover-kind {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
+  font-family: var(--font-manuscript);
+  font-size: 11px;
+  font-style: italic;
   opacity: 0.8;
 }
 
@@ -417,11 +464,15 @@
   line-clamp: 4;
 }
 
-.vlo-book-cover-mark {
-  width: 56px;
-  height: 56px;
+/* The publisher's name at the foot of the cover, over a short foil rule. */
+.vlo-book-cover-imprint {
   margin-top: auto;
-  color: var(--band);
+  padding-top: 8px;
+  border-top: 1px solid var(--band);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
 }
 
 /* The back cover, hinged on the left edge. A book on the right of the shelf shows it. */
@@ -438,16 +489,15 @@
   backface-visibility: hidden;
 }
 
-/* The options of a book hang under it, on the plank's edge. A touch screen always shows them. */
-.vlo-book-ribbon {
+/* The options of a book hang under it on the shelf, and beside it in the stack. A touch screen always
+   shows them. */
+.vlo-book-ribbon,
+.vlo-slab-ribbon {
   position: absolute;
-  top: calc(100% + 20px);
-  left: 50%;
   display: inline-grid;
   place-items: center;
   width: 26px;
   height: 26px;
-  translate: -50% 0;
   border-radius: 999px;
   color: var(--muted);
   background: var(--surface);
@@ -458,18 +508,30 @@
     color 0.2s var(--ease-out);
 }
 
-.vlo-book:hover .vlo-book-ribbon,
-.vlo-book:focus-within .vlo-book-ribbon,
-.vlo-book-ribbon[data-state='open'] {
+.vlo-book-ribbon {
+  top: calc(100% + 20px);
+  left: 50%;
+  translate: -50% 0;
+}
+
+.vlo-slab-ribbon {
+  top: 50%;
+  left: calc(100% + 8px);
+  translate: 0 -50%;
+}
+
+:is(.vlo-book, .vlo-slab):is(:hover, :focus-within) :is(.vlo-book-ribbon, .vlo-slab-ribbon),
+:is(.vlo-book-ribbon, .vlo-slab-ribbon)[data-state='open'] {
   opacity: 1;
 }
 
-.vlo-book-ribbon:hover {
+:is(.vlo-book-ribbon, .vlo-slab-ribbon):hover {
   color: var(--text);
 }
 
 @media (hover: none) {
-  .vlo-book-ribbon {
+  .vlo-book-ribbon,
+  .vlo-slab-ribbon {
     opacity: 1;
   }
 }
@@ -499,21 +561,193 @@
   }
 }
 
-/* ---------------------------------------------------------------- The list */
+/* ---------------------------------------------------------------- The stack */
 
-.vlo-row {
-  animation: vlo-rise 0.8s var(--ease-out) both;
-  animation-delay: calc(min(var(--i, 0), 12) * 45ms);
+/* The books lie in one pile on a wooden board. The pile settles from the bottom up. */
+.vlo-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
-@media (hover: hover) {
-  .vlo-row:hover > div {
-    background: var(--surface);
+.vlo-stack::after {
+  --grain: 0deg;
+  content: '';
+  width: min(100%, 36rem);
+  height: 12px;
+  margin-top: 2px;
+  border-radius: 3px;
+  background:
+    linear-gradient(to bottom, rgb(255 236 210 / 0.22), transparent 35%, rgb(0 0 0 / 0.3)), var(--wood-grain),
+    var(--wood);
+  box-shadow: 0 16px 24px -14px rgb(11 14 20 / 0.55);
+}
+
+.vlo-slab {
+  position: relative;
+  width: min(var(--len), calc(100% - 3rem));
+  height: var(--thick);
+  translate: var(--nudge) 0;
+  rotate: var(--lean);
+  animation: vlo-drop 0.6s var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 24) * 30ms);
+}
+
+@keyframes vlo-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-24px);
   }
 }
 
-/* A quiet notice, such as the backup reminder: a pale celadon wash with a celadon hairline. */
+/* The target of the pointer never moves. Only the book inside it does. */
+.vlo-slab-hit {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  -webkit-user-drag: none;
+}
+
+.vlo-slab-hit:focus-visible {
+  outline-offset: 4px;
+}
+
+/* A spine on its side: cloth, a foil band at each end, and the light along its round back. */
+.vlo-slab-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-inline: 30px;
+  overflow: hidden;
+  border-radius: 3px 2px 2px 3px;
+  background:
+    linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.3),
+      rgb(255 255 255 / 0.1) 22%,
+      rgb(255 255 255 / 0.03) 45%,
+      rgb(0 0 0 / 0.08) 75%,
+      rgb(0 0 0 / 0.34)
+    ),
+    var(--spine);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.18),
+    0 1px 1px rgb(11 14 20 / 0.25);
+  transition:
+    translate 0.4s var(--ease-out),
+    box-shadow 0.4s var(--ease-out),
+    opacity 0.4s var(--ease-out);
+}
+
+.vlo-slab-body::before,
+.vlo-slab-body::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 7px;
+  border-inline: 1.5px solid var(--band);
+  opacity: 0.85;
+}
+
+.vlo-slab-body::before {
+  left: 10px;
+}
+
+.vlo-slab-body::after {
+  right: 10px;
+}
+
+.vlo-slab-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.vlo-slab-title[data-face='manuscript'] {
+  font-family: var(--font-manuscript);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+}
+
+.vlo-slab-title[data-face='mono'] {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.vlo-slab-title[data-caps] {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 14px;
+}
+
+.vlo-slab-meta {
+  flex: none;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* A narrow pile shows only the count beside the title, and keeps room on the right for the options. */
+@media (max-width: 40rem) {
+  .vlo-stack {
+    padding-inline-end: 2.5rem;
+  }
+
+  .vlo-slab-meta:not(:last-child) {
+    display: none;
+  }
+}
+
+/* Hover or focus slides the book out of the pile, away from its options. */
+@media (hover: hover) {
+  .vlo-slab:hover .vlo-slab-body {
+    translate: -18px 0;
+    box-shadow:
+      inset 0 0 0 1px rgb(0 0 0 / 0.18),
+      0 10px 20px -12px rgb(11 14 20 / 0.6);
+    transition-duration: 0.5s;
+  }
+}
+
+.vlo-slab:focus-within .vlo-slab-body {
+  translate: -18px 0;
+  transition-duration: 0.5s;
+}
+
+/* A click pulls the book clear of the pile. The rest of the pile steps back. */
+.vlo-slab[data-opening] .vlo-slab-body {
+  translate: -64px 0;
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.18),
+    0 16px 28px -14px rgb(11 14 20 / 0.7);
+  transition-duration: 0.56s;
+  transition-timing-function: var(--ease-in-out);
+}
+
+.vlo-stack[data-opening] .vlo-slab:not([data-opening]) .vlo-slab-body {
+  opacity: 0.35;
+}
+
+/* A quiet notice, such as the backup reminder: a raised surface with hairlines that blend into any theme. */
 .vlo-notice {
-  background: color-mix(in oklch, var(--accent) 5%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 28%, transparent);
+  background: color-mix(in oklch, var(--surface) 72%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--text) 9%, transparent),
+    inset 0 1px 0 color-mix(in oklch, var(--text) 5%, transparent);
+}
+
+.vlo-notice-rows > li {
+  border-top: 1px solid color-mix(in oklch, var(--text) 7%, transparent);
 }

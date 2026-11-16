@@ -121,7 +121,8 @@ Last update: 2026-11-14
   - ESLint network rule (only `src/lib/net.ts` may make network requests).
   - Ink, Paper and Sepia themes, self-hosted fonts, Calm mode and reduced motion (F08).
   - App shell, Library empty state, Settings, 404, route and root error screens.
-  - PWA: offline app shell, manifest, update prompt that never reloads a tab by itself (F09).
+  - PWA: offline app shell, manifest. A new version loads by itself when Vlo opens, before the writer
+    types or clicks; a version found later waits for the next visit (F09).
     Chromium reports no installability errors (CDP check in `tests/e2e/pwa.spec.ts`).
   - `vercel.json` with the CSP and security headers. `vite preview` sends the same headers.
   - Bundle-size check: 121 KB gzip of a 250 KB budget.
@@ -142,12 +143,13 @@ Last update: 2026-11-14
 - Focus mode (hides the binder, details and site header; Escape leaves), typewriter scrolling, focus-line
   dimming, a session timer with a gentle close prompt, and a Mod-K command menu that finds items by title or
   text and runs actions (F10, F11). The menu, cmdk and MiniSearch load on first open.
-- Library shelf and list layouts. The shelf shows each project as a 3D book on a curved row between two
-  celadon bookends: thicker with more words, taller by kind, with a seal drawn from its id. Hover or focus pulls a
-  book out with a card of its details, and a click turns its front cover forward and opens the project. The
-  wheel, a mouse drag and Tab move along the row; a search and kind pills filter it. Books morph
-  between layouts and into the project, and a theme change spreads from the chosen control. Calm mode and reduced motion stop every animation and
-  start no view transition (F14, US14).
+- Library shelf and stack layouts. The shelf shows first on every visit. Each project is a 3D book on a
+  curved row between two wooden bookends: thicker with more words and taller by kind. Hover or focus pulls a
+  book out with a card of its details, and a click turns its front cover forward, then the page crossfades
+  into the project. The wheel, a mouse drag and Tab move along the row; a search and kind pills filter it.
+  The stack lays the same books flat in one pile on a board; hover slides a book out and a click pulls it
+  clear. A theme change spreads from the chosen control. Calm mode and reduced motion stop every animation
+  and start no view transition (F14, US14).
 - Phase 0 follow-ups: each page sets its tab title and moves focus to its heading after navigation. The update
   notice uses a live region that is always present. Theme radios carry only the theme name. The unchecked switch
   track meets 3:1 contrast. The browser bar takes the theme's page color. Preferences save only after the
@@ -1124,6 +1126,7 @@ Last update: 2026-11-14
 | Date       | Change                                                                                                                                                                                                                                                                                       | Reason                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-11-16 | The Library is a bookshelf (Bookshelf.tsx). The list layout stays for a ruled view of every detail. The heading reads "Welcome to your library".                                                                                                                                             | The product owner found the card grid generic and asked for an interactive shelf like the virtual library guide they shared.                                                                                        |
+| 2026-11-16 | The list layout is now a stack of books. The shelf always shows first. The bookends and plank are wood, and the seals are gone. A new version loads at the next visit with no notice.                                                                                                        | The product owner asked for a bookstack view, wooden bookends, no seals, smoother motion and updates that need no reload button.                                                                                    |
 | 2026-11-11 | New palette: Ink `#0B0E14` (a blue-black) and Paper `#F5F4F1` (a stone white) as the two base colors, and Celadon as the accent (`#A9D4B3` in Ink, `#689373` in Paper, `#4D7758` for Paper text). Sepia and Contrast take a deep celadon accent. Text on the accent is Ink in Ink and Paper. | The terracotta accent was close to a default AI orange, and the cream page was a common AI trend. The product owner asked for a rare, calm accent. Each text color still meets 4.5:1, and the Contrast theme 7:1.   |
 | 2026-11-10 | The version 1 non-goal "cloud sync of manuscripts" is now sealed sync (F49). The relay keeps sealed blobs only, and the key stays on the writer's devices.                                                                                                                                   | Roadmap decision D1. ADR 0008 holds the design.                                                                                                                                                                     |
 | 2026-11-10 | `DOC_SCHEMA` is 7.                                                                                                                                                                                                                                                                           | Track changes adds suggestion marks (F44), so an older build must not open such a document.                                                                                                                         |

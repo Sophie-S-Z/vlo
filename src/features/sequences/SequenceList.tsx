@@ -89,7 +89,9 @@ const PoemCard = memo(function PoemCard({ poem, index, count, motion, actions, n
           ref={setActivatorNodeRef}
           type="button"
           aria-label={`Move ${poem.title}`}
-          className="inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted hover:text-text active:cursor-grabbing"
+          data-tip="Drag to move"
+          data-tip-align="start"
+          className="vlo-tip inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted hover:text-text active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >

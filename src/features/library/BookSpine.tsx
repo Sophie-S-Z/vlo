@@ -1,11 +1,8 @@
 import type { CSSProperties, FocusEvent, MouseEvent, PointerEvent } from 'react';
 import { Link } from 'react-router';
 import type { Project, Series } from '@/lib/db';
-import { MotionViewTransition } from '@/ui/MotionViewTransition';
 import type { BookLook } from './book';
-import { projectTransitionName } from './ProjectCard';
 import { ProjectMenu, type ProjectActions } from './ProjectMenu';
-import { Sigil } from './Sigil';
 
 interface BookSpineProps extends ProjectActions {
   project: Project;
@@ -56,44 +53,40 @@ export function BookSpine({
     '--band': look.band,
   } as CSSProperties;
   return (
-    // The book morphs into the project screen, and between the shelf and the list.
-    <MotionViewTransition name={projectTransitionName(project.id)}>
-      <li
-        className="vlo-book"
-        style={style}
-        data-opening={opening || undefined}
-        onPointerEnter={onShow}
-        onPointerLeave={onHide}
-        onFocus={onShow}
-        onBlur={onHide}
-      >
-        <Link to={`/p/${project.id}`} className="vlo-book-hit" draggable={false} onClick={onOpen}>
-          <span className="vlo-book-body" data-finish={look.finish}>
-            <span className="vlo-book-spine">
-              <span className="vlo-book-band" />
-              <span className="vlo-book-title" data-face={look.face} data-caps={look.caps || undefined}>
-                {project.title}
-              </span>
-              <Sigil seed={project.id} className="vlo-book-mark" />
-              <span className="vlo-book-band" />
+    <li
+      className="vlo-book"
+      style={style}
+      data-opening={opening || undefined}
+      onPointerEnter={onShow}
+      onPointerLeave={onHide}
+      onFocus={onShow}
+      onBlur={onHide}
+    >
+      <Link to={`/p/${project.id}`} className="vlo-book-hit" draggable={false} onClick={onOpen}>
+        <span className="vlo-book-body" data-finish={look.finish}>
+          <span className="vlo-book-spine">
+            <span className="vlo-book-band" />
+            <span className="vlo-book-title" data-face={look.face} data-caps={look.caps || undefined}>
+              {project.title}
             </span>
-            <span aria-hidden="true" className="vlo-book-cover">
-              {/* The cover draws its words from data attributes, so the page holds each word once. */}
-              <span className="vlo-book-cover-kind" data-text={label} />
-              <span className="vlo-book-cover-title" data-text={project.title} />
-              <Sigil seed={project.id} className="vlo-book-cover-mark" />
-            </span>
-            <span aria-hidden="true" className="vlo-book-back" />
+            <span className="vlo-book-band" />
           </span>
-        </Link>
-        <p className="sr-only">{label}</p>
-        <p className="sr-only">{words}</p>
-        <p className="sr-only">
-          {backup}
-          {due && '. Time for a backup.'}
-        </p>
-        <ProjectMenu project={project} series={series} {...actions} className="vlo-book-ribbon" />
-      </li>
-    </MotionViewTransition>
+          <span aria-hidden="true" className="vlo-book-cover">
+            {/* The cover draws its words from data attributes, so the page holds each word once. */}
+            <span className="vlo-book-cover-kind" data-text={label} />
+            <span className="vlo-book-cover-title" data-text={project.title} />
+            <span className="vlo-book-cover-imprint" data-text="Vlo" />
+          </span>
+          <span aria-hidden="true" className="vlo-book-back" />
+        </span>
+      </Link>
+      <p className="sr-only">{label}</p>
+      <p className="sr-only">{words}</p>
+      <p className="sr-only">
+        {backup}
+        {due && '. Time for a backup.'}
+      </p>
+      <ProjectMenu project={project} series={series} {...actions} className="vlo-book-ribbon" />
+    </li>
   );
 }

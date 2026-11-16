@@ -144,8 +144,10 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
-            className="h-7 shrink-0 px-2"
+            className="vlo-tip h-7 shrink-0 px-2"
             aria-label="Choose the counts in the stats bar"
+            data-tip="Choose the counts"
+            data-tip-align="end"
           >
             <Settings2 aria-hidden="true" className="size-3.5" />
           </Button>
