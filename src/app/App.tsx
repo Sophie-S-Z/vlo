@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { readSpace } from '@/features/sync/space';
+import { recordPersistence, renewPersistence } from '@/lib/storage';
 import { PreferencesProvider } from './PreferencesProvider';
 import { RootErrorBoundary } from './RootErrorBoundary';
 import { routes } from './routes';
@@ -23,6 +24,16 @@ export function App() {
       stop?.();
     };
   }, [syncing]);
+  // Persistent storage: Vlo asks again at start, and at once after an install, because Chrome and Safari
+  // often grant it to an installed app.
+  useEffect(() => {
+    void renewPersistence();
+    const installed = () => void recordPersistence();
+    window.addEventListener('appinstalled', installed);
+    return () => {
+      window.removeEventListener('appinstalled', installed);
+    };
+  }, []);
   // The daily count (Phase 18, decision A3): a few seconds after Vlo opens, each minute while it is on the
   // screen, and as it leaves the screen. The count goes only on a new day or after the projects change, so
   // most checks send nothing. A share link's reader and the welcome screen never count.

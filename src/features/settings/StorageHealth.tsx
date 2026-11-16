@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { formatBytes } from '@/lib/bytes';
 import { db } from '@/lib/db';
+import { PERSISTENCE_KEY } from '@/lib/storage';
 
 type Reading<T> = { status: 'checking' } | { status: 'known'; value: T } | { status: 'unknown' };
 
@@ -32,8 +33,8 @@ function settle<T>(result: PromiseSettledResult<T | undefined>): Reading<T> {
 export function StorageHealth() {
   const [state, setState] = useState<StorageState>(CHECKING);
   const supported = typeof navigator !== 'undefined' && 'storage' in navigator;
-  // The answer the browser gave when Vlo asked for protection with the first project.
-  const asked = useLiveQuery(async () => (await db.appMeta.get('persistence'))?.value ?? null);
+  // The browser's last answer when Vlo asked for protection.
+  const asked = useLiveQuery(async () => (await db.appMeta.get(PERSISTENCE_KEY))?.value ?? null);
 
   useEffect(() => {
     if (!supported) return;
@@ -66,7 +67,7 @@ export function StorageHealth() {
         {show(state.persisted, (persisted) => {
           if (persisted) return 'Yes. The browser keeps Vlo data when space runs low.';
           if (asked === 'denied' || asked === 'granted')
-            return 'No. The browser declined. It may clear Vlo data when space runs low, so back up often.';
+            return 'Not yet. The browser declined. Vlo asks again each week, and browsers often agree after you install Vlo as an app. Until then, back up often.';
           if (asked === 'unsupported') return 'No. This browser cannot protect site data, so back up often.';
           return 'Not yet. Vlo asks for protection when you create your first project.';
         })}

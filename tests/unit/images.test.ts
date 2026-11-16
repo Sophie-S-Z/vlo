@@ -15,6 +15,7 @@ import {
 } from '@/features/images/images';
 import { fitSize, hasTransparency, MAX_IMAGE_SIDE } from '@/features/images/resize';
 import { createProject, deleteProject } from '@/features/library/projects';
+import { pack } from '@/features/snapshots/packing';
 import { clock } from '@/lib/clock';
 import { db, type ImageFile } from '@/lib/db';
 import { readItemUpdate, writeItemUpdate } from '@/lib/ydocs';
@@ -220,7 +221,8 @@ describe('Storage (Review Focus 2)', () => {
       projectId: project.id,
       itemId: scene.id,
       createdAt: 1,
-      state: sceneWith(['img-snapshot']),
+      // A snapshot keeps its state in gzip.
+      ...(await pack(sceneWith(['img-snapshot']))),
       text: '',
     });
     await db.itemVersions.add({

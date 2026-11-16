@@ -36,7 +36,7 @@ test('says so when the browser declined protection', async () => {
   render(<StorageHealth />);
   expect(
     await screen.findByText(
-      'No. The browser declined. It may clear Vlo data when space runs low, so back up often.',
+      'Not yet. The browser declined. Vlo asks again each week, and browsers often agree after you install Vlo as an app. Until then, back up often.',
     ),
   ).toBeTruthy();
 });

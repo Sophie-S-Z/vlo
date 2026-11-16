@@ -143,10 +143,20 @@ async function streamThrough(
   return out;
 }
 
+/** Gzip with the browser's CompressionStream. */
+export function gzip(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+  return streamThrough(bytes, new CompressionStream('gzip'));
+}
+
+/** The bytes that `gzip` packed. */
+export function gunzip(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+  return streamThrough(bytes, new DecompressionStream('gzip'));
+}
+
 /** JSON, gzip, then AES-GCM with a new IV. The purpose goes in as additional data. */
 export async function sealJson(value: unknown, key: CryptoKey, purpose: SealPurpose): Promise<Sealed> {
   const json = new TextEncoder().encode(JSON.stringify(value));
-  const packed = await streamThrough(json, new CompressionStream('gzip'));
+  const packed = await gzip(json);
   const iv = randomBytes(IV_BYTES);
   const cipher = new Uint8Array(
     await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: context(purpose) }, key, packed),

@@ -10,6 +10,7 @@ import type { ExportImage } from '@/features/export/model';
 import { IMAGE } from './attrs';
 import { prepareImage } from './resize';
 import { sweepKey, unusedKey } from './sweepKey';
+import { snapshotState } from '@/features/snapshots/packing';
 
 /*
  * The images in the text (Phase 16, Task G1). Each image is a row of the `images` table. The item's
@@ -163,7 +164,7 @@ export async function imagesInUse(projectId: string): Promise<Set<string>> {
   }
   const snapshots = await db.snapshots.where('projectId').equals(projectId).toArray();
   for (const snapshot of snapshots) {
-    imageIdsIn(snapshot.state, used);
+    imageIdsIn(await snapshotState(snapshot), used);
     await nextTurn();
   }
   const versions = await db.itemVersions.where('projectId').equals(projectId).toArray();
