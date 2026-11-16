@@ -81,7 +81,10 @@ describe.runIf(hasLibreOffice)('Word export in LibreOffice', () => {
         .filter((name) => /^Object \d+\/content\.xml$/.test(name))
         .map(async (name) => (await odt.file(name)?.async('string')) ?? ''),
     );
-    const starMath = formulas.map((xml) => /<annotation[^>]*>([^<]*)/.exec(xml)?.[1] ?? '');
+    // Newer LibreOffice puts quotes around the equals sign ("="), so the test removes them.
+    const starMath = formulas.map((xml) =>
+      (/<annotation[^>]*>([^<]*)/.exec(xml)?.[1] ?? '').replaceAll('&quot;=&quot;', '='),
+    );
     // LibreOffice reads the Word equations into its own formula language. It needs its Math module.
     expect(starMath).toEqual(expect.arrayContaining(['{a} over {b}', 'sum from {i = 1} to {n} {{i} ^ {2}}']));
   }, 180_000);
