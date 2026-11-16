@@ -1,7 +1,7 @@
-import { ChevronDown, Hourglass, LayoutGrid, List, NotebookPen, Upload } from 'lucide-react';
+import { ChevronDown, Hourglass, Library as Shelf, List, NotebookPen, Search, Upload } from 'lucide-react';
 import { ToggleGroup } from 'radix-ui';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { startTransition, useRef, useState, type PointerEvent } from 'react';
+import { startTransition, useDeferredValue, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
@@ -22,13 +22,16 @@ import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 import { ICON_BUTTON } from '@/ui/tip';
+import { Bookshelf } from './Bookshelf';
 import { DeleteDialog } from './DeleteDialog';
 import { formatWords } from './format';
 import { NewProjectDialog } from './NewProjectDialog';
 import { ProjectCard, type LibraryLayout } from './ProjectCard';
+import type { ProjectActions } from './ProjectMenu';
 import { RenameDialog } from './RenameDialog';
-import { TemplatesDialog } from './TemplatesDialog';
 import { Sigil } from './Sigil';
+import { TemplatesDialog } from './TemplatesDialog';
+import { projectDef } from './templates';
 import { useLibrary, type LibraryProject } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { WeeklyReport } from '@/features/usage/WeeklyReport';
@@ -37,18 +40,24 @@ const LAYOUT_KEY = 'vlo:libraryLayout';
 
 function loadLayout(): LibraryLayout {
   try {
-    return safeStorage()?.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'grid';
+    return safeStorage()?.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'shelf';
   } catch {
-    return 'grid';
+    return 'shelf';
   }
 }
 
 const toggleClass =
   'relative z-10 inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-4 text-sm text-muted transition-colors hover:text-text data-[state=on]:text-text';
 
-/** "6 projects · 158,164 words". The total shows only when every project counts the same unit (F38). */
+const pillClass =
+  'inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 font-mono text-[0.6875rem] tracking-[0.18em] text-muted uppercase ring-1 ring-rule transition-colors hover:text-text data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:ring-muted';
+
+/** The search and the kind pills show once the shelf holds this many books. */
+const FIND_FROM = 4;
+
+/** "6 volumes · 158,164 words". The total shows only when every project counts the same unit (F38). */
 function summary(projects: LibraryProject[]): string {
-  const count = projects.length === 1 ? '1 project' : `${String(projects.length)} projects`;
+  const count = projects.length === 1 ? '1 volume' : `${String(projects.length)} volumes`;
   const units = new Set(projects.map(({ project }) => countUnit(project.settings.language)));
   const [unit] = units;
   if (units.size !== 1 || unit === undefined) return count;
@@ -58,14 +67,16 @@ function summary(projects: LibraryProject[]): string {
   )}`;
 }
 
-/** The rim light of a card follows a mouse. Touch and pen leave it at rest. */
-function followPointer(event: PointerEvent<HTMLUListElement>) {
-  if (event.pointerType !== 'mouse' || !(event.target instanceof Element)) return;
-  const folio = event.target.closest<HTMLElement>('.vlo-folio');
-  if (!folio) return;
-  const box = folio.getBoundingClientRect();
-  folio.style.setProperty('--mx', `${String(event.clientX - box.left)}px`);
-  folio.style.setProperty('--my', `${String(event.clientY - box.top)}px`);
+/** The kinds of work on the shelf, the most common first. */
+function kindsOf(projects: LibraryProject[]): string[] {
+  const counts = new Map<string, number>();
+  for (const { project } of projects) {
+    const label = projectDef(project).label;
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([label]) => label);
 }
 
 export function LibraryPage() {
@@ -73,6 +84,9 @@ export function LibraryPage() {
   const library = useLibrary();
   const motion = useMotionAllowed();
   const [layout, setLayout] = useState<LibraryLayout>(loadLayout);
+  const [query, setQuery] = useState('');
+  const [kind, setKind] = useState('');
+  const find = useDeferredValue(query.trim().toLowerCase());
   const backupRef = useRef<ImportHandle>(null);
   const writingRef = useRef<ImportHandle>(null);
 
@@ -82,7 +96,7 @@ export function LibraryPage() {
     } catch {
       // Blocked storage: the layout still changes for this visit.
     }
-    // In a transition, each card morphs to its new place. With motion off, the change is instant.
+    // In a transition, each book morphs to its new place. With motion off, the change is instant.
     if (motion) {
       startTransition(() => {
         setLayout(next);
@@ -127,95 +141,174 @@ export function LibraryPage() {
     }
   };
 
+  const projects = library.status === 'ready' ? library.projects : [];
+  const kinds = kindsOf(projects);
+  const shown = projects.filter(({ project }) => {
+    const label = projectDef(project).label;
+    if (kind !== '' && label !== kind) return false;
+    return find === '' || `${project.title} ${label}`.toLowerCase().includes(find);
+  });
+  const seriesOf = (project: Project) => series.find((s) => s.projectIds.includes(project.id));
+  const actionsFor = (project: Project): ProjectActions => ({
+    onBackUp: () => {
+      setBackingUp(project);
+    },
+    onRename: () => {
+      setRenaming(project);
+    },
+    onTemplates: () => {
+      setChanging(project);
+    },
+    onSeries: () => {
+      setJoining(project);
+    },
+    onDelete: () => {
+      setDeleting(project);
+    },
+  });
+
   return (
     <section className="grain">
-      <div className="vlo-masthead grid gap-5">
-        <Sigil
-          seed="Vlo Library"
-          className="vlo-orrery pointer-events-none absolute -top-4 right-2 hidden size-52 text-accent-text opacity-20 md:block"
-        />
-        <p className="vlo-eyebrow flex items-center gap-2.5">
-          <span aria-hidden="true" className="vlo-diamond" />
-          Your private library
-        </p>
-        <h1 className="font-display text-6xl leading-[0.95] font-light tracking-[-0.03em] [font-variation-settings:'SOFT'_100,'WONK'_1] sm:text-8xl">
-          Library
+      <div className="relative isolate grid justify-items-center gap-3 pt-2 text-center">
+        <div aria-hidden="true" className="vlo-haze" />
+        <p className="vlo-eyebrow">A private archive</p>
+        <h1 className="vlo-caret font-manuscript text-5xl leading-[1.05] font-light tracking-[-0.02em] italic sm:text-6xl">
+          Welcome to your library
         </h1>
-        {library.status === 'ready' && library.projects.length > 0 && (
-          <p className="font-manuscript text-lg text-muted italic tabular-nums">
-            {summary(library.projects)}
-          </p>
+        {projects.length > 0 && (
+          <p className="vlo-eyebrow text-accent-text tabular-nums">{summary(projects)}</p>
         )}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          {library.status === 'ready' && library.projects.length > 0 ? (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          {/* Three quiet ways in, behind one menu (Phase 17 decision S4), then the main action. */}
+          <ImportBackup ref={backupRef} trigger={false} />
+          <ImportWriting ref={writingRef} trigger={false} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="rounded-full">
+                <Upload aria-hidden="true" strokeWidth={1.5} className="size-4" />
+                Import
+                <ChevronDown aria-hidden="true" strokeWidth={1.5} className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-72">
+              <DropdownMenuItem
+                className="grid gap-0.5"
+                onSelect={() => {
+                  backupRef.current?.open();
+                }}
+              >
+                <span className="font-medium">Import backup</span>
+                <span className="text-xs text-muted">A .vlo.zip file that Vlo made</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="grid gap-0.5"
+                onSelect={() => {
+                  writingRef.current?.open();
+                }}
+              >
+                <span className="font-medium">Import writing</span>
+                <span className="text-xs text-muted">Word, Markdown, Fountain, text or Scrivener</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button asChild variant="ghost" className={cn(ICON_BUTTON, 'rounded-full')} data-tip="Quick note">
+            <Link to="/capture">
+              <NotebookPen aria-hidden="true" strokeWidth={1.5} className="size-4" />
+              <span className="sr-only">Quick note</span>
+            </Link>
+          </Button>
+          <NewProjectDialog />
+        </div>
+      </div>
+
+      {projects.length > 0 && (
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] justify-items-center gap-4">
+          {projects.length >= FIND_FROM && (
+            <label className="vlo-find flex w-full max-w-xl items-center gap-3 pr-7 pb-2">
+              <Search aria-hidden="true" strokeWidth={1.25} className="size-4 shrink-0 text-muted" />
+              <span className="sr-only">Find a project</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
+                placeholder="What are you looking for?"
+                className="min-w-0 flex-1 bg-transparent text-center font-manuscript text-lg italic outline-none placeholder:text-muted sm:text-xl"
+              />
+            </label>
+          )}
+          <div className="flex w-full flex-wrap items-center justify-center gap-3">
+            {projects.length >= FIND_FROM && kinds.length > 1 && (
+              <ToggleGroup.Root
+                type="single"
+                aria-label="Kind of work"
+                value={kind === '' ? 'all' : kind}
+                onValueChange={(value) => {
+                  if (value !== '') setKind(value === 'all' ? '' : value);
+                }}
+                className="flex max-w-full gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none]"
+              >
+                <ToggleGroup.Item value="all" className={pillClass}>
+                  All
+                </ToggleGroup.Item>
+                {kinds.map((label) => (
+                  <ToggleGroup.Item key={label} value={label} className={pillClass}>
+                    {label}
+                  </ToggleGroup.Item>
+                ))}
+              </ToggleGroup.Root>
+            )}
             <ToggleGroup.Root
               type="single"
               aria-label="Layout"
               value={layout}
               data-layout={layout}
               onValueChange={(value) => {
-                if (value === 'grid' || value === 'list') changeLayout(value);
+                if (value === 'shelf' || value === 'list') changeLayout(value);
               }}
               className="vlo-toggle relative grid grid-cols-2 rounded-full p-0.5 ring-1 ring-rule"
             >
-              <ToggleGroup.Item value="grid" className={toggleClass}>
-                <LayoutGrid aria-hidden="true" strokeWidth={1.5} className="size-4" />
-                Grid
+              <ToggleGroup.Item value="shelf" className={toggleClass}>
+                <Shelf aria-hidden="true" strokeWidth={1.5} className="size-4" />
+                Shelf
               </ToggleGroup.Item>
               <ToggleGroup.Item value="list" className={toggleClass}>
                 <List aria-hidden="true" strokeWidth={1.5} className="size-4" />
                 List
               </ToggleGroup.Item>
             </ToggleGroup.Root>
-          ) : (
-            <span />
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Three quiet ways in, behind one menu (Phase 17 decision S4), then the main action. */}
-            <ImportBackup ref={backupRef} trigger={false} />
-            <ImportWriting ref={writingRef} trigger={false} />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="rounded-full">
-                  <Upload aria-hidden="true" strokeWidth={1.5} className="size-4" />
-                  Import
-                  <ChevronDown aria-hidden="true" strokeWidth={1.5} className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                <DropdownMenuItem
-                  className="grid gap-0.5"
-                  onSelect={() => {
-                    backupRef.current?.open();
-                  }}
-                >
-                  <span className="font-medium">Import backup</span>
-                  <span className="text-xs text-muted">A .vlo.zip file that Vlo made</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="grid gap-0.5"
-                  onSelect={() => {
-                    writingRef.current?.open();
-                  }}
-                >
-                  <span className="font-medium">Import writing</span>
-                  <span className="text-xs text-muted">Word, Markdown, Fountain, text or Scrivener</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button asChild variant="ghost" className={cn(ICON_BUTTON, 'rounded-full')} data-tip="Quick note">
-              <Link to="/capture">
-                <NotebookPen aria-hidden="true" strokeWidth={1.5} className="size-4" />
-                <span className="sr-only">Quick note</span>
-              </Link>
-            </Button>
-            <NewProjectDialog />
           </div>
         </div>
-        <div aria-hidden="true" className="vlo-rule mt-4">
-          <span className="vlo-diamond" />
+      )}
+
+      {projects.length > 0 && shown.length === 0 && (
+        <p role="status" className="mt-16 text-center font-manuscript text-xl text-muted italic">
+          No project matches.
+        </p>
+      )}
+
+      {shown.length > 0 && layout === 'shelf' && (
+        <div className="mt-2">
+          <Bookshelf projects={shown} now={now} seriesOf={seriesOf} actionsFor={actionsFor} />
         </div>
-      </div>
+      )}
+
+      {shown.length > 0 && layout === 'list' && (
+        <ul aria-label="Projects" className="mt-10 grid divide-y divide-rule/70">
+          {shown.map(({ project, wordCount }, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              wordCount={wordCount}
+              index={index}
+              now={now}
+              series={seriesOf(project)}
+              {...actionsFor(project)}
+            />
+          ))}
+        </ul>
+      )}
 
       <WeeklyReport />
 
@@ -299,45 +392,6 @@ export function LibraryPage() {
             </p>
           </div>
         </div>
-      )}
-
-      {library.status === 'ready' && library.projects.length > 0 && (
-        <ul
-          aria-label="Projects"
-          onPointerMove={followPointer}
-          className={cn(
-            'vlo-stagger mt-10 grid',
-            layout === 'grid' ? 'gap-5 sm:grid-cols-2 lg:grid-cols-3' : 'divide-y divide-rule/70',
-          )}
-        >
-          {library.projects.map(({ project, wordCount }, index) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              wordCount={wordCount}
-              layout={layout}
-              index={index}
-              featured={index === 0}
-              now={now}
-              onBackUp={() => {
-                setBackingUp(project);
-              }}
-              onRename={() => {
-                setRenaming(project);
-              }}
-              series={series.find((s) => s.projectIds.includes(project.id))}
-              onTemplates={() => {
-                setChanging(project);
-              }}
-              onSeries={() => {
-                setJoining(project);
-              }}
-              onDelete={() => {
-                setDeleting(project);
-              }}
-            />
-          ))}
-        </ul>
       )}
 
       {series.length > 0 && (

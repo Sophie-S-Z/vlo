@@ -1,11 +1,5 @@
 import type { SVGProps } from 'react';
-
-/** FNV-1a: the same seed always gives the same seal. */
-function hash(seed: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < seed.length; i += 1) h = Math.imul(h ^ seed.charCodeAt(i), 0x01000193);
-  return h >>> 0;
-}
+import { hash } from './book';
 
 /** The corners of a regular polygon around the centre, with the first corner turned by `turn` radians. */
 function corners(sides: number, radius: number, turn: number): [number, number][] {

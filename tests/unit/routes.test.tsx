@@ -42,7 +42,7 @@ test('a first visit to / goes to the welcome screen', async () => {
 test('/ shows the Library after onboarding', async () => {
   await markOnboarded();
   renderAt('/');
-  expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Welcome to your library' })).toBeTruthy();
 });
 
 test('/settings shows Settings', async () => {
@@ -129,7 +129,7 @@ test('after moving to another screen, focus goes to its heading', async () => {
   await act(async () => {
     await router.navigate('/');
   });
-  const library = await screen.findByRole('heading', { level: 1, name: 'Library' });
+  const library = await screen.findByRole('heading', { level: 1, name: 'Welcome to your library' });
   await waitFor(() => {
     expect(document.activeElement).toBe(library);
   });
