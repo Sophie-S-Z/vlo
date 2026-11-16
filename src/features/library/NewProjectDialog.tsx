@@ -73,8 +73,8 @@ export function NewProjectDialog() {
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus aria-hidden="true" className="size-4" />
+        <Button className="rounded-full pr-5 pl-4">
+          <Plus aria-hidden="true" strokeWidth={1.5} className="size-4" />
           New project
         </Button>
       </DialogTrigger>

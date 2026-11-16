@@ -51,7 +51,7 @@ export function AppShell() {
   }, [pathname]);
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col overflow-x-clip">
       <a
         href="#main"
         onClick={(event) => {

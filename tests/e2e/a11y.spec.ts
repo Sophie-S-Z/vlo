@@ -44,7 +44,7 @@ async function eachRoute(page: Page, visit: (route: string) => Promise<void>) {
   await expect(heading(page)).toBeVisible();
   await visit('/welcome');
   await page.getByRole('button', { name: 'Skip' }).click();
-  await expect(heading(page)).toHaveText('Library');
+  await expect(heading(page)).toHaveText('Welcome to your library');
   const project = await newMixedProject(page);
   await visit(project);
   for (const view of VIEWS) {

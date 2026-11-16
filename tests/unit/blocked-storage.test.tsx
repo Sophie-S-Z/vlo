@@ -34,7 +34,7 @@ afterEach(async () => {
 
 test('the app still renders when site storage is blocked', async () => {
   render(<App />);
-  expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Welcome to your library' })).toBeTruthy();
 });
 
 test('preferences still change for this tab when site storage is blocked', () => {

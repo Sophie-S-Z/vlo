@@ -23,7 +23,7 @@ afterEach(async () => {
 test('App renders the Vlo wordmark and the Library', async () => {
   render(<App />);
   expect(await screen.findByRole('link', { name: 'Vlo' })).toBeTruthy();
-  expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Welcome to your library' })).toBeTruthy();
 });
 
 test('a render error outside the router shows the root error screen', async () => {

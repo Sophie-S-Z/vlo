@@ -39,9 +39,9 @@ async function walkThrough(page: Page) {
 
   await page.getByRole('radio', { name: 'List' }).click();
   await expect(page.getByRole('radio', { name: 'List' })).toHaveAttribute('aria-checked', 'true');
-  await expectNoMotion(page, 'grid to list');
-  await page.getByRole('radio', { name: 'Grid' }).click();
-  await expectNoMotion(page, 'list to grid');
+  await expectNoMotion(page, 'shelf to list');
+  await page.getByRole('radio', { name: 'Shelf' }).click();
+  await expectNoMotion(page, 'list to shelf');
 
   await page.getByRole('button', { name: 'New project' }).click();
   await expect(page.getByRole('dialog', { name: 'New project' })).toBeVisible();
@@ -76,7 +76,7 @@ test('US14: Calm mode stops all motion even when the system allows it', async ({
   await walkThrough(page);
 });
 
-test('with motion allowed, the cards rise in and morph between grid and list, and the theme spreads', async ({
+test('with motion allowed, the books rise onto the shelf and morph between shelf and list, and the theme spreads', async ({
   page,
   browserName,
 }) => {
@@ -86,7 +86,7 @@ test('with motion allowed, the cards rise in and morph between grid and list, an
   await seedProjects(page, 6);
   await expect(projects(page)).toHaveCount(6);
   const rising = await page.evaluate(
-    () => document.getAnimations().filter((a) => (a as CSSAnimation).animationName === 'vlo-rise').length,
+    () => document.getAnimations().filter((a) => (a as CSSAnimation).animationName === 'vlo-shelve').length,
   );
   expect(rising).toBeGreaterThan(0);
 
