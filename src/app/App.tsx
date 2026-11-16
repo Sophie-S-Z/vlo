@@ -23,19 +23,24 @@ export function App() {
       stop?.();
     };
   }, [syncing]);
-  // The daily count (Phase 18, decision A3): once a UTC day, a few seconds after Vlo opens or comes back
-  // to the screen. A share link's reader and the welcome screen never count.
+  // The daily count (Phase 18, decision A3): a few seconds after Vlo opens, each minute while it is on the
+  // screen, and as it leaves the screen. The count goes only on a new day or after the projects change, so
+  // most checks send nothing. A share link's reader and the welcome screen never count.
   useEffect(() => {
     const count = () => {
       const path = window.location.pathname;
-      if (document.visibilityState !== 'visible' || path.startsWith('/r/') || path.startsWith('/welcome'))
-        return;
-      void import('@/features/account/dailyCount').then(({ sendDailyCount }) => sendDailyCount());
+      if (path.startsWith('/r/') || path.startsWith('/welcome')) return;
+      const leaving = document.visibilityState !== 'visible';
+      void import('@/features/account/dailyCount').then(({ sendDailyCount }) => sendDailyCount(leaving));
     };
     const timer = setTimeout(count, 5_000);
+    const tick = setInterval(() => {
+      if (document.visibilityState === 'visible') count();
+    }, 60_000);
     document.addEventListener('visibilitychange', count);
     return () => {
       clearTimeout(timer);
+      clearInterval(tick);
       document.removeEventListener('visibilitychange', count);
     };
   }, []);

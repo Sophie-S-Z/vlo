@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FakeSyncRelay } from './syncRelay';
 
 /*
- * A fake of Supabase Auth and the functions of migration 0008 (Phase 18), for the Playwright tests. Each
+ * A fake of Supabase Auth and the functions of migrations 0008 and 0009 (Phase 18 and the live owner page), for the Playwright tests. Each
  * email gets the code 123456. The fake keeps the rules that the app relies on: a function for a signed-in
  * writer reads the account from the bearer token, a vault needs the space token, and the owner functions
  * refuse any account that is not an owner.
@@ -43,7 +43,10 @@ export interface FeedbackRow {
 export class FakeAccounts {
   readonly users = new Map<string, User>();
   readonly vaults = new Map<string, Vault>();
-  readonly pings = new Map<string, { install: string; day: string; user_id: string | null; device: string }>();
+  readonly pings = new Map<
+    string,
+    { install: string; day: string; user_id: string | null; device: string; words: number; total: number }
+  >();
   readonly feedback: FeedbackRow[] = [];
   readonly owners = new Set<string>();
   private readonly tokens = new Map<string, string>();
@@ -142,9 +145,17 @@ export class FakeAccounts {
       }
       case 'daily_count': {
         const install = String(body.p_install);
-        const key = `${install}|${today}`;
+        const day = typeof body.p_day === 'string' ? body.p_day : today;
+        const key = `${install}|${day}`;
         const old = this.pings.get(key);
-        this.pings.set(key, { install, day: today, user_id: uid ?? old?.user_id ?? null, device: String(body.p_device) });
+        this.pings.set(key, {
+          install,
+          day,
+          user_id: uid ?? old?.user_id ?? null,
+          device: String(body.p_device),
+          words: Number(body.p_words ?? old?.words ?? 0),
+          total: Number(body.p_total ?? old?.total ?? 0),
+        });
         return { value: true };
       }
       case 'send_feedback': {
@@ -187,13 +198,24 @@ export class FakeAccounts {
             accounts: this.users.size,
             accounts_7d: this.users.size,
             accounts_30d: this.users.size,
+            now: pings.length,
             active_1d: pings.length,
             active_7d: pings.length,
             active_30d: pings.length,
+            active_prev_7d: 0,
+            returning_7d: 0,
             accounts_active_7d: new Set(pings.map((p) => p.user_id).filter(Boolean)).size,
             accounts_active_30d: new Set(pings.map((p) => p.user_id).filter(Boolean)).size,
+            words_total: pings.reduce((n, p) => n + p.total, 0),
+            projects: pings.length,
             syncing: this.vaults.size,
             spaces: this.sync.spaces.size,
+            sync_bytes: 0,
+            synced_at: null,
+            shares: 0,
+            comments: 0,
+            rooms: 0,
+            db_bytes: 12_000_000,
             installed: 0,
             devices,
             versions: { '0.1.0': pings.length },
@@ -204,7 +226,6 @@ export class FakeAccounts {
             reports: 0,
             features: {},
             templates: {},
-            words: {},
           },
         };
       }
@@ -219,6 +240,9 @@ export class FakeAccounts {
             day,
             devices: pings.length,
             accounts: new Set(pings.map((p) => p.user_id).filter(Boolean)).size,
+            writers: pings.filter((p) => p.words > 0).length,
+            words: pings.reduce((n, p) => n + p.words, 0),
+            new_devices: pings.length,
             new_accounts: [...this.users.values()].filter((u) => u.createdAt.startsWith(day)).length,
             feedback: this.feedback.filter((f) => f.created_at.startsWith(day)).length,
           });
@@ -238,6 +262,10 @@ export class FakeAccounts {
             devices: new Set([...this.pings.values()].filter((p) => p.user_id === u.id).map((p) => p.install)).size,
             syncing: this.vaults.has(u.id),
             feedback: this.feedback.filter((f) => f.user_id === u.id).length,
+            days_30d: 0,
+            words_30d: 0,
+            words_total: null,
+            projects: null,
           })),
         };
       case 'owner_feedback':

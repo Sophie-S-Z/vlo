@@ -12,8 +12,12 @@ export interface DailyCountState {
   off: boolean;
   /** The random id of this browser, made at the first count. */
   install?: string;
-  /** The UTC day of the last count that went through, as "YYYY-MM-DD". */
+  /** The local day of the last count that went through, as "YYYY-MM-DD". */
   day?: string;
+  /** What the projects looked like at that count, so an unchanged device sends nothing new. */
+  seen?: string;
+  /** The time of that count, in ms. */
+  at?: number;
 }
 
 export function readDailyCount(): DailyCountState {
@@ -23,6 +27,8 @@ export function readDailyCount(): DailyCountState {
       off: value?.off === true,
       ...(typeof value?.install === 'string' ? { install: value.install } : {}),
       ...(typeof value?.day === 'string' ? { day: value.day } : {}),
+      ...(typeof value?.seen === 'string' ? { seen: value.seen } : {}),
+      ...(typeof value?.at === 'number' ? { at: value.at } : {}),
     };
   } catch {
     return { off: false };

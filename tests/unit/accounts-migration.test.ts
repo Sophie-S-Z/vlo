@@ -5,7 +5,7 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 
 /*
- * Phase 18 Task A1 (decisions A1 to A7): migration 0008 in PGlite. The app calls each function through
+ * Phase 18 Task A1 (decisions A1 to A7): migrations 0008 and 0009 (the live owner page) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -19,6 +19,7 @@ const MIGRATIONS = [
   '0006_rooms.sql',
   '0007_share_images.sql',
   '0008_accounts.sql',
+  '0009_live_owner.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -62,6 +63,7 @@ beforeEach(async () => {
     select set_config('request.jwt.claim.sub', '', false);
     delete from app_feedback; delete from app_pings; delete from sync_vaults; delete from app_owners;
     delete from sync_spaces; delete from usage_reports; delete from auth.users;
+    delete from shares; delete from sprint_rooms;
     insert into auth.users (id, email, raw_app_meta_data) values
       ('${ALICE}', 'alice@example.com', '{"provider":"email"}'),
       ('${BOB}', 'bob@example.com', '{"provider":"google"}');
@@ -286,6 +288,68 @@ describe('the owner page (decision A6)', () => {
       'select * from public.owner_feedback()',
     );
     expect(item).toMatchObject({ status: 'planned', note: 'In the next phase.', email: 'bob@example.com' });
+  });
+});
+
+/** The UTC day in SQL, which every role may read. */
+const TODAY = "(now() at time zone 'utc')::date";
+
+describe('live words on the owner page (migration 0009)', () => {
+  beforeEach(async () => {
+    await db.query('insert into app_owners (user_id) values ($1)', [ALICE]);
+  });
+
+  /** A count with the words of the device's local day, its total words and its projects. */
+  const words = (who: string, install: string, added: number, total: number, offset = 0) =>
+    as(
+      who,
+      `select public.daily_count($1, '0.1.0', 'computer', false, ${TODAY} + ${String(offset)}, $2, $3, 2)`,
+      [install, added, total],
+    );
+
+  test('a new count replaces the numbers of the day, and an old app keeps them', async () => {
+    await words('anon', INSTALL('a'), 100, 5000);
+    await words('anon', INSTALL('a'), 340, 5240);
+    await count('anon', INSTALL('a'));
+    const rows = (await db.query('select words, words_total, projects from app_pings')).rows;
+    expect(rows).toEqual([{ words: 340, words_total: 5240, projects: 2 }]);
+  });
+
+  test('refuses a day far from today and numbers out of range', async () => {
+    await expect(words('anon', INSTALL('a'), 1, 1, 2)).rejects.toThrow('bad day');
+    await expect(words('anon', INSTALL('a'), -1, 1)).rejects.toThrow('bad words');
+    await expect(words('anon', INSTALL('a'), 1, 200_000_000)).rejects.toThrow('bad words');
+  });
+
+  test('two devices of one account count its words once, and each writer adds to the day', async () => {
+    await words(BOB, INSTALL('b1'), 300, 9000);
+    await words(BOB, INSTALL('b2'), 250, 9000);
+    await words('anon', INSTALL('c'), 50, 700);
+    const [today] = (
+      await as<{ words: number; writers: number; devices: number }>(
+        ALICE,
+        'select * from public.owner_daily(3)',
+      )
+    ).slice(-1);
+    expect(today).toMatchObject({ words: 350, writers: 2, devices: 3 });
+    const [row] = await as<{ s: Record<string, unknown> }>(ALICE, 'select public.owner_summary() as s');
+    expect(row?.s).toMatchObject({ now: 2, words_total: 9700, projects: 4 });
+    const people = await as<{ email: string; words_30d: number; words_total: number; days_30d: number }>(
+      ALICE,
+      'select * from public.owner_accounts()',
+    );
+    expect(people.find((p) => p.email === 'bob@example.com')).toMatchObject({
+      words_30d: 300,
+      words_total: 9000,
+      days_30d: 1,
+    });
+  });
+
+  test("the owner's today sets the last day of the page", async () => {
+    await words('anon', INSTALL('a'), 80, 80, 1);
+    const days = await as<{ words: number }>(ALICE, `select * from public.owner_daily(2, ${TODAY} + 1)`);
+    expect(days.map((d) => d.words)).toEqual([0, 80]);
+    await expect(as(ALICE, `select * from public.owner_daily(2, ${TODAY} - 3)`)).rejects.toThrow('bad day');
   });
 });
 

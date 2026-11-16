@@ -1,7 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { ArrowDown, ArrowUp } from 'lucide-react';
+import { AnimatePresence, domAnimation, LazyMotion, m, MotionConfig } from 'motion/react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { CountUp } from '@/features/progress/CountUp';
+import { dayKey } from '@/features/progress/streaks';
 import { downloadBytes } from '@/lib/download';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
@@ -10,181 +15,81 @@ import { Textarea } from '@/ui/textarea';
 import { accountErrorText } from './AccountPage';
 import { accountsReady } from './auth';
 import {
+  change,
   feedbackCsv,
+  insights,
   isOwner,
   ownerAccounts,
   ownerDaily,
   ownerFeedback,
   ownerSummary,
-  ranked,
   setFeedbackStatus,
+  total,
+  weekdayWords,
+  type DayKey,
   type FeedbackStatus,
   type OwnerAccount,
   type OwnerDay,
   type OwnerFeedback,
   type OwnerSummary,
 } from './owner';
+import { Breakdown, dayText, Meter, n, Sparkline, TrendChart, WeekdayBars, YearMap } from './ownerCharts';
 import { readSession } from './session';
 
 /*
- * The owner page (Phase 18, Task A5, decision A6): how many people use Vlo, how they use it, and what
- * they say. Only an account in `app_owners` can read it, and it shows no writing: the server has none.
+ * The owner page (Phase 18, Task A5, decision A6, and the live revamp of migration 0009): how many people
+ * use Vlo, how much they write, and what they say. Only an account in `app_owners` can read it, and it
+ * shows no writing: the server has none, only counts. The page stays live: it loads again every 30
+ * seconds while it is on the screen, and at once when it comes back. A hidden tab sends no request.
  */
 
-const NUMBER = new Intl.NumberFormat('en-GB');
-const n = (value: number) => NUMBER.format(value);
-const dayText = (iso: string | null) =>
-  iso
-    ? new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        timeZone: iso.length === 10 ? 'UTC' : undefined,
-      })
-    : 'Never';
+/** How often the page loads the numbers again while it is on the screen. */
+const LIVE_MS = 30_000;
+const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const mb = (bytes: number) => `${(bytes / 1_000_000).toFixed(bytes < 10_000_000 ? 1 : 0)} MB`;
+/** The database size of the Supabase free plan. */
+const FREE_DB_BYTES = 500_000_000;
 
-function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
+/** A change against an earlier period, in words and an arrow, never in color alone. */
+function Delta({ now, before, period }: { now: number; before: number; period: string }) {
+  const pct = change(now, before);
+  if (pct === null) return null;
+  const Icon = pct >= 0 ? ArrowUp : ArrowDown;
   return (
-    <div className="grid content-start gap-1 rounded-[var(--radius-card)] border border-rule bg-surface p-4">
-      <dt className="text-sm text-muted">{label}</dt>
-      <dd className="font-display text-3xl font-semibold">{value}</dd>
-      {note && <dd className="text-sm text-muted">{note}</dd>}
-    </div>
+    <span className="flex items-center gap-1 text-sm text-muted">
+      {pct !== 0 && <Icon aria-hidden="true" className="size-3.5" />}
+      {pct === 0 ? `Same as ${period}` : `${pct > 0 ? 'Up' : 'Down'} ${String(Math.abs(pct))}% on ${period}`}
+    </span>
   );
 }
 
-/** Active devices each day: one series, so the title names it and no legend shows. */
-function DailyChart({ days }: { days: OwnerDay[] }) {
-  const id = useId();
-  const [hover, setHover] = useState<number | null>(null);
-  const [table, setTable] = useState(false);
-  const max = Math.max(1, ...days.map((d) => d.devices));
-  const top = max <= 4 ? max : Math.ceil(max / 5) * 5;
-  const W = 600;
-  const H = 180;
-  const slot = W / Math.max(1, days.length);
-  const bar = Math.min(16, slot - 2);
-  const y = (v: number) => H - (v / top) * H;
-  const active = hover === null ? null : days[hover];
+function Tile({
+  label,
+  value,
+  note,
+  trend,
+  children,
+}: {
+  label: string;
+  value: number | string;
+  note?: string;
+  trend?: readonly number[];
+  children?: React.ReactNode;
+}) {
   return (
-    <section aria-labelledby={`${id}-title`} className="grid gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 id={`${id}-title`} className="text-lg font-semibold">
-          Devices that opened Vlo each day, last {days.length} days
-        </h3>
-        <Button
-          type="button"
-          variant="ghost"
-          aria-pressed={table}
-          onClick={() => {
-            setTable(!table);
-          }}
-        >
-          {table ? 'Show the chart' : 'Show as a table'}
-        </Button>
-      </div>
-      {table ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-muted">
-                <th className="py-1 pr-4 font-medium">Day (UTC)</th>
-                <th className="py-1 pr-4 font-medium">Devices</th>
-                <th className="py-1 pr-4 font-medium">Signed-in accounts</th>
-                <th className="py-1 pr-4 font-medium">New accounts</th>
-                <th className="py-1 font-medium">Feedback</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...days].reverse().map((d) => (
-                <tr key={d.day} className="border-t border-rule">
-                  <td className="py-1 pr-4">{dayText(d.day)}</td>
-                  <td className="py-1 pr-4">{n(d.devices)}</td>
-                  <td className="py-1 pr-4">{n(d.accounts)}</td>
-                  <td className="py-1 pr-4">{n(d.new_accounts)}</td>
-                  <td className="py-1">{n(d.feedback)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="relative">
-          <div className="flex gap-2">
-            <div
-              className="flex h-[180px] flex-col justify-between text-right text-xs text-muted"
-              aria-hidden="true"
-            >
-              <span>{n(top)}</span>
-              <span>{n(Math.round(top / 2))}</span>
-              <span>0</span>
-            </div>
-            <svg
-              viewBox={`0 0 ${String(W)} ${String(H)}`}
-              preserveAspectRatio="none"
-              className="h-[180px] w-full overflow-visible"
-              role="img"
-              aria-label={`Devices each day. Today: ${n(days.at(-1)?.devices ?? 0)}. Highest: ${n(max)}.`}
-              onPointerLeave={() => {
-                setHover(null);
-              }}
-            >
-              {[0, 0.5, 1].map((f) => (
-                <line
-                  key={f}
-                  x1={0}
-                  x2={W}
-                  y1={H * f}
-                  y2={H * f}
-                  stroke="var(--rule)"
-                  strokeWidth={1}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-              {days.map((d, i) => {
-                const x = i * slot + (slot - bar) / 2;
-                const h = H - y(d.devices);
-                const r = Math.min(4, h / 2);
-                return (
-                  <g
-                    key={d.day}
-                    onPointerEnter={() => {
-                      setHover(i);
-                    }}
-                  >
-                    {/* The hit target is the whole slot, taller and wider than the bar. */}
-                    <rect x={i * slot} y={0} width={slot} height={H} fill="transparent" />
-                    {d.devices > 0 && (
-                      <path
-                        d={`M${String(x)} ${String(H)}V${String(H - h + r)}q0 -${String(r)} ${String(r)} -${String(r)}h${String(bar - 2 * r)}q${String(r)} 0 ${String(r)} ${String(r)}V${String(H)}z`}
-                        fill="var(--accent)"
-                        opacity={hover === null || hover === i ? 1 : 0.55}
-                      />
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-          <div className="mt-1 flex justify-between pl-8 text-xs text-muted" aria-hidden="true">
-            <span>{dayText(days[0]?.day ?? null)}</span>
-            <span>{dayText(days.at(-1)?.day ?? null)}</span>
-          </div>
-          {active && (
-            <div
-              role="tooltip"
-              className="pointer-events-none absolute top-0 right-0 grid gap-0.5 rounded-md border border-rule bg-surface px-3 py-2 text-sm shadow-[var(--shadow-hover)]"
-            >
-              <span className="font-semibold">{dayText(active.day)}</span>
-              <span>{n(active.devices)} devices</span>
-              <span className="text-muted">{n(active.accounts)} signed-in accounts</span>
-              <span className="text-muted">{n(active.new_accounts)} new accounts</span>
-              <span className="text-muted">{n(active.feedback)} feedback</span>
-            </div>
-          )}
-        </div>
+    <div className="grid content-start gap-1 rounded-[var(--radius-card)] border border-rule bg-surface p-4">
+      <dt className="text-sm text-muted">{label}</dt>
+      <dd className="text-2xl font-semibold sm:text-3xl">
+        {typeof value === 'number' ? <CountUp value={value} /> : value}
+      </dd>
+      {children && <dd>{children}</dd>}
+      {note && <dd className="text-sm text-muted">{note}</dd>}
+      {trend && (
+        <dd className="pt-1">
+          <Sparkline values={trend} />
+        </dd>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -202,39 +107,82 @@ const LABELS: Record<string, string> = {
   research: 'Research paper',
 };
 
-/** A ranked list with a bar for each value: magnitude in one hue. */
-function Breakdown({
-  title,
-  counts,
-  note,
-}: {
-  title: string;
-  counts: Record<string, number>;
-  note?: string;
-}) {
-  const rows = ranked(counts);
-  const max = Math.max(1, ...rows.map(([, v]) => v));
+/** The words of today, the hero of the page. A rise since the last load floats up as "+N". */
+function Today({ summary, days }: { summary: OwnerSummary; days: OwnerDay[] }) {
+  const today = days.at(-1);
+  const words = today?.words ?? 0;
+  const [seen, setSeen] = useState({ words, gain: 0, key: 0 });
+  if (seen.words !== words) setSeen({ words, gain: words - seen.words, key: seen.key + 1 });
+  const average = Math.round(total(days, 'words', 7, 1) / 7);
   return (
-    <section className="grid content-start gap-2">
-      <h3 className="font-semibold">{title}</h3>
-      {note && <p className="text-sm text-muted">{note}</p>}
-      {rows.length === 0 ? (
-        <p className="text-sm text-muted">Nothing yet.</p>
-      ) : (
-        <ul className="grid gap-1.5">
-          {rows.slice(0, 10).map(([name, value]) => (
-            <li
-              key={name}
-              className="grid grid-cols-[minmax(6rem,10rem)_1fr_auto] items-center gap-2 text-sm"
+    <section
+      aria-labelledby="owner-today"
+      className="grid content-start gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-5"
+    >
+      <h2 id="owner-today" className="text-sm text-muted">
+        Words written today
+      </h2>
+      <p className="relative flex items-baseline gap-3">
+        <CountUp value={words} className="text-6xl font-semibold tracking-tight" />
+        <AnimatePresence>
+          {seen.gain > 0 && (
+            <m.span
+              key={seen.key}
+              className="text-lg font-semibold text-accent-text"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, -12] }}
+              transition={{ duration: 4, times: [0, 0.1, 0.8, 1] }}
             >
-              <span className="truncate">{LABELS[name] ?? name}</span>
-              <span
-                className="h-3 rounded-r-[4px] bg-accent"
-                style={{ width: `${String((value / max) * 100)}%` }}
-                aria-hidden="true"
-              />
-              <span className="tabular-nums">{n(value)}</span>
-            </li>
+              +{n(seen.gain)}
+            </m.span>
+          )}
+        </AnimatePresence>
+      </p>
+      <div className="grid gap-1 text-sm">
+        <Delta now={words} before={average} period="the 7-day average" />
+        <p>
+          {n(today?.writers ?? 0)} {today?.writers === 1 ? 'writer' : 'writers'} today, {n(average)} words on
+          an average day
+        </p>
+        <p className="flex items-center gap-2">
+          <span className="relative flex size-2.5" aria-hidden="true">
+            {summary.now > 0 && (
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
+            )}
+            <span
+              className={`relative inline-flex size-2.5 rounded-full ${summary.now > 0 ? 'bg-accent' : 'bg-rule'}`}
+            />
+          </span>
+          {n(summary.now)} {summary.now === 1 ? 'writer' : 'writers'} in Vlo in the last 15 minutes
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function Insights({ lines }: { lines: string[] }) {
+  return (
+    <section
+      aria-labelledby="owner-insights"
+      className="grid content-start gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-5"
+    >
+      <h2 id="owner-insights" className="text-sm text-muted">
+        What stands out
+      </h2>
+      {lines.length === 0 ? (
+        <p className="text-sm text-muted">Facts show here when writers start to write.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {lines.map((line, i) => (
+            <m.li
+              key={line}
+              className="border-l-2 border-accent pl-3"
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+            >
+              {line}
+            </m.li>
           ))}
         </ul>
       )}
@@ -242,89 +190,262 @@ function Breakdown({
   );
 }
 
+const MEASURES: { value: DayKey; label: string; unit: string }[] = [
+  { value: 'words', label: 'Words', unit: 'Words' },
+  { value: 'writers', label: 'Writers', unit: 'Writers who added words' },
+  { value: 'devices', label: 'Devices', unit: 'Devices that opened Vlo' },
+  { value: 'new_devices', label: 'New devices', unit: 'New devices' },
+  { value: 'new_accounts', label: 'New accounts', unit: 'New accounts' },
+  { value: 'feedback', label: 'Feedback', unit: 'Feedback messages' },
+];
+const RANGES = [
+  { value: '7', label: '7 days' },
+  { value: '30', label: '30 days' },
+  { value: '90', label: '90 days' },
+  { value: '365', label: 'Year' },
+];
+
+function OverTime({ days }: { days: OwnerDay[] }) {
+  const [measure, setMeasure] = useState<DayKey>('words');
+  const [range, setRange] = useState('30');
+  const [table, setTable] = useState(false);
+  const shown = days.slice(-Number(range));
+  const def = MEASURES.find((x) => x.value === measure) ?? MEASURES[0];
+  return (
+    <section aria-labelledby="owner-time" className="grid gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 id="owner-time" className="mr-auto text-lg font-semibold">
+          {def?.unit} each day
+        </h2>
+        <Segmented label="Days" options={RANGES} value={range} onChange={setRange} />
+        <Button
+          type="button"
+          variant="ghost"
+          aria-pressed={table}
+          onClick={() => {
+            setTable(!table);
+          }}
+        >
+          {table ? 'Show the chart' : 'Show as a table'}
+        </Button>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="w-max">
+          <Segmented label="Measure" options={MEASURES} value={measure} onChange={setMeasure} />
+        </div>
+      </div>
+      {table ? (
+        <div className="max-h-96 overflow-auto">
+          <table className="w-full min-w-[40rem] text-sm">
+            <thead className="sticky top-0 bg-bg">
+              <tr className="text-left text-muted">
+                <th className="py-1 pr-4 font-medium">Day</th>
+                {MEASURES.map((x) => (
+                  <th key={x.value} className="py-1 pr-4 font-medium">
+                    {x.label}
+                  </th>
+                ))}
+                <th className="py-1 font-medium">Signed-in accounts</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {[...shown].reverse().map((d) => (
+                <tr key={d.day} className="border-t border-rule">
+                  <td className="py-1 pr-4">{dayText(d.day)}</td>
+                  {MEASURES.map((x) => (
+                    <td key={x.value} className="py-1 pr-4">
+                      {n(d[x.value])}
+                    </td>
+                  ))}
+                  <td className="py-1">{n(d.accounts)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <TrendChart
+          key={`${measure}-${range}`}
+          days={shown}
+          value={(d) => d[measure]}
+          unit={def?.unit ?? ''}
+        />
+      )}
+    </section>
+  );
+}
+
 function Overview({ summary, days }: { summary: OwnerSummary; days: OwnerDay[] }) {
+  const lines = useMemo(() => insights(summary, days, dayText), [summary, days]);
+  const spark = (key: DayKey) => days.slice(-14).map((d) => d[key]);
   const newFeedback = summary.feedback.new ?? 0;
   return (
-    <div className="grid gap-8">
-      <dl className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3">
-        <Tile label="Accounts" value={n(summary.accounts)} note={`${n(summary.accounts_7d)} new this week`} />
-        <Tile label="Devices today" value={n(summary.active_1d)} />
-        <Tile label="Devices this week" value={n(summary.active_7d)} />
+    <div className="grid gap-10">
+      <div className="grid gap-3 lg:grid-cols-[3fr_2fr]">
+        <Today summary={summary} days={days} />
+        <Insights lines={lines} />
+      </div>
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile label="Words this week" value={total(days, 'words', 7)} trend={spark('words')}>
+          <Delta now={total(days, 'words', 7)} before={total(days, 'words', 7, 7)} period="last week" />
+        </Tile>
+        <Tile
+          label="Words this month"
+          value={total(days, 'words', 30)}
+          note={`${n(total(days, 'words', days.length))} in the last year`}
+        />
+        <Tile
+          label="Words in Vlo now"
+          value={summary.words_total}
+          note={`In ${n(summary.projects)} ${summary.projects === 1 ? 'project' : 'projects'} on writers' devices`}
+        />
+        <Tile label="Devices today" value={summary.active_1d} trend={spark('devices')}>
+          <Delta now={summary.active_7d} before={summary.active_prev_7d} period="last week, for the week" />
+        </Tile>
         <Tile
           label="Devices this month"
-          value={n(summary.active_30d)}
-          note={`${n(summary.installed)} installed the app`}
+          value={summary.active_30d}
+          note={`${n(summary.active_7d)} this week, ${n(summary.installed)} installed the app`}
         />
         <Tile
-          label="Accounts active this month"
-          value={n(summary.accounts_active_30d)}
-          note={`${n(summary.accounts_active_7d)} this week`}
+          label="Came back this week"
+          value={
+            summary.active_prev_7d === 0
+              ? 'None yet'
+              : `${String(Math.round((summary.returning_7d / summary.active_prev_7d) * 100))}%`
+          }
+          note={`${n(summary.returning_7d)} of ${n(summary.active_prev_7d)} devices from the week before`}
         />
         <Tile
-          label="Accounts that sync"
-          value={n(summary.syncing)}
-          note={`${n(summary.spaces)} sync spaces in all`}
+          label="Accounts"
+          value={summary.accounts}
+          note={`${n(summary.accounts_7d)} new this week, ${n(summary.accounts_active_7d)} active, ${n(summary.syncing)} sync`}
+          trend={spark('new_accounts')}
         />
-        <Tile label="New feedback" value={n(newFeedback)} />
         <Tile
-          label="Average rating"
-          value={summary.rating === null ? 'None' : `${String(summary.rating)} of 5`}
-          note={`${n(summary.ratings)} ratings`}
+          label="New feedback"
+          value={newFeedback}
+          note={
+            summary.rating === null
+              ? 'No ratings yet'
+              : `Rating ${String(summary.rating)} of 5, from ${n(summary.ratings)}`
+          }
+          trend={spark('feedback')}
         />
       </dl>
-      <DailyChart days={days} />
+      <OverTime days={days} />
+      <div className="grid gap-10 lg:grid-cols-[3fr_2fr]">
+        <section aria-labelledby="owner-year" className="grid content-start gap-3">
+          <h2 id="owner-year" className="text-lg font-semibold">
+            A year of writing
+          </h2>
+          <YearMap days={days} />
+        </section>
+        <section aria-labelledby="owner-week" className="grid content-start gap-3">
+          <h2 id="owner-week" className="text-lg font-semibold">
+            Average words on each weekday
+          </h2>
+          <WeekdayBars values={weekdayWords(days)} />
+        </section>
+      </div>
       <div className="grid gap-8 sm:grid-cols-2">
-        <Breakdown title="Kinds of device, this month" counts={summary.devices} />
-        <Breakdown title="Versions of Vlo, this month" counts={summary.versions} />
+        <Breakdown title="Kinds of device, this month" counts={summary.devices} labels={LABELS} />
+        <Breakdown title="Versions of Vlo, this month" counts={summary.versions} labels={LABELS} />
+        <Breakdown title="Feedback by kind" counts={summary.feedback_kinds} labels={KIND_LABELS} />
         <Breakdown
           title="Writing modes in weekly reports"
           counts={summary.templates}
+          labels={LABELS}
           note={`From ${n(summary.reports)} reports in the last 8 weeks. Only writers who turn on usage counts send one.`}
         />
-        <Breakdown title="Features in weekly reports" counts={summary.features} />
-        <Breakdown title="Words added in a week" counts={summary.words} />
-        <Breakdown title="Feedback by kind" counts={summary.feedback_kinds} />
+        <Breakdown title="Features in weekly reports" counts={summary.features} labels={LABELS} />
       </div>
+      <section aria-labelledby="owner-server" className="grid gap-4">
+        <h2 id="owner-server" className="text-lg font-semibold">
+          Server and storage
+        </h2>
+        <Meter
+          label={`Database: ${mb(summary.db_bytes)} of ${mb(FREE_DB_BYTES)} on the free plan`}
+          used={summary.db_bytes}
+          of={FREE_DB_BYTES}
+        />
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Tile
+            label="Sealed sync copies"
+            value={mb(summary.sync_bytes)}
+            note={`Last sync ${dayText(summary.synced_at)}`}
+          />
+          <Tile
+            label="Open share links"
+            value={summary.shares}
+            note={`${n(summary.comments)} reader comments`}
+          />
+          <Tile label="Open sprint rooms" value={summary.rooms} />
+        </dl>
+      </section>
     </div>
   );
 }
 
+const SORTS = [
+  { value: 'active', label: 'Last active' },
+  { value: 'words', label: 'Most words' },
+  { value: 'joined', label: 'Newest' },
+] as const;
+type Sort = (typeof SORTS)[number]['value'];
+const SORTERS: Record<Sort, (a: OwnerAccount, b: OwnerAccount) => number> = {
+  active: (a, b) => (b.last_active ?? '').localeCompare(a.last_active ?? ''),
+  words: (a, b) => b.words_30d - a.words_30d || (b.words_total ?? 0) - (a.words_total ?? 0),
+  joined: (a, b) => b.created_at.localeCompare(a.created_at),
+};
+
 function People({ accounts }: { accounts: OwnerAccount[] }) {
   const id = useId();
   const [filter, setFilter] = useState('');
-  const shown = accounts.filter((a) => a.email.toLowerCase().includes(filter.trim().toLowerCase()));
+  const [sort, setSort] = useState<Sort>('active');
+  const shown = accounts
+    .filter((a) => a.email.toLowerCase().includes(filter.trim().toLowerCase()))
+    .sort(SORTERS[sort]);
+  const top = Math.max(1, ...accounts.map((a) => a.words_30d));
   return (
     <div className="grid gap-4">
-      <div className="grid max-w-sm gap-1.5">
-        <label htmlFor={id} className="text-sm">
-          Find an email
-        </label>
-        <Input
-          id={id}
-          type="search"
-          value={filter}
-          onChange={(e) => {
-            setFilter(e.target.value);
-          }}
-        />
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="grid w-full max-w-sm gap-1.5">
+          <label htmlFor={id} className="text-sm">
+            Find an email
+          </label>
+          <Input
+            id={id}
+            type="search"
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value);
+            }}
+          />
+        </div>
+        <Segmented<Sort> label="Sort" options={[...SORTS]} value={sort} onChange={setSort} />
       </div>
       <p className="text-sm text-muted">
         {n(shown.length)} of {n(accounts.length)} accounts. People who write with no account show only in the
-        device counts.
+        device and word counts.
       </p>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-sm">
+        <table className="w-full min-w-[56rem] text-sm">
           <thead>
             <tr className="text-left text-muted">
               <th className="py-2 pr-4 font-medium">Email</th>
               <th className="py-2 pr-4 font-medium">Joined</th>
               <th className="py-2 pr-4 font-medium">Last active</th>
+              <th className="py-2 pr-4 font-medium">Words, 30 days</th>
+              <th className="py-2 pr-4 font-medium">Days with Vlo, 30 days</th>
+              <th className="py-2 pr-4 font-medium">Words in Vlo</th>
+              <th className="py-2 pr-4 font-medium">Projects</th>
               <th className="py-2 pr-4 font-medium">Devices</th>
               <th className="py-2 pr-4 font-medium">Sync</th>
               <th className="py-2 font-medium">Feedback</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="tabular-nums">
             {shown.map((a) => (
               <tr key={a.id} className="border-t border-rule">
                 <td className="py-2 pr-4">
@@ -333,9 +454,22 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
                 </td>
                 <td className="py-2 pr-4">{dayText(a.created_at)}</td>
                 <td className="py-2 pr-4">{dayText(a.last_active)}</td>
-                <td className="py-2 pr-4 tabular-nums">{n(a.devices)}</td>
+                <td className="py-2 pr-4">
+                  <span className="flex items-center gap-2">
+                    {n(a.words_30d)}
+                    <span
+                      aria-hidden="true"
+                      className="h-2 rounded-r-[4px] bg-accent"
+                      style={{ width: `${String((a.words_30d / top) * 4)}rem` }}
+                    />
+                  </span>
+                </td>
+                <td className="py-2 pr-4">{n(a.days_30d)}</td>
+                <td className="py-2 pr-4">{a.words_total === null ? 'Not yet' : n(a.words_total)}</td>
+                <td className="py-2 pr-4">{a.projects === null ? 'Not yet' : n(a.projects)}</td>
+                <td className="py-2 pr-4">{n(a.devices)}</td>
                 <td className="py-2 pr-4">{a.syncing ? 'On' : 'Off'}</td>
-                <td className="py-2 tabular-nums">{n(a.feedback)}</td>
+                <td className="py-2">{n(a.feedback)}</td>
               </tr>
             ))}
           </tbody>
@@ -503,39 +637,64 @@ interface Data {
   days: OwnerDay[];
   accounts: OwnerAccount[];
   feedback: OwnerFeedback[];
+  /** When the numbers came, in ms. */
+  at: number;
 }
 
 type View = 'overview' | 'people' | 'feedback';
 
+async function loadAll(): Promise<Data> {
+  const today = dayKey(Date.now());
+  const [summary, days, accounts, feedback] = await Promise.all([
+    ownerSummary(today),
+    ownerDaily(365, today),
+    ownerAccounts(today),
+    ownerFeedback(),
+  ]);
+  return { summary, days, accounts, feedback, at: Date.now() };
+}
+
 function Dashboard() {
+  const motion = useMotionAllowed();
   const [data, setData] = useState<Data | null>(null);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [message, setMessage] = useState('');
   const [view, setView] = useState<View>('overview');
   const [loads, setLoads] = useState(0);
 
+  // Live: a load now, every LIVE_MS while the page is on the screen, and when it comes back or goes
+  // online. One load at a time, and a failed load keeps the numbers of the last one.
   useEffect(() => {
-    const run = { live: true };
-    (async () => {
-      if (!(await isOwner())) {
-        if (run.live) setAllowed(false);
-        return;
+    const run = { live: true, busy: false };
+    let owner: boolean | null = null;
+    const load = async () => {
+      if (run.busy || document.visibilityState !== 'visible') return;
+      run.busy = true;
+      try {
+        owner ??= await isOwner();
+        const next = owner ? await loadAll() : null;
+        if (!run.live) return;
+        setAllowed(next !== null);
+        if (next) setData(next);
+        setMessage('');
+      } catch (error: unknown) {
+        if (run.live) setMessage(accountErrorText(error));
+      } finally {
+        run.busy = false;
       }
-      const [summary, days, accounts, feedback] = await Promise.all([
-        ownerSummary(),
-        ownerDaily(30),
-        ownerAccounts(),
-        ownerFeedback(),
-      ]);
-      if (run.live) {
-        setAllowed(true);
-        setData({ summary, days, accounts, feedback });
-      }
-    })().catch((error: unknown) => {
-      if (run.live) setMessage(accountErrorText(error));
-    });
+    };
+    const show = () => {
+      void load();
+    };
+    show();
+    const tick = setInterval(show, LIVE_MS);
+    document.addEventListener('visibilitychange', show);
+    window.addEventListener('online', show);
     return () => {
       run.live = false;
+      clearInterval(tick);
+      document.removeEventListener('visibilitychange', show);
+      window.removeEventListener('online', show);
     };
   }, [loads]);
 
@@ -549,43 +708,74 @@ function Dashboard() {
       </p>
     );
   return (
-    <div className="grid gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented<View>
-          label="Owner view"
-          options={[
-            { value: 'overview', label: 'Overview' },
-            { value: 'people', label: `People (${n(data.accounts.length)})` },
-            { value: 'feedback', label: `Feedback (${n(counts)} new)` },
-          ]}
-          value={view}
-          onChange={setView}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            setLoads((x) => x + 1);
-          }}
-        >
-          Refresh
-        </Button>
-      </div>
-      {view === 'overview' && <Overview summary={data.summary} days={data.days} />}
-      {view === 'people' && <People accounts={data.accounts} />}
-      {view === 'feedback' && (
-        <Inbox
-          items={data.feedback}
-          onChange={(feedback) => {
-            setData({ ...data, feedback });
-          }}
-        />
-      )}
-      <p className="text-sm text-muted">
-        Days are in UTC. A device is one browser on one device; a writer with a phone and a laptop counts as
-        two devices and one account. This page shows no project, title or word of writing.
-      </p>
-    </div>
+    <LazyMotion features={domAnimation} strict>
+      <MotionConfig reducedMotion={motion ? 'user' : 'always'}>
+        <div className="grid gap-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Segmented<View>
+              label="Owner view"
+              options={[
+                { value: 'overview', label: 'Overview' },
+                { value: 'people', label: `People (${n(data.accounts.length)})` },
+                { value: 'feedback', label: `Feedback (${n(counts)} new)` },
+              ]}
+              value={view}
+              onChange={setView}
+            />
+            <div className="flex items-center gap-3">
+              <p className="flex items-center gap-2 text-sm text-muted">
+                <span className="relative flex size-2" aria-hidden="true">
+                  {!message && (
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
+                  )}
+                  <span
+                    className={`relative inline-flex size-2 rounded-full ${message ? 'bg-muted' : 'bg-accent'}`}
+                  />
+                </span>
+                {message
+                  ? `Not live: ${message} Vlo tries again in 30 seconds.`
+                  : `Live. Updated at ${TIME.format(data.at)}.`}
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setLoads((x) => x + 1);
+                }}
+              >
+                Refresh
+              </Button>
+            </div>
+          </div>
+          <AnimatePresence mode="wait" initial={false}>
+            <m.div
+              key={view}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2 }}
+            >
+              {view === 'overview' && <Overview summary={data.summary} days={data.days} />}
+              {view === 'people' && <People accounts={data.accounts} />}
+              {view === 'feedback' && (
+                <Inbox
+                  items={data.feedback}
+                  onChange={(feedback) => {
+                    setData((d) => (d ? { ...d, feedback } : d));
+                  }}
+                />
+              )}
+            </m.div>
+          </AnimatePresence>
+          <p className="text-sm text-muted">
+            A day is the local day of each device. A device is one browser on one device; a writer with a
+            phone and a laptop counts as two devices and one account, and their words count once. Words are
+            the net words that a writer added on the day. This page shows no project, title or word of
+            writing.
+          </p>
+        </div>
+      </MotionConfig>
+    </LazyMotion>
   );
 }
 

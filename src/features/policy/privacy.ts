@@ -8,8 +8,8 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 12,
-  date: '2026-11-13',
+  version: 13,
+  date: '2026-11-16',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
@@ -83,9 +83,9 @@ export const PRIVACY = {
     },
     ping: {
       title: 'The daily count',
-      when: 'Once a day while the switch in Settings is on. It is on until you turn it off.',
+      when: 'Once a day while the switch in Settings is on, and again after your projects change, at most once in 5 minutes. It is on until you turn it off.',
       sends:
-        'A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer) and whether Vlo is installed. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. Never text, a title or a name, and no cookie. Turning it off forgets the random id.',
+        'A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. Never text, a title or a name, and no cookie. Turning it off forgets the random id.',
     },
     feedback: {
       title: 'Feedback to the makers of Vlo',

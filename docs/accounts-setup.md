@@ -2,9 +2,9 @@
 
 Phase 18 uses the same free Supabase project as share links and sync (`docs/sharing-setup.md`). Do that guide first. Then do the steps below. Each step is in the Supabase dashboard unless it says otherwise.
 
-## 1. Apply migration 0008
+## 1. Apply migrations 0008 and 0009
 
-Run `supabase/migrations/0008_accounts.sql` in the SQL Editor, as for the other migrations. It adds the sync vaults, the daily count, feedback, the owner list and their functions.
+Run `supabase/migrations/0008_accounts.sql` in the SQL Editor, as for the other migrations. It adds the sync vaults, the daily count, feedback, the owner list and their functions. Then run `supabase/migrations/0009_live_owner.sql`. It adds the word numbers to the daily count and the live numbers of the owner page.
 
 ## 2. Send the sign-in emails with your own mail server (required)
 
@@ -83,7 +83,7 @@ To add another owner, run the same SQL with their email. To remove one, delete t
 
 ## What the owner sees, and what the owner never sees
 
-- The owner sees: the number of accounts, devices that opened Vlo each day, the kind of each device, versions, accounts that sync, each account's email, start date and last active day, the weekly usage reports that writers chose to send, and every feedback message.
+- The owner sees: the number of accounts, devices that opened Vlo each day, the words that writers added each day, the words and projects on their devices, the kind of each device, versions, accounts that sync, the size of the database, each account's email, start date, last active day and words, the weekly usage reports that writers chose to send, and every feedback message. The page loads the numbers again every 30 seconds while it is on the screen.
 - The owner page never shows a project, a title, a name or a word of writing. The sync server holds sealed copies. The key of each account is in `sync_vaults`, as the product owner chose (ADR 0009), so keep the database password and the service key private.
 
 ## Keep the free project awake

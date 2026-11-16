@@ -110,7 +110,7 @@ test('a writer signs in on a laptop and a phone, and both keep every project', a
   await phoneContext.close();
 });
 
-test('the daily count goes once a day, with no text, and Settings turns it off', async ({
+test('the daily count goes once a day with numbers and no text, and Settings turns it off', async ({
   page,
   context,
 }) => {
@@ -125,10 +125,19 @@ test('the daily count goes once a day, with no text, and Settings turns it off',
     .poll(() => fake.calls.filter((c) => c.name === 'daily_count').length, { timeout: 15_000 })
     .toBe(1);
   const [call] = fake.calls.filter((c) => c.name === 'daily_count');
-  expect(Object.keys(call?.body ?? {}).sort()).toEqual(['p_device', 'p_install', 'p_installed', 'p_version']);
-  expect(call?.body.p_device).toBe('computer');
+  expect(Object.keys(call?.body ?? {}).sort()).toEqual([
+    'p_day',
+    'p_device',
+    'p_install',
+    'p_installed',
+    'p_projects',
+    'p_total',
+    'p_version',
+    'p_words',
+  ]);
+  expect(call?.body).toMatchObject({ p_device: 'computer', p_words: 0, p_projects: 0 });
 
-  // A reload on the same day sends no second count.
+  // A reload on the same day, with no change to the projects, sends no second count.
   await page.reload();
   await page.waitForTimeout(6_000);
   expect(fake.calls.filter((c) => c.name === 'daily_count')).toHaveLength(1);
@@ -137,7 +146,7 @@ test('the daily count goes once a day, with no text, and Settings turns it off',
   await expect(page.getByRole('table')).toContainText('Daily count');
 
   await page.goto('/settings');
-  const toggle = page.getByRole('switch', { name: 'Count this device once a day' });
+  const toggle = page.getByRole('switch', { name: 'Count this device and its words' });
   await expect(toggle).toBeChecked();
   await toggle.click();
   await expect(toggle).not.toBeChecked();
@@ -184,7 +193,10 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
   fake.accounts?.makeOwner('owner@example.com');
   await owner.reload();
   await expect(owner.getByText('Accounts', { exact: true })).toBeVisible();
-  await expect(owner.getByRole('img', { name: /^Devices each day\./ })).toBeVisible();
+  await expect(owner.getByRole('heading', { name: 'Words written today' })).toBeVisible();
+  await expect(owner.getByText(/^Live\. Updated at/)).toBeVisible();
+  await owner.getByRole('button', { name: 'Devices', exact: true }).click();
+  await expect(owner.getByRole('slider', { name: /^Devices that opened Vlo each day\./ })).toBeVisible();
   expect(await seriousIssues(owner)).toEqual([]);
   await owner.getByRole('button', { name: 'Show as a table' }).click();
   await expect(owner.getByRole('table')).toContainText('Signed-in accounts');

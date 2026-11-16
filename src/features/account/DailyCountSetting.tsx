@@ -25,11 +25,11 @@ export function DailyCountSetting() {
       />
       <div className="grid gap-0.5">
         <label htmlFor={id} className="cursor-pointer">
-          Count this device once a day
+          Count this device and its words
         </label>
         <p id={`${id}-hint`} className="text-sm text-muted">
           {on
-            ? 'On. Once a day Vlo sends a random id for this browser, the Vlo version, the kind of device and whether Vlo is installed, so its makers know how many people use it. Never text, a title or a name.'
+            ? 'On. Vlo sends a random id for this browser, the Vlo version, the kind of device, whether Vlo is installed and how many words you write, so its makers know how people use it. Never text, a title or a name.'
             : 'Off. Vlo does not count this device.'}
         </p>
       </div>
