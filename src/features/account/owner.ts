@@ -10,13 +10,27 @@ export interface OwnerSummary {
   accounts: number;
   accounts_7d: number;
   accounts_30d: number;
+  /** Writers with Vlo on the screen in the last 15 minutes. */
+  now: number;
   active_1d: number;
   active_7d: number;
   active_30d: number;
+  active_prev_7d: number;
+  /** Devices of the 7 days before this week that came back this week. */
+  returning_7d: number;
   accounts_active_7d: number;
   accounts_active_30d: number;
+  /** The words and projects on the newest count of each writer. */
+  words_total: number;
+  projects: number;
   syncing: number;
   spaces: number;
+  sync_bytes: number;
+  synced_at: string | null;
+  shares: number;
+  comments: number;
+  rooms: number;
+  db_bytes: number;
   installed: number;
   devices: Record<string, number>;
   versions: Record<string, number>;
@@ -27,13 +41,16 @@ export interface OwnerSummary {
   reports: number;
   features: Record<string, number>;
   templates: Record<string, number>;
-  words: Record<string, number>;
 }
 
 export interface OwnerDay {
   day: string;
   devices: number;
   accounts: number;
+  /** Writers who added words on the day. A writer is an account, or a device with no account. */
+  writers: number;
+  words: number;
+  new_devices: number;
   new_accounts: number;
   feedback: number;
 }
@@ -48,6 +65,10 @@ export interface OwnerAccount {
   devices: number;
   syncing: boolean;
   feedback: number;
+  days_30d: number;
+  words_30d: number;
+  words_total: number | null;
+  projects: number | null;
 }
 
 export type FeedbackStatus = 'new' | 'read' | 'planned' | 'done';
@@ -68,9 +89,12 @@ export interface OwnerFeedback {
 }
 
 export const isOwner = () => accountRpc<boolean>('is_owner');
-export const ownerSummary = () => accountRpc<OwnerSummary>('owner_summary');
-export const ownerDaily = (days: number) => accountRpc<OwnerDay[]>('owner_daily', { p_days: days });
-export const ownerAccounts = () => accountRpc<OwnerAccount[]>('owner_accounts');
+/* `today` is the owner's local day, so the last day of the page is the owner's today. */
+export const ownerSummary = (today: string) => accountRpc<OwnerSummary>('owner_summary', { p_today: today });
+export const ownerDaily = (days: number, today: string) =>
+  accountRpc<OwnerDay[]>('owner_daily', { p_days: days, p_today: today });
+export const ownerAccounts = (today: string) =>
+  accountRpc<OwnerAccount[]>('owner_accounts', { p_today: today });
 export const ownerFeedback = () => accountRpc<OwnerFeedback[]>('owner_feedback');
 export const setFeedbackStatus = (id: string, status: FeedbackStatus, note: string) =>
   accountRpc<boolean>('owner_set_feedback', { p_id: id, p_status: status, p_note: note });
@@ -120,4 +144,76 @@ export function feedbackCsv(rows: readonly OwnerFeedback[]): string {
 /** The entries of a count map, largest first. */
 export function ranked(counts: Record<string, number>): [string, number][] {
   return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+export type DayKey = Exclude<keyof OwnerDay, 'day'>;
+
+/** The sum of `key` over `n` days, `skip` days back from the last day. */
+export function total(days: readonly OwnerDay[], key: DayKey, n: number, skip = 0): number {
+  return days.slice(Math.max(0, days.length - skip - n), days.length - skip).reduce((s, d) => s + d[key], 0);
+}
+
+/** The change from `before` to `now` in percent, or null when `before` is 0. */
+export function change(now: number, before: number): number | null {
+  return before === 0 ? null : Math.round(((now - before) / before) * 100);
+}
+
+/** Days in a row with words, up to today. A day with no words yet today does not break the run. */
+export function writingStreak(days: readonly OwnerDay[]): number {
+  let run = 0;
+  for (let i = days.length - 1; i >= 0; i--) {
+    if ((days[i]?.words ?? 0) > 0) run++;
+    else if (i < days.length - 1) break;
+  }
+  return run;
+}
+
+/** The average words of each weekday, Monday first, over the days with any count. */
+export function weekdayWords(days: readonly OwnerDay[]): number[] {
+  const sums = Array.from({ length: 7 }, () => ({ words: 0, days: 0 }));
+  for (const d of days) {
+    const slot = sums[(new Date(`${d.day}T00:00:00Z`).getUTCDay() + 6) % 7];
+    if (!slot || d.devices === 0) continue;
+    slot.words += d.words;
+    slot.days++;
+  }
+  return sums.map((s) => (s.days === 0 ? 0 : Math.round(s.words / s.days)));
+}
+
+export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const NUMBER = new Intl.NumberFormat('en-GB');
+
+/** Short facts about the numbers, in plain sentences. Each one shows only when its numbers exist. */
+export function insights(summary: OwnerSummary, days: readonly OwnerDay[], dayText: (day: string) => string) {
+  const n = (v: number) => NUMBER.format(v);
+  const out: string[] = [];
+  const today = days.at(-1)?.words ?? 0;
+  const average = total(days, 'words', 28, 1) / 28;
+  if (today > 0 && average > 0) {
+    const ratio = today / average;
+    out.push(
+      ratio >= 1.1
+        ? `Today has ${ratio.toFixed(1)} times the words of an average day in the last 4 weeks.`
+        : `Today has ${String(Math.round(ratio * 100))}% of the words of an average day in the last 4 weeks.`,
+    );
+  }
+  const best = days.reduce<OwnerDay | null>((b, d) => (d.words > (b?.words ?? 0) ? d : b), null);
+  if (best) out.push(`The best day of the year had ${n(best.words)} words, on ${dayText(best.day)}.`);
+  const run = writingStreak(days);
+  if (run > 1) out.push(`Writers added words on ${n(run)} days in a row.`);
+  const week = weekdayWords(days);
+  const top = week.indexOf(Math.max(...week));
+  if ((week[top] ?? 0) > 0)
+    out.push(`${WEEKDAYS[top] ?? ''} is the strongest day, with ${n(week[top] ?? 0)} words on average.`);
+  if (summary.active_prev_7d > 0)
+    out.push(
+      `${String(Math.round((summary.returning_7d / summary.active_prev_7d) * 100))}% of the devices from the week before came back this week.`,
+    );
+  const fresh = total(days, 'new_devices', 7);
+  if (fresh > 0) out.push(`${n(fresh)} new ${fresh === 1 ? 'device' : 'devices'} opened Vlo this week.`);
+  if (summary.active_30d > 0 && summary.installed > 0)
+    out.push(
+      `${String(Math.round((summary.installed / summary.active_30d) * 100))}% of this month's devices installed the app.`,
+    );
+  return out;
 }

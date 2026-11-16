@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { refusal } from '@/features/account/auth';
-import { sendDailyCount } from '@/features/account/dailyCount';
+import { sendDailyCount, writingNumbers } from '@/features/account/dailyCount';
 import { installId, readDailyCount, setDailyCountOn } from '@/features/account/dailyCountState';
 import { feedbackCsv, ranked, type OwnerFeedback } from '@/features/account/owner';
 import { placeOf } from '@/features/account/sendFeedback';
+import { createProject } from '@/features/library/projects';
+import { db } from '@/lib/db';
 
 /* Phase 18 (decisions A3, A5 and A6): the daily count, feedback and its CSV. */
 
@@ -23,6 +25,22 @@ describe('the daily count (decision A3)', () => {
   it('sends nothing in a build with no Supabase project', async () => {
     localStorage.clear();
     await expect(sendDailyCount()).resolves.toBe(false);
+  });
+
+  it("counts today's words of every project, the words on the device and the projects", async () => {
+    await db.open();
+    try {
+      const { project } = await createProject({ title: 'Salt Year', templates: ['novel'] });
+      await createProject({ title: 'Tide', templates: ['poetry'] });
+      await db.projects.update(project.id, {
+        settings: { ...project.settings, wordsByDay: { '2026-11-16': 340, '2026-11-15': 900 } },
+      });
+      await db.items.where('projectId').equals(project.id).modify({ wordCount: 1200 });
+      const items = await db.items.where('projectId').equals(project.id).count();
+      expect(await writingNumbers('2026-11-16')).toEqual({ words: 340, total: 1200 * items, projects: 2 });
+    } finally {
+      await db.delete();
+    }
   });
 });
 

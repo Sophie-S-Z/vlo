@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 12, 13 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 13, 16 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -78,9 +78,9 @@ Your email address and the 6-digit code, or the sign-in that Google gives. For s
 
 ### The daily count
 
-Once a day while the switch in Settings is on. It is on until you turn it off.
+Once a day while the switch in Settings is on, and again after your projects change, at most once in 5 minutes. It is on until you turn it off.
 
-A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer) and whether Vlo is installed. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. Never text, a title or a name, and no cookie. Turning it off forgets the random id.
+A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. Never text, a title or a name, and no cookie. Turning it off forgets the random id.
 
 ### Feedback to the makers of Vlo
 
