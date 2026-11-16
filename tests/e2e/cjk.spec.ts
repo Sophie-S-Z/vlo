@@ -25,5 +25,5 @@ test('a Japanese scene counts characters, and the count follows a change of lang
   await page.reload();
   await expect(count).toHaveText('5 characters');
   await page.goto('/');
-  await expect(page.getByText('5 characters')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Projects' }).getByText('5 characters')).toBeVisible();
 });
