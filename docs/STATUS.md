@@ -48,7 +48,9 @@ Last update: 2026-11-14
   - Done on 2026-11-14: the live Supabase project `dcfpdiyxfweyuhdkktau` has migrations 0001 to 0008. The
     committed `.env` names it with its publishable key, and `vercel.json` allows its host. The security
     advisor shows only the expected notes: closed tables with no policies, and the app's own RPCs.
-  - Open: custom SMTP, Google sign-in and the owner row (`docs/accounts-setup.md`).
+  - Done on 2026-11-16: the owner row, and Google sign-in (the provider is on, and `.env` sets
+    `VITE_AUTH_GOOGLE=1`). The owner keeps the mail server settings in the Supabase dashboard
+    (`docs/accounts-setup.md`, step 2).
 
 - Phase 17 (plan `docs/plans/phase-17.md`), from the beta tester's feedback:
   - Q-A, a quieter screen: one row of icon tools with tooltips (on a wide screen, in the tab row), the item
