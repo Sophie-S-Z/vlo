@@ -28,6 +28,8 @@ export interface RunStyle {
   size?: number;
   /** A gradient, metallic, prismatic or glowing fill. */
   fill?: TextFill;
+  /** Type play: a weight, letter spacing, design axes, an effect or a motion that shows in Vlo only. */
+  play?: true;
   /** A web address for a link. */
   link?: string;
 }

@@ -1,16 +1,23 @@
 /*
- * The 20 Vlo fonts and the writer's own fonts (plan Task A7, decision 7). Every Vlo font has its
+ * The 30 Vlo fonts and the writer's own fonts (plan Task A7, decision 7). Every Vlo font has its
  * @font-face rules in `styles/fonts.css`, and the browser fetches a font file only when text uses it, so
  * each font loads on first use. The service worker keeps a fetched font for offline use.
  */
 
 export type FontGroup =
-  'Book serifs' | 'Display' | 'Sans' | 'Typewriter' | 'Handwriting' | 'Reading-friendly';
+  | 'Book serifs'
+  | 'Display'
+  | 'Storybook and fantasy'
+  | 'Sans'
+  | 'Typewriter'
+  | 'Handwriting'
+  | 'Reading-friendly';
 
 export const FONT_GROUPS: readonly FontGroup[] = [
   'Book serifs',
   'Reading-friendly',
   'Display',
+  'Storybook and fantasy',
   'Sans',
   'Typewriter',
   'Handwriting',
@@ -27,6 +34,37 @@ export interface VloFont {
   fallback: 'serif' | 'sans-serif' | 'monospace' | 'cursive';
   /** True when the font has its own italic. Without one, the browser slants the upright letters. */
   italic: boolean;
+  /** The weight range of a variable font. A font without one has fixed weights only. */
+  weights?: readonly [number, number];
+  /** The design axes a writer can change with Type play, beyond weight (format/typePlay.ts). */
+  axes?: readonly FontAxis[];
+}
+
+/** A design axis of a variable font, as Type play shows it. */
+export interface FontAxis {
+  /** The OpenType axis tag. */
+  tag: string;
+  label: string;
+  /** One line on what the axis changes. */
+  hint: string;
+  min: number;
+  max: number;
+  step: number;
+  /** The font's own value, where the slider starts before the writer moves it. */
+  start: number;
+}
+
+/** Optical size, named for what a writer sees: the contrast between thick and thin strokes. */
+function contrastAxis(min: number, max: number, start: number): FontAxis {
+  return {
+    tag: 'opsz',
+    label: 'Contrast',
+    hint: 'Low is sturdy. High gives fine hairlines, for large type.',
+    min,
+    max,
+    step: 1,
+    start,
+  };
 }
 
 /** The manuscript font when the writer picks none. */
@@ -42,6 +80,8 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Newsreader Variable',
     fallback: 'serif',
     italic: true,
+    weights: [200, 800],
+    axes: [contrastAxis(6, 72, 18)],
   },
   {
     id: 'eb-garamond',
@@ -50,6 +90,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'EB Garamond Variable',
     fallback: 'serif',
     italic: true,
+    weights: [400, 800],
   },
   {
     id: 'libre-baskerville',
@@ -58,6 +99,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Libre Baskerville Variable',
     fallback: 'serif',
     italic: true,
+    weights: [400, 700],
   },
   {
     id: 'lora',
@@ -66,6 +108,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Lora Variable',
     fallback: 'serif',
     italic: true,
+    weights: [400, 700],
   },
   {
     id: 'crimson-pro',
@@ -74,6 +117,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Crimson Pro Variable',
     fallback: 'serif',
     italic: true,
+    weights: [200, 900],
   },
   {
     id: 'cormorant-garamond',
@@ -82,6 +126,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Cormorant Garamond Variable',
     fallback: 'serif',
     italic: true,
+    weights: [300, 700],
   },
   {
     id: 'spectral',
@@ -92,12 +137,22 @@ export const VLO_FONTS: readonly VloFont[] = [
     italic: true,
   },
   {
+    id: 'alegreya',
+    label: 'Alegreya',
+    group: 'Book serifs',
+    family: 'Alegreya Variable',
+    fallback: 'serif',
+    italic: true,
+    weights: [400, 900],
+  },
+  {
     id: 'atkinson',
     label: 'Atkinson Hyperlegible Next',
     group: 'Reading-friendly',
     family: 'Atkinson Hyperlegible Next Variable',
     fallback: 'sans-serif',
     italic: true,
+    weights: [200, 800],
   },
   {
     id: 'literata',
@@ -106,6 +161,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Literata Variable',
     fallback: 'serif',
     italic: true,
+    weights: [200, 900],
   },
   {
     id: 'merriweather',
@@ -114,6 +170,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Merriweather Variable',
     fallback: 'serif',
     italic: true,
+    weights: [300, 900],
   },
   {
     id: 'fraunces',
@@ -122,6 +179,28 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Fraunces Variable',
     fallback: 'serif',
     italic: true,
+    weights: [100, 900],
+    axes: [
+      {
+        tag: 'SOFT',
+        label: 'Softness',
+        hint: 'Rounds the corners of the letters.',
+        min: 0,
+        max: 100,
+        step: 1,
+        start: 0,
+      },
+      {
+        tag: 'WONK',
+        label: 'Wonky',
+        hint: 'At 1, some letters lean and bend.',
+        min: 0,
+        max: 1,
+        step: 1,
+        start: 1,
+      },
+      contrastAxis(9, 144, 9),
+    ],
   },
   {
     id: 'playfair-display',
@@ -130,6 +209,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Playfair Display Variable',
     fallback: 'serif',
     italic: true,
+    weights: [400, 900],
   },
   {
     id: 'cinzel',
@@ -138,6 +218,7 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Cinzel Variable',
     fallback: 'serif',
     italic: false,
+    weights: [400, 900],
   },
   {
     id: 'im-fell-english',
@@ -148,12 +229,64 @@ export const VLO_FONTS: readonly VloFont[] = [
     italic: true,
   },
   {
+    id: 'bodoni-moda',
+    label: 'Bodoni Moda',
+    group: 'Display',
+    family: 'Bodoni Moda Variable',
+    fallback: 'serif',
+    italic: true,
+    weights: [400, 900],
+    axes: [contrastAxis(6, 96, 11)],
+  },
+  {
+    id: 'instrument-serif',
+    label: 'Instrument Serif',
+    group: 'Display',
+    family: 'Instrument Serif',
+    fallback: 'serif',
+    italic: true,
+  },
+  {
+    id: 'grenze-gotisch',
+    label: 'Grenze Gotisch',
+    group: 'Storybook and fantasy',
+    family: 'Grenze Gotisch Variable',
+    fallback: 'serif',
+    italic: false,
+    weights: [100, 900],
+  },
+  {
+    id: 'uncial-antiqua',
+    label: 'Uncial Antiqua',
+    group: 'Storybook and fantasy',
+    family: 'Uncial Antiqua',
+    fallback: 'serif',
+    italic: false,
+  },
+  {
+    id: 'macondo',
+    label: 'Macondo',
+    group: 'Storybook and fantasy',
+    family: 'Macondo',
+    fallback: 'cursive',
+    italic: false,
+  },
+  {
+    id: 'fredericka',
+    label: 'Fredericka the Great',
+    group: 'Storybook and fantasy',
+    family: 'Fredericka the Great',
+    fallback: 'serif',
+    italic: false,
+  },
+  {
     id: 'inter',
     label: 'Inter',
     group: 'Sans',
     family: 'Inter Variable',
     fallback: 'sans-serif',
     italic: true,
+    weights: [100, 900],
   },
   {
     id: 'nunito',
@@ -162,6 +295,27 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Nunito Variable',
     fallback: 'sans-serif',
     italic: true,
+    weights: [200, 1000],
+  },
+  {
+    id: 'recursive',
+    label: 'Recursive',
+    group: 'Sans',
+    family: 'Recursive Variable',
+    fallback: 'sans-serif',
+    italic: false,
+    weights: [300, 1000],
+    axes: [
+      {
+        tag: 'CASL',
+        label: 'Casual',
+        hint: 'From neat to brush-drawn letters.',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        start: 0,
+      },
+    ],
   },
   {
     id: 'courier-prime',
@@ -186,8 +340,26 @@ export const VLO_FONTS: readonly VloFont[] = [
     family: 'Caveat Variable',
     fallback: 'cursive',
     italic: false,
+    weights: [400, 700],
   },
   { id: 'kalam', label: 'Kalam', group: 'Handwriting', family: 'Kalam', fallback: 'cursive', italic: false },
+  {
+    id: 'dancing-script',
+    label: 'Dancing Script',
+    group: 'Handwriting',
+    family: 'Dancing Script Variable',
+    fallback: 'cursive',
+    italic: false,
+    weights: [400, 700],
+  },
+  {
+    id: 'pinyon-script',
+    label: 'Pinyon Script',
+    group: 'Handwriting',
+    family: 'Pinyon Script',
+    fallback: 'cursive',
+    italic: false,
+  },
 ];
 
 const byId = new Map(VLO_FONTS.map((f) => [f.id, f]));

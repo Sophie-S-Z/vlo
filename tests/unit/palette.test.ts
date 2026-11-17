@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import type { ResolvedTheme } from '@/app/preferences';
+import { RESOLVED_THEMES } from '@/app/preferences';
 import {
   HIGHLIGHTS,
   PAGE_COLORS,
@@ -12,7 +12,7 @@ import {
 } from '@/features/editor/format/palette';
 import { AA_TEXT, blend, contrastRatio, parseColor, toHex } from '@/lib/contrast';
 
-const THEMES: ResolvedTheme[] = ['ink', 'paper', 'sepia', 'contrast'];
+const THEMES = RESOLVED_THEMES;
 const css = readFileSync('src/styles/themes.css', 'utf8');
 
 function rgb(value: string) {
@@ -37,7 +37,9 @@ describe.each(THEMES)('on the %s theme', (theme) => {
     'the %s text color meets WCAG AA on the page and the surface',
     (_label, swatch) => {
       for (const back of [page.bg, page.surface]) {
-        expect(contrastRatio(rgb(swatch.values[theme]), rgb(back))).toBeGreaterThanOrEqual(AA_TEXT);
+        expect(
+          contrastRatio(rgb(resolveColor(swatchVar('text', swatch.id), theme)), rgb(back)),
+        ).toBeGreaterThanOrEqual(AA_TEXT);
       }
     },
   );
@@ -45,7 +47,9 @@ describe.each(THEMES)('on the %s theme', (theme) => {
   test.each(HIGHLIGHTS.map((s) => [s.label, s] as const))(
     'text on the %s highlight meets WCAG AA',
     (_label, swatch) => {
-      expect(contrastRatio(rgb(page.text), rgb(swatch.values[theme]))).toBeGreaterThanOrEqual(AA_TEXT);
+      expect(
+        contrastRatio(rgb(page.text), rgb(resolveColor(swatchVar('mark', swatch.id), theme))),
+      ).toBeGreaterThanOrEqual(AA_TEXT);
     },
   );
 });
