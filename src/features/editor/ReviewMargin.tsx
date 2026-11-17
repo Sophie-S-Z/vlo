@@ -94,7 +94,8 @@ export function ReviewMargin({ editor, itemId, room }: ReviewMarginProps) {
   const [tops, setTops] = useState<ReadonlyMap<string, { card: number; words: number }>>(new Map());
   const [hover, setHover] = useState<string | null>(null);
   // With no room right of the page, as on a phone, the counts sit at the right end of the lines.
-  const [inside, setInside] = useState(false);
+  // The room right of the page when a count does not fit there, so the counts sit at the window edge.
+  const [inside, setInside] = useState<number | null>(null);
 
   // The cards change after a pause in typing, and the active card at once.
   useEffect(() => {
@@ -128,7 +129,8 @@ export function ReviewMargin({ editor, itemId, room }: ReviewMarginProps) {
     const words = cards.map((card) => lineTop(editor, card.entry.from, rect));
     if (!room) {
       const page = el.parentElement?.getBoundingClientRect().right ?? rect.right;
-      setInside(document.documentElement.clientWidth - page < COUNT_ROOM);
+      const right = document.documentElement.clientWidth - page;
+      setInside(right < COUNT_ROOM ? Math.max(right, 0) : null);
       setTops(new Map(cards.map((card, i) => [cardId(card), { card: words[i] ?? 0, words: words[i] ?? 0 }])));
       return;
     }
@@ -186,7 +188,12 @@ export function ReviewMargin({ editor, itemId, room }: ReviewMarginProps) {
     return (
       <div
         ref={box}
-        className={cn('absolute top-0 bottom-0 w-6 print:hidden', inside ? 'right-0' : 'left-full ml-1')}
+        // Over the text, so the end of a line does not cover a count. Only the counts take a press.
+        className={cn(
+          'pointer-events-none absolute top-0 bottom-0 z-10 w-6 print:hidden',
+          inside === null && 'left-full ml-1',
+        )}
+        style={inside === null ? undefined : { right: -inside }}
         data-review-margin=""
       >
         {[...lines].map(([top, threads]) => {
@@ -196,7 +203,7 @@ export function ReviewMargin({ editor, itemId, room }: ReviewMarginProps) {
             <button
               key={first.id}
               type="button"
-              className="absolute left-0 flex size-6 items-center justify-center rounded-md bg-surface text-xs font-medium text-accent-text shadow-sm outline-none hover:bg-accent/20 focus-visible:ring-2 focus-visible:ring-accent"
+              className="pointer-events-auto absolute left-0 flex size-6 items-center justify-center rounded-md bg-surface text-xs font-medium text-accent-text shadow-sm outline-none hover:bg-accent/20 focus-visible:ring-2 focus-visible:ring-accent"
               style={{ top }}
               aria-label={
                 threads.length === 1

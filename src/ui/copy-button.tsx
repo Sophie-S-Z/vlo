@@ -18,6 +18,8 @@ interface CopyButtonProps {
   children?: string;
   /** What the status says after a copy. "Link copied." by default. */
   copied?: string;
+  /** Size classes, so the button matches the buttons beside it. */
+  className?: string;
 }
 
 /** A button that copies text, and says in a status whether the browser copied it. A copy pulses once. */
@@ -27,6 +29,7 @@ export function CopyButton({
   html,
   children = 'Copy link',
   copied = 'Link copied.',
+  className,
 }: CopyButtonProps) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
   useEffect(() => {
@@ -59,7 +62,7 @@ export function CopyButton({
         type="button"
         variant="outline"
         aria-label={label}
-        className={cn(state === 'copied' && 'vlo-pulse')}
+        className={cn(className, state === 'copied' && 'vlo-pulse')}
         onClick={() => {
           void copy();
         }}

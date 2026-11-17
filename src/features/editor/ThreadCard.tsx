@@ -19,6 +19,8 @@ import type { CommentEntry } from './extensions/comment';
 const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 /** The longest quote of the thread's words on the card. */
 const QUOTE_CHARS = 60;
+/** The size of Resolve and Copy link, the thread's actions. */
+const ACTION = 'min-h-9 px-3 pointer-coarse:min-h-11';
 
 export function shortQuote(quote: string): string {
   const clean = quote.replace(/\s+/g, ' ').trim();
@@ -242,7 +244,7 @@ export function ThreadCard({
         <div className="flex flex-wrap items-center gap-1">
           <Button
             variant="outline"
-            className="min-h-9 px-3 pointer-coarse:min-h-11"
+            className={ACTION}
             onClick={() => {
               if (resolved) editor.commands.reopenComment(thread.id);
               else editor.commands.resolveComment(thread.id);
@@ -251,7 +253,9 @@ export function ThreadCard({
           >
             {resolved ? 'Reopen' : 'Resolve'}
           </Button>
-          {link !== null && <CopyButton label={`Copy a link to the comment on “${words}”`} text={link} />}
+          {link !== null && (
+            <CopyButton label={`Copy a link to the comment on “${words}”`} text={link} className={ACTION} />
+          )}
         </div>
       )}
     </article>
