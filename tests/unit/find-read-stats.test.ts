@@ -69,6 +69,7 @@ const q = (text: string, more: Partial<FindQuery> = {}): FindQuery => ({
   text,
   caseSensitive: false,
   wholeWord: false,
+  pattern: false,
   ...more,
 });
 

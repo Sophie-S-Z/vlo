@@ -1,5 +1,6 @@
 import { Extension, type Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import type { Transform } from '@tiptap/pm/transform';
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { yUndoPluginKey } from '@tiptap/y-tiptap';
@@ -8,18 +9,25 @@ import { blockText, NODE_MARK } from '../textMap';
 /*
  * Find and replace (plan E1). The plugin keeps the search, its matches and the current match, and marks
  * them with decorations. A match stays inside one paragraph or one poem line. Equations, footnote markers
- * and other inline nodes break a match, so a replacement never changes them.
+ * and other inline nodes break a match, so a replacement never changes them. With `pattern` (Phase 19,
+ * Task B4), the text is a JavaScript regular expression, and a replacement can hold its groups as $1.
  */
 
 export interface FindQuery {
   text: string;
   caseSensitive: boolean;
   wholeWord: boolean;
+  pattern: boolean;
 }
 
 export interface FindMatch {
   from: number;
   to: number;
+  /** The matched text. */
+  text: string;
+  /** The groups of a pattern, for $1 and $<name> in a replacement. */
+  groups?: readonly (string | undefined)[];
+  named?: Readonly<Record<string, string | undefined>>;
 }
 
 export interface FindState {
@@ -33,7 +41,7 @@ export interface FindState {
 /** More matches than this are not marked or counted, so a one-letter search stays fast. */
 export const MAX_MATCHES = 5000;
 
-export const EMPTY_QUERY: FindQuery = { text: '', caseSensitive: false, wholeWord: false };
+export const EMPTY_QUERY: FindQuery = { text: '', caseSensitive: false, wholeWord: false, pattern: false };
 
 export const findKey = new PluginKey<FindState>('findReplace');
 
@@ -44,13 +52,74 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** The pattern for a query, or null when the query is empty. */
-export function queryPattern(query: FindQuery): RegExp | null {
+/** The source and flags of a query's regular expression, or null when the query is empty. */
+function patternParts(query: FindQuery): { source: string; flags: string } | null {
   if (query.text === '') return null;
-  let source = escapeRegExp(query.text);
+  let source = query.pattern ? query.text : escapeRegExp(query.text);
   // A whole word has no letter, digit or underscore just before or after it.
-  if (query.wholeWord) source = `(?<![\\p{L}\\p{N}_])${source}(?![\\p{L}\\p{N}_])`;
-  return new RegExp(source, query.caseSensitive ? 'gu' : 'giu');
+  if (query.wholeWord) source = `(?<![\\p{L}\\p{N}_])(?:${source})(?![\\p{L}\\p{N}_])`;
+  return { source, flags: query.caseSensitive ? 'gu' : 'giu' };
+}
+
+/** The pattern for a query, or null when the query is empty or its pattern has an error. */
+export function queryPattern(query: FindQuery): RegExp | null {
+  const parts = patternParts(query);
+  if (!parts) return null;
+  try {
+    return new RegExp(parts.source, parts.flags);
+  } catch {
+    return null;
+  }
+}
+
+/** The error of a query's pattern, such as "Unterminated group", or null when the pattern is good. */
+export function patternError(query: FindQuery): string | null {
+  const parts = patternParts(query);
+  if (!parts || !query.pattern) return null;
+  try {
+    new RegExp(parts.source, parts.flags);
+    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // "Invalid regular expression: /(/giu: Unterminated group" names the reason after the last colon.
+    return message.slice(message.lastIndexOf(':') + 1).trim() || message;
+  }
+}
+
+/** The text that replaces a match: the replacement, with $1, $<name>, $& and $$ for a pattern. */
+export function replacementText(template: string, match: FindMatch, query: FindQuery): string {
+  if (!query.pattern) return template;
+  return template.replace(/\$(\$|&|\d{1,2}|<([^>]*)>)/g, (all, token: string, name: string | undefined) => {
+    if (token === '$') return '$';
+    if (token === '&') return match.text;
+    if (name !== undefined) return match.named?.[name] ?? '';
+    const groups = match.groups ?? [];
+    const n = Number(token);
+    return n >= 1 && n <= groups.length ? (groups[n - 1] ?? '') : all;
+  });
+}
+
+/**
+ * Replaces the matches, from the end, so each earlier position stays valid. The new text takes the
+ * formats that the whole match had, as typing over a selection does.
+ */
+export function replaceMatches(
+  tr: Transform,
+  matches: readonly FindMatch[],
+  template: string,
+  query: FindQuery,
+): void {
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    if (!m) continue;
+    const text = replacementText(template, m, query);
+    if (text === '') {
+      tr.delete(m.from, m.to);
+      continue;
+    }
+    const marks = tr.doc.resolve(m.from).marksAcross(tr.doc.resolve(m.to)) ?? [];
+    tr.replaceWith(m.from, m.to, tr.doc.type.schema.text(text, marks));
+  }
 }
 
 /** Every match of the query in the document, in document order. */
@@ -67,7 +136,12 @@ export function findMatches(doc: ProseMirrorNode, query: FindQuery): FindMatch[]
       const value = found[0];
       if (value === '' || value.includes(NODE_MARK)) continue;
       const start = found.index;
-      matches.push({ from: at(start), to: at(start) + value.length });
+      matches.push({
+        from: at(start),
+        to: at(start) + value.length,
+        text: value,
+        ...(query.pattern ? { groups: found.slice(1), named: found.groups } : {}),
+      });
       if (matches.length >= MAX_MATCHES) break;
     }
     return false;
@@ -83,7 +157,7 @@ export function findWords(doc: ProseMirrorNode, words: string, near = 0): FindMa
   if (words.trim() === '') return null;
   let best: FindMatch | null = null;
   let gap = Infinity;
-  for (const match of findMatches(doc, { text: words, caseSensitive: true, wholeWord: false })) {
+  for (const match of findMatches(doc, { ...EMPTY_QUERY, text: words, caseSensitive: true })) {
     const distance = Math.abs(doc.resolve(match.from).index(0) - near);
     if (distance < gap) [best, gap] = [match, distance];
   }
@@ -164,17 +238,16 @@ function newUndoStep(editor: Editor): void {
 
 /** Replaces the current match and moves to the next one. Returns false when there is no current match. */
 export function replaceCurrent(editor: Editor, replacement: string): boolean {
-  const { matches, current } = getFindState(editor.state);
+  const { matches, current, query } = getFindState(editor.state);
   const match = matches[current];
   if (!match) return false;
   const tr = editor.state.tr;
-  if (replacement === '') tr.delete(match.from, match.to);
-  else tr.insertText(replacement, match.from, match.to);
+  replaceMatches(tr, [match], replacement, query);
   newUndoStep(editor);
   editor.view.dispatch(tr);
   newUndoStep(editor);
   // The next match is the first one after the new text, so a replacement that holds the query is skipped.
-  const after = match.from + replacement.length;
+  const after = tr.mapping.map(match.to);
   const next = getFindState(editor.state);
   const index = next.matches.findIndex((m) => m.from >= after);
   editor.view.dispatch(
@@ -183,18 +256,19 @@ export function replaceCurrent(editor: Editor, replacement: string): boolean {
   return true;
 }
 
-/** Replaces every match in one step, so one Undo puts them all back. Returns how many it replaced. */
-export function replaceAll(editor: Editor, replacement: string): number {
-  const { matches } = getFindState(editor.state);
+/**
+ * Replaces every match of the query, the search of the find bar by default, in one step, so one Undo puts
+ * them all back. Returns how many it replaced.
+ */
+export function replaceAll(
+  editor: Editor,
+  replacement: string,
+  query: FindQuery = getFindState(editor.state).query,
+): number {
+  const matches = findMatches(editor.state.doc, query);
   if (matches.length === 0) return 0;
   const tr = editor.state.tr;
-  // From the end, so each earlier position stays valid.
-  for (let i = matches.length - 1; i >= 0; i--) {
-    const m = matches[i];
-    if (!m) continue;
-    if (replacement === '') tr.delete(m.from, m.to);
-    else tr.insertText(replacement, m.from, m.to);
-  }
+  replaceMatches(tr, matches, replacement, query);
   newUndoStep(editor);
   editor.view.dispatch(tr);
   newUndoStep(editor);

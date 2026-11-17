@@ -400,7 +400,7 @@ export function Editor({
       {/* The toolbar, the find bar and the read aloud bar stay at the top while the text scrolls. */}
       <div className="sticky top-0 z-10 -mx-1 grid bg-bg" data-vlo-keyboard-bar="">
         <Toolbar editor={editor} kind={kind} templates={templates} />
-        {find?.editor === editor && <FindBar editor={editor} request={find} />}
+        {find?.editor === editor && <FindBar editor={editor} request={find} itemId={itemId} />}
         <ReadAloudBar editor={editor} />
         <CursorNote editor={editor} itemId={itemId} />
         {kind === 'prose' && <PasteNotice editor={editor} />}

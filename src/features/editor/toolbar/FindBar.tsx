@@ -1,32 +1,45 @@
 import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
-import { CaseSensitive, ChevronDown, ChevronUp, WholeWord, X } from 'lucide-react';
+import { CaseSensitive, ChevronDown, ChevronUp, Regex, WholeWord, X } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Input } from '@/ui/input';
+import { Segmented } from '@/ui/segmented';
 import { shortcutLabel } from '../commands/keys';
 import { closeFind, type FindRequest } from '../commands/editorBus';
 import {
+  EMPTY_QUERY,
   endFind,
   getFindState,
   MAX_MATCHES,
+  patternError,
   replaceAll,
   replaceCurrent,
   setFindQuery,
   stepMatch,
   type FindQuery,
 } from '../extensions/findReplace';
+import { useManuscript } from '../manuscript';
+import { ProjectFind } from './ProjectFind';
 import { toolClass } from './ToolButton';
 
 /*
  * The find and replace bar under the toolbar (plan E1). Mod-F puts focus in Find and Mod-H in Replace.
  * Enter finds the next match, Shift-Enter the previous one, and Escape returns to the text with the
- * current match selected. The last search stays for the next time the bar opens.
+ * current match selected. The last search stays for the next time the bar opens. In a project, the bar
+ * also finds and replaces in every item (Phase 19, Task B4).
  */
 
-let lastQuery: FindQuery = { text: '', caseSensitive: false, wholeWord: false };
+type Scope = 'item' | 'project';
+const SCOPES: { value: Scope; label: string }[] = [
+  { value: 'item', label: 'This item' },
+  { value: 'project', label: 'Whole project' },
+];
+
+let lastQuery: FindQuery = EMPTY_QUERY;
 let lastReplacement = '';
+let lastScope: Scope = 'item';
 
 /** Selected text in one line becomes the search, as in other editors. */
 function selectedWords(editor: Editor): string | null {
@@ -52,7 +65,19 @@ function countText(count: number, current: number, text: string): string {
   return `${String(current + 1)} of ${total}`;
 }
 
-export function FindBar({ editor, request }: { editor: Editor; request: FindRequest }) {
+export function FindBar({
+  editor,
+  request,
+  itemId,
+}: {
+  editor: Editor;
+  request: FindRequest;
+  itemId: string | undefined;
+}) {
+  const manuscript = useManuscript();
+  const [scope, setScope] = useState<Scope>(lastScope);
+  // The whole project needs a project and an item: a unit test or a lone editor has only this text.
+  const project = manuscript && itemId !== undefined ? { projectId: manuscript.projectId, itemId } : null;
   const findId = useId();
   const replaceId = useId();
   const findInput = useRef<HTMLInputElement>(null);
@@ -103,6 +128,10 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
   useEffect(() => {
     lastReplacement = replacement;
   }, [replacement]);
+
+  useEffect(() => {
+    lastScope = scope;
+  }, [scope]);
 
   // The marks go away with the bar.
   useEffect(
@@ -186,7 +215,8 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
     }
   };
 
-  const count = countText(result.count, result.current, query.text);
+  const error = patternError(query);
+  const count = error === null ? countText(result.count, result.current, query.text) : '';
   const none = query.text !== '' && result.count === 0;
   const toggle = (on: boolean) => cn(toolClass, on && 'bg-surface text-accent-text');
 
@@ -209,8 +239,8 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
             placeholder="Find"
             autoComplete="off"
             spellCheck={false}
-            aria-invalid={none || undefined}
-            aria-describedby={`${findId}-count`}
+            aria-invalid={none || error !== null || undefined}
+            aria-describedby={`${findId}-count ${findId}-error`}
             onChange={(event) => {
               setQuery({ ...query, text: event.target.value });
               setMessage('');
@@ -260,6 +290,13 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
           <X aria-hidden="true" className="size-4" />
         </button>
       </div>
+      <p
+        id={`${findId}-error`}
+        role="alert"
+        className={error === null ? 'sr-only' : 'px-1 text-xs text-accent-text'}
+      >
+        {error === null ? '' : `This pattern has an error: ${error}.`}
+      </p>
       {/* The search options sit under Find, before Replace, so the keyboard order follows the screen. */}
       <div className="flex flex-wrap items-center gap-1">
         <button
@@ -285,6 +322,18 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
           }}
         >
           <WholeWord aria-hidden="true" className="size-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Use a pattern"
+          aria-pressed={query.pattern}
+          title="Use a pattern (a regular expression, with $1 for a group in Replace)"
+          className={toggle(query.pattern)}
+          onClick={() => {
+            setQuery({ ...query, pattern: !query.pattern });
+          }}
+        >
+          <Regex aria-hidden="true" className="size-4" />
         </button>
         <label htmlFor={replaceId} className="sr-only">
           Replace with
@@ -324,6 +373,21 @@ export function FindBar({ editor, request }: { editor: Editor; request: FindRequ
       <p role="status" className={cn('px-1 text-xs text-muted', message === '' && 'sr-only')}>
         {message}
       </p>
+      {project && (
+        <div className="px-1">
+          <Segmented label="Find in" options={SCOPES} value={scope} onChange={setScope} />
+        </div>
+      )}
+      {project && scope === 'project' && error === null && (
+        <ProjectFind
+          editor={editor}
+          itemId={project.itemId}
+          projectId={project.projectId}
+          language={manuscript?.language}
+          query={query}
+          replacement={replacement}
+        />
+      )}
     </section>
   );
 }
