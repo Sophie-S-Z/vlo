@@ -5,7 +5,7 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 
 /*
- * Phase 18 Task A1 (decisions A1 to A7): migrations 0008 and 0009 (the live owner page) in PGlite. The app calls each function through
+ * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page) and 0010 (places) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -20,6 +20,7 @@ const MIGRATIONS = [
   '0007_share_images.sql',
   '0008_accounts.sql',
   '0009_live_owner.sql',
+  '0010_places.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -350,6 +351,71 @@ describe('live words on the owner page (migration 0009)', () => {
     const days = await as<{ words: number }>(ALICE, `select * from public.owner_daily(2, ${TODAY} + 1)`);
     expect(days.map((d) => d.words)).toEqual([0, 80]);
     await expect(as(ALICE, `select * from public.owner_daily(2, ${TODAY} - 3)`)).rejects.toThrow('bad day');
+  });
+});
+
+describe('places and signed-out visitors (migration 0010)', () => {
+  beforeEach(async () => {
+    await db.query('insert into app_owners (user_id) values ($1)', [ALICE]);
+  });
+
+  /** A count with a place, as the app sends it on the first count of a day. */
+  const placed = (
+    who: string,
+    install: string,
+    country: string,
+    region: string | null,
+    city: string | null,
+  ) =>
+    as(who, `select public.daily_count($1, '0.1.0', 'computer', false, ${TODAY}, 0, 0, 0, $2, $3, $4)`, [
+      install,
+      country,
+      region,
+      city,
+    ]);
+  const visitors = async () =>
+    (await as<{ v: Record<string, unknown> }>(ALICE, 'select public.owner_visitors() as v'))[0]?.v;
+
+  test('keeps the place of the day, and a value of the wrong shape becomes null', async () => {
+    await placed('anon', INSTALL('a'), 'NZ', 'AUK', 'Auckland');
+    await count('anon', INSTALL('a'));
+    await placed('anon', INSTALL('b'), 'nz', 'AUK', 'Auckland');
+    await placed('anon', INSTALL('c'), 'US', 'TOOLONG', 'San|Jose');
+    const rows = (await db.query('select install, country, region, city from app_pings order by install'))
+      .rows;
+    expect(rows).toEqual([
+      { install: INSTALL('a'), country: 'NZ', region: 'AUK', city: 'Auckland' },
+      { install: INSTALL('b'), country: null, region: null, city: null },
+      { install: INSTALL('c'), country: 'US', region: null, city: null },
+    ]);
+  });
+
+  test('counts signed-out devices and the newest place of each device', async () => {
+    await placed('anon', INSTALL('a'), 'NZ', 'AUK', 'Auckland');
+    await placed('anon', INSTALL('b'), 'NZ', 'AUK', 'Auckland');
+    await placed(BOB, INSTALL('c'), 'US', 'CA', 'San Jose');
+    // A device that signed in on another day of the week is not signed out for the week. Its newest
+    // place is from that day, because today's count has none.
+    await count('anon', INSTALL('c'));
+    await db.query(
+      "insert into app_pings (install, day, user_id, app_version, device, country) values ($1, vlo_today() - 3, $2, '0.1.0', 'phone', 'FR')",
+      [INSTALL('d'), BOB],
+    );
+    await count('anon', INSTALL('d'));
+    expect(await visitors()).toEqual({
+      signed_out_1d: 3,
+      signed_out_7d: 2,
+      signed_out_30d: 2,
+      located: 4,
+      countries: { FR: 1, NZ: 2, US: 1 },
+      regions: { 'NZ-AUK': 2, 'US-CA': 1 },
+      cities: { 'NZ|AUK|Auckland': 2, 'US|CA|San Jose': 1 },
+    });
+  });
+
+  test('only an owner reads the visitors', async () => {
+    await expect(as(BOB, 'select public.owner_visitors()')).rejects.toThrow('not owner');
+    await expect(as('anon', 'select public.owner_visitors()')).rejects.toThrow(/permission denied/);
   });
 });
 

@@ -120,27 +120,45 @@ test('the daily count goes once a day with numbers and no text, and Settings tur
       localStorage.setItem('vlo:daily-count', JSON.stringify({ off: false }));
   });
   const fake = await fakeSupabase(context);
+  // Vercel's place headers, as api/geo.ts sends them back. The preview server has no such function.
+  let places = 0;
+  await context.route('**/api/geo', (route) => {
+    places++;
+    return route.fulfill({ json: { country: 'NZ', region: 'AUK', city: 'Auckland' } });
+  });
   await skipOnboarding(page);
   await expect
     .poll(() => fake.calls.filter((c) => c.name === 'daily_count').length, { timeout: 15_000 })
     .toBe(1);
   const [call] = fake.calls.filter((c) => c.name === 'daily_count');
   expect(Object.keys(call?.body ?? {}).sort()).toEqual([
+    'p_city',
+    'p_country',
     'p_day',
     'p_device',
     'p_install',
     'p_installed',
     'p_projects',
+    'p_region',
     'p_total',
     'p_version',
     'p_words',
   ]);
-  expect(call?.body).toMatchObject({ p_device: 'computer', p_words: 0, p_projects: 0 });
+  expect(call?.body).toMatchObject({
+    p_device: 'computer',
+    p_words: 0,
+    p_projects: 0,
+    p_country: 'NZ',
+    p_region: 'AUK',
+    p_city: 'Auckland',
+  });
 
   // A reload on the same day, with no change to the projects, sends no second count.
   await page.reload();
   await page.waitForTimeout(6_000);
   expect(fake.calls.filter((c) => c.name === 'daily_count')).toHaveLength(1);
+  // The place goes once a day, with the first count.
+  expect(places).toBe(1);
 
   await page.goto('/network');
   await expect(page.getByRole('table')).toContainText('Daily count');
@@ -204,6 +222,8 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
     'Average day, last 4 weeks',
   );
   await expect(owner.getByText(/^Live\. Updated at/)).toBeVisible();
+  await expect(owner.getByRole('heading', { name: 'Signed-out visitors and places' })).toBeVisible();
+  await expect(owner.getByText('Signed out this month')).toBeVisible();
   await owner.getByRole('button', { name: 'Devices', exact: true }).click();
   await expect(owner.getByRole('slider', { name: /^Devices that opened Vlo each day\./ })).toBeVisible();
   expect(await seriousIssues(owner)).toEqual([]);

@@ -45,7 +45,15 @@ export class FakeAccounts {
   readonly vaults = new Map<string, Vault>();
   readonly pings = new Map<
     string,
-    { install: string; day: string; user_id: string | null; device: string; words: number; total: number }
+    {
+      install: string;
+      day: string;
+      user_id: string | null;
+      device: string;
+      words: number;
+      total: number;
+      country: string | null;
+    }
   >();
   readonly feedback: FeedbackRow[] = [];
   readonly owners = new Set<string>();
@@ -155,6 +163,7 @@ export class FakeAccounts {
           device: String(body.p_device),
           words: Number(body.p_words ?? old?.words ?? 0),
           total: Number(body.p_total ?? old?.total ?? 0),
+          country: typeof body.p_country === 'string' ? body.p_country : (old?.country ?? null),
         });
         return { value: true };
       }
@@ -248,6 +257,24 @@ export class FakeAccounts {
           });
         }
         return { value: rows };
+      }
+      case 'owner_visitors': {
+        owner();
+        const pings = [...this.pings.values()];
+        const signedOut = pings.filter((p) => p.user_id === null).length;
+        const countries: Record<string, number> = {};
+        for (const p of pings) if (p.country) countries[p.country] = (countries[p.country] ?? 0) + 1;
+        return {
+          value: {
+            signed_out_1d: signedOut,
+            signed_out_7d: signedOut,
+            signed_out_30d: signedOut,
+            located: pings.filter((p) => p.country).length,
+            countries,
+            regions: {},
+            cities: {},
+          },
+        };
       }
       case 'owner_accounts':
         owner();

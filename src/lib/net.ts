@@ -4,10 +4,10 @@ import { newId } from './ids';
 
 /*
  * The network module (VLO_SPEC section 10, F25): the only code that may call fetch. `appFile` reads files
- * that the app itself serves, such as the fonts that a PDF export embeds. That request stays on the app's
- * own origin, so it is not an outgoing request (US09). `vloFetch` makes every request that leaves the
- * app. It refuses a host that its purpose does not list, and it writes one network log entry for each
- * request.
+ * that the app itself serves, such as the fonts that a PDF export embeds, and `appPlace` asks the app's
+ * own server for a rough place. Those requests stay on the app's own origin, so they are not outgoing
+ * requests (US09). `vloFetch` makes every request that leaves the app. It refuses a host that its purpose
+ * does not list, and it writes one network log entry for each request.
  */
 
 /** Reads a file under public/, such as "fonts/lora/regular.ttf", from the app's own origin. */
@@ -18,6 +18,33 @@ export async function appFile(path: string): Promise<Uint8Array> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Vlo could not load ${path} (HTTP ${String(response.status)}).`);
   return new Uint8Array(await response.arrayBuffer());
+}
+
+/** The rough place of this device, as the app's own server reads it from the IP address. */
+export interface Place {
+  country?: string;
+  region?: string;
+  city?: string;
+}
+
+/**
+ * Asks the app's own server for the place of this device (api/geo.ts on Vercel), for the daily count.
+ * The request stays on the app's origin. A build with no such server, or a failed request, gives null.
+ */
+export async function appPlace(): Promise<Place | null> {
+  try {
+    const response = await fetch(new URL('/api/geo', globalThis.location.origin), { cache: 'no-store' });
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) return null;
+    const body = (await response.json()) as Record<string, unknown>;
+    const place: Place = {};
+    for (const key of ['country', 'region', 'city'] as const) {
+      const value = body[key];
+      if (typeof value === 'string' && value !== '') place[key] = value;
+    }
+    return place.country ? place : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The Supabase project of this build (spec section 11), or '' when the build has none. */

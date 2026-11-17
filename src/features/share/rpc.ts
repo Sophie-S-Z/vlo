@@ -41,6 +41,7 @@ export type RpcName =
   | 'owner_summary'
   | 'owner_daily'
   | 'owner_accounts'
+  | 'owner_visitors'
   | 'owner_feedback'
   | 'owner_set_feedback';
 

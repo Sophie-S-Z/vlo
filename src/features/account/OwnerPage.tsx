@@ -24,6 +24,8 @@ import {
   ownerDaily,
   ownerFeedback,
   ownerSummary,
+  ownerVisitors,
+  placeLabels,
   setFeedbackStatus,
   total,
   weekdayWords,
@@ -33,6 +35,7 @@ import {
   type OwnerDay,
   type OwnerFeedback,
   type OwnerSummary,
+  type OwnerVisitors,
 } from './owner';
 import { Breakdown, dayText, Meter, n, Sparkline, TrendChart, WeekdayBars, YearMap } from './ownerCharts';
 import { readSession } from './session';
@@ -333,7 +336,61 @@ function Daily({ days }: { days: OwnerDay[] }) {
   );
 }
 
-function Overview({ summary, days }: { summary: OwnerSummary; days: OwnerDay[] }) {
+/** The share of `part` in `whole`, in whole percent. */
+const percent = (part: number, whole: number) =>
+  `${String(whole === 0 ? 0 : Math.round((part / whole) * 100))}%`;
+
+/** Visitors with no account, and where the devices of the month are. */
+function Visitors({ summary, visitors }: { summary: OwnerSummary; visitors: OwnerVisitors }) {
+  return (
+    <section aria-labelledby="owner-visitors" className="grid gap-4">
+      <h2 id="owner-visitors" className="text-lg font-semibold">
+        Signed-out visitors and places
+      </h2>
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Tile
+          label="Signed out today"
+          value={visitors.signed_out_1d}
+          note={`${percent(visitors.signed_out_1d, summary.active_1d)} of today's devices`}
+        />
+        <Tile
+          label="Signed out this week"
+          value={visitors.signed_out_7d}
+          note={`${percent(visitors.signed_out_7d, summary.active_7d)} of this week's devices`}
+        />
+        <Tile
+          label="Signed out this month"
+          value={visitors.signed_out_30d}
+          note={`${percent(visitors.signed_out_30d, summary.active_30d)} of this month's devices`}
+        />
+      </dl>
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <Breakdown
+          title="Countries, this month"
+          counts={visitors.countries}
+          labels={placeLabels(visitors.countries)}
+          note={`${n(visitors.located)} of ${n(summary.active_30d)} devices have a place.`}
+        />
+        <Breakdown title="Regions" counts={visitors.regions} labels={placeLabels(visitors.regions)} />
+        <Breakdown title="Cities" counts={visitors.cities} labels={placeLabels(visitors.cities)} />
+      </div>
+      <p className="text-sm text-muted">
+        A signed-out device had no account on any count of the period. A place is the newest country, region
+        and city of a device, from its internet address. Vlo keeps no address and no exact location.
+      </p>
+    </section>
+  );
+}
+
+function Overview({
+  summary,
+  days,
+  visitors,
+}: {
+  summary: OwnerSummary;
+  days: OwnerDay[];
+  visitors: OwnerVisitors;
+}) {
   const lines = useMemo(() => insights(summary, days, dayText), [summary, days]);
   const spark = (key: DayKey) => days.slice(-14).map((d) => d[key]);
   const newFeedback = summary.feedback.new ?? 0;
@@ -391,6 +448,7 @@ function Overview({ summary, days }: { summary: OwnerSummary; days: OwnerDay[] }
           trend={spark('feedback')}
         />
       </dl>
+      <Visitors summary={summary} visitors={visitors} />
       <Daily days={days} />
       <OverTime days={days} />
       <div className="grid gap-10 lg:grid-cols-[3fr_2fr]">
@@ -696,6 +754,7 @@ interface Data {
   days: OwnerDay[];
   accounts: OwnerAccount[];
   feedback: OwnerFeedback[];
+  visitors: OwnerVisitors;
   /** When the numbers came, in ms. */
   at: number;
 }
@@ -704,13 +763,14 @@ type View = 'overview' | 'people' | 'feedback';
 
 async function loadAll(): Promise<Data> {
   const today = dayKey(Date.now());
-  const [summary, days, accounts, feedback] = await Promise.all([
+  const [summary, days, accounts, feedback, visitors] = await Promise.all([
     ownerSummary(today),
     ownerDaily(365, today),
     ownerAccounts(today),
     ownerFeedback(),
+    ownerVisitors(today),
   ]);
-  return { summary, days, accounts, feedback, at: Date.now() };
+  return { summary, days, accounts, feedback, visitors, at: Date.now() };
 }
 
 function Dashboard() {
@@ -814,7 +874,9 @@ function Dashboard() {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.2 }}
             >
-              {view === 'overview' && <Overview summary={data.summary} days={data.days} />}
+              {view === 'overview' && (
+                <Overview summary={data.summary} days={data.days} visitors={data.visitors} />
+              )}
               {view === 'people' && <People accounts={data.accounts} />}
               {view === 'feedback' && (
                 <Inbox

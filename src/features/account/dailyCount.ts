@@ -3,6 +3,7 @@ import { rpc, sharingReady } from '@/features/share/rpc';
 import { APP_VERSION } from '@/features/usage/usage';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
+import { appPlace } from '@/lib/net';
 import { currentSession } from './auth';
 import { deviceKind, installId as installIdOf, readDailyCount, writeDailyCount } from './dailyCountState';
 
@@ -12,7 +13,9 @@ export { installId, readDailyCount, setDailyCountOn } from './dailyCountState';
  * The daily count (Phase 18, decision A3). Each local day, a device sends a random install id, the app
  * version, the kind of device and whether Vlo is installed, so the owner knows how many people use Vlo.
  * A signed-in device adds its account. The count also holds three numbers for the live owner page: the
- * words added today, the words on the device and its count of projects. No text, title, name or cookie.
+ * words added today, the words on the device and its count of projects. The first count of a day adds the
+ * rough place that the app's own server reads from the IP address: a country, a region and a city. No
+ * text, title, name, IP address or cookie.
  * Settings has a switch, and the choice stays in this browser.
  */
 
@@ -76,7 +79,11 @@ async function send(leaving: boolean): Promise<boolean> {
     const early = !leaving && now - (state.at ?? 0) < COUNT_GAP_MS;
     if (state.day === today && (state.seen === seen || early)) return false;
     const install = installIdOf();
-    const [session, numbers] = await Promise.all([currentSession().catch(() => null), writingNumbers(today)]);
+    const [session, numbers, place] = await Promise.all([
+      currentSession().catch(() => null),
+      writingNumbers(today),
+      state.day === today ? null : appPlace(),
+    ]);
     await rpc(
       'daily_count',
       {
@@ -88,6 +95,7 @@ async function send(leaving: boolean): Promise<boolean> {
         p_words: numbers.words,
         p_total: numbers.total,
         p_projects: numbers.projects,
+        ...(place && { p_country: place.country, p_region: place.region, p_city: place.city }),
       },
       'ping',
       session?.accessToken,
