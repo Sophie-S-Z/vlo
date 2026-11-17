@@ -145,7 +145,8 @@ Last update: 2026-11-14
 - Focus mode (hides the binder, details and site header; Escape leaves), typewriter scrolling, focus-line
   dimming, a session timer with a gentle close prompt, and a Mod-K command menu that finds items by title or
   text and runs actions (F10, F11). The menu, cmdk and MiniSearch load on first open.
-- Library shelf and stack layouts. The shelf shows first on every visit. Each project is a 3D book on a
+- Library shelf and stack layouts. The Library opens in the layout the writer last picked, and the shelf
+  comes first for a writer who never picked. Each project is a 3D book on a
   curved row between two wooden bookends: thicker with more words and taller by kind. Hover or focus pulls a
   book out with a card of its details, and a click turns its front cover forward, then the page crossfades
   into the project. The wheel, a mouse drag and Tab move along the row; a search and kind pills filter it.

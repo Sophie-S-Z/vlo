@@ -34,6 +34,25 @@ test('a project stays after reload', async ({ page }) => {
   await expect(page.getByRole('link', { name: /Untitled collection/ })).toBeVisible();
 });
 
+test('the Library opens in the layout the writer last picked, and the shelf comes first', async ({
+  page,
+}) => {
+  await skipOnboarding(page);
+  await createPoetry(page);
+  await expect(page.getByRole('heading', { level: 2, name: 'Poem 1' })).toBeVisible();
+  const layout = (name: string) =>
+    page.getByRole('radiogroup', { name: 'Layout' }).getByRole('radio', { name });
+
+  await page.goto('/');
+  await expect(layout('Shelf')).toHaveAttribute('aria-checked', 'true');
+  await layout('Stack').click();
+  await page.reload();
+  await expect(layout('Stack')).toHaveAttribute('aria-checked', 'true');
+  await layout('Shelf').click();
+  await page.reload();
+  await expect(layout('Shelf')).toHaveAttribute('aria-checked', 'true');
+});
+
 test('keyboard only: create a Memoir project with a typed title', async ({ page }) => {
   await skipOnboarding(page);
   const newButton = page.getByRole('button', { name: 'New project' });
