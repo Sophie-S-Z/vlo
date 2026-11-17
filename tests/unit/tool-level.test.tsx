@@ -58,7 +58,9 @@ describe.each<EditorForm>(['prose', 'poem'])('the %s toolbar', (form) => {
     const full = await tools(form, 'full');
     const simple = await tools(form, 'simple');
     const reachable = new Set([...simple.bar, ...simple.more]);
-    const missing = full.bar.filter((name) => !reachable.has(name) && !/^(Text style|Alignment):/.test(name));
+    const missing = full.bar.filter(
+      (name) => !reachable.has(name) && !/^(Text style|Mode):|^(Insert|Format|Review)$/.test(name),
+    );
     expect(missing).toEqual([]);
     expect(full.more.at(-1)).toBe('Show fewer tools');
     expect(simple.more.at(-1)).toBe('Show all tools');

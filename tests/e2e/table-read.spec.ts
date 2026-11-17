@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -72,8 +73,7 @@ test('F58: a table read reads each quote in its character’s voice, and keeps t
     .locator('p')
     .first()
     .click({ position: { x: 1, y: 5 } });
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitem', { name: /Read aloud/ }).click();
+  await useTool(page, 'Read aloud');
   // The device voices read here; the natural voices are not on this device.
   await panel(page).getByLabel('Voice', { exact: true }).selectOption('v-moira');
   await panel(page).getByRole('checkbox', { name: 'Table read: a voice for each character' }).check();
@@ -88,7 +88,6 @@ test('F58: a table read reads each quote in its character’s voice, and keeps t
 
   await page.reload();
   await scene(page).click();
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitem', { name: /Read aloud/ }).click();
+  await useTool(page, 'Read aloud');
   await expect(panel(page).getByRole('checkbox', { name: /Table read/ })).toBeChecked();
 });

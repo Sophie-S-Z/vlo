@@ -52,6 +52,7 @@ const EDITS: { type: FormAction; label: string }[] = [
   { type: 'rename', label: 'Rename' },
   { type: 'synopsis', label: 'Edit synopsis' },
   { type: 'story-date', label: 'Story date' },
+  { type: 'target', label: 'Word target' },
 ];
 
 const MOVES: { move: BinderMove; label: string }[] = [
@@ -164,6 +165,12 @@ export const BinderItem = memo(function BinderItem({
                 <span>{formatDate(item.storyDate)}</span>
               </>
             )}
+            {item.target !== undefined && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">{targetLabel(item.wordCount, item.target)}</span>
+              </>
+            )}
             {label && (
               <>
                 <span aria-hidden="true">·</span>
@@ -218,7 +225,9 @@ export const BinderItem = memo(function BinderItem({
                 Open beside
               </DropdownMenuItem>
             )}
-            {EDITS.filter(({ type }) => type !== 'story-date' || dated).map(({ type, label }) => (
+            {EDITS.filter(({ type }) =>
+              type === 'story-date' ? dated : type === 'target' ? writable : true,
+            ).map(({ type, label }) => (
               <DropdownMenuItem
                 key={type}
                 onSelect={() => {
@@ -285,3 +294,9 @@ export const BinderItem = memo(function BinderItem({
     </li>
   );
 });
+
+/** "40% of 2,000", or "Target met" from the target up. */
+export function targetLabel(words: number, target: number): string {
+  if (words >= target) return 'Target met';
+  return `${String(Math.floor((words / target) * 100))}% of ${target.toLocaleString()}`;
+}

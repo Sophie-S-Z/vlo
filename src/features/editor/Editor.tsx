@@ -52,10 +52,16 @@ import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
 import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
+import { restorePlace, savePlace, scrollToCaret } from './lastPlace';
+import { watchPhoneTyping } from './phoneTyping';
+import { useTracking } from './trackingStore';
 import { useWritingPrefs } from './writingPrefs';
 import '@/styles/editor.css';
 import '@/styles/fonts.css';
 import type { EditorForm } from '@/features/library/templates';
+
+/** The pause after a caret move before the place is kept, in ms. */
+const PLACE_DELAY_MS = 1000;
 
 // The theme colors behind each palette swatch. The editor chunk adds them once.
 ensurePaletteStyles();
@@ -211,7 +217,11 @@ export function Editor({
       enablePasteRules: kind === 'prose',
       // The tool surfaces read editor state on their own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
-      editorProps: { attributes: editorAttributes(label, kind, helpId, writing.showAiText) },
+      editorProps: {
+        attributes: editorAttributes(label, kind, helpId, writing.showAiText),
+        // Room for the sticky toolbar above the caret, and for the phone keyboard bar under it.
+        scrollMargin: { top: 56, bottom: 72, left: 0, right: 0 },
+      },
     },
     [doc, kind, smart, english, projectId],
   );
@@ -231,6 +241,15 @@ export function Editor({
     });
   }, [editor, label, kind, helpId, writing.showAiText]);
 
+  // Viewing mode (Phase 19, Task A1) makes the text read only. Each tool reads the editable state, so an
+  // empty transaction lets them see the change.
+  const viewing = useTracking().viewing;
+  useEffect(() => {
+    if (editor.isDestroyed || editor.isEditable === !viewing) return;
+    editor.setEditable(!viewing, false);
+    editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false));
+  }, [editor, viewing]);
+
   const focus = useFocusPrefs();
   // A focus switch changed: redraw the dimming and center the caret at once.
   useEffect(() => {
@@ -248,7 +267,15 @@ export function Editor({
   // language, leaves the focus where it was, so a writer in the details panel stays there.
   const focused = useRef(focusOnOpen);
   useEffect(() => {
-    if (focused.current) editor.commands.focus('end');
+    // The item opens at the writer's last place on this device (Task A2), else at the end of the text.
+    if (focused.current) {
+      if (itemId !== undefined && restorePlace(itemId, editor)) {
+        editor.commands.focus();
+        requestAnimationFrame(() => {
+          if (!editor.isDestroyed) scrollToCaret(editor.view);
+        });
+      } else editor.commands.focus('end');
+    }
     const onFocus = () => {
       focused.current = true;
     };
@@ -261,7 +288,63 @@ export function Editor({
       editor.off('focus', onFocus);
       editor.off('blur', onBlur);
     };
+    // The item id of an editor never changes: the pane keys the editor by its item.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
+
+  // Print (Task A5): the print sheet in editor.css prints only the open editor's page. In a split view the
+  // active pane is the open one.
+  const printRoot = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const before = () => {
+      const active = getActiveEditor()?.editor;
+      if (active !== undefined && active !== editor) return;
+      printRoot.current?.setAttribute('data-vlo-print-root', '');
+      document.documentElement.setAttribute('data-vlo-printing', '');
+    };
+    const after = () => {
+      printRoot.current?.removeAttribute('data-vlo-print-root');
+      document.documentElement.removeAttribute('data-vlo-printing');
+    };
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    return () => {
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+    };
+  }, [editor]);
+
+  // On a phone with its keyboard open, the text takes the screen and the toolbar sits on the keyboard.
+  useEffect(() => watchPhoneTyping(editor), [editor]);
+
+  // Keeps the place after a 1 s pause, when the text loses focus, when the tab hides and when it closes.
+  useEffect(() => {
+    if (itemId === undefined) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const save = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      savePlace(itemId, editor);
+    };
+    const later = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(save, PLACE_DELAY_MS);
+    };
+    const onHide = () => {
+      if (document.visibilityState === 'hidden' && timer) save();
+    };
+    editor.on('selectionUpdate', later);
+    editor.on('blur', save);
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', save);
+    return () => {
+      if (timer) save();
+      editor.off('selectionUpdate', later);
+      editor.off('blur', save);
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', save);
+    };
+  }, [editor, itemId]);
 
   // The command menu runs format commands on the open editor. In a split view (F39) the editor whose text
   // has focus is the active one, and a pane that opens beside waits for focus.
@@ -289,37 +372,51 @@ export function Editor({
 
   // The project font is the manuscript font for the text, the notes and the panels' samples.
   // Comfort settings (F37) change the screen only. The page-end lines measure the screen, so they follow.
-  const stack = fontStack(writing.comfortFont ? COMFORT_FONT : font, BASE_STACK);
+  // Page look (Task A3) can show the text in a screen font of its own, also on this device only.
+  const stack = fontStack(writing.comfortFont ? COMFORT_FONT : (writing.screenFont ?? font), BASE_STACK);
   const rootStyle = {
     '--font-manuscript': stack,
     '--vlo-letter-spacing': `${String(writing.letterSpacing)}em`,
     '--vlo-word-spacing': `${String(writing.wordSpacing)}em`,
     '--vlo-line-height': String(writing.lineHeight),
   } as CSSProperties;
-  const layoutKey = [stack, writing.letterSpacing, writing.wordSpacing, writing.lineHeight].join('|');
+  const layoutKey = [
+    stack,
+    writing.letterSpacing,
+    writing.wordSpacing,
+    writing.lineHeight,
+    writing.paragraphs,
+  ].join('|');
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-3" data-vlo-editor="" style={rootStyle}>
+    <div
+      className="grid grid-cols-[minmax(0,1fr)] gap-3"
+      data-vlo-editor=""
+      data-paragraphs={writing.paragraphs}
+      style={rootStyle}
+    >
       {/* The toolbar, the find bar and the read aloud bar stay at the top while the text scrolls. */}
-      <div className="sticky top-0 z-10 -mx-1 grid bg-bg">
+      <div className="sticky top-0 z-10 -mx-1 grid bg-bg" data-vlo-keyboard-bar="">
         <Toolbar editor={editor} kind={kind} templates={templates} />
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
         <CursorNote editor={editor} itemId={itemId} />
       </div>
-      <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
-        {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
-        <div
-          className={cn('relative', craft && 'vlo-craft')}
-          {...(language ? { lang: language, dir: textDirection(language) } : {})}
-        >
-          {craft && itemId !== undefined && (
-            <CraftLabels editor={editor} itemId={itemId} form={poemForm} english={english} />
-          )}
-          <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
-        </div>
-        <FootnoteList editor={editor} />
-      </PageFrame>
+      <div ref={printRoot} className="contents">
+        <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
+          {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
+          <div
+            className={cn('relative', craft && 'vlo-craft')}
+            {...(language ? { lang: language, dir: textDirection(language) } : {})}
+          >
+            {craft && itemId !== undefined && (
+              <CraftLabels editor={editor} itemId={itemId} form={poemForm} english={english} />
+            )}
+            <EditorContent editor={editor} className={cn('relative', focus.typewriter && 'vlo-typewriter')} />
+          </div>
+          <FootnoteList editor={editor} />
+        </PageFrame>
+      </div>
       <ChangesList editor={editor} />
       <CommentList editor={editor} />
       <SelectionMenu editor={editor} form={kind} templates={templates} />

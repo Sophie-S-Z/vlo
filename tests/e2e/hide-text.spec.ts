@@ -69,7 +69,7 @@ test('bars cover the words, and "Keep my paragraph clear" shows only the paragra
 }) => {
   const scene = await novelWithTwoParagraphs(page);
   await page.getByRole('button', { name: 'Focus' }).click();
-  await page.getByRole('menuitemradio', { name: 'Cover the words with bars' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Cover the words with bars' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-hide-text', 'bars');
   for (const look of await looks(page)) {
     expect(look.color).toBe('rgba(0, 0, 0, 0)');

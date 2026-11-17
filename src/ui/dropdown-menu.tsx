@@ -43,6 +43,20 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
 }
 
 export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+export const DropdownMenuGroup = DropdownMenuPrimitive.Group;
+
+/** A quiet heading over a group of items. */
+export function DropdownMenuLabel({
+  className,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.Label>) {
+  return (
+    <DropdownMenuPrimitive.Label
+      className={cn('px-3 pt-2 pb-1 text-xs font-medium text-muted', className)}
+      {...props}
+    />
+  );
+}
 export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
 export function DropdownMenuSeparator({
