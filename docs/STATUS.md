@@ -29,6 +29,29 @@ Last update: 2026-11-17
     Portuguese and Korean. The device voices stay in the list. A natural voice is the default.
   - Privacy version 17.
 
+- Phase 19, Part B: the core writing tools (2026-11-17, `docs/plans/phase-19.md`):
+  - Prose has Heading 4, checklists and page breaks (Ctrl+Enter). Each export maps them: Word has a real
+    page break and a box for each item, the PDF starts a new page, Markdown writes `- [x]`, and a share
+    link and a web copy show the boxes as characters. Document schema 12. Heading 1 inside the text
+    stays out, because the item title is the top heading.
+  - The item outline lists the headings, the scene breaks and a script's scene headings, with the words
+    of each section. It stays in the margin when the window has room, and it opens in a popover when the
+    window has none. Ctrl+K lists the same entries under "In this item".
+  - A paste from Google Docs, Word or a web page keeps its formats, lists, links and footnotes, and drops
+    fonts, sizes and colors. "Keep the original look" puts the paste again with them. Ctrl+Shift+V pastes
+    plain text. Paint format copies the formats and the paragraph look at the cursor. Change case has
+    four rules in the project language (a Turkish i keeps its dot), and Shift+F3 steps through them.
+  - Alt+Shift+Up and Alt+Shift+Down move the block at the cursor. A list item moves in its list, and a
+    poem line in its stanza (with Ctrl, the stanza). A handle at the left of each prose block drags the
+    block and opens a menu: Turn into, Duplicate, Move up, Move down and Delete.
+  - The find bar has patterns (regular expressions with $1 in Replace) and Whole project. Replace all in
+    project asks first, keeps a snapshot of each changed item, and changes the open item in its editor,
+    so Undo there puts it back. 120 scenes take well under 3 seconds.
+  - Not built yet: "Paragraph style" and "Copy link to this paragraph" in the block menu (they wait for
+    paragraph styles in Part F and paragraph links), and a worker for the project replace (the main
+    thread replaces 120 scenes fast enough). Title Case follows the Chicago and MLA short-word rule in
+    every project. A pasted image from a web address stays out, as before.
+
 - Phase 19, Part A: the editor menus, page look and word targets (2026-11-17, `docs/plans/phase-19.md`):
   - The toolbar has three named menus, Insert, Format and Review, in place of one long More tools list.
     Each menu puts its tools in labeled groups. A Mode menu changes between Editing, Suggesting and

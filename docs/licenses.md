@@ -55,7 +55,11 @@ Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. 
 | @tiptap/core | 3.32.2 | MIT | runtime |
 | @tiptap/extension-bubble-menu | 3.32.2 | MIT | runtime |
 | @tiptap/extension-collaboration | 3.32.2 | MIT | runtime |
+| @tiptap/extension-drag-handle | 3.32.2 | MIT | runtime |
+| @tiptap/extension-drag-handle-react | 3.32.2 | MIT | runtime |
 | @tiptap/extension-highlight | 3.32.2 | MIT | runtime |
+| @tiptap/extension-list | 3.32.2 | MIT | runtime |
+| @tiptap/extension-node-range | 3.32.2 | MIT | runtime |
 | @tiptap/extension-subscript | 3.32.2 | MIT | runtime |
 | @tiptap/extension-superscript | 3.32.2 | MIT | runtime |
 | @tiptap/extension-text-align | 3.32.2 | MIT | runtime |
