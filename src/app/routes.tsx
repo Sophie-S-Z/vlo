@@ -184,6 +184,12 @@ export const routes: RouteObject[] = [
         }),
       },
       {
+        path: 'leaderboard',
+        lazy: async () => ({
+          Component: (await import('@/features/account/LeaderboardPage')).LeaderboardPage,
+        }),
+      },
+      {
         path: 'owner',
         lazy: async () => ({ Component: (await import('@/features/account/OwnerPage')).OwnerPage }),
       },

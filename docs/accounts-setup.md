@@ -4,7 +4,7 @@ Phase 18 uses the same free Supabase project as share links and sync (`docs/shar
 
 ## 1. Apply migrations 0008, 0009 and 0010
 
-Run `supabase/migrations/0008_accounts.sql` in the SQL Editor, as for the other migrations. It adds the sync vaults, the daily count, feedback, the owner list and their functions. Then run `supabase/migrations/0009_live_owner.sql`. It adds the word numbers to the daily count and the live numbers of the owner page. Then run `supabase/migrations/0010_places.sql`. It adds the rough place of each device and the signed-out visitors to the owner page. Apply 0010 before you deploy the app that sends a place, because the old `daily_count` refuses the new arguments.
+Run `supabase/migrations/0008_accounts.sql` in the SQL Editor, as for the other migrations. It adds the sync vaults, the daily count, feedback, the owner list and their functions. Then run `supabase/migrations/0009_live_owner.sql`. It adds the word numbers to the daily count and the live numbers of the owner page. Then run `supabase/migrations/0010_places.sql`. It adds the rough place of each device and the signed-out visitors to the owner page. Apply 0010 before you deploy the app that sends a place, because the old `daily_count` refuses the new arguments. Then run `0011_profiles.sql`, `0012_feedback_guards.sql` and `0013_leaderboard.sql`. Migration 0013 adds the leaderboard. Apply it before you deploy the app that has the Leaderboard page.
 
 ## 2. Send the sign-in emails with your own mail server (required)
 

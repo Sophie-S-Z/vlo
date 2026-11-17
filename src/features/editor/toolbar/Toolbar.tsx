@@ -76,6 +76,8 @@ const CHECKS: Section = { label: 'Checks', tools: ['style-check', 'continuity-ch
 const SHOW: Section = { label: 'Show', tools: ['show-ai-text', 'show-codex-names'] };
 const HELP: Section = { label: 'Help', tools: ['print', 'shortcuts'] };
 const REVIEW: readonly Section[] = [FIND, LISTEN, CHECKS, SHOW, HELP];
+/** Prose keeps Spacing with its paragraph tools. A poem and a script have no paragraph tools. */
+const SPACE: Section = { label: 'Spacing', tools: ['spacing'] };
 
 const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
   prose: {
@@ -153,6 +155,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
             'subscript',
           ],
         },
+        SPACE,
         { label: 'Clear', tools: ['clear'] },
       ],
       review: REVIEW,
@@ -167,10 +170,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     ],
     menus: {
       insert: [{ label: 'Characters', tools: ['characters'] }],
-      format: [
-        { label: 'Text', tools: ['underline'] },
-        { label: 'Clear', tools: ['clear'] },
-      ],
+      format: [{ label: 'Text', tools: ['underline'] }, SPACE, { label: 'Clear', tools: ['clear'] }],
       review: REVIEW,
     },
   },

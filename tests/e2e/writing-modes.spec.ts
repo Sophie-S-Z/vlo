@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+import { openView } from './support/views';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -70,4 +71,36 @@ test('an essay project adds a ready section from the binder', async ({ page, isM
   await page.getByRole('menuitem', { name: 'Acknowledgements' }).click();
   await expect(page.getByRole('textbox', { name: 'Acknowledgements' })).toBeFocused();
   await expect(page.getByTestId('section-guide')).toContainText('Thank the people');
+});
+
+test('a comedy project starts from a stand-up set, plays a rimshot, and finds its punch words', async ({
+  page,
+}) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New project' });
+  await dialog.getByRole('checkbox', { name: /Comedy/ }).click();
+  await expect(dialog.getByLabel('Start the comedy from')).toHaveValue('stand-up');
+  await expect(dialog.getByLabel('Title')).toHaveValue('Untitled comedy');
+  await dialog.getByRole('button', { name: 'Create project' }).click();
+
+  const opener = page.getByRole('textbox', { name: 'Opener' });
+  await expect(opener).toBeFocused();
+  await expect(page.getByTestId('section-guide')).toContainText('first 15 seconds');
+  await opener.pressSequentially('My dog files my taxes. He is a good boy.');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('/rimshot');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.vlo-rimshot')).toHaveText('ba-dum-tss!');
+  await expect(opener).not.toContainText('/rimshot');
+  await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
+
+  await openView(page, 'Workshop');
+  await expect(page.getByRole('region', { name: 'Opener' }).getByRole('strong')).toHaveText('boy.');
+  await page
+    .getByRole('group', { name: 'Workshop tool' })
+    .getByRole('button', { name: 'Premise machine' })
+    .click();
+  await expect(page.getByText(/^What if .+\?$/)).toBeVisible();
+  expect(await seriousIssues(page)).toEqual([]);
 });

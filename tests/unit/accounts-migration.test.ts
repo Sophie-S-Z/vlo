@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 /*
  * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page), 0010 (places), 0011
- * (profiles) and 0012 (feedback guards) in PGlite. The app calls each function through
+ * (profiles), 0012 (feedback guards) and 0013 (the leaderboard) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -24,6 +24,7 @@ const MIGRATIONS = [
   '0010_places.sql',
   '0011_profiles.sql',
   '0012_feedback_guards.sql',
+  '0013_leaderboard.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -567,4 +568,66 @@ test('each new function sets pg_temp last on its path, and no role reads a new t
   ])
     for (const who of ['anon', ALICE])
       await expect(as(who, `select * from ${table}`)).rejects.toThrow(/permission denied/);
+});
+
+describe('the leaderboard (migration 0013)', () => {
+  const CAROL = '00000000-0000-4000-8000-00000000000c';
+
+  beforeEach(async () => {
+    await db.query("insert into auth.users (id, email) values ($1, 'carol@example.com')", [CAROL]);
+  });
+
+  /** A count of words on a day, today in UTC unless the SQL of `day` says else, written straight to the table. */
+  const ping = (user: string | null, install: string, words: number, day = TODAY) =>
+    db.query(
+      `insert into app_pings (install, day, user_id, app_version, device, words) values ($1, ${day}, $2, '0.1.0', 'computer', $3)`,
+      [install, user, words],
+    );
+
+  const board = (who: string, period: string) =>
+    as<{ place: number; name: string; photo: string | null; words: number; me: boolean }>(
+      who,
+      `select * from public.leaderboard($1, ${TODAY})`,
+      [period],
+    );
+
+  test('ranks the writers of a period by their words, and counts the devices of an account once', async () => {
+    await as(ALICE, "select public.profile_put('Alice Lovelace', '', 'A. L. Quill', '', $1)", [PHOTO]);
+    await as(BOB, "select public.profile_put('Bob Byron', 'Bobby', '', '', null)");
+    await as(CAROL, "select public.profile_put('Carol Ann Duffy', '', '', '', null)");
+    await ping(ALICE, INSTALL('a1'), 300);
+    await ping(ALICE, INSTALL('a2'), 250);
+    await ping(BOB, INSTALL('b'), 500);
+    await ping(CAROL, INSTALL('c'), 0);
+    // Last year, so no board of this year holds it.
+    await ping(CAROL, INSTALL('c'), 9000, `date_trunc('year', ${TODAY})::date - 1`);
+    // A device with no account is not on the board.
+    await ping(null, INSTALL('d'), 800);
+
+    expect(await board(ALICE, 'day')).toEqual([
+      { place: 1, name: 'Bobby', photo: null, words: 500, me: false },
+      { place: 2, name: 'A. L. Quill', photo: PHOTO, words: 300, me: true },
+    ]);
+    expect((await board(BOB, 'year')).map((r) => [r.name, r.words, r.me])).toEqual([
+      ['Bobby', 500, true],
+      ['A. L. Quill', 300, false],
+    ]);
+  });
+
+  test('a writer can leave the board and come back', async () => {
+    await as(ALICE, "select public.profile_put('Alice', '', '', '', null)");
+    await ping(ALICE, INSTALL('a'), 100);
+    expect(await as(ALICE, 'select public.leaderboard_show() as on')).toEqual([{ on: true }]);
+    expect(await as(ALICE, 'select public.leaderboard_show(false) as on')).toEqual([{ on: false }]);
+    expect(await board(BOB, 'week')).toEqual([]);
+    await as(ALICE, 'select public.leaderboard_show(true)');
+    expect((await board(BOB, 'month')).map((r) => r.name)).toEqual(['Alice']);
+    // An account with no profile is never on the board.
+    expect(await as(CAROL, 'select public.leaderboard_show(true) as on')).toEqual([{ on: false }]);
+  });
+
+  test('refuses the anon role and a period that is not a day, a week, a month or a year', async () => {
+    await expect(board(ALICE, 'decade')).rejects.toThrow('bad period');
+    await expect(board('anon', 'day')).rejects.toThrow(/permission denied/);
+  });
 });

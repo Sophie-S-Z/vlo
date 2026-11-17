@@ -18,15 +18,15 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 27,
+  version: 28,
   date: '2026-11-17',
   guide: [
     {
       title: 'Start a project',
       steps: [
         'In the Library, choose New project.',
-        'Pick one or more shapes: Novel, Memoir, Poetry collection, Script, Essay, Article, Research paper or Open writing.',
-        'An essay, an article or a research paper can start from a structure, such as IMRaD, a literature review, a five-paragraph essay or a how-to article.',
+        'Pick one or more shapes: Novel, Memoir, Poetry collection, Script, Comedy, Essay, Article, Research paper or Open writing.',
+        'An essay, an article, a research paper or a comedy project can start from a structure, such as IMRaD, a five-paragraph essay, a how-to article, a stand-up set or a sketch.',
         'Choose Create project. The first item opens, ready for your words.',
         'For a fast note, choose Quick note (the notebook icon) in the Library. The note goes into the Inbox folder at the top of the project.',
         'To bring in a backup or writing from Word, PDF, OpenDocument, RTF, EPUB, a web page, Markdown, plain text or Scrivener, choose Import in the Library. A PDF gives its words but not its bold or italic.',
@@ -74,6 +74,14 @@ export const HELP = {
       ],
     },
     {
+      title: 'Change the space between letters, words and lines',
+      steps: [
+        'In any project, choose Spacing in More tools, or type /spacing.',
+        'Drag a slider, or type any number in its box. The text on your screen changes at once.',
+        'The same controls are in Settings, under Reading comfort. Exports keep their own spacing.',
+      ],
+    },
+    {
       title: 'Put an image in the text',
       steps: [
         'Drop an image file on a scene, a memory or a page. The image goes in where you drop it. In a poem, an image goes between two stanzas. You can also paste an image, or type / and choose Image.',
@@ -105,12 +113,22 @@ export const HELP = {
     {
       title: 'Use the Workshop',
       steps: [
-        'A poetry collection, an essay, an article and a research paper have a Workshop. Choose More next to the view tabs, then Workshop.',
+        'A poetry collection, an essay, an article, a research paper and a comedy project have a Workshop. Choose More next to the view tabs, then Workshop.',
         'Erasure: pick a poem or paste a text, then choose the words to keep. The kept words stay where they stood, and Make the poem saves the result as a new poem.',
         'Golden shovel: type a line that you borrow and its poet. Each word of the line ends one line of your poem, in order.',
         'Echoes lists the words that come back from poem to poem. Line endings shows where each line of a poem ends: on a pause, running on, or on a small word.',
         'Spine lists the first sentence of each paragraph of an essay, an article or a paper. Read in order, those sentences should make the argument.',
         'An article has Headlines, to compare headline ideas by their length. A research paper has Citation check, which counts the citations of each source and lists the sources that the text does not cite.',
+      ],
+    },
+    {
+      title: 'Write comedy',
+      steps: [
+        'A comedy project holds bits, and a set holds bits in order. Start from a stand-up set, a sketch, a parody, a roast, a top ten list or a satirical news story.',
+        'Each bit of a structure shows a short guide above the text, as in an essay.',
+        'In the Workshop, Punch words shows the last word of each joke, and Premise machine gives a random idea for a bit.',
+        'Put a blank line after each joke, so Punch words can find it.',
+        'After a punchline, type /rimshot, or choose Rimshot in More tools. Vlo plays a drum and a cymbal.',
       ],
     },
     {

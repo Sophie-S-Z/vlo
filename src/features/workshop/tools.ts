@@ -6,7 +6,15 @@ import type { Template } from '@/lib/db';
  */
 
 export type WorkshopToolId =
-  'erasure' | 'shovel' | 'echoes' | 'endings' | 'spine' | 'headlines' | 'citations';
+  | 'erasure'
+  | 'shovel'
+  | 'echoes'
+  | 'endings'
+  | 'spine'
+  | 'headlines'
+  | 'citations'
+  | 'punchlines'
+  | 'premises';
 
 export interface WorkshopTool {
   id: WorkshopToolId;
@@ -68,6 +76,20 @@ export const WORKSHOP_TOOLS: readonly WorkshopTool[] = [
     hint: 'How many times the paper cites each source, and the sources that it never cites.',
     templates: ['research'],
     keywords: ['references', 'sources', 'uncited', 'bibliography', 'works cited'],
+  },
+  {
+    id: 'punchlines',
+    label: 'Punch words',
+    hint: 'The last words of each joke, bit by bit. The funniest word goes last, so each one should get a laugh on its own.',
+    templates: ['comedy'],
+    keywords: ['punchline', 'jokes', 'laugh', 'button', 'comedy'],
+  },
+  {
+    id: 'premises',
+    label: 'Premise machine',
+    hint: 'A random premise for a bit, when the page stays blank. Pull the lever again for a new one.',
+    templates: ['comedy'],
+    keywords: ['joke prompt', 'idea', 'random', 'writer’s block', 'comedy'],
   },
 ];
 

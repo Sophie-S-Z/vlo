@@ -22,7 +22,7 @@ export interface WritingPrefs {
   toolLevel: ToolLevel;
   /** Comfort (F37): the screen shows the text in Atkinson Hyperlegible Next. Exports keep the project font. */
   comfortFont: boolean;
-  /** Comfort spacing on the screen only, in em (letters and words) and in lines. */
+  /** Spacing on the screen only, in em (letters and words) and in lines. The editor and Settings set it. */
   letterSpacing: number;
   wordSpacing: number;
   lineHeight: number;
@@ -66,13 +66,28 @@ const OLD_WIDTH_KEY = 'vlo:pageWidth';
 
 export type ToolLevel = 'simple' | 'full';
 
-/** The comfort choices: Standard, Wider and Widest. Standard is the editor's own spacing. */
-export const LETTER_SPACINGS = [0, 0.05, 0.1] as const;
-export const WORD_SPACINGS = [0, 0.1, 0.2] as const;
+/** The line spacings that Page look names. The Spacing tool sets any line spacing in `SPACING`. */
 export const LINE_HEIGHTS = [1.7, 2, 2.3] as const;
 
-function oneOf(list: readonly number[], value: unknown): number {
-  return typeof value === 'number' && list.includes(value) ? value : (list[0] ?? 0);
+export type SpacingKey = 'letterSpacing' | 'wordSpacing' | 'lineHeight';
+
+/**
+ * The free range of each spacing on the screen: letters and words in em, lines as a multiple of the font
+ * size. The default is the editor's own spacing.
+ */
+export const SPACING: Readonly<
+  Record<SpacingKey, { min: number; max: number; step: number; normal: number }>
+> = {
+  letterSpacing: { min: -0.05, max: 0.5, step: 0.01, normal: 0 },
+  wordSpacing: { min: -0.2, max: 1.5, step: 0.05, normal: 0 },
+  lineHeight: { min: 1, max: 4, step: 0.05, normal: 1.7 },
+};
+
+/** A spacing in its range, on its step. A value that is not a number gives the default. */
+export function cleanSpacing(key: SpacingKey, value: unknown): number {
+  const { min, max, step, normal } = SPACING[key];
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) return normal;
+  return Number((Math.round(value / step) * step).toFixed(3));
 }
 
 const KEY = 'vlo:writing';
@@ -115,7 +130,8 @@ export function cleanPageLook(value: unknown): PageLook | null {
   if (!value || typeof value !== 'object') return null;
   const look = value as Record<string, unknown>;
   const pageWidth = cleanPageWidth(look.pageWidth);
-  if (pageWidth === null || !LINE_HEIGHTS.some((h) => h === look.lineHeight)) return null;
+  const lineHeight = cleanSpacing('lineHeight', look.lineHeight);
+  if (pageWidth === null || lineHeight !== look.lineHeight) return null;
   if (!PARAGRAPH_LOOKS.some((p) => p === look.paragraphs)) return null;
   const screenFont = look.screenFont === null ? null : cleanFontValue(look.screenFont);
   if (screenFont === null && look.screenFont !== null) return null;
@@ -123,7 +139,7 @@ export function cleanPageLook(value: unknown): PageLook | null {
     pageWidth,
     paragraphs: cleanParagraphs(look.paragraphs),
     screenFont,
-    lineHeight: oneOf(LINE_HEIGHTS, look.lineHeight),
+    lineHeight,
   };
 }
 
@@ -171,9 +187,9 @@ function load(): WritingPrefs {
     showAiText: typeof value.showAiText === 'boolean' ? value.showAiText : WRITING_DEFAULTS.showAiText,
     toolLevel: value.toolLevel === 'simple' ? 'simple' : 'full',
     comfortFont: value.comfortFont === true,
-    letterSpacing: oneOf(LETTER_SPACINGS, value.letterSpacing),
-    wordSpacing: oneOf(WORD_SPACINGS, value.wordSpacing),
-    lineHeight: oneOf(LINE_HEIGHTS, value.lineHeight),
+    letterSpacing: cleanSpacing('letterSpacing', value.letterSpacing),
+    wordSpacing: cleanSpacing('wordSpacing', value.wordSpacing),
+    lineHeight: cleanSpacing('lineHeight', value.lineHeight),
     styleCheck: value.styleCheck === true,
     continuityCheck: value.continuityCheck === true,
     pageWidth: cleanPageWidth(value.pageWidth) ?? oldWidth() ?? PAGE_WIDTH_DEFAULT,

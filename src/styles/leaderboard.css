@@ -1,0 +1,118 @@
+/*
+ * The writing leaderboard (LeaderboardPage.tsx). The first three rows glow in gold, silver and bronze, and
+ * a light sweeps across them. The first wears a crown. Calm mode and reduced motion stop each animation
+ * (tokens.css), and the colors and the glow stay.
+ */
+
+.vlo-rank {
+  position: relative;
+  isolation: isolate;
+}
+
+.vlo-rank-place {
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.vlo-rank[data-medal='gold'] {
+  --medal: #e6b422;
+  --medal-deep: #9a6b00;
+  --medal-light: #fff4c2;
+}
+
+.vlo-rank[data-medal='silver'] {
+  --medal: #b9c2cf;
+  --medal-deep: #5d6878;
+  --medal-light: #ffffff;
+}
+
+.vlo-rank[data-medal='bronze'] {
+  --medal: #cd7f32;
+  --medal-deep: #7a4413;
+  --medal-light: #ffdcb8;
+}
+
+.vlo-rank[data-medal] {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--medal) 26%, var(--surface)),
+    color-mix(in oklch, var(--medal) 10%, var(--surface)) 60%,
+    color-mix(in oklch, var(--medal) 20%, var(--surface))
+  );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--medal) 60%, transparent),
+    0 0 18px -4px color-mix(in oklch, var(--medal) 70%, transparent);
+  animation: vlo-medal-glow 2.6s var(--ease-in-out) infinite alternate;
+}
+
+/* The shimmer: a band of light that crosses the row, then waits. The band moves inside the row, so the
+   row needs no clip, and the crown can stand over its edge. */
+.vlo-rank[data-medal]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+      105deg,
+      transparent 40%,
+      color-mix(in oklch, var(--medal-light) 55%, transparent) 49%,
+      color-mix(in oklch, var(--medal-light) 70%, transparent) 50%,
+      transparent 60%
+    )
+    no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  mix-blend-mode: soft-light;
+  animation: vlo-medal-shimmer 3.4s var(--ease-in-out) infinite;
+}
+
+/* Silver and bronze shimmer a moment after gold, so the light runs down the podium. */
+.vlo-rank[data-medal='silver']::after {
+  animation-delay: 0.35s;
+}
+
+.vlo-rank[data-medal='bronze']::after {
+  animation-delay: 0.7s;
+}
+
+.vlo-rank[data-medal] .vlo-rank-place {
+  color: var(--medal-deep);
+  background: radial-gradient(circle at 35% 30%, var(--medal-light), var(--medal) 60%, var(--medal-deep));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--medal-deep) 50%, transparent),
+    0 1px 3px rgb(11 14 20 / 0.3);
+}
+
+@keyframes vlo-medal-glow {
+  to {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklch, var(--medal) 85%, transparent),
+      0 0 30px 0 color-mix(in oklch, var(--medal) 85%, transparent);
+  }
+}
+
+@keyframes vlo-medal-shimmer {
+  60%,
+  100% {
+    background-position: 0 0;
+  }
+}
+
+/* A small gold crown, tipped on the first writer's photo. It bobs a little. */
+.vlo-crown {
+  z-index: 1;
+  color: #e6b422;
+  fill: #ffd84d;
+  stroke: #9a6b00;
+  rotate: -20deg;
+  filter: drop-shadow(0 0 4px rgb(255 200 40 / 0.7));
+  animation: vlo-crown-bob 2.2s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes vlo-crown-bob {
+  to {
+    translate: 0 -2px;
+    rotate: -12deg;
+  }
+}

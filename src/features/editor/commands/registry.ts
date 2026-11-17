@@ -15,6 +15,7 @@ import {
   Baseline,
   Bold,
   Clapperboard,
+  Drum,
   Heading2,
   Heading3,
   Highlighter,
@@ -65,12 +66,13 @@ import { craftItemOf } from '@/features/craft/craftSwitch';
 import { showsAliases } from '@/features/people/aliasPreview';
 import { getNames, setShowAliases } from '@/features/people/nameStore';
 import { getCodex, setShowCodexNames } from '@/features/codex/codexStore';
-import { getWritingPrefs, setWritingPrefs } from '../writingPrefs';
+import { getWritingPrefs, setWritingPrefs, SPACING, type SpacingKey } from '../writingPrefs';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { ROLE_LABELS, SCRIPT_LINE, SCRIPT_ROLES, type ScriptRole } from '../scriptRoles';
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
 import { canStyleCheck } from '../extensions/styleCheck';
+import { rimshot } from '../rimshot';
 import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
 import type { EditorForm } from '@/features/library/templates';
@@ -617,15 +619,26 @@ export const COMMANDS: readonly EditorCommand[] = [
   {
     kind: 'panel',
     id: 'spacing',
-    label: 'Line spacing',
+    label: 'Spacing',
     icon: UnfoldVertical,
-    group: 'paragraph',
-    forms: PROSE,
-    keywords: ['double spacing', 'line height', 'leading'],
+    // With the font and its size, because the spacing of the screen is a look of the text. A poem gets it
+    // too, as it never moves a line.
+    group: 'color',
+    forms: ALL,
+    keywords: [
+      'line spacing',
+      'double spacing',
+      'line height',
+      'leading',
+      'letter spacing',
+      'tracking',
+      'word spacing',
+    ],
     panel: 'spacing',
     slash: true,
     isActive: (e) =>
-      Boolean(e.getAttributes('paragraph').lineSpacing ?? e.getAttributes('heading').lineSpacing),
+      Boolean(e.getAttributes('paragraph').lineSpacing ?? e.getAttributes('heading').lineSpacing) ||
+      (Object.keys(SPACING) as SpacingKey[]).some((key) => getWritingPrefs()[key] !== SPACING[key].normal),
   },
   {
     kind: 'run',
@@ -981,6 +994,18 @@ export const COMMANDS: readonly EditorCommand[] = [
       const itemId = craftItemOf(e);
       return itemId !== undefined && craftOf(itemId) === true;
     },
+  },
+  {
+    kind: 'run',
+    id: 'rimshot',
+    label: 'Rimshot',
+    icon: Drum,
+    group: 'craft',
+    forms: ALL,
+    templates: ['comedy'],
+    keywords: ['ba dum tss', 'drum', 'punchline', 'joke', 'laugh', 'comedy'],
+    slash: true,
+    run: rimshot,
   },
   {
     kind: 'run',

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Trophy } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigation } from 'react-router';
 import { AccountMenu } from '@/features/account/AccountMenu';
@@ -97,6 +97,14 @@ export function AppShell() {
                     Settings
                   </NavLink>
                 </li>
+                {sharingReady() && account && (
+                  <li>
+                    <NavLink to="/leaderboard" className={navClass} aria-label="Leaderboard">
+                      <Trophy aria-hidden="true" strokeWidth={1.5} className="size-4 sm:hidden" />
+                      <span className="hidden sm:inline">Leaderboard</span>
+                    </NavLink>
+                  </li>
+                )}
                 {sharingReady() && !account && (
                   <li>
                     <NavLink to="/account" className={navClass}>

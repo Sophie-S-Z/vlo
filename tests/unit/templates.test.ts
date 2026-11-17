@@ -92,7 +92,7 @@ describe('mixed templates', () => {
   test('a mix of every template holds every kind', () => {
     const def = projectDef(TEMPLATE_ORDER);
     expect([...def.kinds].sort()).toEqual([...ALL].sort());
-    expect(def.label).toBe('Novel + Memoir + Poetry + Open + Script + Essay + Article + Research');
+    expect(def.label).toBe('Novel + Memoir + Poetry + Open + Script + Essay + Article + Research + Comedy');
     for (const kind of ALL) expect(def.kindLabel[kind]).toBeTruthy();
     expect(holdsText(TEMPLATE_ORDER, 'page')).toBe(true);
     expect(holdsText(TEMPLATE_ORDER, 'chapter')).toBe(false);

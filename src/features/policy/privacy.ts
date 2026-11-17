@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 17,
+  version: 18,
   date: '2026-11-17',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -80,7 +80,7 @@ export const PRIVACY = {
       title: 'Your account',
       when: 'Only when you sign in, while you stay signed in, when you save your profile or set a password, and when you sign out or delete the account.',
       sends:
-        'Your email address and the 6-digit code, your password if you set one, or the sign-in that Google gives. The account server keeps only a hash of the password. Your profile: your name, the name that Vlo greets you by, a pen name, a bio and a photo, if you give them. The photo goes as a small square copy that holds no camera data. The makers of Vlo see your name next to your email on the owner page. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the profile, the key, the sync and every sealed copy.',
+        'Your email address and the 6-digit code, your password if you set one, or the sign-in that Google gives. The account server keeps only a hash of the password. Your profile: your name, the name that Vlo greets you by, a pen name, a bio and a photo, if you give them. The photo goes as a small square copy that holds no camera data. The makers of Vlo see your name next to your email on the owner page. On the leaderboard, other signed-in writers see your pen name, or else the name that Vlo greets you by, your photo and the words that the daily count added for you. Turn off Show me on the leaderboard on the Leaderboard page to leave it. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the profile, the key, the sync and every sealed copy.',
     },
     ping: {
       title: 'The daily count',

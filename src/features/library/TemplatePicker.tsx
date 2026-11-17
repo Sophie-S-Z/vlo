@@ -4,6 +4,7 @@ import {
   Clapperboard,
   Feather,
   GraduationCap,
+  Laugh,
   Hourglass,
   Newspaper,
   NotebookPen,
@@ -24,14 +25,16 @@ const ICONS: Record<Template, LucideIcon> = {
   essay: ScrollText,
   article: Newspaper,
   research: GraduationCap,
+  comedy: Laugh,
 };
 
-/** The order of the cards: stories and poems, then the nonfiction modes, then open writing. */
+/** The order of the cards: stories, poems, scripts and comedy, then the nonfiction modes, then open writing. */
 const CARD_ORDER: readonly Template[] = [
   'novel',
   'memoir',
   'poetry',
   'script',
+  'comedy',
   'essay',
   'article',
   'research',

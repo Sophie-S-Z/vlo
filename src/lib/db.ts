@@ -7,7 +7,8 @@ import { countUnit, recountItems } from './wordcount';
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
 
 /** A kind of writing. A project has one or more (`Project.templates`). */
-export type Template = 'novel' | 'memoir' | 'poetry' | 'open' | 'script' | 'essay' | 'article' | 'research';
+export type Template =
+  'novel' | 'memoir' | 'poetry' | 'open' | 'script' | 'essay' | 'article' | 'research' | 'comedy';
 export type AiMode = 'pen' | 'reader' | 'cowriter';
 /** A `script` item is a scene of a screenplay or a stage play (F63). */
 export type ItemKind = 'part' | 'chapter' | 'scene' | 'memory' | 'poem' | 'page' | 'script' | 'note';

@@ -63,6 +63,8 @@ export class FakeAccounts {
     string,
     { name: string; called: string; pen_name: string; bio: string; photo: string | null; updated_at: string }
   >();
+  /** The accounts that left the leaderboard (migration 0012). */
+  readonly offBoard = new Set<string>();
   private readonly tokens = new Map<string, string>();
   /** The emails that asked for a code, in order. */
   readonly codesSent: string[] = [];
@@ -371,6 +373,43 @@ export class FakeAccounts {
         row.status = String(body.p_status);
         if (typeof body.p_note === 'string') row.note = body.p_note;
         return { value: true };
+      }
+      case 'leaderboard': {
+        // The fake keeps no calendar: "day" is the day that the app sends, and each longer period is every day.
+        const me = signedIn();
+        const words = new Map<string, number>();
+        const best = new Map<string, number>();
+        for (const p of this.pings.values()) {
+          if (!p.user_id || (body.p_period === 'day' && p.day !== body.p_today)) continue;
+          const key = `${p.user_id}|${p.day}`;
+          best.set(key, Math.max(best.get(key) ?? 0, p.words));
+        }
+        for (const [key, n] of best) {
+          const id = key.split('|')[0] ?? '';
+          words.set(id, (words.get(id) ?? 0) + n);
+        }
+        const rows = [...words]
+          .filter(([id, n]) => n > 0 && this.profiles.has(id) && !this.offBoard.has(id))
+          .sort((a, b) => b[1] - a[1]);
+        return {
+          value: rows.map(([id, n]) => {
+            const profile = this.profiles.get(id);
+            const names = [profile?.pen_name, profile?.called, profile?.name.split(' ')[0]];
+            return {
+              place: rows.findIndex(([, m]) => m === n) + 1,
+              name: names.find((name) => name !== undefined && name !== '') ?? '',
+              photo: profile?.photo ?? null,
+              words: n,
+              me: id === me,
+            };
+          }),
+        };
+      }
+      case 'leaderboard_show': {
+        const me = signedIn();
+        if (body.p_on === false) this.offBoard.add(me);
+        if (body.p_on === true) this.offBoard.delete(me);
+        return { value: this.profiles.has(me) && !this.offBoard.has(me) };
       }
       case 'owner_block_sender': {
         owner();

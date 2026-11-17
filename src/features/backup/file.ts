@@ -81,13 +81,13 @@ import type {
  * images in the text (`images`, Phase 16). Version 14 adds the Essay, Article and Research paper templates
  * and the guide, the word range, the role and the working title switch of a section (Phase 17). A version 14
  * file can also hold the word target of an item (`target`, Phase 19); an older build keeps the row and skips
- * the target. Vlo still reads versions 1 to 13.
+ * the target. Version 15 adds the Comedy template. Vlo still reads versions 1 to 14.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 14;
+export const BACKUP_VERSION = 15;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;

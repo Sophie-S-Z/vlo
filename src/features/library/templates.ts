@@ -201,6 +201,25 @@ export const TEMPLATES: Record<Template, TemplateDef> = {
     ],
     editorKind: editorFor,
   },
+  comedy: {
+    id: 'comedy',
+    label: 'Comedy',
+    shortLabel: 'Comedy',
+    description: 'Jokes, sketches, parodies and roasts. Set it up, knock it down, then tag it.',
+    untitled: 'Untitled comedy',
+    kinds: ['part', 'page', 'note'],
+    kindLabel: { part: 'Set', page: 'Bit', note: 'Note' },
+    childKinds: { root: ['part', 'page', 'note'], part: ['page', 'note'] },
+    starter: [
+      {
+        kind: 'page',
+        title: 'Bit 1',
+        guide:
+          'Set-up, then punchline. Put the funniest word last. Then tag it, because one laugh is never enough.',
+      },
+    ],
+    editorKind: editorFor,
+  },
 };
 
 /** The templates in their stored order. New templates go at the end, so old projects keep their order. */
@@ -213,6 +232,7 @@ export const TEMPLATE_ORDER: readonly Template[] = [
   'essay',
   'article',
   'research',
+  'comedy',
 ];
 
 /** The templates in `TEMPLATE_ORDER`, each one time. An empty or unknown list gives a novel. */

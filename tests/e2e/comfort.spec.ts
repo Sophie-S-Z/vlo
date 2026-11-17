@@ -9,12 +9,17 @@ test.beforeEach(async ({ page }) => {
 
 /* Plan Task G8 (roadmap F37): the comfort settings change the editor on this device only. */
 
-test('the widest comfort settings and the comfort font change the editor text', async ({ page }) => {
+test('wider spacing and the comfort font change the editor text', async ({ page }) => {
   await skipOnboarding(page);
   await page.goto('/settings');
   await page.getByRole('switch', { name: 'Show my text in Atkinson Hyperlegible Next' }).click();
-  for (const group of ['Space between letters', 'Space between words', 'Space between lines'])
-    await page.getByRole('radiogroup', { name: group }).getByRole('radio', { name: 'Widest' }).click();
+  const spacing = {
+    'Space between letters': '0.1',
+    'Space between words': '0.2',
+    'Space between lines': '2.3',
+  };
+  for (const [name, value] of Object.entries(spacing))
+    await page.getByRole('spinbutton', { name }).fill(value);
   await page.getByRole('radio', { name: 'Contrast' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'contrast');
   expect(await seriousIssues(page)).toEqual([]);
@@ -40,4 +45,22 @@ test('the widest comfort settings and the comfort font change the editor text', 
   expect(style.line).toBeCloseTo(2.3, 2);
   expect(style.letter).toBeCloseTo(0.1, 2);
   expect(style.word).toBeCloseTo(0.2, 2);
+});
+
+test('the Spacing panel of a poem changes the space between letters', async ({ page }) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New project' });
+  await dialog.getByRole('checkbox', { name: /Poetry collection/ }).click();
+  await dialog.getByRole('button', { name: 'Create project' }).click();
+  const editor = page.getByRole('textbox', { name: 'Poem 1' });
+  await expect(editor).toBeFocused();
+  await page.getByRole('button', { name: 'Format', exact: true }).click();
+  await page.getByRole('menu').getByRole('group', { name: 'Spacing' }).getByRole('menuitem').click();
+  await page.getByRole('spinbutton', { name: 'Space between letters' }).fill('0.25');
+  const letter = await editor.evaluate((element) => {
+    const s = getComputedStyle(element);
+    return parseFloat(s.letterSpacing) / parseFloat(s.fontSize);
+  });
+  expect(letter).toBeCloseTo(0.25, 2);
 });
