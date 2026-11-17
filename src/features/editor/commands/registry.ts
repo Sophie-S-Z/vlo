@@ -14,6 +14,7 @@ import {
   FilePenLine,
   Baseline,
   Bold,
+  CheckCheck,
   CaseLower,
   CaseSensitive,
   CaseUpper,
@@ -34,6 +35,7 @@ import {
   LetterText,
   Link,
   MessageSquareText,
+  MessagesSquare,
   Mic,
   MoveDown,
   MoveUp,
@@ -69,6 +71,7 @@ import {
   VenetianMask,
   type LucideIcon,
   WandSparkles,
+  X,
 } from 'lucide-react';
 import type { Template } from '@/lib/db';
 import { craftOf, setCraftLabels } from '@/features/craft/craftStore';
@@ -83,6 +86,7 @@ import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
 import { canStyleCheck } from '../extensions/styleCheck';
 import { rimshot } from '../rimshot';
+import { changesOf } from '../extensions/suggestion';
 import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
 import { TEXT_CASES, type TextCase } from '../format/textCase';
@@ -114,6 +118,7 @@ export type PanelId =
   | 'memory'
   | 'person'
   | 'comment'
+  | 'comments'
   | 'cite'
   | 'image'
   | 'shortcuts';
@@ -809,6 +814,39 @@ export const COMMANDS: readonly EditorCommand[] = [
     },
     isActive: () => getTracking().on,
     isEnabled: () => getTracking().projectId !== null,
+  },
+  {
+    kind: 'panel',
+    id: 'all-comments',
+    label: 'All comments',
+    icon: MessagesSquare,
+    group: 'review',
+    forms: ALL,
+    keys: 'Mod-Alt-Shift-a',
+    keywords: ['comments', 'threads', 'replies', 'resolved', 'reopen', 'review'],
+    panel: 'comments',
+  },
+  {
+    kind: 'run',
+    id: 'accept-all-changes',
+    label: 'Accept all changes',
+    icon: CheckCheck,
+    group: 'review',
+    forms: ALL,
+    keywords: ['track changes', 'suggestions', 'revision', 'accept'],
+    run: (e) => e.commands.acceptAll(),
+    isEnabled: (e) => changesOf(e.state).length > 0,
+  },
+  {
+    kind: 'run',
+    id: 'reject-all-changes',
+    label: 'Reject all changes',
+    icon: X,
+    group: 'review',
+    forms: ALL,
+    keywords: ['track changes', 'suggestions', 'revision', 'reject'],
+    run: (e) => e.commands.rejectAll(),
+    isEnabled: (e) => changesOf(e.state).length > 0,
   },
   {
     kind: 'run',

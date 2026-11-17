@@ -19,14 +19,15 @@ describe('readReview', () => {
         original: 'Mira finds the ledger.',
         changes: [
           { kind: 'delete', from: 0, to: 5, ...ANA },
-          // A reply on the same words joins its comment, with its author's name.
+          // A reply on the same words joins its comment's thread.
           {
             kind: 'comment',
             from: 15,
             to: 21,
             id: '1',
-            text: 'Which ledger?\nBen Ode: The blue one.',
+            text: 'Which ledger?',
             ...ANA,
+            replies: [{ text: 'The blue one.', by: 'Ben Ode', date: expect.any(Number) as number }],
           },
           // The two runs of one insert are one change.
           { kind: 'insert', at: 21, text: ' at dawn', ...ANA },
@@ -34,7 +35,7 @@ describe('readReview', () => {
       },
       {
         original: 'It is cold.',
-        changes: [{ kind: 'comment', from: 0, to: 11, id: '3', text: 'Show it.', ...ANA }],
+        changes: [{ kind: 'comment', from: 0, to: 11, id: '3', text: 'Show it.', ...ANA, replies: [] }],
       },
       { original: '', changes: [{ kind: 'insert', at: 0, text: 'She runs.', ...ANA }] },
     ]);

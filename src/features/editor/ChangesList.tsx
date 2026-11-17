@@ -29,9 +29,10 @@ function select(editor: Editor, change: ChangeEntry): void {
 
 /**
  * Track changes for the open item, under the text (F44, decision R1): the switch's pass, and each waiting
- * change in text order with Accept and Reject. It shows while tracking is on or a change waits.
+ * change in text order with Accept and Reject. It shows while tracking is on or a change waits. When the
+ * review margin shows the changes as cards (Phase 19, Task C2), the list keeps only its tools.
  */
-export function ChangesList({ editor }: { editor: Editor }) {
+export function ChangesList({ editor, inMargin }: { editor: Editor; inMargin: boolean }) {
   const headingId = useId();
   const passId = useId();
   const tracking = useTracking();
@@ -82,6 +83,8 @@ export function ChangesList({ editor }: { editor: Editor }) {
         <p className="text-sm text-muted">
           New words and deleted words show here until you accept or reject them.
         </p>
+      ) : inMargin ? (
+        <p className="text-sm text-muted">Each change has a card in the margin, beside its words.</p>
       ) : (
         <ul className="grid gap-1">
           {changes.map((change) => {

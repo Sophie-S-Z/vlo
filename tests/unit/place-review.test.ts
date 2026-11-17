@@ -7,6 +7,7 @@ import { toDocx } from '@/features/export/docx';
 import { bookmarkName } from '@/features/export/model';
 import { BEFORE_WORD, placeChanges, placeReview } from '@/features/import/placeReview';
 import { readReview, type ReviewParagraph } from '@/features/import/review';
+import { repliesOf } from '@/features/editor/format/comment';
 import { editorSchemas } from '@/features/import/tree';
 import { db } from '@/lib/db';
 import { openItemDoc, writeItemUpdate, YFRAGMENT } from '@/lib/ydocs';
@@ -34,7 +35,12 @@ function runs(doc: ProseMirrorNode) {
     out.push({
       text: node.text ?? '',
       ...(s ? { change: String(s.kind), by: String(s.by), pass: Number(s.pass) } : {}),
-      ...(c ? { comment: `${String(c.by)}: ${String(c.text)}` } : {}),
+      // The thread, one message for each line.
+      ...(c
+        ? {
+            comment: [c, ...repliesOf(c.replies)].map((m) => `${String(m.by)}: ${String(m.text)}`).join('\n'),
+          }
+        : {}),
     });
     return false;
   });

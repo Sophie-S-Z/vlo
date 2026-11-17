@@ -12,7 +12,24 @@ import { ImportError } from './tree';
 export type ReviewChange =
   | { kind: 'insert'; at: number; text: string; by: string; date: number }
   | { kind: 'delete'; from: number; to: number; by: string; date: number }
-  | { kind: 'comment'; from: number; to: number; id: string; text: string; by: string; date: number };
+  | {
+      kind: 'comment';
+      from: number;
+      to: number;
+      id: string;
+      text: string;
+      by: string;
+      date: number;
+      /** The answers in the comment's thread, in the order of the file. */
+      replies: readonly WordMessage[];
+    };
+
+/** A Word comment or reply. */
+export interface WordMessage {
+  text: string;
+  by: string;
+  date: number;
+}
 
 export interface ReviewParagraph {
   /**
@@ -44,9 +61,9 @@ function trackedOf(element: Element, kind: 'insert' | 'delete'): Tracked {
 }
 
 /** The text of each comment, by its Word id, with its author and date. */
-async function commentsOf(zip: JSZip): Promise<Map<string, { text: string; by: string; date: number }>> {
+async function commentsOf(zip: JSZip): Promise<Map<string, WordMessage>> {
   const doc = await xml(zip, 'word/comments.xml');
-  const out = new Map<string, { text: string; by: string; date: number }>();
+  const out = new Map<string, WordMessage>();
   for (const comment of Array.from(doc?.getElementsByTagNameNS(W, 'comment') ?? [])) {
     const text = Array.from(comment.getElementsByTagNameNS(W, 'p'))
       .map((p) =>
@@ -91,7 +108,7 @@ export async function readReview(bytes: Uint8Array): Promise<Review> {
 
   const commentPart = (id: string, from: number) => {
     const to = paragraph.original.length;
-    paragraph.changes.push({ kind: 'comment', from, to, id, text: '', by: '', date: 0 });
+    paragraph.changes.push({ kind: 'comment', from, to, id, text: '', by: '', date: 0, replies: [] });
     anchors.set(id, [...(anchors.get(id) ?? []), `${String(count)}:${String(from)}:${String(to)}`]);
   };
 
@@ -177,9 +194,9 @@ export async function readReview(bytes: Uint8Array): Promise<Review> {
   };
   walk(body);
 
-  // A reply has the same words as its comment, so it joins the comment's text.
+  // A reply has the same words as its comment, so it joins the comment's thread.
   const comments = await commentsOf(zip);
-  const texts = new Map<string, { text: string; by: string; date: number }>();
+  const texts = new Map<string, WordMessage & { replies: WordMessage[] }>();
   const first = new Map<string, string>();
   for (const [id, places] of anchors) {
     const comment = comments.get(id);
@@ -188,10 +205,10 @@ export async function readReview(bytes: Uint8Array): Promise<Review> {
     const parent = first.get(key);
     const thread = parent === undefined ? undefined : texts.get(parent);
     if (thread) {
-      thread.text += `\n${comment.by || 'Reply'}: ${comment.text}`;
+      thread.replies.push(comment);
     } else {
       first.set(key, id);
-      texts.set(id, { ...comment });
+      texts.set(id, { ...comment, replies: [] });
     }
   }
   for (const paragraphs of sections.values()) {

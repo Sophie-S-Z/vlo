@@ -27,7 +27,6 @@ import { HeldSelection, ToolKeys } from './extensions/editorTools';
 import { FindReplace } from './extensions/findReplace';
 import { ImageInput } from './extensions/image';
 import { ChangesList } from './ChangesList';
-import { CommentList } from './CommentList';
 import { FootnoteList } from './FootnoteList';
 import { poemExtensions } from './extensions/poem';
 import { CraftLabels } from '@/features/craft/CraftLabels';
@@ -97,6 +96,8 @@ interface EditorProps {
   craft?: boolean;
   /** The form that the Craft labels check the poem against (F56). */
   poemForm?: PoemForm | undefined;
+  /** The margin shows each waiting change as a card, so the list under the text keeps only its tools. */
+  changesInMargin?: boolean;
 }
 
 const HELP = {
@@ -170,6 +171,7 @@ export function Editor({
   projectId,
   craft = false,
   poemForm,
+  changesInMargin = false,
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
@@ -420,8 +422,7 @@ export function Editor({
           <FootnoteList editor={editor} />
         </PageFrame>
       </div>
-      <ChangesList editor={editor} />
-      <CommentList editor={editor} />
+      <ChangesList editor={editor} inMargin={changesInMargin} />
       {kind === 'prose' && <BlockHandle editor={editor} />}
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />

@@ -64,10 +64,16 @@ test("an editor's Word changes come back as waiting changes and comments", async
   await page.reload();
   await expect(scene).toHaveText(`Mira finds the ledger at dawn.${REVIEW_TEXT[1] ?? ''}She runs.`);
   await expect(changes.getByRole('listitem')).toHaveCount(2);
-  const comments = page.getByRole('region', { name: 'Comments' });
-  await expect(comments.getByRole('listitem')).toHaveCount(2);
-  await expect(comments).toContainText('Which ledger?\nBen Ode: The blue one.');
-  await expect(comments).toContainText('Ana Ruiz');
+  // A reply in Word comes back as a reply in the comment's thread.
+  await page.keyboard.press(`${mod}+Alt+Shift+a`);
+  const comments = page.getByRole('list', { name: 'Open comments' });
+  await expect(comments.getByRole('article')).toHaveCount(2);
+  const ledger = comments.getByRole('article', { name: 'Comment on “ledger”' });
+  await expect(ledger).toContainText('Ana Ruiz');
+  await expect(ledger).toContainText('Which ledger?');
+  await expect(ledger).toContainText('Ben Ode');
+  await expect(ledger).toContainText('The blue one.');
+  await page.keyboard.press('Escape');
 
   // A file that Vlo did not export gets the way to Import writing.
   await page.keyboard.press(`${mod}+k`);

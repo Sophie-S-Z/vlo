@@ -11,7 +11,7 @@ import { personIdOf, PRIVATE_NAME } from '@/features/people/markName';
 import { CITE, citeText } from '@/features/editor/format/cite';
 import { AI_ORIGIN, aiLabelOf } from '@/features/editor/format/aiOrigin';
 import { SUGGESTION } from '@/features/editor/format/suggestion';
-import { COMMENT } from '@/features/editor/format/comment';
+import { COMMENT, repliesOf } from '@/features/editor/format/comment';
 import { CAPITAL_ROLES, SCRIPT_LINE, scriptRole, type ScriptRole } from '@/features/editor/scriptRoles';
 import { YFRAGMENT } from '@/lib/ydocs';
 import {
@@ -227,7 +227,14 @@ function commentOf(marks: JSONContent['marks']): TextComment | null {
   if (typeof attrs?.id !== 'string' || typeof attrs.text !== 'string' || attrs.text.trim() === '')
     return null;
   const at = Number(attrs.at);
-  return { id: attrs.id, text: attrs.text, by: String(attrs.by ?? ''), at: Number.isFinite(at) ? at : 0 };
+  return {
+    id: attrs.id,
+    text: attrs.text,
+    by: String(attrs.by ?? ''),
+    at: Number.isFinite(at) ? at : 0,
+    replies: repliesOf(attrs.replies).map(({ text, by, at: when }) => ({ text, by, at: when })),
+    resolved: Number(attrs.resolvedAt) > 0,
+  };
 }
 
 function inlineRuns(content: JSONContent[] | undefined, notes: NoteCounter, review: ExportReview): Run[] {

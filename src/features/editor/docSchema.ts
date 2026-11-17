@@ -6,9 +6,10 @@ import type * as Y from 'yjs';
  * build never binds an editor to a document newer than its own schema. 1 is Phase 1; 2 adds the Phase 2
  * formats (styles, colors, gradient text and footnotes); 3 adds equations; 4 adds private names; 5 adds the aiOrigin mark;
  * 6 adds comments; 7 adds suggestions and the comment's author; 8 adds the script line (F63); 9 adds the
- * citation (F64); 10 adds the image (Phase 16); 11 adds the image between the stanzas of a poem; 12 adds Heading 4, the checklist and the page break (Phase 19).
+ * citation (F64); 10 adds the image (Phase 16); 11 adds the image between the stanzas of a poem; 12 adds Heading 4, the checklist and the page break (Phase 19); 13 adds the replies and
+ * the resolve time of a comment (Phase 19, Task C1).
  */
-export const DOC_SCHEMA = 12;
+export const DOC_SCHEMA = 13;
 
 const META = 'vlo';
 const KEY = 'schema';

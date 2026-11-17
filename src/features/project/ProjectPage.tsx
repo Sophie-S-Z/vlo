@@ -10,7 +10,7 @@ import { useMediaQuery } from '@/app/useMediaQuery';
 import { Binder } from '@/features/binder/Binder';
 import { cardTransitionName, FROM_CARD } from '@/features/board/useBoard';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
-import { runCommand, useActiveEditor } from '@/features/editor/commands/editorBus';
+import { runCommand, showCommentOnOpen, useActiveEditor } from '@/features/editor/commands/editorBus';
 import { shortcutLabel } from '@/features/editor/commands/keys';
 import { commandsFor } from '@/features/editor/commands/registry';
 import { EditorPane } from '@/features/editor/EditorPane';
@@ -173,6 +173,20 @@ export function ProjectPage() {
   const { projectId = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const state = useProject(projectId);
+  // A comment link (Phase 19, Task C1) opens its item at the thread, once.
+  const linkedItem = params.get('item');
+  const linkedComment = params.get('comment');
+  useEffect(() => {
+    if (linkedItem === null || linkedComment === null) return;
+    showCommentOnOpen(linkedItem, linkedComment);
+    setParams(
+      (now) => {
+        now.delete('comment');
+        return now;
+      },
+      { replace: true },
+    );
+  }, [linkedItem, linkedComment, setParams]);
   useDocumentTitle(
     state.status === 'ready'
       ? state.project.title

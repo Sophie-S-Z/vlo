@@ -944,6 +944,10 @@ html[data-calm='true'] .vlo-fill-shimmer {
   background: color-mix(in oklab, var(--accent) 16%, transparent);
   box-decoration-break: clone;
 }
+/* A resolved thread (Phase 19, Task C1) stays on its words for Reopen, out of sight. */
+.vlo-manuscript .vlo-comment[data-resolved] {
+  background: none;
+}
 
 /* "Show Codex names" (F42): a dotted line under each name of the Codex. */
 .vlo-manuscript .vlo-codex {
