@@ -20,6 +20,7 @@ import {
   type ResolvedTheme,
   type ThemeChoice,
 } from './preferences';
+import { THEMES } from './themes';
 import { useMediaQuery } from './useMediaQuery';
 
 interface PreferencesContextValue {
@@ -42,6 +43,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = resolvedTheme;
+    root.dataset.tone = THEMES[resolvedTheme].tone;
+    // atmospheres.css paints the theme's scene behind the app when this is set.
+    if (THEMES[resolvedTheme].atmosphere) root.dataset.atmosphere = '';
+    else delete root.dataset.atmosphere;
     root.dataset.calm = String(prefs.calm);
     // The browser bar takes the theme's page color.
     const background = getComputedStyle(root).getPropertyValue('--bg').trim();

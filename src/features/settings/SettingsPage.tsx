@@ -1,9 +1,12 @@
 import { lazy, Suspense, useId, useRef, useState } from 'react';
 import { useMotionAllowed, usePreferences } from '@/app/PreferencesProvider';
-import type { ResolvedTheme, ThemeChoice } from '@/app/preferences';
+import { RESOLVED_THEMES, type ResolvedTheme, type ThemeChoice } from '@/app/preferences';
+import { THEMES, themeHint, themeLabel } from '@/app/themes';
 import { withViewTransition } from '@/ui/motion';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Switch } from '@/ui/switch';
+import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
+import { Check } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { showTipsAgain, useTips } from '@/features/onboarding/Tips';
 import { ComfortSettings } from './ComfortSettings';
@@ -24,21 +27,12 @@ const DevicesSection = lazy(async () => ({
   default: (await import('@/features/sync/DevicesSection')).DevicesSection,
 }));
 
-const THEME_LABELS: Record<ThemeChoice, string> = {
-  system: 'System',
-  ink: 'Ink',
-  paper: 'Paper',
-  sepia: 'Sepia',
-  contrast: 'Contrast',
-};
-
-const THEME_HINTS: Record<ThemeChoice, string> = {
-  system: 'Follows your device: Ink when dark, Paper when light.',
-  ink: 'Light text on a dark page.',
-  paper: 'Dark text on a light page.',
-  sepia: 'Brown text on a warm page.',
-  contrast: 'Black text on a white page, with the strongest contrast.',
-};
+/** The plain themes, as rows. The atmospheres follow as pictures. */
+const PLAIN_THEMES: readonly ThemeChoice[] = [
+  'system',
+  ...RESOLVED_THEMES.filter((theme) => !THEMES[theme].atmosphere),
+];
+const ATMOSPHERES: readonly ResolvedTheme[] = RESOLVED_THEMES.filter((theme) => THEMES[theme].atmosphere);
 
 /** A small page in a theme's own colors. The theme variables apply to any element with `data-theme`. */
 function ThemeSwatch({ theme }: { theme: ResolvedTheme }) {
@@ -130,20 +124,20 @@ export function SettingsPage() {
                 },
                 { origin, className: 'vlo-theme-reveal' },
               );
-              setAnnouncement(`Theme set to ${THEME_LABELS[choice]}.`);
+              setAnnouncement(`Theme set to ${themeLabel(choice)}.`);
             }}
           >
-            {(Object.keys(THEME_LABELS) as ThemeChoice[]).map((choice) => {
+            {PLAIN_THEMES.map((choice) => {
               const id = `theme-${choice}`;
               return (
                 <div key={choice} className="flex min-h-11 items-start gap-3">
                   <RadioGroupItem id={id} value={choice} aria-describedby={`${id}-hint`} className="mt-0.5" />
                   <div className="grid flex-1 gap-0.5">
                     <label htmlFor={id} className="cursor-pointer">
-                      {THEME_LABELS[choice]}
+                      {themeLabel(choice)}
                     </label>
                     <span id={`${id}-hint`} className="text-sm text-muted">
-                      {THEME_HINTS[choice]}
+                      {themeHint(choice)}
                     </span>
                   </div>
                   {/* System shows Paper with Ink over its lower right half. */}
@@ -158,9 +152,46 @@ export function SettingsPage() {
                 </div>
               );
             })}
+            <h3 className="mt-5 font-display text-lg font-semibold">Atmospheres</h3>
+            <p className="-mt-1 mb-1 text-sm text-muted">
+              A scene around your work, with its own colors. Its small lights move only while you rest, and
+              stay still in Calm mode.
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {ATMOSPHERES.map((theme) => {
+                const id = `theme-${theme}`;
+                return (
+                  <RadioGroupPrimitive.Item
+                    key={theme}
+                    id={id}
+                    value={theme}
+                    aria-describedby={`${id}-hint`}
+                    className="group grid content-start gap-1.5 rounded-lg p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <span
+                      aria-hidden="true"
+                      data-theme={theme}
+                      className="vlo-atmosphere-preview relative flex aspect-[16/10] items-end justify-between overflow-hidden rounded-md border border-rule p-2.5 text-text group-data-[state=checked]:ring-2 group-data-[state=checked]:ring-accent"
+                    >
+                      <span className="font-display text-2xl leading-none font-semibold">Aa</span>
+                      <span className="mb-1 size-2 rounded-full bg-accent" />
+                      {prefs.theme === theme && (
+                        <span className="absolute top-1.5 right-1.5 rounded-full bg-accent p-0.5 text-on-accent">
+                          <Check className="size-3" />
+                        </span>
+                      )}
+                    </span>
+                    <span className="px-0.5 text-sm text-text">{THEMES[theme].label}</span>
+                    <span id={`${id}-hint`} className="px-0.5 text-xs text-muted">
+                      {THEMES[theme].hint}
+                    </span>
+                  </RadioGroupPrimitive.Item>
+                );
+              })}
+            </div>
           </RadioGroup>
           <p className="mt-3 text-sm text-muted">
-            Showing: <span className="text-text">{THEME_LABELS[resolvedTheme]}</span>
+            Showing: <span className="text-text">{themeLabel(resolvedTheme)}</span>
           </p>
         </Section>
 

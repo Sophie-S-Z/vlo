@@ -29,6 +29,7 @@ interface Looks {
   size: boolean;
   fills: Set<string>;
   shimmer: boolean;
+  play: boolean;
   math: boolean;
   layout: boolean;
   hanging: boolean;
@@ -48,6 +49,7 @@ function scan(doc: ExportDoc): Looks {
     size: false,
     fills: new Set(),
     shimmer: false,
+    play: false,
     math: false,
     layout: false,
     hanging: false,
@@ -64,6 +66,7 @@ function scan(doc: ExportDoc): Looks {
       if (style.color) looks.color = true;
       if (style.highlight) looks.highlight = true;
       if (style.size !== undefined) looks.size = true;
+      if (style.play) looks.play = true;
       if (style.fill) {
         looks.fills.add(style.fill.look);
         if (style.fill.shimmer) looks.shimmer = true;
@@ -208,6 +211,11 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
         : `${String(missing)} citations name sources that this project does not have now. They show “[missing source]”.`,
     );
   notices.push(...imageNotices(looks, format, extras.manuscriptFont !== undefined));
+  if (looks.play) {
+    notices.push(
+      'Type play stays in Vlo. The file keeps a heavy weight as bold, and draws the letters without their spacing, effects and motion.',
+    );
+  }
   for (const swap of extras.swaps ?? []) {
     notices.push(
       `${swap.name} is not in the file. ${swap.reason} The file uses ${swap.standInName} in its place.`,

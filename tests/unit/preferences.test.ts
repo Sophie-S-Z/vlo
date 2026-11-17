@@ -77,6 +77,24 @@ describe('PreferencesProvider', () => {
     expect(loadPreferences(localStorage)).toEqual({ theme: 'sepia', calm: true });
   });
 
+  test('an atmosphere theme sets its tone and turns on the scene, and a plain theme turns it off', () => {
+    const { result } = renderHook(() => usePreferences(), { wrapper });
+    const root = document.documentElement;
+    expect(root.dataset.tone).toBe('light');
+    expect(root.dataset.atmosphere).toBeUndefined();
+    act(() => {
+      result.current.setTheme('galaxy');
+    });
+    expect(root.dataset.theme).toBe('galaxy');
+    expect(root.dataset.tone).toBe('dark');
+    expect(root.dataset.atmosphere).toBe('');
+    expect(loadPreferences(localStorage).theme).toBe('galaxy');
+    act(() => {
+      result.current.setTheme('paper');
+    });
+    expect(root.dataset.atmosphere).toBeUndefined();
+  });
+
   test('a storage event from another tab updates the preferences', () => {
     const { result } = renderHook(() => usePreferences(), { wrapper });
     act(() => {

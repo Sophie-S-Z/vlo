@@ -56,6 +56,7 @@ import {
   UserRound,
   VenetianMask,
   type LucideIcon,
+  WandSparkles,
 } from 'lucide-react';
 import type { Template } from '@/lib/db';
 import { craftOf, setCraftLabels } from '@/features/craft/craftStore';
@@ -87,6 +88,7 @@ export type PanelId =
   | 'color'
   | 'highlight'
   | 'gradient'
+  | 'type-play'
   | 'size'
   | 'spacing'
   | 'characters'
@@ -342,6 +344,34 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     isActive: (e) => Boolean(e.getAttributes('textStyle').font),
+  },
+  {
+    kind: 'panel',
+    id: 'type-play',
+    label: 'Type play',
+    icon: WandSparkles,
+    group: 'color',
+    forms: BOTH,
+    keywords: [
+      'weight',
+      'letter spacing',
+      'tracking',
+      'variable font',
+      'softness',
+      'casual',
+      'outline',
+      'engraved',
+      'shadow',
+      'echo',
+      'breathe',
+      'flicker',
+      'animate',
+      'effect',
+    ],
+    panel: 'type-play',
+    slash: true,
+    selection: true,
+    isActive: (e) => e.isActive('typePlay'),
   },
   {
     kind: 'panel',
