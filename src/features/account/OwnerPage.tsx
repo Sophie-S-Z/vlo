@@ -520,8 +520,9 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
   const id = useId();
   const [filter, setFilter] = useState('');
   const [sort, setSort] = useState<Sort>('active');
+  const find = filter.trim().toLowerCase();
   const shown = accounts
-    .filter((a) => a.email.toLowerCase().includes(filter.trim().toLowerCase()))
+    .filter((a) => `${a.name ?? ''} ${a.email}`.toLowerCase().includes(find))
     .sort(SORTERS[sort]);
   const top = Math.max(1, ...accounts.map((a) => a.words_30d));
   return (
@@ -529,7 +530,7 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid w-full max-w-sm gap-1.5">
           <label htmlFor={id} className="text-sm">
-            Find an email
+            Find a name or email
           </label>
           <Input
             id={id}
@@ -550,7 +551,7 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
         <table aria-label="Accounts" className="w-full min-w-[56rem] text-sm">
           <thead>
             <tr className="text-left text-muted">
-              <th className="py-2 pr-4 font-medium">Email</th>
+              <th className="py-2 pr-4 font-medium">Writer</th>
               <th className="py-2 pr-4 font-medium">Joined</th>
               <th className="py-2 pr-4 font-medium">Last active</th>
               <th className="py-2 pr-4 font-medium">Words, 30 days</th>
@@ -566,7 +567,8 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
             {shown.map((a) => (
               <tr key={a.id} className="border-t border-rule">
                 <td className="py-2 pr-4">
-                  {a.email}
+                  {a.name && <span className="block font-medium">{a.name}</span>}
+                  <span className={a.name ? 'text-muted' : undefined}>{a.email}</span>
                   {a.provider === 'google' ? <span className="text-muted"> (Google)</span> : null}
                 </td>
                 <td className="py-2 pr-4">{dayText(a.created_at)}</td>

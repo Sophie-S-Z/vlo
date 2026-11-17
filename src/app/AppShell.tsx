@@ -2,6 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowUpRight } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigation } from 'react-router';
+import { AccountMenu } from '@/features/account/AccountMenu';
+import { readProfile } from '@/features/account/profile';
 import { readSession } from '@/features/account/session';
 import { SafetyBadge } from '@/features/backup/SafetyBadge';
 import { sharingReady } from '@/features/share/rpc';
@@ -26,8 +28,16 @@ export function AppShell() {
   const firstPath = useRef(true);
   // A screen's code loads on its first visit. While it loads, a line at the top shows that Vlo is working.
   const loading = useNavigation().state === 'loading';
-  // Accounts (Phase 18): the header says "Sign in" until this device has an account, then "Account".
-  const signedIn = useLiveQuery(async () => (await readSession().catch(() => null)) !== null, [], false);
+  // Accounts (Phase 18): the header says "Sign in" until this device has an account, then shows the
+  // writer's photo and name (ADR 0011).
+  const account = useLiveQuery(
+    async () => {
+      const session = await readSession().catch(() => null);
+      return session && { email: session.email, profile: await readProfile().catch(() => null) };
+    },
+    [],
+    null,
+  );
 
   // After moving to another screen, focus goes to its heading, so a screen reader starts there. When the
   // new screen already put focus inside the page, such as the editor, it stays.
@@ -87,15 +97,16 @@ export function AppShell() {
                     Settings
                   </NavLink>
                 </li>
-                {sharingReady() && (
+                {sharingReady() && !account && (
                   <li>
                     <NavLink to="/account" className={navClass}>
-                      {signedIn ? 'Account' : 'Sign in'}
+                      Sign in
                     </NavLink>
                   </li>
                 )}
               </ul>
             </nav>
+            {sharingReady() && account && <AccountMenu email={account.email} profile={account.profile} />}
           </div>
         </div>
       </header>

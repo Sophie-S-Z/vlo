@@ -135,12 +135,23 @@ export const HELP = {
       title: 'Use Vlo on all your devices',
       needsSharing: true,
       steps: [
-        'Choose Sign in at the top of the screen, type your email, then type the 6-digit code from the email. Sync turns on.',
+        'Choose Sign in at the top of the screen, type your email, then type the 6-digit code from the email. A new account then asks for your name. Sync turns on.',
         'On your phone or another computer, open Vlo and sign in with the same email.',
         'Every project of the account comes to the new device, finished or in progress. A change on one device goes to the others.',
         'Words that two devices write offline both stay.',
         'Each account has its own projects. To have the projects of another account, or the ones you wrote with no account, choose Bring its projects here on the Account page.',
         'Sign out on a device that is not yours. It stops sync, and the projects of the account stay hidden until you sign in again. Delete my account is on the Account page.',
+      ],
+    },
+    {
+      title: 'Change your profile',
+      needsSharing: true,
+      steps: [
+        'Choose your photo or your initials at the top of the screen, then choose Your profile.',
+        'Add a photo, then drag it and zoom until the circle shows what you want.',
+        'Change your name, or the name that Vlo greets you by in the Library.',
+        'Type a pen name for the author of your new projects. A bio can fill the About the author page of a book.',
+        'Choose Save profile. Your other devices show the change the next time Vlo opens.',
       ],
     },
     {
