@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 28,
+  version: 29,
   date: '2026-11-17',
   guide: [
     {
@@ -46,7 +46,7 @@ export const HELP = {
     {
       title: 'Use the menus above the text',
       steps: [
-        'Insert holds footnotes, images, math, scene breaks and special characters.',
+        'Insert holds footnotes, images, math, scene breaks, page breaks and special characters.',
         'Format holds the text styles, the fonts, the colors and the paragraph styles.',
         'Review holds Find, Read aloud, Speak to write, the checks and Print. Print shows only the open text.',
         'Mode, at the end of the toolbar, changes between Editing, Suggesting and Viewing. In Viewing, the text cannot change.',
@@ -71,6 +71,46 @@ export const HELP = {
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
         'To make a note to yourself, select the words and choose Comment. Comments show under the text, and exports leave them out.',
         'In an English project, Review has Style check. It marks repeated words, filler words, cliches and long sentences. Put the cursor in the marked words to see why. The check never changes your text.',
+      ],
+    },
+    {
+      title: 'Use headings, checklists and page breaks',
+      steps: [
+        'In prose, the style menu at the start of the toolbar has Body text, Heading 2, Heading 3 and Heading 4. The item title is the top heading.',
+        'Choose Checklist, or type [ ] and a space at the start of a line, for a list with boxes. Click a box to tick it.',
+        'Press Ctrl+Enter (Cmd+Enter on a Mac) for a page break. The page view, Word, PDF and EPUB start a new page there.',
+        'Choose Outline (next to the word count) to see the headings and scenes of the item, with the words in each. Click one to go there.',
+        'In a wide window, the outline stays in the margin. Choose Outline again to put it away.',
+        'Press Ctrl+K (Cmd+K on a Mac) and type a heading to go to it.',
+      ],
+    },
+    {
+      title: 'Paste, copy formats and change case',
+      steps: [
+        'A paste from Google Docs, Word or a web page keeps bold, italic, links, headings, lists and footnotes. It takes the font and the colors of your project.',
+        'To keep the fonts, sizes and colors of the paste, choose Keep the original look under the toolbar.',
+        'Press Ctrl+Shift+V (Cmd+Shift+V on a Mac) to paste plain text.',
+        'Paint format, in Format, copies the styles at the cursor. Select other words, and they take the styles. Choose it twice to keep it on, and press Escape to stop.',
+        'Format, Case, has UPPERCASE, lowercase, Title Case and Sentence case. Shift+F3 steps through them.',
+      ],
+    },
+    {
+      title: 'Move paragraphs',
+      steps: [
+        'Press Alt+Shift+Up or Alt+Shift+Down to move the paragraph with the cursor, or the selected paragraphs.',
+        'In a list, the item moves in its list. In a poem, the line moves in its stanza. Add Ctrl (Cmd on a Mac) to move the stanza.',
+        'With a mouse, point at a paragraph. Drag the handle at its left to move it.',
+        'Click the handle for its menu: Turn into, Duplicate, Move up, Move down and Delete.',
+      ],
+    },
+    {
+      title: 'Find and replace in the whole project',
+      steps: [
+        'Press Ctrl+F (Cmd+F on a Mac) to find, or Ctrl+H for Replace.',
+        'Choose Whole project to see each item with matches. Click an item to open it at the first match.',
+        'Replace all in project shows the count and asks first. History keeps a snapshot of each item from before.',
+        'Choose Use a pattern to search with a regular expression. In Replace, $1 puts in the first group.',
+        'A pattern with an error shows the error, and Vlo does not search.',
       ],
     },
     {

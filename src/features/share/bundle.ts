@@ -1,6 +1,7 @@
 import type { LatexToMathml } from '@/features/export/latex';
 import { parseMathml, type MathNode } from '@/features/export/mathml';
 import {
+  boxedItems,
   imageStandIn,
   type Align,
   type Block,
@@ -242,7 +243,16 @@ function runsOf(runs: readonly Run[], toMathml: LatexToMathml): ShareRun[] {
   });
 }
 
-function blockOf(block: Block, toMathml: LatexToMathml, images: SharedImages): ShareBlock {
+/** The share blocks of some blocks. A reader has no pages, so a page break stays out. */
+function blocksOf(blocks: readonly Block[], toMathml: LatexToMathml, images: SharedImages): ShareBlock[] {
+  return blocks.flatMap((b) => (b.type === 'pageBreak' ? [] : [blockOf(b, toMathml, images)]));
+}
+
+function blockOf(
+  block: Exclude<Block, { type: 'pageBreak' }>,
+  toMathml: LatexToMathml,
+  images: SharedImages,
+): ShareBlock {
   switch (block.type) {
     case 'paragraph':
       return {
@@ -253,7 +263,8 @@ function blockOf(block: Block, toMathml: LatexToMathml, images: SharedImages): S
     case 'heading':
       return {
         type: 'h',
-        level: block.level,
+        // The reader has four levels, so a Heading 4 in the text reads as the smallest one.
+        level: Math.min(block.level, 4) as 1 | 2 | 3 | 4,
         runs: runsOf(block.runs, toMathml),
         ...(block.align ? { align: block.align } : {}),
       };
@@ -262,10 +273,11 @@ function blockOf(block: Block, toMathml: LatexToMathml, images: SharedImages): S
         type: 'list',
         ordered: block.ordered,
         start: Math.trunc(block.start),
-        items: block.items.map((blocks) => blocks.map((b) => blockOf(b, toMathml, images))),
+        // A checklist item starts with its box, as the reader has no checklist of its own.
+        items: boxedItems(block).map((blocks) => blocksOf(blocks, toMathml, images)),
       };
     case 'quote':
-      return { type: 'quote', blocks: block.blocks.map((b) => blockOf(b, toMathml, images)) };
+      return { type: 'quote', blocks: blocksOf(block.blocks, toMathml, images) };
     case 'stanza':
       return {
         type: 'stanza',
@@ -320,7 +332,7 @@ export function toBundle(
     sections: doc.sections.map((section) => ({
       title: section.title,
       form: section.form,
-      blocks: section.blocks.map((b) => blockOf(b, toMathml, images)),
+      blocks: blocksOf(section.blocks, toMathml, images),
     })),
   };
 }

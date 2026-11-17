@@ -298,7 +298,8 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, rev
       }
       case 'heading': {
         // The text's own headings sit under the item title, so level 2 in the editor is level 3 here.
-        const level = Number(attrs?.level) === 3 ? 4 : 3;
+        const n = Number(attrs?.level);
+        const level = n === 4 ? 5 : n === 3 ? 4 : 3;
         const block: Block = { type: 'heading', level, runs: inlineRuns(node.content, notes, review) };
         const a = align(attrs);
         if (a) block.align = a;
@@ -318,11 +319,25 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, rev
         });
         break;
       }
+      case 'taskList': {
+        const items = (node.content ?? []).filter((child) => child.type === 'taskItem');
+        blocks.push({
+          type: 'list',
+          ordered: false,
+          start: 1,
+          items: items.map((child) => proseBlocks(child.content, notes, review)),
+          checked: items.map((child) => child.attrs?.checked === true),
+        });
+        break;
+      }
       case 'blockquote':
         blocks.push({ type: 'quote', blocks: proseBlocks(node.content, notes, review) });
         break;
       case 'sceneBreak':
         blocks.push({ type: 'sceneBreak' });
+        break;
+      case 'pageBreak':
+        blocks.push({ type: 'pageBreak' });
         break;
       case SCRIPT_LINE: {
         const role = scriptRole(attrs?.role);

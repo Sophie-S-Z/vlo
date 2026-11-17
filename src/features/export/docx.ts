@@ -42,6 +42,7 @@ import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manu
 import { parseMathml } from './mathml';
 import {
   bookmarkName,
+  boxedItems,
   imageStandIn,
   repeatsTitle,
   runsOf,
@@ -105,6 +106,7 @@ const HEADINGS = [
   HeadingLevel.HEADING_2,
   HeadingLevel.HEADING_3,
   HeadingLevel.HEADING_4,
+  HeadingLevel.HEADING_5,
 ];
 
 const BULLETS = ['•', '◦', '▪'];
@@ -449,6 +451,8 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
           children: [new TextRun('#')],
         }),
       ];
+    case 'pageBreak':
+      return [new Paragraph({ children: [new PageBreak()] })];
     case 'math':
       return [
         new Paragraph({
@@ -463,6 +467,11 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
     case 'quote':
       return blocksParagraphs(block.blocks, { ...place, left: place.left + STEP }, ctx);
     case 'list': {
+      // A checklist item starts with its box, with no bullet, as Word shows a checkbox list.
+      if (block.checked) {
+        const inner: Place = { left: place.left + STEP };
+        return boxedItems(block).flatMap((item) => blocksParagraphs(item, inner, ctx));
+      }
       const instance = ctx.nextList();
       const reference = block.ordered ? `vlo-ordered-${String(block.start)}` : 'vlo-bullet';
       const level = Math.min(Math.round(place.left / STEP), 8);
@@ -588,6 +597,7 @@ function styles(font: string, manuscript: boolean, language: string) {
         heading2: heading,
         heading3: { ...heading, run: { ...plain, bold: true } },
         heading4: { ...heading, run: { ...plain, bold: true, italics: true } },
+        heading5: { ...heading, run: { ...plain, italics: true } },
         hyperlink: { run: plain },
       },
       paragraphStyles: [
@@ -624,6 +634,10 @@ function styles(font: string, manuscript: boolean, language: string) {
       },
       heading4: {
         run: { font, size: 24, bold: true, italics: true, color: ink },
+        paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
+      },
+      heading5: {
+        run: { font, size: 22, italics: true, color: ink },
         paragraph: { spacing: { before: EM, after: EM / 2 }, keepNext: true },
       },
       hyperlink: { run: { color: '2F5D8A', underline: {} } },

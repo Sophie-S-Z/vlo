@@ -14,12 +14,18 @@ import {
   FilePenLine,
   Baseline,
   Bold,
+  CaseLower,
+  CaseSensitive,
+  CaseUpper,
   Clapperboard,
+  ClipboardType,
   Drum,
   Heading2,
   Heading3,
+  Heading4,
   Highlighter,
   Hash,
+  ScissorsLineDashed,
   ImagePlus,
   IndentDecrease,
   IndentIncrease,
@@ -29,11 +35,15 @@ import {
   Link,
   MessageSquareText,
   Mic,
+  MoveDown,
+  MoveUp,
   Music,
   Omega,
+  Paintbrush,
   Parentheses,
   List,
   ListOrdered,
+  ListTodo,
   Pilcrow,
   Printer,
   Quote,
@@ -75,6 +85,8 @@ import { canStyleCheck } from '../extensions/styleCheck';
 import { rimshot } from '../rimshot';
 import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
+import { TEXT_CASES, type TextCase } from '../format/textCase';
+import { paintKey } from '../extensions/paintFormat';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
@@ -114,6 +126,7 @@ export type CommandGroup =
   | 'align'
   | 'paragraph'
   | 'indent'
+  | 'move'
   | 'insert'
   | 'review'
   | 'names'
@@ -129,6 +142,7 @@ export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   align: 'Alignment',
   paragraph: 'Paragraph',
   indent: 'Indent',
+  move: 'Move',
   insert: 'Insert',
   review: 'Find and read aloud',
   names: 'Private names',
@@ -174,6 +188,19 @@ export interface PanelCommand extends BaseCommand {
 }
 
 export type EditorCommand = RunCommand | PanelCommand;
+
+const CASE_LABELS: Readonly<Record<TextCase, string>> = {
+  upper: 'UPPERCASE',
+  lower: 'lowercase',
+  title: 'Title Case',
+  sentence: 'Sentence case',
+};
+const CASE_ICONS: Readonly<Record<TextCase, LucideIcon>> = {
+  upper: CaseUpper,
+  lower: CaseLower,
+  title: CaseSensitive,
+  sentence: LetterText,
+};
 
 const BOTH: readonly EditorForm[] = ['prose', 'poem'];
 const ALL: readonly EditorForm[] = ['prose', 'poem', 'script'];
@@ -518,6 +545,19 @@ export const COMMANDS: readonly EditorCommand[] = [
   },
   {
     kind: 'run',
+    id: 'heading-4',
+    label: 'Heading 4',
+    icon: Heading4,
+    group: 'block',
+    forms: PROSE,
+    keys: 'Mod-Alt-4',
+    keywords: ['h4', 'minor heading'],
+    slash: true,
+    run: (e) => e.commands.toggleHeading({ level: 4 }),
+    isActive: (e) => e.isActive('heading', { level: 4 }),
+  },
+  {
+    kind: 'run',
     id: 'quote',
     label: 'Quote',
     icon: Quote,
@@ -557,6 +597,19 @@ export const COMMANDS: readonly EditorCommand[] = [
   },
   {
     kind: 'run',
+    id: 'checklist',
+    label: 'Checklist',
+    icon: ListTodo,
+    group: 'block',
+    forms: PROSE,
+    keys: 'Mod-Shift-9',
+    keywords: ['task', 'todo', 'to-do', 'checkbox'],
+    slash: true,
+    run: (e) => e.commands.toggleTaskList(),
+    isActive: (e) => e.isActive('taskList'),
+  },
+  {
+    kind: 'run',
     id: 'scene-break',
     label: 'Scene break',
     icon: Hash,
@@ -565,6 +618,18 @@ export const COMMANDS: readonly EditorCommand[] = [
     keywords: ['separator', 'divider', 'asterism'],
     slash: true,
     run: (e) => e.commands.insertSceneBreak(),
+  },
+  {
+    kind: 'run',
+    id: 'page-break',
+    label: 'Page break',
+    icon: ScissorsLineDashed,
+    group: 'insert',
+    forms: PROSE,
+    keys: 'Mod-Enter',
+    keywords: ['new page', 'section break'],
+    slash: true,
+    run: (e) => e.commands.insertPageBreak(),
   },
   {
     kind: 'run',
@@ -1019,6 +1084,109 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     run: (e) => e.commands.clearFormatting(),
+  },
+  {
+    kind: 'run',
+    id: 'move-up',
+    label: 'Move up',
+    icon: MoveUp,
+    group: 'move',
+    forms: ALL,
+    keys: 'Alt-Shift-ArrowUp',
+    keywords: ['move paragraph', 'move line', 'reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(-1),
+  },
+  {
+    kind: 'run',
+    id: 'move-down',
+    label: 'Move down',
+    icon: MoveDown,
+    group: 'move',
+    forms: ALL,
+    keys: 'Alt-Shift-ArrowDown',
+    keywords: ['move paragraph', 'move line', 'reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(1),
+  },
+  {
+    kind: 'run',
+    id: 'move-stanza-up',
+    label: 'Move stanza up',
+    icon: MoveUp,
+    group: 'move',
+    forms: POEM,
+    keys: 'Mod-Alt-Shift-ArrowUp',
+    keywords: ['reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(-1, true),
+  },
+  {
+    kind: 'run',
+    id: 'move-stanza-down',
+    label: 'Move stanza down',
+    icon: MoveDown,
+    group: 'move',
+    forms: POEM,
+    keys: 'Mod-Alt-Shift-ArrowDown',
+    keywords: ['reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(1, true),
+  },
+  {
+    kind: 'run',
+    id: 'paint-format',
+    label: 'Paint format',
+    icon: Paintbrush,
+    group: 'clear',
+    forms: BOTH,
+    keywords: ['copy formatting', 'format painter', 'brush', 'same style'],
+    slash: true,
+    selection: true,
+    run: (e) => e.commands.paintFormat(),
+    isActive: (e) => Boolean(paintKey.getState(e.state)),
+  },
+  {
+    kind: 'run',
+    id: 'paste-plain',
+    label: 'Paste as plain text',
+    icon: ClipboardType,
+    group: 'clear',
+    forms: ALL,
+    keys: 'Mod-Shift-v',
+    keywords: ['paste without formatting', 'unformatted', 'text only'],
+    slash: true,
+    run: (e) => {
+      // Insecure pages and some browsers have no clipboard to read. The key works there all the same.
+      const clipboard = navigator.clipboard as Clipboard | undefined;
+      if (!clipboard) return false;
+      // The browser asks the writer first. A refusal leaves the text as it was.
+      void clipboard.readText().then(
+        (text) => {
+          if (!e.isDestroyed) e.view.pasteText(text);
+        },
+        () => undefined,
+      );
+      return true;
+    },
+  },
+  ...TEXT_CASES.map((rule): RunCommand => ({
+    kind: 'run',
+    id: `case-${rule}`,
+    label: CASE_LABELS[rule],
+    icon: CASE_ICONS[rule],
+    group: 'style',
+    forms: ALL,
+    keywords: ['change case', 'capitals', 'caps'],
+    slash: true,
+    run: (e) => e.commands.setTextCase(rule),
+  })),
+  {
+    kind: 'run',
+    id: 'next-case',
+    label: 'Change case',
+    icon: CaseSensitive,
+    group: 'style',
+    forms: ALL,
+    keys: 'Shift-F3',
+    keywords: ['uppercase', 'lowercase', 'title case', 'sentence case', 'capitals'],
+    run: (e) => e.commands.nextTextCase(),
   },
   {
     kind: 'run',

@@ -29,6 +29,7 @@ import {
   watchImage,
 } from '@/features/images/images';
 import { openPanel } from '../commands/editorBus';
+import { moveBlocks } from './moveBlocks';
 
 /*
  * An image in the text (Phase 16, Tasks G1 and G2). The node is a block that holds the id of a row of the
@@ -197,28 +198,6 @@ function placeImages(tr: Transaction, pos: number, nodes: readonly ProseMirrorNo
   return at;
 }
 
-/** Moves the image at `pos` past its neighbor block, when the document allows the new order. */
-function moveBlock(state: EditorState, pos: number, direction: -1 | 1) {
-  const $pos = state.doc.resolve(pos);
-  const node = $pos.nodeAfter;
-  if (!node) return null;
-  const parent = $pos.parent;
-  const index = $pos.index();
-  const other = index + direction;
-  if (other < 0 || other >= parent.childCount) return null;
-  const neighbor = parent.child(other);
-  // A poem keeps a stanza before and after each image.
-  const order: ProseMirrorNode[] = [];
-  parent.forEach((child) => order.push(child));
-  [order[index], order[other]] = [neighbor, node];
-  if (!parent.type.validContent(Fragment.from(order))) return null;
-  const tr = state.tr.delete(pos, pos + node.nodeSize);
-  const target = direction < 0 ? pos - neighbor.nodeSize : pos + neighbor.nodeSize;
-  tr.insert(target, node);
-  tr.setSelection(NodeSelection.create(tr.doc, target)).scrollIntoView();
-  return tr;
-}
-
 export const ImageNode = Node.create({
   name: IMAGE,
   group: 'block',
@@ -322,9 +301,8 @@ export const ImageNode = Node.create({
       moveImage:
         (direction) =>
         ({ state, dispatch }) => {
-          const pos = selectedImage(state);
-          if (pos === null) return false;
-          const tr = moveBlock(state, pos, direction);
+          if (selectedImage(state) === null) return false;
+          const tr = moveBlocks(state, direction);
           if (!tr) return false;
           dispatch?.(tr);
           return true;

@@ -611,7 +611,7 @@ class Layout {
           const title = runsText(block.runs).trim();
           return this.opening(block, block.level === 2 && isNumbered(title));
         }
-        const sizes = manuscript ? [12, 12, 12, 12] : [22, 17, 14, 12];
+        const sizes = manuscript ? [12, 12, 12, 12, 12] : [22, 17, 14, 12, 11];
         const size = (sizes[block.level - 1] ?? 12) * scale;
         const rows = await this.paragraph(block.runs, {
           left: place.left,
@@ -622,7 +622,7 @@ class Layout {
             font: this.bodyFont,
             size,
             bold: !manuscript || block.level > 2,
-            italic: block.level === 4,
+            italic: block.level >= 4,
           },
         });
         rows.forEach((row) => {
@@ -632,7 +632,7 @@ class Layout {
         if (first) {
           first.spaceBefore = manuscript
             ? leading(textSize, spacing)
-            : ([30, 24, 16, 12][block.level - 1] ?? 12) * scale;
+            : ([30, 24, 16, 12, 12][block.level - 1] ?? 12) * scale;
           if (folder) {
             first.breakBefore = true;
             if (manuscript) first.dropTo = 1 / 3;
@@ -662,6 +662,9 @@ class Layout {
           },
         ];
       }
+      // blocks() starts a new page at the next block.
+      case 'pageBreak':
+        return [];
       case 'math': {
         const layout = await this.mathLayout();
         const box = layout.equation(this.toMathml(block.latex), block.latex, textSize * 1.1, true);
@@ -701,14 +704,44 @@ class Layout {
             first.spaceBefore = i === 0 ? blockGap : blockGap / 2;
             const draw = first.draw;
             const markerWidth = markerFace.font.widthOfTextAtSize(marker, textSize);
+            const done = block.checked?.[i];
             first.draw = (d, top) => {
               draw(d, top);
               const lead = leading(textSize, spacing);
-              d.text(marker, inner.left - 6 - markerWidth, top - lead * 0.78, {
-                face: markerFace,
-                size: textSize,
-                color: INK,
-              });
+              if (done === undefined) {
+                d.text(marker, inner.left - 6 - markerWidth, top - lead * 0.78, {
+                  face: markerFace,
+                  size: textSize,
+                  color: INK,
+                });
+                return;
+              }
+              // A checklist item has a drawn box, as the PDF fonts have no ballot box.
+              const side = textSize * 0.7;
+              const x = inner.left - 8 - side;
+              const y = top - lead * 0.78;
+              const width = textSize * 0.06;
+              d.line(
+                [
+                  [x, y],
+                  [x + side, y],
+                  [x + side, y + side],
+                  [x, y + side],
+                  [x, y],
+                ],
+                width,
+                INK,
+              );
+              if (done)
+                d.line(
+                  [
+                    [x + side * 0.2, y + side * 0.5],
+                    [x + side * 0.42, y + side * 0.22],
+                    [x + side * 0.82, y + side * 0.8],
+                  ],
+                  width * 1.6,
+                  INK,
+                );
             };
           }
           out.push(...rows);
@@ -831,8 +864,20 @@ class Layout {
     folder: boolean,
   ): Promise<Row[]> {
     const out: Row[] = [];
-    for (const block of blocks)
-      out.push(...(await this.block(block, place, folder && block.type === 'heading')));
+    let newPage = false;
+    for (const block of blocks) {
+      if (block.type === 'pageBreak') {
+        newPage = true;
+        continue;
+      }
+      const rows = await this.block(block, place, folder && block.type === 'heading');
+      const [first] = rows;
+      if (newPage && first) {
+        first.breakBefore = true;
+        newPage = false;
+      }
+      out.push(...rows);
+    }
     return out;
   }
 

@@ -122,7 +122,8 @@ export const BlockStyle = Extension.create({
   },
 });
 
-const KEPT_MARKS = new Set([PRIVATE_NAME, AI_ORIGIN, COMMENT, SUGGESTION]);
+/** Marks that are facts about the text, not formats. Clear formatting and paint format leave them. */
+export const KEPT_MARKS: ReadonlySet<string> = new Set([PRIVATE_NAME, AI_ORIGIN, COMMENT, SUGGESTION]);
 
 /** Mod-\ clears marks; in prose it also resets the block styles of the selected blocks. */
 export const ClearFormatting = Extension.create<{ blocks: boolean }>({

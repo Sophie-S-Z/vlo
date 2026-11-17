@@ -130,7 +130,7 @@ describe('The image node', () => {
   });
 
   test('raises the document schema, so an older build never drops an image', () => {
-    expect(DOC_SCHEMA).toBe(11);
+    expect(DOC_SCHEMA).toBeGreaterThanOrEqual(11);
   });
 });
 

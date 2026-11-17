@@ -14,6 +14,7 @@ import { runCommand, useActiveEditor } from '@/features/editor/commands/editorBu
 import { shortcutLabel } from '@/features/editor/commands/keys';
 import { commandsFor } from '@/features/editor/commands/registry';
 import { EditorPane } from '@/features/editor/EditorPane';
+import { goToEntry, outlineOf } from '@/features/editor/itemOutline';
 import { wordsToday } from '@/features/editor/stats/stats';
 import { WritingStats } from '@/features/editor/stats/WritingStats';
 import { pause as stopSound } from '@/features/sound/controller';
@@ -78,6 +79,11 @@ const ITEM_TOOLS: readonly { id: string; label: string; keywords: readonly strin
     id: 'page',
     label: 'Page format, zoom and language…',
     keywords: ['pageless', 'letter', 'a4', 'zoom', 'language', 'paper', 'pages'],
+  },
+  {
+    id: 'outline',
+    label: 'Show the outline',
+    keywords: ['headings', 'contents', 'sections', 'navigation', 'table of contents', 'jump'],
   },
   {
     id: 'scene',
@@ -757,6 +763,20 @@ export function ProjectPage() {
             },
           },
         ]
+      : []),
+    // The headings and scenes of the open item (Phase 19, Task B1), built only while the menu is open.
+    ...(menuOpen && activeEditor && activeEditor.form !== 'poem'
+      ? outlineOf(activeEditor.editor.state.doc, project.settings.language).map((entry): CommandAction => ({
+          id: `outline-${String(entry.pos)}`,
+          label: entry.label,
+          group: 'outline',
+          hint: formatWords(entry.words, countUnit(project.settings.language)),
+          run: () => {
+            afterMenu.current = () => {
+              goToEntry(activeEditor.editor, entry);
+            };
+          },
+        }))
       : []),
     ...(activeEditor
       ? commandsFor(activeEditor.form, project.templates).map((cmd): CommandAction => ({

@@ -1,6 +1,6 @@
 # Phase 19: The best page to write on
 
-> **Status:** approved by the product owner on 2026-11-17. Part A is built (see `docs/STATUS.md`). Parts B to F follow, each in its own pull request.
+> **Status:** approved by the product owner on 2026-11-17. Parts A and B are built (see `docs/STATUS.md`). Parts C to F follow, each in its own pull request.
 
 **Goal:** A writer who comes from Google Docs, Word, Scrivener, Ulysses or iA Writer finds every tool that they use each day, and finds each tool in fewer steps than in the old app. The page stays calm. Each tool waits in a clear place until the writer needs it. The writer can make the page look and work the way they like.
 

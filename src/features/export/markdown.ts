@@ -69,6 +69,9 @@ function poemLine(runs: readonly Run[]): string {
   return guardLineStart(NBSP.repeat(lead) + rest);
 }
 
+/** The page break in Markdown: an HTML block, which Vlo's own import reads back as a page break. */
+export const PAGE_BREAK_HTML = '<div style="page-break-after: always"></div>';
+
 function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth = 0, shift = 0): string {
   const indent = '   '.repeat(depth);
   switch (block.type) {
@@ -78,6 +81,9 @@ function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth =
       return `${'#'.repeat(Math.min(block.level + shift, 6))} ${inline(block.runs, { poem: false })}`;
     case 'sceneBreak':
       return '***';
+    // Markdown has no page break. Pandoc, Typora and most Markdown readers take this one.
+    case 'pageBreak':
+      return PAGE_BREAK_HTML;
     case 'math':
       return `$$${block.latex}$$`;
     case 'image': {
@@ -97,7 +103,12 @@ function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth =
     case 'list':
       return block.items
         .map((item, i) => {
-          const marker = block.ordered ? `${String(block.start + i)}. ` : '- ';
+          const done = block.checked?.[i];
+          const marker = block.ordered
+            ? `${String(block.start + i)}. `
+            : done === undefined
+              ? '- '
+              : `- [${done ? 'x' : ' '}] `;
           const body = item.map((b) => blockMarkdown(b, paths, depth + 1, shift)).join('\n\n');
           const [first = '', ...rest] = body.split('\n');
           const pad = ' '.repeat(marker.length);

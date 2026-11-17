@@ -14,7 +14,7 @@ const INCH = 1440;
 const EM = 240;
 const STEP = 720;
 const TEXT_SIZE = 24;
-const HEADING_SIZES: Readonly<Record<1 | 2 | 3 | 4, number>> = { 1: 40, 2: 32, 3: 28, 4: 24 };
+const HEADING_SIZES: Readonly<Record<1 | 2 | 3 | 4 | 5, number>> = { 1: 40, 2: 32, 3: 28, 4: 24, 5: 22 };
 const ALIGN = { left: '\\ql', center: '\\qc', right: '\\qr', justify: '\\qj' } as const;
 
 /** The text in RTF: the control characters are escaped, and each character past ASCII is a \uN. */
@@ -102,11 +102,13 @@ function blockRtf(block: Block, left: number, ctx: Context): string {
     }
     case 'heading':
       return paragraph(
-        `${ALIGN[block.align ?? 'left']}${indent}\\outlinelevel${String(block.level - 1)}\\keepn\\sb240\\b\\fs${String(HEADING_SIZES[block.level])}${block.level === 4 ? '\\i' : ''}`,
+        `${ALIGN[block.align ?? 'left']}${indent}\\outlinelevel${String(block.level - 1)}\\keepn\\sb240\\b\\fs${String(HEADING_SIZES[block.level])}${block.level >= 4 ? '\\i' : ''}`,
         inline(block.runs),
       );
     case 'sceneBreak':
       return paragraph('\\qc', '*\\~\\~*\\~\\~*');
+    case 'pageBreak':
+      return '\\page\n';
     case 'math':
       return paragraph('\\qc', rtfText(`$$${block.latex}$$`));
     case 'image': {
@@ -124,7 +126,15 @@ function blockRtf(block: Block, left: number, ctx: Context): string {
       return block.items
         .map((item, i) => {
           const inner = left + STEP;
-          const marker = block.ordered ? `${String(block.start + i)}.` : '\\u8226?';
+          const done = block.checked?.[i];
+          // A checklist item has its box (U+2610 or U+2611) in place of the bullet.
+          const marker = block.ordered
+            ? `${String(block.start + i)}.`
+            : done === undefined
+              ? '\\u8226?'
+              : done
+                ? '\\u9745?'
+                : '\\u9744?';
           const [first, ...rest] = item;
           const head =
             first?.type === 'paragraph'
