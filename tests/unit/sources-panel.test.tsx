@@ -97,12 +97,17 @@ test('a file imports, an edit saves, and Undo gives back a deleted source', asyn
   fireEvent.change(within(form).getByLabelText('Pages'), { target: { value: '45-68' } });
   fireEvent.click(within(form).getByRole('button', { name: 'Save' }));
   expect(await screen.findByText('Saved Lights on the Water.')).toBeDefined();
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Edit Lights on the Water' }));
+  // The focus moves in an effect after the render, so the checks wait for it.
+  await waitFor(() => {
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Edit Lights on the Water' }));
+  });
   expect((await db.sources.toArray()).find((s) => s.key === 'bjork_lights_2020')?.pages).toBe('45–68');
 
   fireEvent.click(screen.getByRole('button', { name: 'Delete Tides and Timetables' }));
   const undo = await screen.findByRole('button', { name: 'Undo' });
-  expect(document.activeElement).toBe(undo);
+  await waitFor(() => {
+    expect(document.activeElement).toBe(undo);
+  });
   expect(await db.sources.count()).toBe(3);
   fireEvent.click(undo);
   expect(await screen.findByText('Restored Tides and Timetables.')).toBeDefined();
