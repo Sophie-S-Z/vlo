@@ -58,6 +58,8 @@ export interface OwnerDay {
 export interface OwnerAccount {
   id: string;
   email: string;
+  /** The name of the account's profile (migration 0011), or null before the writer gives one. */
+  name: string | null;
   provider: string;
   created_at: string;
   last_sign_in_at: string | null;

@@ -5,7 +5,8 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 
 /*
- * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page) and 0010 (places) in PGlite. The app calls each function through
+ * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page), 0010 (places) and 0011
+ * (profiles) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -21,6 +22,7 @@ const MIGRATIONS = [
   '0008_accounts.sql',
   '0009_live_owner.sql',
   '0010_places.sql',
+  '0011_profiles.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -276,6 +278,7 @@ describe('the owner page (decision A6)', () => {
     );
     expect(people[0]).toMatchObject({
       email: 'bob@example.com',
+      name: null,
       devices: 1,
       feedback: 1,
       provider: 'google',
@@ -289,6 +292,60 @@ describe('the owner page (decision A6)', () => {
       'select * from public.owner_feedback()',
     );
     expect(item).toMatchObject({ status: 'planned', note: 'In the next phase.', email: 'bob@example.com' });
+  });
+});
+
+const PHOTO = `data:image/webp;base64,${'A'.repeat(100)}==`;
+const putProfile = (who: string, name: string, photo: string | null = null, bio = '') =>
+  as(who, "select public.profile_put($1, ' Ada ', '', $2, $3)", [name, bio, photo]);
+
+describe('profiles (migration 0011)', () => {
+  test('an account saves and reads its own profile, and another account sees none of it', async () => {
+    await putProfile(ALICE, '  Alice Lovelace ', PHOTO, 'Line one.\nLine two.');
+    const [mine] = await as(ALICE, 'select name, called, pen_name, bio, photo from public.profile_get()');
+    expect(mine).toEqual({
+      name: 'Alice Lovelace',
+      called: 'Ada',
+      pen_name: '',
+      bio: 'Line one.\nLine two.',
+      photo: PHOTO,
+    });
+    expect(await as(BOB, 'select * from public.profile_get()')).toEqual([]);
+    // A second save replaces the whole profile, so a null photo removes it.
+    await putProfile(ALICE, 'Alice');
+    expect(await as(ALICE, 'select name, photo from public.profile_get()')).toEqual([
+      { name: 'Alice', photo: null },
+    ]);
+  });
+
+  test('refuses an empty or long name, a control character, a large photo and the anon role', async () => {
+    await expect(putProfile(ALICE, '   ')).rejects.toThrow('bad name');
+    await expect(putProfile(ALICE, 'x'.repeat(81))).rejects.toThrow('bad name');
+    await expect(putProfile(ALICE, 'Al\u0007ice')).rejects.toThrow('bad name');
+    await expect(putProfile(ALICE, 'Alice', null, 'x'.repeat(1001))).rejects.toThrow('bad bio');
+    await expect(putProfile(ALICE, 'Alice', 'data:image/png;base64,AAAA')).rejects.toThrow('bad photo');
+    await expect(putProfile(ALICE, 'Alice', `data:image/jpeg;base64,${'A'.repeat(60000)}`)).rejects.toThrow(
+      'bad photo',
+    );
+    await expect(putProfile('anon', 'Alice')).rejects.toThrow(/permission denied/);
+    await expect(as(ALICE, 'select public.vlo_check_text($1, 5, false, $2)', ['a', 'b'])).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+
+  test('the profile goes with its account, and the owner page shows the name', async () => {
+    await db.query('insert into app_owners (user_id) values ($1)', [ALICE]);
+    await putProfile(BOB, 'Bob Byron');
+    const people = await as<{ email: string; name: string | null }>(
+      ALICE,
+      'select email, name from public.owner_accounts() order by email',
+    );
+    expect(people).toEqual([
+      { email: 'alice@example.com', name: null },
+      { email: 'bob@example.com', name: 'Bob Byron' },
+    ]);
+    await as(BOB, 'select public.delete_my_account()');
+    expect((await db.query('select 1 from profiles')).rows).toHaveLength(0);
   });
 });
 
@@ -426,7 +483,7 @@ test('each new function sets pg_temp last on its path, and no role reads a new t
     )
   ).rows;
   for (const row of rows) expect(row.config?.find((c) => c.startsWith('search_path='))).toMatch(/pg_temp$/);
-  for (const table of ['app_owners', 'sync_vaults', 'app_pings', 'app_feedback'])
+  for (const table of ['app_owners', 'sync_vaults', 'app_pings', 'app_feedback', 'profiles'])
     for (const who of ['anon', ALICE])
       await expect(as(who, `select * from ${table}`)).rejects.toThrow(/permission denied/);
 });

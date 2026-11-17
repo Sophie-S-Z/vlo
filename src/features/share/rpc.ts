@@ -43,7 +43,10 @@ export type RpcName =
   | 'owner_accounts'
   | 'owner_visitors'
   | 'owner_feedback'
-  | 'owner_set_feedback';
+  | 'owner_set_feedback'
+  // The writer's profile (migration 0011).
+  | 'profile_get'
+  | 'profile_put';
 
 export type ShareErrorKind =
   'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'busy' | 'server';

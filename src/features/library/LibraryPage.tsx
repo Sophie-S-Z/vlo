@@ -5,6 +5,7 @@ import { useDeferredValue, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { MARKETING_URL } from '@/app/links';
 import { safeStorage } from '@/app/preferences';
+import { greetingName, readProfile } from '@/features/account/profile';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FolderAllow } from '@/features/backup/FolderAllow';
 import { ImportBackup, type ImportHandle } from '@/features/backup/ImportBackup';
@@ -135,6 +136,11 @@ export function LibraryPage() {
   };
 
   const projects = library.status === 'ready' ? library.projects : [];
+  // A signed-in writer is greeted by name each time the Library opens (ADR 0011).
+  const name = useLiveQuery(async () => {
+    const profile = await readProfile().catch(() => null);
+    return profile ? greetingName(profile) : '';
+  }, []);
   const kinds = kindsOf(projects);
   const shown = projects.filter(({ project }) => {
     const label = projectDef(project).label;
@@ -164,8 +170,20 @@ export function LibraryPage() {
     <section className="grain">
       <div className="relative isolate grid justify-items-center gap-3 pt-2 text-center">
         <div aria-hidden="true" className="vlo-haze" />
-        <h1 className="vlo-caret font-manuscript text-5xl leading-[1.05] font-light tracking-[-0.02em] italic sm:text-6xl">
-          Welcome to your library
+        {/* Hidden for the moment that the name loads, so the greeting does not change under the eye. */}
+        <h1
+          className={cn(
+            'vlo-caret max-w-4xl font-manuscript text-5xl leading-[1.05] font-light tracking-[-0.02em] text-balance italic sm:text-6xl',
+            name === undefined && 'invisible',
+          )}
+        >
+          {name ? (
+            <>
+              Welcome back to your library, <span className="whitespace-nowrap">{name}</span>
+            </>
+          ) : (
+            'Welcome to your library'
+          )}
         </h1>
         {projects.length > 0 && <p className="text-sm text-muted tabular-nums">{summary(projects)}</p>}
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">

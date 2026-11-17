@@ -35,6 +35,13 @@ export function App() {
       .then(({ startAccountSync }) => startAccountSync(guessDeviceName()))
       .catch(() => undefined);
   }, [signedIn, syncing]);
+  // The profile can change on another device, so the copy here follows the server as Vlo opens (ADR 0011).
+  useEffect(() => {
+    if (!signedIn) return;
+    void import('@/features/account/profileServer')
+      .then(({ refreshProfile }) => refreshProfile())
+      .catch(() => undefined);
+  }, [signedIn]);
   // Persistent storage: Vlo asks again at start, and at once after an install, because Chrome and Safari
   // often grant it to an installed app.
   useEffect(() => {

@@ -4,6 +4,15 @@ Last update: 2026-11-17
 
 ## Done
 
+- Profiles (2026-11-17, ADR 0011, migration 0011), from the product owner's ask:
+  - A new account gives its name after the sign-in code (`/profile/new`), with an optional photo that the
+    writer places in a circle. Google's name fills the field. An older account gives its name once.
+  - The Library says "Welcome back to your library, <name>". The header shows the photo or the initials,
+    with a menu for Your profile and Account and sync.
+  - `/profile`: the photo, the full name, the name of the greeting, a pen name and a bio, with a preview of
+    where each shows. New projects take the pen name as their author; the Book page can take the bio.
+  - The owner page shows each account's name. Privacy version 15. Migration 0011 needs the live database.
+
 - Separate accounts (2026-11-17, ADR 0010), from the product owner's ask:
   - Each account has its own library on the device: its own database and item texts. A sign-in no longer
     gives the device's projects to the account. The account that was signed in before the upgrade keeps

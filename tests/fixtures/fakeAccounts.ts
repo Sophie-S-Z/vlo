@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FakeSyncRelay } from './syncRelay';
 
 /*
- * A fake of Supabase Auth and the functions of migrations 0008 and 0009 (Phase 18 and the live owner page), for the Playwright tests. Each
+ * A fake of Supabase Auth and the functions of migrations 0008, 0009 and 0011 (Phase 18, the live owner page and profiles), for the Playwright tests. Each
  * email gets the code 123456. The fake keeps the rules that the app relies on: a function for a signed-in
  * writer reads the account from the bearer token, a vault needs the space token, and the owner functions
  * refuse any account that is not an owner.
@@ -57,6 +57,10 @@ export class FakeAccounts {
   >();
   readonly feedback: FeedbackRow[] = [];
   readonly owners = new Set<string>();
+  readonly profiles = new Map<
+    string,
+    { name: string; called: string; pen_name: string; bio: string; photo: string | null; updated_at: string }
+  >();
   private readonly tokens = new Map<string, string>();
   /** The emails that asked for a code, in order. */
   readonly codesSent: string[] = [];
@@ -148,8 +152,31 @@ export class FakeAccounts {
         const vault = this.vaults.get(id);
         if (vault) this.sync.spaces.delete(vault.space_id);
         this.vaults.delete(id);
+        this.profiles.delete(id);
         this.users.delete(id);
         return { value: true };
+      }
+      case 'profile_get': {
+        const profile = this.profiles.get(signedIn());
+        return { value: profile ? [profile] : [] };
+      }
+      case 'profile_put': {
+        const id = signedIn();
+        const name = String(body.p_name).trim();
+        if (name === '' || name.length > 80) throw new Error('bad name');
+        const photo = typeof body.p_photo === 'string' ? body.p_photo : null;
+        if (photo !== null && (photo.length > 60000 || !/^data:image\/(jpeg|webp);base64,/.test(photo)))
+          throw new Error('bad photo');
+        const updated_at = new Date().toISOString();
+        this.profiles.set(id, {
+          name,
+          called: String(body.p_called).trim(),
+          pen_name: String(body.p_pen_name).trim(),
+          bio: String(body.p_bio).trim(),
+          photo,
+          updated_at,
+        });
+        return { value: updated_at };
       }
       case 'daily_count': {
         const install = String(body.p_install);
@@ -282,6 +309,7 @@ export class FakeAccounts {
           value: [...this.users.values()].map((u) => ({
             id: u.id,
             email: u.email,
+            name: this.profiles.get(u.id)?.name ?? null,
             provider: u.provider,
             created_at: u.createdAt,
             last_sign_in_at: u.createdAt,

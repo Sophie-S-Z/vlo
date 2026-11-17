@@ -97,7 +97,12 @@ interface TokenAnswer {
   access_token: string;
   refresh_token: string;
   expires_in: number;
-  user: { id: string; email?: string; app_metadata?: { provider?: string } };
+  user: {
+    id: string;
+    email?: string;
+    app_metadata?: { provider?: string };
+    user_metadata?: { full_name?: unknown; name?: unknown };
+  };
 }
 
 function isTokenAnswer(value: unknown): value is TokenAnswer {
@@ -120,6 +125,10 @@ async function keep(answer: unknown): Promise<AccountSession> {
     email: answer.user.email ?? '',
     provider: answer.user.app_metadata?.provider ?? 'email',
   };
+  // Google gives the writer's name, so the profile step can start with it.
+  const { full_name: fullName, name } = answer.user.user_metadata ?? {};
+  const given = typeof fullName === 'string' ? fullName : typeof name === 'string' ? name : '';
+  if (given.trim() !== '') session.name = given.trim();
   await saveSession(session);
   rememberAccount(session.userId, session.email);
   return session;

@@ -8,6 +8,8 @@ import { deleteItemDoc } from '@/lib/itemDocName';
 import { forgetAccount, knownAccounts, libraryName, openLibrary } from '@/lib/library';
 import { inBatches } from '@/lib/ydocs';
 import { clearAccountSyncPause } from './accountSync';
+import { keepProfile, profileStep } from './profile';
+import { fetchProfile } from './profileServer';
 import { readSession, type AccountSession } from './session';
 
 /*
@@ -70,12 +72,17 @@ export async function bringWorks(from: OtherLibrary): Promise<number> {
 /**
  * After a sign-in: opens the account's library. A returning account skips the welcome, since sync fills
  * its library. When works wait in the library with no account and the account has none, the Account page
- * opens, where the writer can bring them in.
+ * opens, where the writer can bring them in. An account with no profile gives its name first.
  */
 export async function enterAccount(session: AccountSession, next = '/'): Promise<void> {
-  const vaults = await rpc<unknown[]>('vault_get', {}, 'account', session.accessToken).catch(() => []);
+  const [vaults, profile] = await Promise.all([
+    rpc<unknown[]>('vault_get', {}, 'account', session.accessToken).catch(() => []),
+    // Undefined when the server did not answer: the Library asks for the profile again as it opens.
+    fetchProfile(session.accessToken).catch(() => undefined),
+  ]);
   const empty = await withLibrary(libraryName(session.userId), async (library) => {
     await clearAccountSyncPause(library);
+    if (profile) await keepProfile(profile, library);
     // The welcome is for a first visit: not for an account that syncs, nor for a writer who saw it here.
     const seen = vaults.length > 0 || (await db.appMeta.get(ONBOARDED)) !== undefined;
     if (seen && !(await library.appMeta.get(ONBOARDED)))
@@ -86,7 +93,8 @@ export async function enterAccount(session: AccountSession, next = '/'): Promise
     empty &&
     (await Dexie.exists(libraryName(null))) &&
     (await withLibrary(libraryName(null), (library) => library.projects.count())) > 0;
-  openLibrary(session.userId, waiting ? '/account' : next);
+  const to = waiting ? '/account' : next;
+  openLibrary(session.userId, profile === null ? profileStep(to) : to);
 }
 
 /**

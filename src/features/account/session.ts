@@ -17,6 +17,8 @@ export interface AccountSession {
   email: string;
   /** 'email' or 'google'. */
   provider: string;
+  /** The name that the sign-in gave, such as Google's. The profile step starts with it. */
+  name?: string;
 }
 
 function isSession(value: unknown): value is AccountSession {

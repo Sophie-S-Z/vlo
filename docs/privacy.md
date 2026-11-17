@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 14, 17 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 15, 17 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -12,7 +12,7 @@ Version 14, 17 November 2026. The app shows these words at `/privacy` (`src/feat
 - A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.
 - The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.
 - The network log stays in this browser.
-- Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync between your devices.
+- Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync between your devices and for your profile.
 
 ## What can leave, and when
 
@@ -72,9 +72,9 @@ The title, the excerpt and the text of the post, with the access token that Word
 
 ### Your account
 
-Only when you sign in, while you stay signed in, and when you sign out or delete the account.
+Only when you sign in, while you stay signed in, when you save your profile, and when you sign out or delete the account.
 
-Your email address and the 6-digit code, or the sign-in that Google gives. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the key, the sync and every sealed copy.
+Your email address and the 6-digit code, or the sign-in that Google gives. Your profile: your name, the name that Vlo greets you by, a pen name, a bio and a photo, if you give them. The photo goes as a small square copy that holds no camera data. The makers of Vlo see your name next to your email on the owner page. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the profile, the key, the sync and every sealed copy.
 
 ### The daily count
 

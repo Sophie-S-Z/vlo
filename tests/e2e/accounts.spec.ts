@@ -14,6 +14,18 @@ test.use({ serviceWorkers: 'block' });
 
 const projects = (page: Page) => page.getByRole('list', { name: 'Projects' }).getByRole('listitem');
 
+/** A new account gives its name after the code (ADR 0011). A returning account goes on at once. */
+async function giveName(page: Page, email: string) {
+  const step = page.getByRole('heading', { level: 1, name: 'What is your name?' });
+  const signedIn = page.getByText(`Signed in as ${email}`);
+  await expect(step.or(signedIn)).toBeVisible();
+  if (await step.isVisible()) {
+    await page.getByLabel('Your full name').fill(`${email.split('@')[0] ?? ''} Writer`);
+    await page.getByRole('button', { name: 'Continue' }).click();
+  }
+  await expect(signedIn).toBeVisible();
+}
+
 async function signIn(page: Page, email: string) {
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible();
@@ -22,10 +34,8 @@ async function signIn(page: Page, email: string) {
   await expect(page.getByRole('status').filter({ hasText: 'Vlo sent a code' })).toBeVisible();
   await page.getByLabel('Code from the email').fill(CODE);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText(`Signed in as ${email}`)).toBeVisible();
-  await expect(
-    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Account' }),
-  ).toBeVisible();
+  await giveName(page, email);
+  await expect(page.getByRole('button', { name: /^Account: / })).toBeVisible();
 }
 
 async function syncNow(page: Page) {
@@ -127,6 +137,76 @@ test('a writer signs in on a laptop and a phone, brings in the projects, and bot
   await phoneContext.close();
 });
 
+test('a new writer gives a name and a photo, the Library greets them, and the profile follows them', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const laptopContext = await browser.newContext();
+  const fake = await fakeSupabase(laptopContext);
+  const laptop = await laptopContext.newPage();
+  await skipOnboarding(laptop);
+  await laptop.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Sign in' }).click();
+  await laptop.getByLabel('Email').fill('ada@example.com');
+  await laptop.getByRole('button', { name: 'Send me a code' }).click();
+  await laptop.getByLabel('Code from the email').fill(CODE);
+  await laptop.getByRole('button', { name: 'Sign in' }).click();
+
+  // The name step: a photo, placed in the circle, and the name.
+  await expect(laptop.getByRole('heading', { level: 1, name: 'What is your name?' })).toBeVisible();
+  await laptop.locator('input[type="file"]').setInputFiles('tests/fixtures/images/harbour.jpg');
+  const crop = laptop.getByRole('dialog', { name: 'Place your photo' });
+  await crop.getByRole('button', { name: 'Zoom in' }).click();
+  await crop.getByRole('group').press('ArrowRight');
+  expect(await seriousIssues(laptop)).toEqual([]);
+  await crop.getByRole('button', { name: 'Use this photo' }).click();
+  await expect(crop).toBeHidden();
+  await laptop.getByLabel('Your full name').fill('Ada King Lovelace');
+  await laptop.getByRole('button', { name: 'Continue' }).click();
+  await expect(laptop.getByText('Signed in as ada@example.com')).toBeVisible();
+  const [saved] = [...(fake.accounts?.profiles.values() ?? [])];
+  expect(saved).toMatchObject({ name: 'Ada King Lovelace', called: '' });
+  expect(saved?.photo).toMatch(/^data:image\/(webp|jpeg);base64,/);
+
+  const greeting = laptop.getByRole('heading', { level: 1 });
+  await laptop.goto('/');
+  await expect(greeting).toHaveText('Welcome back to your library, Ada');
+
+  // The header opens the profile. The preview follows the words as the writer types.
+  await laptop.getByRole('button', { name: 'Account: Ada' }).click();
+  await laptop.getByRole('menuitem', { name: 'Your profile' }).click();
+  await expect(laptop.getByRole('heading', { level: 1, name: 'Your profile' })).toBeVisible();
+  await laptop.getByLabel(/What Vlo calls you/).fill('Countess');
+  await laptop.getByLabel(/Pen name/).fill('A. A. L.');
+  await laptop.getByLabel(/About you/).fill('Ada wrote the first program.');
+  const preview = laptop.getByRole('complementary', { name: 'Where your profile shows' });
+  await expect(preview).toContainText('Welcome back to your library, Countess');
+  await expect(preview).toContainText('A. A. L.');
+  expect(await seriousIssues(laptop)).toEqual([]);
+  await laptop.getByRole('button', { name: 'Save profile' }).click();
+  await expect(laptop.getByRole('status').filter({ hasText: 'Your profile is saved.' })).toBeVisible();
+  await laptop.goto('/');
+  await expect(greeting).toHaveText('Welcome back to your library, Countess');
+
+  // A new project takes the pen name as its author, and a book can take the bio.
+  await newProject(laptop, false, 'Engines of thought.');
+  await laptop.goto(`${new URL(laptop.url()).pathname}/book`);
+  await expect(laptop.getByLabel('Copyright page')).toHaveValue(/A\. A\. L\./);
+  await laptop.getByRole('button', { name: 'Use the bio from your profile' }).click();
+  await expect(laptop.getByLabel('About the author')).toHaveValue('Ada wrote the first program.');
+
+  // Another device signs in with no name step, and greets the writer by name.
+  const phoneContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await fakeSupabase(phoneContext, fake);
+  const phone = await phoneContext.newPage();
+  await skipOnboarding(phone);
+  await signIn(phone, 'ada@example.com');
+  await phone.goto('/');
+  await expect(phone.getByRole('heading', { level: 1 })).toHaveText('Welcome back to your library, Countess');
+
+  await laptopContext.close();
+  await phoneContext.close();
+});
+
 test('two accounts in one browser keep their own projects until the writer merges them', async ({
   page,
   context,
@@ -144,7 +224,7 @@ test('two accounts in one browser keep their own projects until the writer merge
   await other.getByRole('button', { name: 'Send me a code' }).click();
   await other.getByLabel('Code from the email').fill(CODE);
   await other.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText('Signed in as ben@example.com')).toBeVisible();
+  await giveName(page, 'ben@example.com');
   await page.goto('/');
   await expect(projects(page)).toHaveCount(0);
 
@@ -183,7 +263,13 @@ test('a signed-out visit opens on the sign-in screen, which can make an account 
   await page.getByRole('button', { name: 'Send me a code' }).click();
   await page.getByLabel('Code from the email').fill(CODE);
   await page.getByRole('button', { name: 'Create my account' }).click();
-  // A new account with nothing waiting goes to the screen it asked for: here, the welcome.
+  // A new account gives its name, then goes to the screen it asked for: here, the welcome.
+  await expect(page).toHaveURL(/\/profile\/new\?next=%2F$/);
+  expect(await seriousIssues(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Type your name.' })).toBeVisible();
+  await page.getByLabel('Your full name').fill('Noor Haddad');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page).toHaveURL(/\/welcome$/);
 });
 

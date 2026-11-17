@@ -1,4 +1,5 @@
 import { redirect, type LoaderFunctionArgs, type RouteObject } from 'react-router';
+import { profileLater, profileStep, readProfile } from '@/features/account/profile';
 import { readSession } from '@/features/account/session';
 import { LibraryPage } from '@/features/library/LibraryPage';
 import { sharingReady } from '@/features/share/rpc';
@@ -29,7 +30,9 @@ const OPEN_PATHS = ['/account', '/pair', '/privacy', '/ai-policy', '/help', '/ve
 
 /**
  * A signed-out visit opens on the sign-in screen, in a build with accounts. A writer who chose to write
- * with no account in this tab goes on. Storage that fails lets the visit through, so no one is locked out.
+ * with no account in this tab goes on. A signed-in account with no profile on this device gives its name
+ * first (ADR 0011), unless the device is offline or the server did not answer in this tab. Storage that fails lets the visit through, so no one is
+ * locked out.
  */
 async function signInLoader({ request }: LoaderFunctionArgs) {
   if (!sharingReady()) return null;
@@ -37,7 +40,10 @@ async function signInLoader({ request }: LoaderFunctionArgs) {
   if (OPEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;
   if (guestChosen() && ACTIVE_ACCOUNT === null) return null;
   try {
-    if (await readSession()) return null;
+    if (await readSession()) {
+      const named = !navigator.onLine || profileLater() || (await readProfile()) !== null;
+      return named ? null : redirect(profileStep(pathname + search));
+    }
   } catch {
     return null;
   }
@@ -51,6 +57,12 @@ export const routes: RouteObject[] = [
     path: '/sign-in',
     errorElement: <RouteError />,
     lazy: async () => ({ Component: (await import('@/features/account/SignInPage')).SignInPage }),
+  },
+  // The name step after a first sign-in (ADR 0011), on its own page like the sign-in screen.
+  {
+    path: '/profile/new',
+    errorElement: <RouteError />,
+    lazy: async () => ({ Component: (await import('@/features/account/ProfileSetupPage')).ProfileSetupPage }),
   },
   // A share link's reader view (plan Task E4): outside the app shell and the welcome redirect.
   {
@@ -124,6 +136,10 @@ export const routes: RouteObject[] = [
       {
         path: 'series/:seriesId',
         lazy: async () => ({ Component: (await import('@/features/series/SeriesPage')).SeriesPage }),
+      },
+      {
+        path: 'profile',
+        lazy: async () => ({ Component: (await import('@/features/account/ProfilePage')).ProfilePage }),
       },
       {
         path: 'settings',
