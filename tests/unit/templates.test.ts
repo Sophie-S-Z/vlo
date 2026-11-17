@@ -119,11 +119,13 @@ describe('template pick', () => {
     expect(pick.value).toEqual(['novel', 'open']);
   });
 
-  test('the last template stays picked', () => {
+  test('a second click takes the last template away, and the welcome starts with none', () => {
     let pick = togglePick(newPick(), 'memoir');
     pick = togglePick(pick, 'memoir');
-    expect(pick.value).toEqual(['memoir']);
+    expect(pick.value).toEqual([]);
     // A first click on the suggestion keeps it and ends the suggestion.
     expect(togglePick(newPick(), 'novel')).toEqual({ value: ['novel'], suggested: false });
+    expect(newPick(false)).toEqual({ value: [], suggested: false });
+    expect(togglePick(newPick(false), 'poetry')).toEqual({ value: ['poetry'], suggested: false });
   });
 });

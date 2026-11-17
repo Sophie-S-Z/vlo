@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
+import { RESOLVED_THEMES } from '@/app/preferences';
+import { THEMES } from '@/app/themes';
 
 const css = readFileSync('src/styles/themes.css', 'utf8');
 
@@ -26,7 +28,7 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-describe.each(['ink', 'paper', 'sepia', 'contrast'])('theme %s', (theme) => {
+describe.each(RESOLVED_THEMES)('theme %s', (theme) => {
   const vars = themeBlock(theme);
   test.each(['text', 'muted', 'accent-text'])('--%s meets WCAG AA on --bg and --surface', (fg) => {
     const color = vars[fg];
@@ -73,7 +75,7 @@ test('spec colors are present unchanged', () => {
 });
 
 test('text on the accent color meets WCAG AA in every theme', () => {
-  for (const theme of ['ink', 'paper', 'sepia', 'contrast']) {
+  for (const theme of RESOLVED_THEMES) {
     const vars = themeBlock(theme);
     expect(contrast(vars['on-accent'] ?? '', vars.accent ?? ''), theme).toBeGreaterThanOrEqual(4.5);
   }
@@ -82,7 +84,7 @@ test('text on the accent color meets WCAG AA in every theme', () => {
 test('an unchecked switch has a --muted border, which meets 3:1 for controls in every theme', () => {
   const switchSource = readFileSync('src/ui/switch.tsx', 'utf8');
   expect(switchSource).toMatch(/rounded-full border border-muted bg-rule/);
-  for (const theme of ['ink', 'paper', 'sepia', 'contrast']) {
+  for (const theme of RESOLVED_THEMES) {
     const vars = themeBlock(theme);
     expect(contrast(vars.muted ?? '', vars.surface ?? '')).toBeGreaterThanOrEqual(3);
     expect(contrast(vars.muted ?? '', vars.bg ?? '')).toBeGreaterThanOrEqual(3);
@@ -105,12 +107,23 @@ test('dimmed lines in focus mode still meet WCAG AA in every theme', () => {
   const editorCss = readFileSync('src/styles/editor.css', 'utf8');
   const opacity = Number(/\.vlo-dim\s*\{[^}]*opacity:\s*([\d.]+)/.exec(editorCss)?.[1]);
   expect(opacity).toBeGreaterThan(0);
-  for (const theme of ['ink', 'paper', 'sepia']) {
+  for (const theme of RESOLVED_THEMES.filter((t) => t !== 'contrast')) {
     const vars = themeBlock(theme);
     for (const bg of ['bg', 'surface']) {
       const back = vars[bg] ?? '';
       const seen = blend(vars.text ?? '', back, opacity);
       expect(contrast(seen, back), `${theme} on --${bg}`).toBeGreaterThanOrEqual(4.5);
     }
+  }
+});
+
+test('each atmosphere has a scene and a color scheme that matches its tone, and plain themes have no scene', () => {
+  const atmospheres = readFileSync('src/styles/atmospheres.css', 'utf8');
+  for (const theme of RESOLVED_THEMES) {
+    const info = THEMES[theme];
+    const scene = new RegExp(`\\[data-theme='${theme}'\\] \\{[^}]*--atmosphere:`).test(atmospheres);
+    expect(scene, theme).toBe(info.atmosphere);
+    const block = new RegExp(`\\[data-theme='${theme}'\\][^{]*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+    expect(block, theme).toContain(`color-scheme: ${info.tone};`);
   }
 });

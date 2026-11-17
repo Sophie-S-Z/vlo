@@ -29,7 +29,7 @@ export const HELP = {
         'An essay, an article or a research paper can start from a structure, such as IMRaD, a literature review, a five-paragraph essay or a how-to article.',
         'Choose Create project. The first item opens, ready for your words.',
         'For a fast note, choose Quick note (the notebook icon) in the Library. The note goes into the Inbox folder at the top of the project.',
-        'To bring in a backup or writing from Word, Markdown or Scrivener, choose Import in the Library.',
+        'To bring in a backup or writing from Word, PDF, OpenDocument, RTF, EPUB, a web page, Markdown, plain text or Scrivener, choose Import in the Library. A PDF gives its words but not its bold or italic.',
       ],
     },
     {
@@ -61,7 +61,7 @@ export const HELP = {
         'Vlo asks for the alt text: what the image shows, for a reader who cannot see it. Choose Decorative when the image adds nothing that the words do not say.',
         'Drag the image to move it. Or select it and press Alt with the Up or Down arrow key. Press Enter on a selected image to change its alt text, caption, size or place.',
         'Vlo keeps a copy of at most 2,400 pixels on the long side, on this device. The copy holds no camera data, such as the place of a photo. Backups keep each image.',
-        'Word, PDF and EPUB exports hold each image with its caption, and Word and EPUB hold its alt text. Markdown with images comes as a zip file. Manuscript format, web copies and scripts put a line such as “[Image: The harbour]” in its place.',
+        'Word, PDF and EPUB exports hold each image with its caption, and Word and EPUB hold its alt text. Rich Text and web pages hold each image too. Markdown with images comes as a zip file. Manuscript format, plain text, web copies and scripts put a line such as “[Image: The harbour]” in its place.',
         'A share link holds each image at most 1,600 pixels on its long side, sealed like the text, up to 20 MB for the link. Sync sends each image of up to 2 MB to your other devices. A larger image stays on its device, and the other devices show its alt text.',
       ],
     },
@@ -156,12 +156,13 @@ export const HELP = {
       ],
     },
     {
-      title: 'Send feedback',
+      title: 'Send feedback or a note to Sophie',
       needsSharing: true,
       steps: [
-        'Choose Send feedback at the bottom of any screen.',
-        'Pick idea, problem, praise or question, type your message, and pick a rating if you want.',
-        'Choose Send feedback. Only what you type goes, never the text of your projects.',
+        'Choose Send feedback or Write to Sophie at the bottom of any screen, or in the menu of your photo.',
+        'Pick idea, problem, praise, question or a personal note, type your message, and pick a rating if you want.',
+        'Choose Send. Only what you type goes, never the text of your projects.',
+        'You can send up to 10 messages in a day, with 30 seconds between messages.',
       ],
     },
     {
@@ -180,7 +181,7 @@ export const HELP = {
       title: 'Export',
       steps: [
         'In a project, choose Export.',
-        'Pick Word, PDF, EPUB or Markdown, and this item or the whole project.',
+        'Pick Word, PDF, EPUB, Rich Text, Markdown, Web page or Plain text, and this item or the whole project.',
         'A novel can use standard manuscript format. Poems keep every space and indent in each format.',
         'For Google Docs, export to Word, then open the file in Google Drive.',
         'To post on Substack, Medium, WordPress or another site, use Publish (the paper plane icon).',
@@ -310,7 +311,7 @@ export const HELP = {
         'Tab changes the element of the line. Enter starts the element that usually follows, so dialogue follows a character.',
         'On a character line, Vlo shows the rest of a Codex character name in grey. Enter takes the name.',
         'To change to a stage play, choose the page button above the text, then Script layout.',
-        'Export gives a script PDF in Courier Prime on US Letter, a Fountain file or a Final Draft file. Import writing reads a Fountain file.',
+        'Export gives a script PDF in Courier Prime on US Letter, a Fountain file or a Final Draft file. Import writing reads a Fountain file or a Final Draft file.',
       ],
     },
     {

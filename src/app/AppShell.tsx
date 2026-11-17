@@ -148,6 +148,11 @@ export function AppShell() {
                 </Link>
               </li>
               <li>
+                <Link to="/send-feedback?kind=note" state={{ from: pathname }} className={FOOTER_LINK}>
+                  Write to Sophie
+                </Link>
+              </li>
+              <li>
                 <Link to="/privacy" className={FOOTER_LINK}>
                   Privacy
                 </Link>

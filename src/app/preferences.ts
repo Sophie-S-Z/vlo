@@ -1,5 +1,19 @@
-export type ThemeChoice = 'system' | 'ink' | 'paper' | 'sepia' | 'contrast';
-export type ResolvedTheme = 'ink' | 'paper' | 'sepia' | 'contrast';
+/** Every theme Vlo draws. The first four are plain pages; the rest are atmospheres (src/app/themes.ts). */
+export const RESOLVED_THEMES = [
+  'ink',
+  'paper',
+  'sepia',
+  'contrast',
+  'forest',
+  'galaxy',
+  'deep-sea',
+  'candlelight',
+  'wonderland',
+  'blossom',
+  'frost',
+] as const;
+export type ResolvedTheme = (typeof RESOLVED_THEMES)[number];
+export type ThemeChoice = 'system' | ResolvedTheme;
 
 export interface Preferences {
   theme: ThemeChoice;
@@ -7,12 +21,15 @@ export interface Preferences {
 }
 
 export const PREFERENCES_KEY = 'vlo:preferences';
-export const THEME_CHOICES: readonly ThemeChoice[] = ['system', 'ink', 'paper', 'sepia', 'contrast'];
-export const RESOLVED_THEMES: readonly ResolvedTheme[] = ['ink', 'paper', 'sepia', 'contrast'];
+export const THEME_CHOICES: readonly ThemeChoice[] = ['system', ...RESOLVED_THEMES];
 export const DEFAULT_PREFERENCES: Preferences = { theme: 'system', calm: false };
 
 function isThemeChoice(value: unknown): value is ThemeChoice {
   return typeof value === 'string' && (THEME_CHOICES as readonly string[]).includes(value);
+}
+
+export function isResolvedTheme(value: unknown): value is ResolvedTheme {
+  return typeof value === 'string' && (RESOLVED_THEMES as readonly string[]).includes(value);
 }
 
 /** Parses stored preferences. Bad or missing values fall back to the defaults. */

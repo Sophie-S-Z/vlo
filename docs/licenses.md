@@ -15,13 +15,17 @@ Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. 
 | @electric-sql/pglite | 0.5.11 | Apache-2.0 | build and test |
 | @eslint/js | 9.39.5 | MIT | build and test |
 | @floating-ui/dom | 1.8.0 | MIT | runtime |
+| @fontsource-variable/alegreya | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/atkinson-hyperlegible-next | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/bodoni-moda | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/caveat | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/cinzel | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/cormorant-garamond | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/crimson-pro | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/dancing-script | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/eb-garamond | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/fraunces | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/grenze-gotisch | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/libre-baskerville | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/literata | 5.3.0 | OFL-1.1 | runtime |
@@ -30,11 +34,17 @@ Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. 
 | @fontsource-variable/newsreader | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/nunito | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/playfair-display | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/recursive | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/courier-prime | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/fredericka-the-great | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/im-fell-english | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/instrument-serif | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/kalam | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/macondo | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/pinyon-script | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/spectral | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/uncial-antiqua | 5.3.0 | OFL-1.1 | runtime |
 | @huggingface/transformers | 4.3.1 | Apache-2.0 | runtime |
 | @mlc-ai/web-llm | 0.2.87 | Apache-2.0 | runtime |
 | @pdf-lib/fontkit | 1.1.1 | MIT | runtime |
@@ -83,6 +93,7 @@ Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. 
 | minisearch | 7.2.0 | MIT | runtime |
 | motion | 14.9.0 | MIT | runtime |
 | pdf-lib | 1.17.1 | MIT | runtime |
+| pdfjs-dist | 6.5.438 | Apache-2.0 | runtime |
 | playwright-core | 1.63.0 | Apache-2.0 | build and test |
 | prettier | 3.9.10 | MIT | build and test |
 | radix-ui | 1.8.1 | MIT | runtime |

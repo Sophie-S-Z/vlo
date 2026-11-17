@@ -1,20 +1,23 @@
-import { rpc } from '@/features/share/rpc';
+import { rpc, sharingReady } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
 import { db, type AiMode, type Template } from '@/lib/db';
 
 /*
- * Opt-in usage counts (spec F30 and section 11, plan Task E5, decision S6). They are off by default. While
- * they are on, Vlo counts feature uses, AI requests by mode and error codes on this device, by ISO week.
- * Once a week the Library shows the report of the last full week as exact JSON, and the writer sends it or
- * skips it. A report holds fixed names, counts and bands only: never text, titles or names. The names
- * come from the lists below, never from the writer's text.
+ * Weekly usage counts (spec F30 and section 11, plan Task E5). They are always on, and Settings and the
+ * privacy page say so. Vlo counts feature uses, AI requests by mode and error codes on this device, by
+ * ISO week. Once a week Vlo sends the report of the last full week by itself. A report holds fixed names,
+ * counts and bands only: never text, titles or names. The names come from the lists below, never from the
+ * writer's text.
  */
 
 export const FEATURES = [
   'export-docx',
   'export-pdf',
   'export-epub',
+  'export-rtf',
   'export-markdown',
+  'export-html',
+  'export-text',
   'export-web',
   'export-fountain',
   'export-fdx',
@@ -62,8 +65,7 @@ interface WeekCounts {
 }
 
 export interface UsageState {
-  on: boolean;
-  /** The last week whose report the writer sent or skipped. */
+  /** The last week that Vlo sent, or the week before counts started. */
   handledWeek?: string;
   /** The counts by ISO week, such as "2026-W45". Vlo keeps two weeks at most. */
   weeks: Record<string, WeekCounts>;
@@ -107,36 +109,17 @@ export function lastWeek(now: number): { week: string; start: number; end: numbe
 }
 
 function isState(value: unknown): value is UsageState {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as UsageState).on === 'boolean' &&
-    typeof (value as UsageState).weeks === 'object'
-  );
+  return typeof value === 'object' && value !== null && typeof (value as UsageState).weeks === 'object';
 }
 
 export async function usageState(): Promise<UsageState> {
   const value = (await db.appMeta.get(KEY))?.value;
-  return isState(value) ? value : { on: false, weeks: {} };
-}
-
-/** Turns usage counts on or off. Off removes every local count. */
-export async function setUsageOn(on: boolean): Promise<void> {
-  await db.transaction('rw', db.appMeta, async () => {
-    const state = await usageState();
-    // A writer who turns counts on now has nothing to send for last week.
-    const next: UsageState = on
-      ? { on: true, handledWeek: lastWeek(clock.now()).week, weeks: {} }
-      : { on: false, weeks: {} };
-    if (on && state.on) return;
-    await db.appMeta.put({ key: KEY, value: next });
-  });
+  return isState(value) ? value : { weeks: {} };
 }
 
 async function count(change: (week: WeekCounts) => void): Promise<void> {
   await db.transaction('rw', db.appMeta, async () => {
     const state = await usageState();
-    if (!state.on) return;
     const now = clock.now();
     const { week } = isoWeek(now);
     const keep = new Set([week, lastWeek(now).week]);
@@ -160,21 +143,21 @@ export function usageSettled(): Promise<void> {
   return queue;
 }
 
-/** Counts one use of a feature. It does nothing while usage counts are off, and it never fails. */
+/** Counts one use of a feature. It never fails. */
 export function recordFeature(name: FeatureName): void {
   enqueue((w) => {
     w.features[name] = (w.features[name] ?? 0) + 1;
   });
 }
 
-/** Counts one error. It does nothing while usage counts are off, and it never fails. */
+/** Counts one error. It never fails. */
 export function recordError(code: ErrorCode): void {
   enqueue((w) => {
     w.errors[code] = (w.errors[code] ?? 0) + 1;
   });
 }
 
-/** Counts one AI request in a mode. It does nothing while usage counts are off, and it never fails. */
+/** Counts one AI request in a mode. It never fails. */
 export function recordAiRequest(mode: AiMode): void {
   enqueue((w) => {
     w.ai[mode] = (w.ai[mode] ?? 0) + 1;
@@ -182,14 +165,13 @@ export function recordAiRequest(mode: AiMode): void {
 }
 
 /**
- * The report of the last full week, or null when counts are off, the writer already sent or skipped it,
- * or the week had no writing and no counts.
+ * The report of the last full week, or null when counts started after it, Vlo already sent it, or the
+ * week had no writing and no counts.
  */
 export async function weeklyReport(now: number): Promise<{ week: string; report: UsageReport } | null> {
   const state = await usageState();
-  if (!state.on) return null;
   const { week, start, end } = lastWeek(now);
-  if (state.handledWeek !== undefined && state.handledWeek >= week) return null;
+  if (state.handledWeek === undefined || state.handledWeek >= week) return null;
   const sessions = await db.sessions.filter((s) => s.startedAt >= start && s.startedAt <= end).toArray();
   const counts = state.weeks[week] ?? { features: {}, ai: {}, errors: {} };
   const active = new Set(sessions.map((s) => s.projectId));
@@ -216,11 +198,10 @@ export async function weeklyReport(now: number): Promise<{ week: string; report:
   return empty ? null : { week, report };
 }
 
-/** Marks the week as sent or skipped, so the Library does not ask again. */
-export async function handleWeek(week: string): Promise<void> {
+/** Marks the week as handled, so Vlo does not send it again. */
+async function handleWeek(week: string): Promise<void> {
   await db.transaction('rw', db.appMeta, async () => {
     const state = await usageState();
-    if (!state.on) return;
     const weeks = Object.fromEntries(Object.entries(state.weeks).filter(([w]) => w > week));
     await db.appMeta.put({ key: KEY, value: { ...state, handledWeek: week, weeks } });
   });
@@ -229,8 +210,36 @@ export async function handleWeek(week: string): Promise<void> {
 /** The app version for submit_usage. */
 export const APP_VERSION: string = (import.meta.env.VITE_APP_VERSION as string | undefined) ?? '0.0.0';
 
-/** Sends the report exactly as the writer saw it, then marks the week. */
-export async function sendReport(week: string, report: UsageReport): Promise<void> {
-  await rpc('submit_usage', { p_week: week, p_app_version: APP_VERSION, p_report: report }, 'usage');
-  await handleWeek(week);
+/** The sends wait in one line, so two checks at once never send a week twice. */
+let sending: Promise<boolean> = Promise.resolve(false);
+
+/**
+ * Sends the report of the last full week once. The first check on a device only marks the start, so Vlo
+ * never sends a week from before the counts started. It never throws: a send that fails goes at the next
+ * check.
+ */
+export function sendWeeklyReport(): Promise<boolean> {
+  const next = sending.then(async () => {
+    try {
+      if (!sharingReady()) return false;
+      const now = clock.now();
+      if ((await usageState()).handledWeek === undefined) {
+        await handleWeek(lastWeek(now).week);
+        return false;
+      }
+      const pending = await weeklyReport(now);
+      if (!pending) return false;
+      await rpc(
+        'submit_usage',
+        { p_week: pending.week, p_app_version: APP_VERSION, p_report: pending.report },
+        'usage',
+      );
+      await handleWeek(pending.week);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  sending = next;
+  return next;
 }

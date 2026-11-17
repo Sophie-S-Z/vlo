@@ -2,14 +2,13 @@ import { guessDeviceName } from '@/features/sync/deviceName';
 import { toBase64Url } from '@/lib/crypto';
 
 /*
- * The on and off state of the daily count and the install id (Phase 18, decision A3). It stays in this
- * browser's localStorage. Settings reads it, so this module holds no network code.
+ * The state of the daily count and the install id (Phase 18, decision A3). It stays in this browser's
+ * localStorage. The count is always on. A value of `off` from an older version has no effect.
  */
 
 const KEY = 'vlo:daily-count';
 
 export interface DailyCountState {
-  off: boolean;
   /** The random id of this browser, made at the first count. */
   install?: string;
   /** The local day of the last count that went through, as "YYYY-MM-DD". */
@@ -24,14 +23,13 @@ export function readDailyCount(): DailyCountState {
   try {
     const value = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Partial<DailyCountState> | null;
     return {
-      off: value?.off === true,
       ...(typeof value?.install === 'string' ? { install: value.install } : {}),
       ...(typeof value?.day === 'string' ? { day: value.day } : {}),
       ...(typeof value?.seen === 'string' ? { seen: value.seen } : {}),
       ...(typeof value?.at === 'number' ? { at: value.at } : {}),
     };
   } catch {
-    return { off: false };
+    return {};
   }
 }
 
@@ -41,11 +39,6 @@ export function writeDailyCount(state: DailyCountState): void {
   } catch {
     // With no storage, the next visit counts again. The server keeps one row for each install and day.
   }
-}
-
-/** Turns the daily count on or off. Off forgets the install id, so a later count is a new install. */
-export function setDailyCountOn(on: boolean): void {
-  writeDailyCount(on ? { ...readDailyCount(), off: false } : { off: true });
 }
 
 /** The install id of this browser: 16 random bytes in base64url, as the relay ids. */

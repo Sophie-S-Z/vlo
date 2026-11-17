@@ -7,6 +7,7 @@ import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { cleanFontValue, fontStack, type FontValue } from '../format/fonts';
 import { swatchVar } from '../format/palette';
 import { TextFillMark } from './textFill';
+import { TypePlayMark } from './typePlay';
 import { PRIVATE_NAME } from '@/features/people/markName';
 import { AI_ORIGIN } from '../format/aiOrigin';
 import { COMMENT } from './comment';
@@ -214,7 +215,10 @@ const ColoredHighlight = Highlight.extend({
   },
 }).configure({ multicolor: true });
 
-/** Inline formats for every editor: superscript, subscript, highlight, font, font color, font size and fills. */
+/**
+ * Inline formats for every editor: superscript, subscript, highlight, font, font color, font size, fills
+ * and Type play.
+ */
 export function inlineFormatting(): AnyExtension[] {
   return [
     Superscript.extend({ excludes: 'subscript' }),
@@ -225,6 +229,7 @@ export function inlineFormatting(): AnyExtension[] {
     FontSize,
     FontChoice,
     TextFillMark,
+    TypePlayMark,
   ];
 }
 
