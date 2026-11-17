@@ -3,10 +3,15 @@ import type { Page } from '@playwright/test';
 
 /**
  * Serious and critical WCAG 2.2 AA issues on the page, as "rule: targets" lines.
- * Entrance animations finish first, so axe reads final colours and never a half-faded frame. An animation
- * can start late, such as the word count's roll after a save, so the wait repeats until two quiet frames.
+ * While axe reads the page, every CSS animation and transition jumps to its end, so axe never reads a
+ * half-faded frame, also of an animation that starts late, such as the word count's roll after a save. The
+ * scripted animations finish first, and the wait repeats until two quiet frames.
  */
 export async function seriousIssues(page: Page): Promise<string[]> {
+  const still = await page.addStyleTag({
+    content:
+      '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; transition-delay: 0s !important; }',
+  });
   await page.evaluate(async () => {
     const running = () =>
       document
@@ -31,6 +36,9 @@ export async function seriousIssues(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
     .analyze();
+  await still.evaluate((style: Element) => {
+    style.remove();
+  });
   return results.violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')
     .map(
