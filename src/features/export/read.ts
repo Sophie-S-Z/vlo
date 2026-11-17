@@ -2,6 +2,7 @@ import type { JSONContent } from '@tiptap/core';
 import { IMAGE, imageAttrs } from '@/features/images/attrs';
 import * as Y from 'yjs';
 import { parseFill } from '@/features/editor/format/fill';
+import { parsePlay } from '@/features/editor/format/typePlay';
 import { cleanFontValue } from '@/features/editor/format/fonts';
 import { cleanLatex } from '@/features/editor/format/math';
 import { parseNote } from '@/features/editor/format/notes';
@@ -174,6 +175,14 @@ function styleOf(marks: JSONContent['marks']): RunStyle {
       case 'textFill': {
         const fill = parseFill(attrs.fill);
         if (fill) style.fill = fill;
+        break;
+      }
+      case 'typePlay': {
+        const play = parsePlay(attrs.play);
+        if (!play) break;
+        style.play = true;
+        // A file keeps a heavy weight as bold. The other looks of Type play stay in Vlo.
+        if ((play.weight ?? 0) >= 600) style.bold = true;
         break;
       }
       case 'link': {

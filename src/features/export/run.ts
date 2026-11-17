@@ -53,7 +53,10 @@ export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; typ
   },
   pdf: { extension: 'pdf', type: 'application/pdf' },
   epub: { extension: 'epub', type: 'application/epub+zip' },
+  rtf: { extension: 'rtf', type: 'application/rtf' },
   markdown: { extension: 'md', type: 'text/markdown;charset=utf-8' },
+  html: { extension: 'html', type: 'text/html;charset=utf-8' },
+  text: { extension: 'txt', type: 'text/plain;charset=utf-8' },
   web: { extension: 'html', type: 'text/html;charset=utf-8' },
   fountain: { extension: 'fountain', type: 'text/plain;charset=utf-8' },
   fdx: { extension: 'fdx', type: 'application/xml' },
@@ -157,6 +160,12 @@ export async function makeExport(
     const { toWebHtml, toWebText } = await import('./web');
     bytes = new TextEncoder().encode(toWebHtml(doc));
     text = toWebText(doc);
+  } else if (format === 'html' || format === 'text') {
+    const { toHtmlFile, toPlainText } = await import('./web');
+    bytes = new TextEncoder().encode(format === 'html' ? toHtmlFile(doc) : toPlainText(doc));
+  } else if (format === 'rtf') {
+    const { toRtf } = await import('./rtf');
+    bytes = new TextEncoder().encode(toRtf(doc));
   } else if (format === 'fountain' || format === 'fdx') {
     const { toFdx, toFountain } = await import('./fountain');
     bytes = new TextEncoder().encode(format === 'fdx' ? toFdx(doc) : toFountain(doc));

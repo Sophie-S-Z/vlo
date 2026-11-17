@@ -476,7 +476,20 @@ export function ProjectPage() {
     {
       id: 'export',
       label: 'Export…',
-      keywords: ['download', 'word', 'docx', 'markdown', 'google docs', 'save as', 'pdf', 'epub'],
+      keywords: [
+        'download',
+        'word',
+        'docx',
+        'markdown',
+        'google docs',
+        'save as',
+        'pdf',
+        'epub',
+        'rtf',
+        'html',
+        'txt',
+        'text',
+      ],
       run: () => {
         // The export dialog opens after the menu closes, so the two dialogs never hold focus at once.
         afterMenu.current = () => {

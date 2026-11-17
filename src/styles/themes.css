@@ -50,3 +50,100 @@
   --accent-text: #20432b;
   --on-accent: #ffffff;
 }
+
+/*
+ * Atmospheres (src/app/themes.ts). Each one is a full theme with its own page colors, and atmospheres.css
+ * paints its scene behind the app. The dark ones borrow the Ink text colors and highlights, the light ones
+ * the Paper ones, and every pair keeps WCAG AA (tests/unit/contrast.test.ts, tests/unit/palette.test.ts).
+ */
+
+/* Deep forest: pine-black green, with lichen for the accent. */
+[data-theme='forest'] {
+  color-scheme: dark;
+  --bg: #0c1511;
+  --surface: #121c17;
+  --text: #e7ebe1;
+  --muted: #9aa79c;
+  --rule: #26352c;
+  --accent: #bdd48a;
+  --accent-text: #bdd48a;
+  --on-accent: #0c1511;
+}
+
+/* Mystic galaxy: deep violet space, with nebula orchid for the accent. */
+[data-theme='galaxy'] {
+  color-scheme: dark;
+  --bg: #0c0a1a;
+  --surface: #15122a;
+  --text: #ece9f6;
+  --muted: #a49fbd;
+  --rule: #29243f;
+  --accent: #e7a6d6;
+  --accent-text: #e7a6d6;
+  --on-accent: #0c0a1a;
+}
+
+/* Deep sea: blue-green dark water, with a glowing teal for the accent. */
+[data-theme='deep-sea'] {
+  color-scheme: dark;
+  --bg: #06141a;
+  --surface: #0c1e26;
+  --text: #e1eef0;
+  --muted: #8eaab0;
+  --rule: #1a323b;
+  --accent: #74d3d0;
+  --accent-text: #74d3d0;
+  --on-accent: #06141a;
+}
+
+/* Candlelight: a brown-black room, with flame amber for the accent. */
+[data-theme='candlelight'] {
+  color-scheme: dark;
+  --bg: #120d0a;
+  --surface: #1c1511;
+  --text: #f1e7d8;
+  --muted: #a8998a;
+  --rule: #30251d;
+  --accent: #efb768;
+  --accent-text: #efb768;
+  --on-accent: #120d0a;
+}
+
+/* Wonderland: pale lavender, plum ink and a playing-card red. */
+[data-theme='wonderland'] {
+  color-scheme: light;
+  --bg: #f3f1fa;
+  --surface: #fbfaff;
+  --text: #231a35;
+  --muted: #635a75;
+  --rule: #dfdaec;
+  --accent: #b8344f;
+  --accent-text: #a82e47;
+  --on-accent: #ffffff;
+}
+
+/* Blossom: petal pink, with a deep plum for the accent. */
+[data-theme='blossom'] {
+  color-scheme: light;
+  --bg: #f9f0f0;
+  --surface: #fffafa;
+  --text: #33191f;
+  --muted: #745058;
+  --rule: #ecdadc;
+  --accent: #8e3a62;
+  --accent-text: #8e3a62;
+  --on-accent: #ffffff;
+}
+
+/* Frost: cold blue-white, with a winter-sky blue for the accent. */
+[data-theme='frost'] {
+  color-scheme: light;
+  --bg: #eef3f7;
+  --surface: #f9fbfd;
+  --text: #13202d;
+  --muted: #546474;
+  --rule: #d7e0e8;
+  --accent: #2f6690;
+  --accent-text: #2b5f86;
+  --on-accent: #ffffff;
+}

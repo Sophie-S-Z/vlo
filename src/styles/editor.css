@@ -609,6 +609,108 @@ html[data-hide-text][data-hide-keep]
   }
 }
 
+/*
+ * Type play (the typePlay mark, format/typePlay.ts). Weight, letter spacing and design axes come inline.
+ * Effects draw with text-shadow and a text stroke, from theme colors, so they follow the theme. Motion
+ * changes only opacity and text-shadow, so no line moves. Like shimmer, it pauses while the writer types and
+ * stops in Calm mode and under reduced motion.
+ */
+.vlo-play-outline {
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.035em currentColor;
+  paint-order: stroke fill;
+}
+
+.vlo-play-outline::selection,
+.vlo-play-outline *::selection,
+.vlo-play-outline .vlo-held-selection,
+.vlo-play-outline .vlo-find-current {
+  -webkit-text-fill-color: var(--text);
+}
+
+.vlo-play-engraved {
+  text-shadow:
+    0 0.05em 0 color-mix(in oklch, var(--bg), white 45%),
+    0 -0.03em 0 color-mix(in oklch, var(--bg), black 55%);
+}
+
+.vlo-play-lifted {
+  text-shadow:
+    0 0.04em 0.04em color-mix(in oklch, var(--text) 18%, transparent),
+    0 0.14em 0.3em color-mix(in oklch, var(--text) 22%, transparent);
+}
+
+.vlo-play-echo {
+  text-shadow:
+    0.06em 0.06em 0 color-mix(in oklch, var(--accent) 70%, transparent),
+    0.12em 0.12em 0 color-mix(in oklch, var(--accent) 35%, transparent);
+}
+
+.vlo-play-breathe {
+  animation: vlo-play-breathe 5s ease-in-out infinite;
+}
+
+.vlo-play-flicker {
+  animation: vlo-play-flicker 3.2s linear infinite;
+}
+
+@keyframes vlo-play-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.82;
+    text-shadow: 0 0 0.45em color-mix(in oklch, currentColor 45%, transparent);
+  }
+}
+
+/* A candle: small, uneven dips in light, with a warm glow at the bright moments. */
+@keyframes vlo-play-flicker {
+  0%,
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 0.3em color-mix(in oklch, var(--accent) 40%, transparent);
+  }
+  18% {
+    opacity: 0.86;
+    text-shadow: none;
+  }
+  22% {
+    opacity: 1;
+    text-shadow: 0 0 0.4em color-mix(in oklch, var(--accent) 50%, transparent);
+  }
+  47% {
+    opacity: 0.9;
+    text-shadow: 0 0 0.15em color-mix(in oklch, var(--accent) 25%, transparent);
+  }
+  52% {
+    opacity: 0.84;
+  }
+  56% {
+    opacity: 1;
+    text-shadow: 0 0 0.35em color-mix(in oklch, var(--accent) 45%, transparent);
+  }
+  83% {
+    opacity: 0.92;
+  }
+}
+
+html[data-typing='true'] :is(.vlo-play-breathe, .vlo-play-flicker) {
+  animation-play-state: paused;
+}
+
+html[data-calm='true'] :is(.vlo-play-breathe, .vlo-play-flicker) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vlo-play-breathe,
+  .vlo-play-flicker {
+    animation: none;
+  }
+}
+
 html[data-typing='true'] .vlo-fill-shimmer {
   animation-play-state: paused;
 }

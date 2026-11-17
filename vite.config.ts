@@ -91,12 +91,14 @@ export default defineConfig({
         // either (plan decision D2). It is cached the first time a poet turns the labels on. The in-browser
         // AI engine (about 2 MB gzip, Phase 4 plan decision P3) is cached the first time a writer picks it.
         // The speech-to-text worker and its ONNX Runtime file (about 7 MB gzip, Phase 11 plan Task K9) are
-        // cached the first time a writer turns a recording into text.
+        // cached the first time a writer turns a recording into text. The PDF reader's worker (about 400 KB
+        // gzip) is cached the first time a writer imports a PDF.
         globIgnores: [
           'assets/fonts/**',
           'assets/craft/**',
           'assets/ai-model/**',
           'assets/transcribe.worker-*',
+          'assets/pdf.worker-*',
         ],
         runtimeCaching: [
           {
@@ -126,6 +128,16 @@ export default defineConfig({
               cacheName: 'vlo-speech-engine',
               // The file names carry a content hash, so a cached file never goes stale.
               expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            urlPattern: /\/assets\/pdf\.worker-[^/]+\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-pdf-reader',
+              // The file name carries a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 2 },
               cacheableResponse: { statuses: [200] },
             },
           },

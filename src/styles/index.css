@@ -7,6 +7,7 @@
 @import '@fontsource/jetbrains-mono/400.css';
 @import './tokens.css';
 @import './themes.css';
+@import './atmospheres.css';
 @import './motion.css';
 @import './library.css';
 
@@ -21,7 +22,7 @@
   --shadow-lg: 0 1px 2px rgb(11 14 20 / 0.08), 0 12px 32px -8px rgb(11 14 20 / 0.24);
 }
 
-@custom-variant dark (&:where([data-theme='ink'], [data-theme='ink'] *));
+@custom-variant dark (&:where([data-tone='dark'], [data-tone='dark'] *));
 
 @theme inline {
   --color-bg: var(--bg);

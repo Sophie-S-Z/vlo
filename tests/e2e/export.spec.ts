@@ -45,7 +45,7 @@ test('a Word export holds the text, and the dialog shows the two steps to Google
 
   await page.getByRole('button', { name: 'Export' }).click();
   const dialog = page.getByRole('dialog', { name: 'Export' });
-  await expect(dialog.getByRole('radio', { name: /Word/ })).toBeChecked();
+  await expect(dialog.getByRole('radio', { name: /^Word/ })).toBeChecked();
   await expect(dialog.getByRole('radio', { name: /This scene: Scene 1/ })).toBeChecked();
   expect(await seriousIssues(page)).toEqual([]);
 
@@ -109,6 +109,29 @@ test('a Markdown export of a poem keeps every leading space as a no-break space'
 
   const done = page.getByRole('dialog', { name: 'Your file is ready' });
   await expect(done.getByRole('heading', { name: 'Open it in Google Docs' })).toHaveCount(0);
+});
+
+test('plain text, Rich Text and web page exports keep the poem and its leading spaces', async ({ page }) => {
+  await newProject(page, 'poetry');
+  await page.keyboard.type('Salt on the sill.');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('    The tide goes out');
+  await saved(page);
+
+  const dialog = page.getByRole('dialog', { name: 'Export' });
+  const done = page.getByRole('dialog', { name: 'Your file is ready' });
+  for (const [format, extension, line] of [
+    [/^Plain text/, 'txt', 'Salt on the sill.\n    The tide goes out\n'],
+    [/^Rich Text/, 'rtf', 'Salt on the sill.\\line     The tide goes out\\par'],
+    [/^Web page/, 'html', 'Salt on the sill.<br>\u00a0\u00a0\u00a0\u00a0The tide goes out'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Export' }).click();
+    await dialog.getByRole('radio', { name: format }).click();
+    const { name, bytes } = await exportFile(page);
+    expect(name.endsWith(`.${extension}`)).toBe(true);
+    expect(bytes.toString('utf8')).toContain(line);
+    await done.getByRole('button', { name: 'Done' }).click();
+  }
 });
 
 test('a PDF export holds the text with its fonts, and has no Google Docs steps', async ({ page }) => {

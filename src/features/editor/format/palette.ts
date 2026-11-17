@@ -1,16 +1,18 @@
-import { RESOLVED_THEMES, type ResolvedTheme } from '@/app/preferences';
+import { isResolvedTheme, RESOLVED_THEMES, type ResolvedTheme } from '@/app/preferences';
+import { THEMES, type PaletteBase } from '@/app/themes';
 
 /*
  * Theme-aware colors for text and highlights. The document stores a CSS variable, such as
  * `var(--vlo-text-rose)`, so a rose word stays readable when the writer changes the theme. Exports use
- * the Paper value, because paper is white. The Contrast theme uses the Paper values on its white page. Every text color meets 4.5:1 on each theme's page and
- * surface, and every highlight keeps the theme's text at 4.5:1 or more (tests/unit/palette.test.ts).
+ * the Paper value, because paper is white. The Contrast theme uses the Paper values on its white page. An
+ * atmosphere theme borrows the values of its base palette (src/app/themes.ts). Every text color meets 4.5:1 on
+ * each theme's page and surface, and every highlight keeps the theme's text at 4.5:1 or more (tests/unit/palette.test.ts).
  */
 
 export interface Swatch {
   id: string;
   label: string;
-  values: Readonly<Record<ResolvedTheme, string>>;
+  values: Readonly<Record<PaletteBase, string>>;
 }
 
 export const TEXT_COLORS: readonly Swatch[] = [
@@ -114,15 +116,16 @@ export function swatchOf(value: string): { kind: SwatchKind; swatch: Swatch } | 
 
 /** A stored color as a plain color for one theme. Custom colors pass through unchanged. */
 export function resolveColor(value: string, theme: ResolvedTheme): string {
-  return swatchOf(value)?.swatch.values[theme] ?? value;
+  return swatchOf(value)?.swatch.values[THEMES[theme].palette] ?? value;
 }
 
 /** The CSS variables for every swatch, one block per theme. */
 export function paletteCss(): string {
   return RESOLVED_THEMES.map((theme) => {
+    const base = THEMES[theme].palette;
     const lines = [
-      ...TEXT_COLORS.map((s) => `--vlo-text-${s.id}: ${s.values[theme]};`),
-      ...HIGHLIGHTS.map((s) => `--vlo-mark-${s.id}: ${s.values[theme]};`),
+      ...TEXT_COLORS.map((s) => `--vlo-text-${s.id}: ${s.values[base]};`),
+      ...HIGHLIGHTS.map((s) => `--vlo-mark-${s.id}: ${s.values[base]};`),
     ];
     return `[data-theme='${theme}'] { ${lines.join(' ')} }`;
   }).join('\n');
@@ -145,10 +148,17 @@ export const PAGE_COLORS: Readonly<Record<ResolvedTheme, { bg: string; surface: 
   paper: { bg: '#f5f4f1', surface: '#fcfcf9', text: '#141a23' },
   sepia: { bg: '#efe3cc', surface: '#f6ecd9', text: '#3a2e22' },
   contrast: { bg: '#ffffff', surface: '#f4f4f4', text: '#000000' },
+  forest: { bg: '#0c1511', surface: '#121c17', text: '#e7ebe1' },
+  galaxy: { bg: '#0c0a1a', surface: '#15122a', text: '#ece9f6' },
+  'deep-sea': { bg: '#06141a', surface: '#0c1e26', text: '#e1eef0' },
+  candlelight: { bg: '#120d0a', surface: '#1c1511', text: '#f1e7d8' },
+  wonderland: { bg: '#f3f1fa', surface: '#fbfaff', text: '#231a35' },
+  blossom: { bg: '#f9f0f0', surface: '#fffafa', text: '#33191f' },
+  frost: { bg: '#eef3f7', surface: '#f9fbfd', text: '#13202d' },
 };
 
 /** The theme on screen now. Paper when no theme is set, such as in a test. */
 export function currentTheme(): ResolvedTheme {
   const theme = typeof document === 'undefined' ? undefined : document.documentElement.dataset.theme;
-  return theme === 'ink' || theme === 'sepia' || theme === 'contrast' ? theme : 'paper';
+  return isResolvedTheme(theme) ? theme : 'paper';
 }

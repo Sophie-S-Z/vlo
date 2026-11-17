@@ -23,6 +23,16 @@ Last update: 2026-11-17
   - Fixed: "Blur the words" and "Cover the words with bars" in the Focus menu did not turn Hide the
     text off on a second click.
 
+- More file types (2026-11-17), from the product owner's ask:
+  - Import writing reads PDF, OpenDocument (.odt), RTF, EPUB, web pages (.html), and Final Draft (.fdx)
+    files, beside Word, Markdown, text, Fountain and Scrivener. An RTF heading keeps its outline level.
+  - A PDF has lines at places on a page, so the PDF reader joins them into paragraphs, finds headings by
+    size and verse by short lines, and leaves out page numbers and running heads. PDF.js (Apache-2.0)
+    reads the text in its own worker, and it loads only for a PDF. The service worker caches it on first
+    use. A PDF gives no bold or italic, and a scan of pages has no text, so the summary says so.
+  - Export adds Rich Text (.rtf), Web page (.html, with its images inside) and Plain text (.txt). Each one
+    reads back through Import writing with its words and its chapters, and a poem keeps every space.
+
 - Profiles (2026-11-17, ADR 0011, migration 0011), from the product owner's ask:
   - A new account gives its name after the sign-in code (`/profile/new`), with an optional photo that the
     writer places in a circle. Google's name fills the field. An older account gives its name once.
@@ -1166,6 +1176,9 @@ Last update: 2026-11-17
 
 | Date       | Change                                                                                                                                                                                                                                                                                       | Reason                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-17 | Seven atmosphere themes (`src/app/themes.ts`): Deep forest, Mystic galaxy, Deep sea, Candlelight, Wonderland, Blossom and Frost. Each has its own colors and a CSS-only scene behind the app (`atmospheres.css`), whose lights rest while the writer types and stay still in Calm mode.      |
+| 2026-11-17 | 30 Vlo fonts in seven groups. New: Alegreya, Bodoni Moda, Instrument Serif, Recursive, Dancing Script, Pinyon Script, and Storybook and fantasy (Grenze Gotisch, Uncial Antiqua, Macondo, Fredericka the Great). All OFL.                                                                    |
+| 2026-11-17 | Type play (`typePlay` mark): exact weight, letter spacing and variable-font axes, the effects Outline, Engraved, Lifted and Echo, and the motions Breathe and Flicker. Screen only; exports keep 600+ weight as bold.                                                                        |
 | 2026-11-16 | The Library is a bookshelf (Bookshelf.tsx). The list layout stays for a ruled view of every detail. The heading reads "Welcome to your library".                                                                                                                                             | The product owner found the card grid generic and asked for an interactive shelf like the virtual library guide they shared.                                                                                        |
 | 2026-11-16 | The list layout is now a stack of books. The shelf always shows first. The bookends and plank are wood, and the seals are gone. A new version loads at the next visit with no notice.                                                                                                        | The product owner asked for a bookstack view, wooden bookends, no seals, smoother motion and updates that need no reload button.                                                                                    |
 | 2026-11-11 | New palette: Ink `#0B0E14` (a blue-black) and Paper `#F5F4F1` (a stone white) as the two base colors, and Celadon as the accent (`#A9D4B3` in Ink, `#689373` in Paper, `#4D7758` for Paper text). Sepia and Contrast take a deep celadon accent. Text on the accent is Ink in Ink and Paper. | The terracotta accent was close to a default AI orange, and the cream page was a common AI trend. The product owner asked for a rare, calm accent. Each text color still meets 4.5:1, and the Contrast theme 7:1.   |
