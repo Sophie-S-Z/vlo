@@ -2,9 +2,9 @@
 
 Phase 18 uses the same free Supabase project as share links and sync (`docs/sharing-setup.md`). Do that guide first. Then do the steps below. Each step is in the Supabase dashboard unless it says otherwise.
 
-## 1. Apply migrations 0008 and 0009
+## 1. Apply migrations 0008, 0009 and 0010
 
-Run `supabase/migrations/0008_accounts.sql` in the SQL Editor, as for the other migrations. It adds the sync vaults, the daily count, feedback, the owner list and their functions. Then run `supabase/migrations/0009_live_owner.sql`. It adds the word numbers to the daily count and the live numbers of the owner page.
+Run `supabase/migrations/0008_accounts.sql` in the SQL Editor, as for the other migrations. It adds the sync vaults, the daily count, feedback, the owner list and their functions. Then run `supabase/migrations/0009_live_owner.sql`. It adds the word numbers to the daily count and the live numbers of the owner page. Then run `supabase/migrations/0010_places.sql`. It adds the rough place of each device and the signed-out visitors to the owner page. Apply 0010 before you deploy the app that sends a place, because the old `daily_count` refuses the new arguments.
 
 ## 2. Send the sign-in emails with your own mail server (required)
 
@@ -83,8 +83,8 @@ To add another owner, run the same SQL with their email. To remove one, delete t
 
 ## What the owner sees, and what the owner never sees
 
-- The owner sees: the number of accounts, devices that opened Vlo each day, the words that writers added each day, the words and projects on their devices, the kind of each device, versions, accounts that sync, the size of the database, each account's email, start date, last active day and words, the weekly usage reports that writers chose to send, and every feedback message. The page loads the numbers again every 30 seconds while it is on the screen.
-- The owner page never shows a project, a title, a name or a word of writing. The sync server holds sealed copies. The key of each account is in `sync_vaults`, as the product owner chose (ADR 0009), so keep the database password and the service key private.
+- The owner sees: the number of accounts, devices that opened Vlo each day, the words that writers added each day, the words and projects on their devices, the kind of each device, versions, accounts that sync, the size of the database, each account's email, start date, last active day and words, how many devices had no account, the countries, regions and cities of the devices as counts, the weekly usage reports that writers chose to send, and every feedback message. The page loads the numbers again every 30 seconds while it is on the screen.
+- The owner page never shows a project, a title, a name, a word of writing, an internet address or the place of one account. Vercel reads the place from the address in `api/geo.ts`, and only the country, region and city reach the database. The sync server holds sealed copies. The key of each account is in `sync_vaults`, as the product owner chose (ADR 0009), so keep the database password and the service key private.
 
 ## Keep the free project awake
 

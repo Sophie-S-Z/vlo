@@ -47,11 +47,10 @@ export function App() {
   }, []);
   // The daily count (Phase 18, decision A3): a few seconds after Vlo opens, each minute while it is on the
   // screen, and as it leaves the screen. The count goes only on a new day or after the projects change, so
-  // most checks send nothing. A share link's reader and the welcome screen never count.
+  // most checks send nothing. A visitor who is not signed in counts too. A share link's reader never counts.
   useEffect(() => {
     const count = () => {
-      const path = window.location.pathname;
-      if (path.startsWith('/r/') || path.startsWith('/welcome')) return;
+      if (window.location.pathname.startsWith('/r/')) return;
       const leaving = document.visibilityState !== 'visible';
       void import('@/features/account/dailyCount').then(({ sendDailyCount }) => sendDailyCount(leaving));
     };

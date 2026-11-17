@@ -71,6 +71,21 @@ export interface OwnerAccount {
   projects: number | null;
 }
 
+/** Signed-out devices and the places of the devices of the last 30 days (migration 0010). */
+export interface OwnerVisitors {
+  signed_out_1d: number;
+  signed_out_7d: number;
+  signed_out_30d: number;
+  /** The devices with a place. A count from a build with no place server has none. */
+  located: number;
+  /** Devices by country code, such as "US". */
+  countries: Record<string, number>;
+  /** Devices by country and region code, such as "US-CA". */
+  regions: Record<string, number>;
+  /** Devices by country, region and city, such as "US|CA|San Jose". */
+  cities: Record<string, number>;
+}
+
 export type FeedbackStatus = 'new' | 'read' | 'planned' | 'done';
 
 export interface OwnerFeedback {
@@ -95,6 +110,8 @@ export const ownerDaily = (days: number, today: string) =>
   accountRpc<OwnerDay[]>('owner_daily', { p_days: days, p_today: today });
 export const ownerAccounts = (today: string) =>
   accountRpc<OwnerAccount[]>('owner_accounts', { p_today: today });
+export const ownerVisitors = (today: string) =>
+  accountRpc<OwnerVisitors>('owner_visitors', { p_today: today });
 export const ownerFeedback = () => accountRpc<OwnerFeedback[]>('owner_feedback');
 export const setFeedbackStatus = (id: string, status: FeedbackStatus, note: string) =>
   accountRpc<boolean>('owner_set_feedback', { p_id: id, p_status: status, p_note: note });
@@ -139,6 +156,27 @@ export function feedbackCsv(rows: readonly OwnerFeedback[]): string {
       .join(','),
   );
   return [head.join(','), ...lines].join('\r\n') + '\r\n';
+}
+
+const COUNTRIES = new Intl.DisplayNames(['en'], { type: 'region' });
+
+/** The English name of a country code, or the code when the name is not known. */
+function countryName(code: string): string {
+  try {
+    return COUNTRIES.of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** The names of the place keys of `OwnerVisitors`, such as "San Jose, CA, United States" for "US|CA|San Jose". */
+export function placeLabels(counts: Record<string, number>): Record<string, string> {
+  return Object.fromEntries(
+    Object.keys(counts).map((key) => {
+      const [country = '', region, city] = key.includes('|') ? key.split('|') : key.split('-');
+      return [key, [city, region, countryName(country)].filter(Boolean).join(', ')];
+    }),
+  );
 }
 
 /** The entries of a count map, largest first. */
