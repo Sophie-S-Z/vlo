@@ -53,6 +53,7 @@ describe('vercel.json', () => {
       '/workbox-abc.js',
       '/manifest.webmanifest',
       '/fonts/lora/regular.ttf',
+      '/api/geo',
     ]) {
       expect(pattern.test(path), path).toBe(false);
     }

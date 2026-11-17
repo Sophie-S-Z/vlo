@@ -29,7 +29,7 @@ export function DailyCountSetting() {
         </label>
         <p id={`${id}-hint`} className="text-sm text-muted">
           {on
-            ? 'On. Vlo sends a random id for this browser, the Vlo version, the kind of device, whether Vlo is installed and how many words you write, so its makers know how people use it. Never text, a title or a name.'
+            ? 'On. Vlo sends a random id for this browser, the Vlo version, the kind of device, whether Vlo is installed, how many words you write and a rough place (country, region and city), so its makers know how people use it. Never text, a title, a name or your internet address.'
             : 'Off. Vlo does not count this device.'}
         </p>
       </div>

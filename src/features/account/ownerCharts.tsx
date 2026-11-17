@@ -341,7 +341,9 @@ export function Breakdown({
               key={name}
               className="grid grid-cols-[minmax(6rem,10rem)_1fr_auto] items-center gap-2 text-sm"
             >
-              <span className="truncate">{labels[name] ?? name}</span>
+              <span className="truncate" title={labels[name] ?? name}>
+                {labels[name] ?? name}
+              </span>
               <m.span
                 className="h-3 rounded-r-[4px] bg-accent"
                 initial={{ width: 0 }}
