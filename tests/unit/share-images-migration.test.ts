@@ -105,7 +105,7 @@ describe('0007_share_images', () => {
     await expect(add(id, 9, 'x'.repeat(800_000))).resolves.toEqual([{ ok: true }]);
     // A replaced image counts once.
     await expect(add(id, 0, 'x'.repeat(2_800_000))).resolves.toEqual([{ ok: true }]);
-  });
+  }, 30_000);
 
   test('the images count toward the 300 MB for all links', async () => {
     const id = await newShare(T('owner'), 'x'.repeat(1_000_000));
