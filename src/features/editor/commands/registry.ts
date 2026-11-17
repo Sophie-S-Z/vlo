@@ -8,6 +8,7 @@ import {
   ArrowRightToLine,
   AudioLines,
   Bot,
+  BookA,
   BookMarked,
   BookUser,
   Asterisk,
@@ -124,6 +125,7 @@ export type PanelId =
   | 'comments'
   | 'cite'
   | 'image'
+  | 'thesaurus'
   | 'shortcuts';
 
 export type CommandGroup =
@@ -1049,6 +1051,27 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: () => getCodex().show,
+  },
+  {
+    kind: 'panel',
+    id: 'thesaurus',
+    label: 'Thesaurus',
+    icon: BookA,
+    group: 'review',
+    forms: ALL,
+    // Word's key. Browsers keep Mod-Shift-T for reopening a closed tab.
+    keys: 'Shift-F7',
+    keywords: [
+      'synonyms',
+      'antonyms',
+      'opposites',
+      'other words',
+      'rhymes',
+      'rhyming dictionary',
+      'definition',
+    ],
+    slash: true,
+    panel: 'thesaurus',
   },
   {
     kind: 'run',

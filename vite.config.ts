@@ -95,6 +95,7 @@ export default defineConfig({
         // the first time a writer reads with one, and it runs the same ONNX Runtime file. The PDF reader's
         // worker (about 400 KB gzip) is cached the first time a writer imports a PDF. The spelling and grammar
         // check (Harper, about 8.5 MB gzip with its dictionary) is cached the first time a writer turns it on.
+        // The thesaurus (WordNet, about 1.8 MB gzip) is cached the first time a writer opens it.
         globIgnores: [
           'assets/fonts/**',
           'assets/craft/**',
@@ -104,6 +105,7 @@ export default defineConfig({
           'assets/pdf.worker-*',
           'assets/grammar.worker-*',
           'assets/grammar/**',
+          'assets/thesaurus/**',
         ],
         runtimeCaching: [
           {
@@ -150,6 +152,16 @@ export default defineConfig({
               cacheName: 'vlo-grammar-check',
               // The file names carry a content hash, so a cached file never goes stale.
               expiration: { maxEntries: 8 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            urlPattern: /\/assets\/thesaurus\/[^/]+\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-thesaurus',
+              // The file name carries a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [200] },
             },
           },
@@ -209,14 +221,15 @@ export default defineConfig({
     format: 'es',
     rolldownOptions: {
       output: {
-        // The Craft worker's dictionary goes under assets/craft/, and Harper under assets/grammar/, so the
-        // install leaves them out.
-        chunkFileNames: (chunk) =>
-          chunk.moduleIds.some((id) => id.includes('cmu-pronouncing-dictionary'))
-            ? 'assets/craft/[name]-[hash].js'
-            : chunk.moduleIds.some((id) => id.includes('harper.js'))
-              ? 'assets/grammar/[name]-[hash].js'
-              : 'assets/[name]-[hash].js',
+        // The pronouncing dictionary goes under assets/craft/, Harper under assets/grammar/ and WordNet under
+        // assets/thesaurus/, so the install leaves them out.
+        chunkFileNames: (chunk) => {
+          const has = (name: string) => chunk.moduleIds.some((id) => id.includes(name));
+          if (has('cmu-pronouncing-dictionary')) return 'assets/craft/[name]-[hash].js';
+          if (has('harper.js')) return 'assets/grammar/[name]-[hash].js';
+          if (has('thesaurus.json')) return 'assets/thesaurus/[name]-[hash].js';
+          return 'assets/[name]-[hash].js';
+        },
       },
     },
   },

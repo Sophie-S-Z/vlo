@@ -71,6 +71,7 @@ interface Layout {
 }
 
 const FIND: Section = { label: 'Find', tools: ['find', 'replace'] };
+const WORDS: Section = { label: 'Words', tools: ['thesaurus'] };
 const LISTEN: Section = { label: 'Listen and speak', tools: ['read-aloud', 'speak'] };
 const CHECKS: Section = {
   label: 'Checks',
@@ -82,7 +83,7 @@ const COMMENTS: Section = {
 };
 const SHOW: Section = { label: 'Show', tools: ['show-ai-text', 'show-codex-names'] };
 const HELP: Section = { label: 'Help', tools: ['print', 'shortcuts'] };
-const REVIEW: readonly Section[] = [FIND, LISTEN, CHECKS, COMMENTS, SHOW, HELP];
+const REVIEW: readonly Section[] = [FIND, WORDS, LISTEN, CHECKS, COMMENTS, SHOW, HELP];
 /** Prose keeps Spacing with its paragraph tools. A poem and a script have no paragraph tools. */
 const SPACE: Section = { label: 'Spacing', tools: ['spacing'] };
 /** Change case, in every form. Shift-F3 steps through the same cases. */

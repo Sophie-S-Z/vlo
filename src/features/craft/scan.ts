@@ -107,7 +107,8 @@ interface Looked {
   keys: string[];
 }
 
-function rhymeKey(phones: readonly string[]): string {
+/** The phones of a word from its last stressed vowel to the end, without stress digits. */
+export function rhymeKey(phones: readonly string[]): string {
   const vowels = phones.flatMap((p, i) => (VOWEL.test(p) ? [i] : []));
   const stressed = vowels.filter((i) => !(phones[i] ?? '').endsWith('0'));
   const from = stressed.at(-1) ?? vowels.at(-1) ?? 0;
