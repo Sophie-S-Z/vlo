@@ -38,8 +38,8 @@ import { SignInForm, takeNext } from './SignInForm';
 
 /*
  * The account page (Phase 18, Tasks A2 and A3). Sign in with an email code or Google, and sync turns on:
- * the first device makes the account's sync, and each next device joins it. Every project stays on the
- * device in each step.
+ * the first device makes the account's sync, and each next device joins it. Each account has its own
+ * library on the device (ADR 0010), and this page brings in the projects of another library on request.
  */
 
 /** The writer's text for a failed call of this page. */

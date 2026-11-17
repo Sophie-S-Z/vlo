@@ -5,7 +5,8 @@ import { expect, type Page } from '@playwright/test';
  * "Write without an account" ahead, as the screen keeps that choice for the tab.
  */
 export async function writeWithoutAccount(page: Page) {
-  await page.addInitScript(() => {
+  // The choice holds for one tab, so the context gives it to each new tab of the test too.
+  await page.context().addInitScript(() => {
     sessionStorage.setItem('vlo:guest', '1');
   });
 }
