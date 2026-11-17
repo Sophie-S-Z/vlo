@@ -106,7 +106,7 @@ function PanelBody({
     case 'footnote':
       return <FootnotePanel editor={editor} />;
     case 'read-aloud':
-      return <ReadAloudPanel editor={editor} />;
+      return <ReadAloudPanel editor={editor} language={language} />;
     case 'speak':
       return (
         <Suspense fallback={<p className="text-sm text-muted">Loading the recorder.</p>}>

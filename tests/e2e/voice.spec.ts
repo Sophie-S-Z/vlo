@@ -66,7 +66,7 @@ test('a memory recording saves with its question, and Turn into text asks before
 
   await clip.getByRole('button', { name: 'Turn into text' }).click();
   const ask = dialog.getByRole('region', { name: 'Download the speech model' });
-  await expect(ask).toContainText('the Whisper base model once (80 MB)');
+  await expect(ask).toContainText('Whisper small (252 MB) makes the fewest mistakes.');
   expect(await seriousIssues(page)).toEqual([]);
   await ask.getByRole('button', { name: 'Cancel' }).click();
   await expect(ask).toBeHidden();

@@ -7,7 +7,18 @@ import { backUpProject, importBackup, readBackup } from '@/features/backup/backu
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { createProject } from '@/features/library/projects';
 import { addRecording } from '@/features/research/research';
-import { deleteModel, downloadModel, MODEL_CACHE, MODEL_ID, modelReady } from '@/features/voice/model';
+import { deleteNaturalVoices, deleteSpeechModels } from '@/features/voice/deleteModels';
+import { cacheKey, RUNTIME_CACHE, type HostedModel } from '@/features/voice/hosted';
+import {
+  downloadModel,
+  getSpeechModel,
+  MODEL_CACHE,
+  modelReady,
+  setSpeechModel,
+  SPEECH_ENGINE_CACHE,
+  SPEECH_MODELS,
+} from '@/features/voice/model';
+import { NATURAL_VOICES, VOICE_ENGINE_CACHE } from '@/features/voice/natural';
 import { PROMPTS } from '@/features/voice/prompts';
 import { insertDictation } from '@/features/voice/speech';
 import type { TranscribeResponse } from '@/features/voice/transcribe.worker';
@@ -102,38 +113,58 @@ test('a recording saves as a research file of its memory, and a backup and a cop
   expect(fetches).toEqual([]);
 });
 
-describe('the speech model', () => {
+/** Puts every file of `model` in its cache, as a finished download does. */
+async function putModel(model: HostedModel) {
+  const cache = await caches.open(model.cache);
+  for (const [path] of model.files) await cache.put(cacheKey(model, path), new Response('{}'));
+}
+
+describe('the speech models', () => {
+  test('the most accurate model is the default, and the choice stays on this device', () => {
+    localStorage.clear();
+    expect(getSpeechModel()).toBe('small');
+    setSpeechModel('base');
+    expect(getSpeechModel()).toBe('base');
+    localStorage.clear();
+  });
+
   test('with the model off, a check sends nothing, and a cut download keeps nothing', async () => {
-    expect(await modelReady()).toBe(false);
+    expect(await modelReady('small')).toBe(false);
     expect(fetches).toEqual([]);
 
-    await expect(downloadModel(() => undefined)).rejects.toThrow(
+    await expect(downloadModel('small', () => undefined)).rejects.toThrow(
       'The download of config.json was not complete.',
     );
     expect(fetches).toEqual([
-      `https://huggingface.co/${MODEL_ID}/resolve/27a07b4b52b3a4c5886134bb4320e93e1a4bbc7c/config.json`,
+      'https://huggingface.co/onnx-community/whisper-small/resolve/36050c46d777d46dc4b5f43f6d90574fc38f8732/config.json',
     ]);
     expect(caches.stores.get(MODEL_CACHE)?.size).toBe(0);
     const log = await db.networkLog.toArray();
     expect(log.map((e) => [e.purpose, e.host])).toEqual([['model-download', 'huggingface.co']]);
   });
 
-  test('"Delete the model" frees its cache and the cache of its code', async () => {
-    const cache = await caches.open(MODEL_CACHE);
-    for (const path of [
-      'config.json',
-      'generation_config.json',
-      'preprocessor_config.json',
-      'tokenizer_config.json',
-      'tokenizer.json',
-      'onnx/encoder_model_quantized.onnx',
-      'onnx/decoder_model_merged_quantized.onnx',
-    ])
-      await cache.put(`https://huggingface.co/${MODEL_ID}/resolve/main/${path}`, new Response('{}'));
-    await caches.open('vlo-speech-engine');
-    expect(await modelReady()).toBe(true);
-    await deleteModel();
-    expect(await modelReady()).toBe(false);
+  test('each model is ready only with all of its files, and the two share one cache', async () => {
+    await putModel(SPEECH_MODELS.base);
+    expect(await modelReady('base')).toBe(true);
+    expect(await modelReady('small')).toBe(false);
+    await putModel(SPEECH_MODELS.small);
+    expect(await modelReady('small')).toBe(true);
+    expect([...caches.stores.keys()]).toEqual([MODEL_CACHE]);
+  });
+
+  test('Delete frees the models and their code, and the shared runtime only when nothing needs it', async () => {
+    await putModel(SPEECH_MODELS.small);
+    await putModel(NATURAL_VOICES);
+    for (const name of [SPEECH_ENGINE_CACHE, VOICE_ENGINE_CACHE, RUNTIME_CACHE]) await caches.open(name);
+
+    await deleteSpeechModels();
+    expect(await modelReady('small')).toBe(false);
+    // The natural voices still run on the shared runtime.
+    expect([...caches.stores.keys()].sort()).toEqual(
+      [NATURAL_VOICES.cache, VOICE_ENGINE_CACHE, RUNTIME_CACHE].sort(),
+    );
+
+    await deleteNaturalVoices();
     expect([...caches.stores.keys()]).toEqual([]);
   });
 
@@ -163,14 +194,15 @@ describe('the speech model', () => {
     expect(Object.keys(paths)).toEqual(['wasm']);
     expect(paths.wasm).toMatch(/ort-wasm-simd-threaded\.asyncify/);
 
+    const model = SPEECH_MODELS.small.id;
     const samples = Float32Array.from({ length: 16_000 }, (_, i) => Math.sin(i / 10));
-    self.onmessage?.(new MessageEvent('message', { data: { id: 7, samples, language: 'en' } }));
+    self.onmessage?.(new MessageEvent('message', { data: { id: 7, model, samples, language: 'en' } }));
     await vi.waitFor(() => {
       expect(replies).toHaveLength(1);
     });
     expect(replies[0]).toEqual({ id: 7, text: 'The tide came in. Mira ran.' });
     // jsdom has no WebGPU, so the model runs on WASM.
-    expect(pipeline).toHaveBeenCalledWith('automatic-speech-recognition', MODEL_ID, {
+    expect(pipeline).toHaveBeenCalledWith('automatic-speech-recognition', model, {
       dtype: 'q8',
       device: 'wasm',
     });
@@ -180,6 +212,12 @@ describe('the speech model', () => {
       chunk_length_s: 30,
       stride_length_s: 5,
     });
+    // The same model serves the next clip without a new load.
+    self.onmessage?.(new MessageEvent('message', { data: { id: 8, model, samples } }));
+    await vi.waitFor(() => {
+      expect(replies).toHaveLength(2);
+    });
+    expect(pipeline).toHaveBeenCalledOnce();
     vi.doUnmock('@huggingface/transformers');
   });
 });

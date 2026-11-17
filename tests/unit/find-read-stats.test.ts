@@ -263,6 +263,8 @@ const REMOTE = { voiceURI: 'cloud-1', name: 'Cloud', lang: 'en-US', localService
 describe('read aloud (E2)', () => {
   beforeEach(() => {
     localStorage.clear();
+    // These tests read with the device voices. natural-voices.test.ts tests the natural voices.
+    setReadSettings({ voice: null });
   });
   afterEach(() => {
     stopReading();
@@ -287,9 +289,11 @@ describe('read aloud (E2)', () => {
   });
 
   test('settings stay in range', () => {
-    expect(cleanReadSettings({ rate: 9, voice: '' })).toEqual({ rate: 2, voice: null });
+    expect(cleanReadSettings({ rate: 9, voice: null })).toEqual({ rate: 2, voice: null });
     expect(cleanReadSettings({ rate: 0.1, voice: 'x' })).toEqual({ rate: 0.5, voice: 'x' });
-    expect(cleanReadSettings('junk')).toEqual({ rate: 1, voice: null });
+    // With no choice, Vlo reads with its first natural voice.
+    expect(cleanReadSettings({ voice: '' })).toEqual({ rate: 1, voice: 'vlo-natural:F1' });
+    expect(cleanReadSettings('junk')).toEqual({ rate: 1, voice: 'vlo-natural:F1' });
   });
 
   test('with no on-device voice it says why and speaks nothing', () => {

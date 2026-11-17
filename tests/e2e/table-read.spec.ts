@@ -74,6 +74,8 @@ test('F58: a table read reads each quote in its character’s voice, and keeps t
     .first()
     .click({ position: { x: 1, y: 5 } });
   await useTool(page, 'Read aloud');
+  // The device voices read here; the natural voices are not on this device.
+  await panel(page).getByLabel('Voice', { exact: true }).selectOption('v-moira');
   await panel(page).getByRole('checkbox', { name: 'Table read: a voice for each character' }).check();
   await expect(panel(page).getByLabel('Voice of the narrator')).toHaveValue('v-moira');
   await expect(panel(page).getByLabel('Voice of Mira')).toHaveValue('v-ava');

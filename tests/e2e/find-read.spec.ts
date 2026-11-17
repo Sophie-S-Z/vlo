@@ -218,7 +218,12 @@ test('read aloud uses on-device voices only, marks each sentence, and Pause and 
 
   const panel = await openReadAloud(page);
   const voice = panel.getByRole('combobox', { name: 'Voice' });
-  await expect(voice.locator('option')).toHaveText(['Moira (en-IE)', 'Daniel (en-GB)']);
+  // The natural voices come first, then the voices of this device. The cloud voice is never there.
+  await expect(voice.locator('optgroup[label="Natural voices"] option')).toHaveCount(10);
+  await expect(voice.locator('optgroup[label="Voices of this device"] option')).toHaveText([
+    'Moira (en-IE)',
+    'Daniel (en-GB)',
+  ]);
   await voice.selectOption('daniel');
   await panel.getByRole('slider', { name: 'Speed' }).fill('1.5');
   await panel.getByRole('button', { name: 'Read from the cursor' }).click();
@@ -256,13 +261,26 @@ test('read aloud uses on-device voices only, marks each sentence, and Pause and 
   await expect.poll(async () => (await spoken(page)).at(-1)?.text).toBe('Night fell.');
 });
 
-test('read aloud says why it cannot read when the device has no on-device voice', async ({ page }) => {
+test('with no on-device voice, read aloud offers the natural voices and asks before their download', async ({
+  page,
+}) => {
+  const outside: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).hostname !== 'localhost') outside.push(request.url());
+  });
   await fakeSpeech(page, 'none');
   await newNovel(page, 'Quiet words.');
   const panel = await openReadAloud(page);
-  await expect(panel).toContainText('This device has no on-device voices');
-  await expect(panel.getByRole('combobox', { name: 'Voice' })).toHaveCount(0);
+  const voice = panel.getByRole('combobox', { name: 'Voice' });
+  await expect(voice.locator('option')).toHaveCount(10);
+  await expect(voice.locator('option:checked')).toHaveText('Female voice 1');
+  const ask = panel.getByRole('region', { name: 'Download the natural voices' });
+  await expect(ask).toContainText('The natural voices download once from Hugging Face (263 MB).');
+  await expect(ask.getByRole('button', { name: 'Download and read' })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Read from the cursor' })).toHaveCount(0);
+  expect(await seriousIssues(page)).toEqual([]);
   expect(await spoken(page)).toEqual([]);
+  expect(outside).toEqual([]);
 });
 
 test('writing stats show the open item, the selection and the words written today', async ({ page }) => {

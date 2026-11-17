@@ -7,15 +7,27 @@ Last update: 2026-11-17
 - Leaderboard, comedy and spacing (2026-11-17, ADR 0012, migration 0013), from the product owner's ask:
   - `/leaderboard`: the signed-in writers who wrote the most words today, this week, this month and this
     year, live. The first three glow and shimmer in gold, silver and bronze, and the first wears a crown.
-    A switch takes a writer off the board. Privacy version 16. Migration 0013 needs the live database.
+    A switch takes a writer off the board. Privacy version 18. Migration 0013 needs the live database.
   - The Comedy mode: bits in sets, six structures (stand-up set, sketch, parody, roast, top ten list,
     satirical news story), Punch words and Premise machine in the Workshop, and a /rimshot. Backup 15.
-  - Spacing in the Format menu for every kind of writing: free sliders and number fields for the space between
-    letters, words and lines on the screen. Settings has the same controls.
+  - Spacing in the Format menu for every kind of writing: free sliders and number fields for the space
+    between letters, words and lines on the screen. Settings has the same controls.
   - Fixed: the Shelf and Stack switch kept its thumb on Shelf; the caret after the Library greeting stayed
     after it stopped blinking; the haze behind the greeting showed its edges and did not follow the theme.
   - Settings, Storage says that the browser sets the limit, and offers to ask for protected storage,
     which gives the largest limit in Firefox.
+
+- Voice typing and natural voices (2026-11-17), from the product owner's ask. Nothing is paid, and
+  nothing leaves the device:
+  - Speak to write has no time limit. An audio worklet hears the microphone, and Vlo writes the words
+    of each pause at the cursor while the writer speaks on (`src/features/voice/segments.ts`). A clip
+    with no speech goes nowhere, as Whisper invents words for silence.
+  - Whisper small (252 MB) is the default speech model, as it makes the fewest mistakes. Whisper base
+    (80 MB) stays as the fast model. The writer picks one at the first download or in Settings.
+  - Read aloud has ten natural voices, five female and five male: Supertonic 2 (OpenRAIL-M, 263 MB),
+    which runs in its own worker on WebGPU or WASM. The voices speak English, Spanish, French,
+    Portuguese and Korean. The device voices stay in the list. A natural voice is the default.
+  - Privacy version 17.
 
 - Phase 19, Part A: the editor menus, page look and word targets (2026-11-17, `docs/plans/phase-19.md`):
   - The toolbar has three named menus, Insert, Format and Review, in place of one long More tools list.
@@ -1304,3 +1316,5 @@ Last update: 2026-11-17
 | 2026-11-07 | The Supabase URL and anon key go in a committed `.env`, and the host goes in `vercel.json` by hand. `vite preview` adds the build's host to the CSP.                                                                                                                                         | Vercel headers are static. A unit test checks that the CSP lists exactly the network module's hosts.                                                                                                                |
 | 2026-11-07 | `ai_mode_counts` counts AI requests by mode.                                                                                                                                                                                                                                                 | The spec names the key only. Requests by mode show which modes writers use.                                                                                                                                         |
 | 2026-11-07 | A usage report covers the last full ISO week, in local time, and the Library asks only when that week has writing or counts.                                                                                                                                                                 | A report of an empty week tells nothing, and the prompt would come every week.                                                                                                                                      |
+| 2026-11-17 | The natural voices are Supertonic 2 in Transformers.js, not Kokoro or Piper.                                                                                                                                                                                                                 | It reads the letters of the text, so it needs no eSpeak NG phonemizer (GPL-3.0), and invented names do not break it.                                                                                                |
+| 2026-11-17 | Live dictation does not end a clip at a pause while an earlier clip turns into text.                                                                                                                                                                                                         | A slow device then gets fewer, longer clips, so it never falls behind the writer.                                                                                                                                   |
