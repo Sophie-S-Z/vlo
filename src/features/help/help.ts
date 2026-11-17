@@ -154,7 +154,7 @@ export const HELP = {
       title: 'Use Vlo on all your devices',
       needsSharing: true,
       steps: [
-        'Choose Sign in at the top of the screen, type your email, then type the 6-digit code from the email. Sync turns on.',
+        'Choose Sign in at the top of the screen, type your email, then type the 6-digit code from the email. A new account then asks for your name. Sync turns on.',
         'On your phone or another computer, open Vlo and sign in with the same email.',
         'Every project of the account comes to the new device, finished or in progress. A change on one device goes to the others.',
         'Words that two devices write offline both stay.',
@@ -163,12 +163,24 @@ export const HELP = {
       ],
     },
     {
-      title: 'Send feedback',
+      title: 'Change your profile',
       needsSharing: true,
       steps: [
-        'Choose Send feedback at the bottom of any screen.',
-        'Pick idea, problem, praise or question, type your message, and pick a rating if you want.',
-        'Choose Send feedback. Only what you type goes, never the text of your projects.',
+        'Choose your photo or your initials at the top of the screen, then choose Your profile.',
+        'Add a photo, then drag it and zoom until the circle shows what you want.',
+        'Change your name, or the name that Vlo greets you by in the Library.',
+        'Type a pen name for the author of your new projects. A bio can fill the About the author page of a book.',
+        'Choose Save profile. Your other devices show the change the next time Vlo opens.',
+      ],
+    },
+    {
+      title: 'Send feedback or a note to Sophie',
+      needsSharing: true,
+      steps: [
+        'Choose Send feedback or Write to Sophie at the bottom of any screen, or in the menu of your photo.',
+        'Pick idea, problem, praise, question or a personal note, type your message, and pick a rating if you want.',
+        'Choose Send. Only what you type goes, never the text of your projects.',
+        'You can send up to 10 messages in a day, with 30 seconds between messages.',
       ],
     },
     {

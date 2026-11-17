@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FakeSyncRelay } from './syncRelay';
 
 /*
- * A fake of Supabase Auth and the functions of migrations 0008 and 0009 (Phase 18 and the live owner page), for the Playwright tests. Each
+ * A fake of Supabase Auth and the functions of migrations 0008, 0009, 0011 and 0012 (Phase 18, the live owner page, profiles and feedback guards), for the Playwright tests. Each
  * email gets the code 123456. The fake keeps the rules that the app relies on: a function for a signed-in
  * writer reads the account from the bearer token, a vault needs the space token, and the owner functions
  * refuse any account that is not an owner.
@@ -56,10 +56,20 @@ export class FakeAccounts {
     }
   >();
   readonly feedback: FeedbackRow[] = [];
+  /** The installs and accounts that the owner blocked (migration 0012). */
+  readonly blocked = new Set<string>();
   readonly owners = new Set<string>();
+  readonly profiles = new Map<
+    string,
+    { name: string; called: string; pen_name: string; bio: string; photo: string | null; updated_at: string }
+  >();
   private readonly tokens = new Map<string, string>();
   /** The emails that asked for a code, in order. */
   readonly codesSent: string[] = [];
+  /** The password of each account that set one. */
+  readonly passwords = new Map<string, string>();
+  /** True when a password change needs a code from the email, as with "Secure password change". */
+  passwordNeedsCode = false;
 
   constructor(private readonly sync: FakeSyncRelay) {}
 
@@ -92,6 +102,27 @@ export class FakeAccounts {
       const user = [...this.users.values()].find((u) => u.email === String(body.email).toLowerCase());
       if (!user || body.token !== CODE) return [403, { error_code: 'otp_expired', msg: 'Token has expired or is invalid' }];
       return [200, this.session(user)];
+    }
+    if (path === 'token' && typeof body.password === 'string') {
+      const user = [...this.users.values()].find((u) => u.email === String(body.email).toLowerCase());
+      if (!user || this.passwords.get(user.id) !== body.password)
+        return [400, { error_code: 'invalid_credentials', msg: 'Invalid login credentials' }];
+      return [200, this.session(user)];
+    }
+    if (path === 'user' || path === 'reauthenticate') {
+      const id = this.tokens.get(bearer);
+      if (!id) return [401, { error_code: 'no_authorization' }];
+      if (path === 'reauthenticate') {
+        this.codesSent.push(this.users.get(id)?.email ?? '');
+        return [200, {}];
+      }
+      const password = String(body.password);
+      if (password.length < 6) return [422, { error_code: 'weak_password' }];
+      if (this.passwords.get(id) === password) return [422, { error_code: 'same_password' }];
+      if (this.passwordNeedsCode && body.nonce !== CODE)
+        return [400, { error_code: body.nonce ? 'reauthentication_not_valid' : 'reauthentication_needed' }];
+      this.passwords.set(id, password);
+      return [200, { id }];
     }
     if (path === 'token') {
       const id = this.tokens.get(String(body.refresh_token));
@@ -148,8 +179,31 @@ export class FakeAccounts {
         const vault = this.vaults.get(id);
         if (vault) this.sync.spaces.delete(vault.space_id);
         this.vaults.delete(id);
+        this.profiles.delete(id);
         this.users.delete(id);
         return { value: true };
+      }
+      case 'profile_get': {
+        const profile = this.profiles.get(signedIn());
+        return { value: profile ? [profile] : [] };
+      }
+      case 'profile_put': {
+        const id = signedIn();
+        const name = String(body.p_name).trim();
+        if (name === '' || name.length > 80) throw new Error('bad name');
+        const photo = typeof body.p_photo === 'string' ? body.p_photo : null;
+        if (photo !== null && (photo.length > 60000 || !/^data:image\/(jpeg|webp);base64,/.test(photo)))
+          throw new Error('bad photo');
+        const updated_at = new Date().toISOString();
+        this.profiles.set(id, {
+          name,
+          called: String(body.p_called).trim(),
+          pen_name: String(body.p_pen_name).trim(),
+          bio: String(body.p_bio).trim(),
+          photo,
+          updated_at,
+        });
+        return { value: updated_at };
       }
       case 'daily_count': {
         const install = String(body.p_install);
@@ -170,12 +224,17 @@ export class FakeAccounts {
       case 'send_feedback': {
         const message = String(body.p_message).trim();
         if (message === '') throw new Error('empty message');
+        const install = String(body.p_install);
+        if (this.blocked.has(install) || (uid !== null && this.blocked.has(uid))) throw new Error('feedback blocked');
+        const mine = this.feedback.filter((f) => f.install === install || (uid !== null && f.user_id === uid));
+        if (mine.some((f) => Date.now() - Date.parse(f.created_at) < 30_000)) throw new Error('feedback too fast');
+        if (mine.some((f) => f.message === message)) throw new Error('feedback duplicate');
         const id = randomUUID();
         this.feedback.push({
           id,
           created_at: new Date().toISOString(),
           user_id: uid,
-          install: String(body.p_install),
+          install,
           kind: String(body.p_kind),
           message,
           rating: body.p_rating === null ? null : Number(body.p_rating),
@@ -282,6 +341,7 @@ export class FakeAccounts {
           value: [...this.users.values()].map((u) => ({
             id: u.id,
             email: u.email,
+            name: this.profiles.get(u.id)?.name ?? null,
             provider: u.provider,
             created_at: u.createdAt,
             last_sign_in_at: u.createdAt,
@@ -301,6 +361,7 @@ export class FakeAccounts {
           value: [...this.feedback].reverse().map((f) => ({
             ...f,
             email: f.user_id ? (this.users.get(f.user_id)?.email ?? null) : null,
+            blocked: this.blocked.has(f.install) || (f.user_id !== null && this.blocked.has(f.user_id)),
           })),
         };
       case 'owner_set_feedback': {
@@ -309,6 +370,17 @@ export class FakeAccounts {
         if (!row) return { value: false };
         row.status = String(body.p_status);
         if (typeof body.p_note === 'string') row.note = body.p_note;
+        return { value: true };
+      }
+      case 'owner_block_sender': {
+        owner();
+        const row = this.feedback.find((f) => f.id === body.p_id);
+        if (!row) return { value: false };
+        for (const key of [row.install, row.user_id]) {
+          if (key === null) continue;
+          if (body.p_blocked === true) this.blocked.add(key);
+          else this.blocked.delete(key);
+        }
         return { value: true };
       }
       default:

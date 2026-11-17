@@ -16,6 +16,7 @@ import { accountErrorText } from './AccountPage';
 import { accountsReady } from './auth';
 import {
   benchmarks,
+  blockSender,
   change,
   feedbackCsv,
   insights,
@@ -473,7 +474,7 @@ function Overview({
           title="Writing modes in weekly reports"
           counts={summary.templates}
           labels={LABELS}
-          note={`From ${n(summary.reports)} reports in the last 8 weeks. Only writers who turn on usage counts send one.`}
+          note={`From ${n(summary.reports)} reports in the last 8 weeks. Each device sends one a week.`}
         />
         <Breakdown title="Features in weekly reports" counts={summary.features} labels={LABELS} />
       </div>
@@ -520,8 +521,9 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
   const id = useId();
   const [filter, setFilter] = useState('');
   const [sort, setSort] = useState<Sort>('active');
+  const find = filter.trim().toLowerCase();
   const shown = accounts
-    .filter((a) => a.email.toLowerCase().includes(filter.trim().toLowerCase()))
+    .filter((a) => `${a.name ?? ''} ${a.email}`.toLowerCase().includes(find))
     .sort(SORTERS[sort]);
   const top = Math.max(1, ...accounts.map((a) => a.words_30d));
   return (
@@ -529,7 +531,7 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid w-full max-w-sm gap-1.5">
           <label htmlFor={id} className="text-sm">
-            Find an email
+            Find a name or email
           </label>
           <Input
             id={id}
@@ -550,7 +552,7 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
         <table aria-label="Accounts" className="w-full min-w-[56rem] text-sm">
           <thead>
             <tr className="text-left text-muted">
-              <th className="py-2 pr-4 font-medium">Email</th>
+              <th className="py-2 pr-4 font-medium">Writer</th>
               <th className="py-2 pr-4 font-medium">Joined</th>
               <th className="py-2 pr-4 font-medium">Last active</th>
               <th className="py-2 pr-4 font-medium">Words, 30 days</th>
@@ -566,7 +568,8 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
             {shown.map((a) => (
               <tr key={a.id} className="border-t border-rule">
                 <td className="py-2 pr-4">
-                  {a.email}
+                  {a.name && <span className="block font-medium">{a.name}</span>}
+                  <span className={a.name ? 'text-muted' : undefined}>{a.email}</span>
                   {a.provider === 'google' ? <span className="text-muted"> (Google)</span> : null}
                 </td>
                 <td className="py-2 pr-4">{dayText(a.created_at)}</td>
@@ -607,6 +610,7 @@ const KIND_LABELS: Record<OwnerFeedback['kind'], string> = {
   problem: 'Problem',
   praise: 'Praise',
   question: 'Question',
+  note: 'Note to you',
 };
 
 function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: OwnerFeedback) => void }) {
@@ -625,12 +629,25 @@ function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: 
       },
     );
   };
+  const block = (blocked: boolean) => {
+    setMessage('');
+    blockSender(item.id, blocked).then(
+      () => {
+        onSaved({ ...item, blocked });
+        setMessage(blocked ? 'Blocked. This sender cannot send more messages.' : 'Unblocked.');
+      },
+      (error: unknown) => {
+        setMessage(accountErrorText(error));
+      },
+    );
+  };
   const from = item.email ?? item.contact;
   return (
     <li className="grid gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-4">
       <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted">
         <span className="font-semibold text-text">{KIND_LABELS[item.kind]}</span>
         <span>{dayText(item.created_at)}</span>
+        {item.blocked && <span className="font-semibold text-accent-text">Sender blocked</span>}
         {item.rating !== null && <span>Rating {item.rating} of 5</span>}
         <span>
           {item.device}, version {item.app_version}
@@ -672,7 +689,7 @@ function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: 
             setNote(e.target.value);
           }}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             variant="outline"
@@ -682,6 +699,15 @@ function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: 
             }}
           >
             Save the note
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              block(!item.blocked);
+            }}
+          >
+            {item.blocked ? 'Unblock this sender' : 'Block this sender'}
           </Button>
           <span role="status" className="text-sm">
             {message}

@@ -14,7 +14,6 @@ import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { UsageSettings } from '@/features/usage/UsageSettings';
-import { DailyCountSetting } from '@/features/account/DailyCountSetting';
 import { sharingReady } from '@/features/share/rpc';
 import { Link } from 'react-router';
 import { SpeechSettings } from '@/features/voice/SpeechSettings';
@@ -272,7 +271,7 @@ export function SettingsPage() {
                 Sign in and sync
               </Link>
               <Link to="/send-feedback" state={{ from: '/settings' }} className="underline">
-                Send feedback to the makers of Vlo
+                Send feedback or a note to Sophie, who makes Vlo
               </Link>
             </p>
           </Section>
@@ -285,10 +284,7 @@ export function SettingsPage() {
         </Section>
 
         <Section title="Usage counts">
-          <div className="grid gap-6">
-            <DailyCountSetting />
-            <UsageSettings />
-          </div>
+          <UsageSettings />
         </Section>
       </div>
     </div>

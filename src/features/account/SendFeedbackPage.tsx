@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useId, useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { ShareError, sharingReady } from '@/features/share/rpc';
 import { Button } from '@/ui/button';
@@ -8,12 +8,20 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { Textarea } from '@/ui/textarea';
-import { FEEDBACK_KINDS, MAX_FEEDBACK, placeOf, sendFeedback, type FeedbackKind } from './sendFeedback';
+import {
+  FEEDBACK_KINDS,
+  kindOf,
+  MAX_FEEDBACK,
+  placeOf,
+  sendFeedback,
+  type FeedbackKind,
+} from './sendFeedback';
 import { readSession } from './session';
 
 /*
- * Send feedback (Phase 18, Task A4, decision A5): what a writer thinks of Vlo goes to its owner. Only what
- * the writer types goes, with the kind of device and the app version.
+ * Send feedback (Phase 18, Task A4, decision A5): what a writer thinks of Vlo, or a personal note, goes to
+ * Sophie, who makes Vlo. Only what the writer types goes, with the kind of device and the app version. The
+ * server refuses spam (migration 0012).
  */
 
 const STARS = [1, 2, 3, 4, 5] as const;
@@ -25,16 +33,26 @@ export function feedbackErrorText(error: unknown): string {
   if (kind === 'limit') return 'You sent 10 messages today. Thank you! Send more tomorrow.';
   if (kind === 'too-large') return 'This message is too long. Keep it under 4,000 characters.';
   if (kind === 'busy') return 'The server is at its limit for today. Try again tomorrow.';
+  if (kind === 'too-fast') return 'You sent a message a moment ago. Wait 30 seconds, then send this one.';
+  if (kind === 'duplicate') return 'You sent this message already today. Sophie has it.';
+  if (kind === 'blocked') return 'Vlo cannot send messages from this device or account.';
   return 'The server refused the feedback. Try again later.';
 }
 
+/** Each visit starts a new form, also from the page itself, such as a link to a note after Thank you. */
 export function SendFeedbackPage() {
+  const { key } = useLocation();
+  return <FeedbackForm key={key} />;
+}
+
+function FeedbackForm() {
   useDocumentTitle('Send feedback');
   const id = useId();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '';
+  const [params] = useSearchParams();
   const session = useLiveQuery(readSession);
-  const [kind, setKind] = useState<FeedbackKind>('idea');
+  const [kind, setKind] = useState<FeedbackKind>(() => kindOf(params.get('kind')));
   const [message, setMessage] = useState('');
   const [rating, setRating] = useState<number | null>(null);
   const [contact, setContact] = useState('');
@@ -59,7 +77,7 @@ export function SendFeedbackPage() {
     return (
       <div className="grid max-w-2xl gap-4">
         <h1 className="font-display text-4xl font-semibold">Thank you</h1>
-        <p role="status">Your feedback went to the people who make Vlo. They read each message.</p>
+        <p role="status">Your message went to Sophie, who makes Vlo. Sophie reads each message.</p>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -85,15 +103,16 @@ export function SendFeedbackPage() {
     <div className="grid max-w-2xl gap-6">
       <h1 className="font-display text-4xl font-semibold">Send feedback</h1>
       <p>
-        Tell the people who make Vlo what works, what does not, and what you want next. Only what you type
-        here goes, with the kind of device and the version of Vlo. No text of your projects goes.
+        Tell Sophie, who makes Vlo, what works, what does not, and what you want next. You can also send a
+        personal note. Only what you type here goes, with the kind of device and the version of Vlo. No text
+        of your projects goes. You can send up to 10 messages in a day.
       </p>
       <form
         className="grid gap-5"
         onSubmit={(event) => {
           event.preventDefault();
           if (message.trim() === '') {
-            setStatus('Type your feedback first.');
+            setStatus('Type your message first.');
             return;
           }
           setBusy(true);
@@ -127,7 +146,7 @@ export function SendFeedbackPage() {
           </RadioGroup>
         </fieldset>
         <div className="grid gap-1.5">
-          <Label htmlFor={`${id}-message`}>Your feedback</Label>
+          <Label htmlFor={`${id}-message`}>{kind === 'note' ? 'Your note' : 'Your feedback'}</Label>
           <Textarea
             id={`${id}-message`}
             rows={7}
@@ -164,8 +183,8 @@ export function SendFeedbackPage() {
         </fieldset>
         {session ? (
           <p className="text-sm text-muted">
-            You are signed in, so your feedback goes with your account ({session.email}). The owner can reply
-            to that address.
+            You are signed in, so your message goes with your account ({session.email}). Sophie can reply to
+            that address.
           </p>
         ) : (
           <div className="grid max-w-sm gap-1.5">
@@ -184,7 +203,7 @@ export function SendFeedbackPage() {
         )}
         <div>
           <Button type="submit" disabled={busy}>
-            Send feedback
+            {kind === 'note' ? 'Send the note' : 'Send feedback'}
           </Button>
         </div>
         <p role="status" className="text-sm">

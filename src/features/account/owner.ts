@@ -1,4 +1,5 @@
 import { accountRpc } from './auth';
+import type { FeedbackKind } from './sendFeedback';
 
 /*
  * The data of the owner page (Phase 18, Task A5, decision A6). Each call runs as the signed-in owner, and
@@ -58,6 +59,8 @@ export interface OwnerDay {
 export interface OwnerAccount {
   id: string;
   email: string;
+  /** The name of the account's profile (migration 0011), or null before the writer gives one. */
+  name: string | null;
   provider: string;
   created_at: string;
   last_sign_in_at: string | null;
@@ -91,7 +94,7 @@ export type FeedbackStatus = 'new' | 'read' | 'planned' | 'done';
 export interface OwnerFeedback {
   id: string;
   created_at: string;
-  kind: 'idea' | 'problem' | 'praise' | 'question';
+  kind: FeedbackKind;
   message: string;
   rating: number | null;
   contact: string | null;
@@ -101,6 +104,8 @@ export interface OwnerFeedback {
   place: string;
   status: FeedbackStatus;
   note: string;
+  /** True when the owner blocked the sender of this message. */
+  blocked: boolean;
 }
 
 export const isOwner = () => accountRpc<boolean>('is_owner');
@@ -115,6 +120,9 @@ export const ownerVisitors = (today: string) =>
 export const ownerFeedback = () => accountRpc<OwnerFeedback[]>('owner_feedback');
 export const setFeedbackStatus = (id: string, status: FeedbackStatus, note: string) =>
   accountRpc<boolean>('owner_set_feedback', { p_id: id, p_status: status, p_note: note });
+/** Blocks or unblocks the sender of a message: its device, its account and its internet address. */
+export const blockSender = (id: string, blocked: boolean) =>
+  accountRpc<boolean>('owner_block_sender', { p_id: id, p_blocked: blocked });
 
 /** One CSV field: quoted when it holds a comma, a quote or a line break. A formula start gets a quote. */
 function csvField(value: string | number | null): string {
@@ -137,6 +145,7 @@ export function feedbackCsv(rows: readonly OwnerFeedback[]): string {
     'version',
     'screen',
     'note',
+    'blocked',
   ];
   const lines = rows.map((r) =>
     [
@@ -151,6 +160,7 @@ export function feedbackCsv(rows: readonly OwnerFeedback[]): string {
       r.app_version,
       r.place,
       r.note,
+      r.blocked ? 'yes' : 'no',
     ]
       .map(csvField)
       .join(','),

@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await writeWithoutAccount(page);
 });
 
-/* Plan Task E5 (spec F30, decision S6): opt-in usage counts, with the exact JSON before each send. */
+/* Plan Task E5 (spec F30): usage counts are always on, and Vlo sends each weekly report by itself. */
 
 // Playwright routes the fake Supabase requests only in Chromium once the service worker controls the
 // page, so these tests run with no service worker. The PWA tests cover the worker.
@@ -41,7 +41,32 @@ async function fakeSupabase(page: Page): Promise<{ name: string; body: Record<st
   return calls;
 }
 
-/** A writing session 7 days ago, and a usage state that has not handled last week yet. */
+/** The week before counts started on this device, once the first check marks it. */
+async function startWeek(page: Page): Promise<string | undefined> {
+  return page.evaluate(
+    () =>
+      new Promise<string | undefined>((resolve, reject) => {
+        const open = indexedDB.open('vlo');
+        open.onerror = () => {
+          reject(open.error ?? new Error('open failed'));
+        };
+        open.onsuccess = () => {
+          const db = open.result;
+          const read = db.transaction('appMeta').objectStore('appMeta').get('usage');
+          read.onsuccess = () => {
+            db.close();
+            resolve((read.result as { value: { handledWeek?: string } } | undefined)?.value.handledWeek);
+          };
+          read.onerror = () => {
+            db.close();
+            reject(read.error ?? new Error('read failed'));
+          };
+        };
+      }),
+  );
+}
+
+/** A writing session 7 days ago, and counts that started long before it. */
 async function lastWeekWithWriting(page: Page) {
   await page.evaluate(async () => {
     await new Promise<void>((resolve, reject) => {
@@ -61,12 +86,7 @@ async function lastWeekWithWriting(page: Page) {
           wordsAdded: 1200,
           poemsAdded: 0,
         });
-        const meta = tx.objectStore('appMeta');
-        const read = meta.get('usage');
-        read.onsuccess = () => {
-          const value = (read.result as { value: Record<string, unknown> } | undefined)?.value ?? {};
-          meta.put({ key: 'usage', value: { ...value, handledWeek: '2000-W01' } });
-        };
+        tx.objectStore('appMeta').put({ key: 'usage', value: { handledWeek: '2000-W01', weeks: {} } });
         tx.oncomplete = () => {
           db.close();
           resolve();
@@ -79,59 +99,44 @@ async function lastWeekWithWriting(page: Page) {
   });
 }
 
-test('usage counts start off, ask first, and send the exact JSON that the Library shows', async ({
-  page,
-}) => {
-  const calls = await fakeSupabase(page);
+test('Settings says what each count sends, with no switch', async ({ page }) => {
+  await fakeSupabase(page);
   await skipOnboarding(page);
   await page.goto('/settings');
-  const toggle = page.getByRole('switch', { name: 'Send weekly usage counts' });
-  await expect(toggle).not.toBeChecked();
-
-  await toggle.click();
-  const dialog = page.getByRole('dialog', { name: 'Send weekly usage counts?' });
-  await expect(dialog).toContainText('"words_added_band": "1000-4999"');
+  const usage = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { level: 2, name: 'Usage counts' }) });
+  await expect(usage.getByRole('heading', { name: 'The daily count' })).toBeVisible();
+  await expect(usage.getByRole('heading', { name: 'Weekly usage counts' })).toBeVisible();
+  await expect(usage).toContainText('Vlo sends the counts of the week before by itself');
+  await expect(usage.getByRole('switch')).toHaveCount(0);
+  await usage.getByText('A weekly report looks like this').click();
+  await expect(usage).toContainText('"words_added_band": "1000-4999"');
+  await expect(usage.getByRole('link', { name: 'privacy page' })).toHaveAttribute('href', '/privacy');
   expect(await seriousIssues(page)).toEqual([]);
-  await dialog.getByRole('button', { name: 'Turn on' }).click();
-  await expect(toggle).toBeChecked();
-  await expect(page.getByText('Usage counts are on.')).toBeVisible();
+});
 
+test('Vlo sends the report of last week by itself, once, with no text', async ({ page }) => {
+  const calls = await fakeSupabase(page);
+  await skipOnboarding(page);
   await seedProjects(page, 1);
-  await lastWeekWithWriting(page);
-  await page.goto('/');
-  const prompt = page.getByRole('region', { name: 'Usage counts for last week' });
-  await expect(prompt).toBeVisible();
-  const shown = JSON.parse((await prompt.getByLabel('The report').textContent()) ?? '') as Record<
-    string,
-    unknown
-  >;
-  expect(shown).toMatchObject({ templates_used: ['novel'], words_added_band: '1000-4999' });
-  expect(JSON.stringify(shown)).not.toContain('Seeded project');
-  await expect(prompt).toContainText(/with the week \(\d{4}-W\d{2}\) and the app version \(0\.1\.0\)/);
-  expect(await seriousIssues(page)).toEqual([]);
+  // The first check marks the start of the counts, so the seed below cannot race with it.
+  await expect.poll(() => startWeek(page), { timeout: 15_000 }).toMatch(/^\d{4}-W\d{2}$/);
   expect(calls).toHaveLength(0);
 
-  await prompt.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByText('Sent.')).toBeVisible();
-  await expect(prompt).toHaveCount(0);
-  expect(calls.map((c) => c.name)).toEqual(['submit_usage']);
-  expect(calls[0]?.body.p_report).toEqual(shown);
+  await lastWeekWithWriting(page);
+  await page.goto('/');
+  await expect.poll(() => calls.length, { timeout: 15_000 }).toBe(1);
+  expect(calls[0]?.name).toBe('submit_usage');
+  expect(calls[0]?.body.p_report).toMatchObject({ templates_used: ['novel'], words_added_band: '1000-4999' });
+  expect(JSON.stringify(calls[0]?.body)).not.toContain('Seeded project');
   expect(calls[0]?.body.p_week).toMatch(/^\d{4}-W\d{2}$/);
   expect(calls[0]?.body.p_app_version).toBe('0.1.0');
 
-  await page.reload();
-  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Usage counts for last week' })).toHaveCount(0);
-});
+  await page.goto('/network');
+  await expect(page.getByRole('table')).toContainText('Usage count');
 
-test('with usage counts off, the Library asks nothing and sends nothing', async ({ page }) => {
-  const calls = await fakeSupabase(page);
-  await skipOnboarding(page);
-  await seedProjects(page, 1);
-  await lastWeekWithWriting(page);
-  await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
-  await expect(page.getByText('Seeded project 1')).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Usage counts for last week' })).toHaveCount(0);
-  expect(calls).toHaveLength(0);
+  await page.reload();
+  await page.waitForTimeout(6_000);
+  expect(calls).toHaveLength(1);
 });

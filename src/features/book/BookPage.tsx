@@ -1,7 +1,9 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Printer } from 'lucide-react';
 import { lazy, Suspense, useId, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
+import { readProfile } from '@/features/account/profile';
 import { updateProjectSettings } from '@/features/library/projects';
 import { projectDef } from '@/features/library/templates';
 import { usePeople } from '@/features/people/people';
@@ -79,6 +81,8 @@ function BookScreen({ project, items }: { project: Project; items: Item[] }) {
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
   const typing = useRef<number | undefined>(undefined);
+  // The bio of a signed-in writer's profile can fill "About the author" (ADR 0011).
+  const bio = useLiveQuery(async () => (await readProfile().catch(() => null))?.bio.trim() ?? '', [], '');
 
   const save = (next: BookSettings) => {
     window.clearTimeout(typing.current);
@@ -245,6 +249,20 @@ function BookScreen({ project, items }: { project: Project; items: Item[] }) {
                   save(book);
                 }}
               />
+              {key === 'about' && bio !== '' && book.about.trim() === '' && (
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-9"
+                    onClick={() => {
+                      choose({ about: bio });
+                    }}
+                  >
+                    Use the bio from your profile
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
           <p className="text-sm text-muted">An empty page stays out of the book.</p>

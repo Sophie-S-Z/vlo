@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 /*
- * Plan Task E5 (spec F30, decision S6): opt-in usage counts. Off by default, bands and fixed names only, no
- * text, title or name, under 4 KB, and the sent body is the report the writer saw.
+ * Plan Task E5 (spec F30): usage counts. Always on, bands and fixed names only, no text, title or name,
+ * under 4 KB, and Vlo sends each week once by itself, never a week from before the counts started.
  */
 
 type Modules = typeof import('@/features/usage/usage') & {
@@ -115,21 +115,32 @@ describe('bands and weeks', () => {
 });
 
 describe('usage counts', () => {
-  test('are off by default: no count, no report and no request', async () => {
+  test('the first check marks the start and sends nothing about the week before', async () => {
     await fixtureLibrary();
-    at(LAST_WEEK);
-    m.recordFeature('export-docx');
-    m.recordError('export-failed');
-    await m.usageSettled();
-    expect(await m.db.appMeta.get('usage')).toBeUndefined();
+    at(NOW);
     expect(await m.weeklyReport(NOW)).toBeNull();
+    expect(await m.sendWeeklyReport()).toBe(false);
+    expect(await m.usageState()).toEqual({ handledWeek: '2026-W45', weeks: {} });
+    expect(await m.sendWeeklyReport()).toBe(false);
     expect(calls).toHaveLength(0);
+  });
+
+  test('an older state with the switch off still counts and sends', async () => {
+    await m.db.appMeta.put({ key: 'usage', value: { on: false, weeks: {} } });
+    at(LAST_WEEK - 7 * 86_400_000);
+    await m.sendWeeklyReport();
+    at(LAST_WEEK);
+    m.recordFeature('board');
+    await m.usageSettled();
+    at(NOW);
+    expect(await m.sendWeeklyReport()).toBe(true);
+    expect(calls[0]?.body.p_report).toMatchObject({ features_used: ['board'] });
   });
 
   test('a report holds bands and fixed names only, and no title, name or word of text', async () => {
     await fixtureLibrary();
     at(LAST_WEEK - 7 * 86_400_000);
-    await m.setUsageOn(true);
+    await m.sendWeeklyReport();
     at(LAST_WEEK);
     m.recordFeature('export-docx');
     m.recordFeature('export-docx');
@@ -164,7 +175,7 @@ describe('usage counts', () => {
 
   test('a report with every template, feature and error code stays under 4 KB', async () => {
     at(LAST_WEEK - 7 * 86_400_000);
-    await m.setUsageOn(true);
+    await m.sendWeeklyReport();
     at(LAST_WEEK);
     for (const f of m.FEATURES) m.recordFeature(f);
     for (const c of m.ERROR_CODES) m.recordError(c);
@@ -213,14 +224,20 @@ describe('usage counts', () => {
     expect(new TextEncoder().encode(JSON.stringify(result?.report)).length).toBeLessThan(4096);
   });
 
-  test('Send gives the shown report as it is, and the week does not come back', async () => {
+  test('Vlo sends the report by itself once, and keeps only the counts of this week', async () => {
     await fixtureLibrary();
     at(LAST_WEEK - 7 * 86_400_000);
-    await m.setUsageOn(true);
+    await m.sendWeeklyReport();
+    at(LAST_WEEK);
+    m.recordFeature('board');
+    at(NOW);
+    m.recordFeature('timeline');
+    await m.usageSettled();
     const result = await m.weeklyReport(NOW);
     if (!result) throw new Error('No report.');
-    const shown = JSON.stringify(result.report, null, 2);
-    await m.sendReport(result.week, result.report);
+
+    const [first, second] = await Promise.all([m.sendWeeklyReport(), m.sendWeeklyReport()]);
+    expect([first, second]).toEqual([true, false]);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.name).toBe('submit_usage');
     expect(calls[0]?.body).toEqual({
@@ -228,33 +245,19 @@ describe('usage counts', () => {
       p_app_version: m.APP_VERSION,
       p_report: result.report,
     });
-    expect(JSON.stringify(calls[0]?.body.p_report, null, 2)).toBe(shown);
     expect(await m.weeklyReport(NOW)).toBeNull();
+    expect(Object.keys((await m.usageState()).weeks)).toEqual(['2026-W46']);
   });
 
-  test('Skip this week sends nothing, and turning counts off removes them', async () => {
+  test('a send that fails goes at the next check', async () => {
     await fixtureLibrary();
     at(LAST_WEEK - 7 * 86_400_000);
-    await m.setUsageOn(true);
-    at(LAST_WEEK);
-    m.recordFeature('board');
-    await m.usageSettled();
-    await m.handleWeek('2026-W45');
-    expect(await m.weeklyReport(NOW)).toBeNull();
-    expect(calls).toHaveLength(0);
-
+    await m.sendWeeklyReport();
     at(NOW);
-    m.recordFeature('timeline');
-    await m.usageSettled();
-    expect(Object.keys((await m.usageState()).weeks)).toEqual(['2026-W46']);
-    await m.setUsageOn(false);
-    expect(await m.usageState()).toEqual({ on: false, weeks: {} });
-  });
-
-  test('turning counts on does not ask about the week before', async () => {
-    await fixtureLibrary();
-    at(NOW);
-    await m.setUsageOn(true);
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError('offline'));
+    expect(await m.sendWeeklyReport()).toBe(false);
+    expect(await m.weeklyReport(NOW)).not.toBeNull();
+    expect(await m.sendWeeklyReport()).toBe(true);
     expect(await m.weeklyReport(NOW)).toBeNull();
   });
 });

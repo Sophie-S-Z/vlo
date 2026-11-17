@@ -2,12 +2,22 @@ import { useId, useState } from 'react';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
-import { AuthError, googleReady, googleSignInUrl, looksLikeEmail, sendCode, verifyCode } from './auth';
+import {
+  AuthError,
+  googleReady,
+  googleSignInUrl,
+  looksLikeEmail,
+  passwordSignIn,
+  prefersPassword,
+  sendCode,
+  verifyCode,
+} from './auth';
 import type { AccountSession } from './session';
 
 /*
- * The email code and Google sign-in (Phase 18, decision A2), for the sign-in screen and the Account page.
- * A new email gets a new account, so one form both signs in and makes an account.
+ * The email code, the password and Google sign-in (Phase 18, decision A2), for the sign-in screen and the
+ * Account page. A new email gets a new account, so one form both signs in and makes an account. A password
+ * works only after the writer sets one on the Account page, so a new account always starts with a code.
  */
 
 const NEXT = 'vlo:next';
@@ -42,9 +52,12 @@ export function SignInForm({
   const id = useId();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [way, setWay] = useState<'code' | 'password'>(() => (prefersPassword() ? 'password' : 'code'));
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const withPassword = way === 'password' && !create;
 
   async function run(task: () => Promise<void>) {
     setBusy(true);
@@ -57,6 +70,36 @@ export function SignInForm({
     }
     // A finished sign-in loads the account's library, so the form stays busy until the page goes.
   }
+
+  /** Changes between the code and the password. The email stays. */
+  function changeWay(next: 'code' | 'password') {
+    setWay(next);
+    setSent(false);
+    setCode('');
+    setPassword('');
+    setMessage('');
+  }
+
+  const emailField = (
+    <div className="grid gap-1.5">
+      <Label htmlFor={`${id}-email`}>Email</Label>
+      <Input
+        id={`${id}-email`}
+        type="email"
+        autoComplete={withPassword ? 'username' : 'email'}
+        inputMode="email"
+        value={email}
+        onChange={(event) => {
+          setEmail(event.target.value);
+        }}
+      />
+    </div>
+  );
+  const checkEmail = () => {
+    if (looksLikeEmail(email)) return true;
+    setMessage('Type your whole email address, such as name@example.com.');
+    return false;
+  };
 
   return (
     <div className="grid gap-5">
@@ -82,15 +125,54 @@ export function SignInForm({
           </p>
         </>
       )}
-      {!sent ? (
+      {withPassword ? (
         <form
           className="grid gap-3"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!looksLikeEmail(email)) {
-              setMessage('Type your whole email address, such as name@example.com.');
-              return;
-            }
+            if (!checkEmail()) return;
+            void run(async () => {
+              await onSession(await passwordSignIn(email, password));
+            });
+          }}
+        >
+          {emailField}
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${id}-password`}>Password</Label>
+            <Input
+              id={`${id}-password`}
+              type="password"
+              autoComplete="current-password"
+              aria-describedby={`${id}-forgot`}
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+              }}
+            />
+            <p id={`${id}-forgot`} className="text-sm text-muted">
+              Forgot your password? Sign in with a code, then set a new password on the Account page.
+            </p>
+          </div>
+          <Button type="submit" className="min-h-12 text-base" disabled={busy || password === ''}>
+            Sign in
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => {
+              changeWay('code');
+            }}
+          >
+            Sign in with a code
+          </Button>
+        </form>
+      ) : !sent ? (
+        <form
+          className="grid gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!checkEmail()) return;
             void run(async () => {
               await sendCode(email);
               setSent(true);
@@ -99,22 +181,22 @@ export function SignInForm({
             });
           }}
         >
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${id}-email`}>Email</Label>
-            <Input
-              id={`${id}-email`}
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-              }}
-            />
-          </div>
+          {emailField}
           <Button type="submit" className="min-h-12 text-base" disabled={busy}>
             Send me a code
           </Button>
+          {!create && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                changeWay('password');
+              }}
+            >
+              Sign in with a password
+            </Button>
+          )}
         </form>
       ) : (
         <form

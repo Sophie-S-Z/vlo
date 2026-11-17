@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 14,
+  version: 16,
   date: '2026-11-17',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -19,7 +19,7 @@ export const PRIVACY = {
     'A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.',
     'The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.',
     'The network log stays in this browser.',
-    'Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync between your devices.',
+    'Vlo loads no third-party script, font, analytics or tracking pixel. You need no account to write. An account is only for sync between your devices and for your profile.',
   ],
   leaves: {
     ai: {
@@ -41,9 +41,9 @@ export const PRIVACY = {
     },
     usage: {
       title: 'Weekly usage counts',
-      when: 'Only after you turn them on in Settings, and only when you press Send on a weekly report.',
+      when: 'Once a week, by itself, the first time Vlo is open after the week ends. It is always on.',
       sends:
-        'Counts in bands, the templates and features that you used, AI mode counts and error codes. Never text, titles or names. You see each report before it goes.',
+        'The counts of the week before: the templates and features that you used, your words and poems as bands such as 1000-4999, AI requests by mode, and error codes. Never text, titles or names. Settings shows a sample report.',
     },
     originality: {
       title: 'The web originality check',
@@ -77,21 +77,21 @@ export const PRIVACY = {
     },
     account: {
       title: 'Your account',
-      when: 'Only when you sign in, while you stay signed in, and when you sign out or delete the account.',
+      when: 'Only when you sign in, while you stay signed in, when you save your profile or set a password, and when you sign out or delete the account.',
       sends:
-        'Your email address and the 6-digit code, or the sign-in that Google gives. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the key, the sync and every sealed copy.',
+        'Your email address and the 6-digit code, your password if you set one, or the sign-in that Google gives. The account server keeps only a hash of the password. Your profile: your name, the name that Vlo greets you by, a pen name, a bio and a photo, if you give them. The photo goes as a small square copy that holds no camera data. The makers of Vlo see your name next to your email on the owner page. For sync, the account keeps the sync key on the server, so each device where you sign in can open your synced projects. The copies on the sync server stay encrypted, but a person with access to the database could use the key to read them. Delete my account removes the account, the profile, the key, the sync and every sealed copy.',
     },
     ping: {
       title: 'The daily count',
-      when: 'Once a day while the switch in Settings is on, signed in or not, and again after your projects change, at most once in 5 minutes. It is on until you turn it off.',
+      when: 'Once a day, signed in or not, and again after your projects change, at most once in 5 minutes. It is always on.',
       sends:
-        "A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. Once a day, the app's own server on Vercel reads a rough place from the internet address of this device: the country, the region and the city. The count keeps only those three, never the address or an exact location, and the makers of Vlo see places only as counts of devices. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. With no account, they see only that a signed-out device used Vlo. Never text, a title or a name, and no cookie. Turning it off forgets the random id and sends no place.",
+        "A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. Once a day, the app's own server on Vercel reads a rough place from the internet address of this device: the country, the region and the city. The count keeps only those three, never the address or an exact location, and the makers of Vlo see places only as counts of devices. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. With no account, they see only that a signed-out device used Vlo. Never text, a title or a name, and no cookie.",
     },
     feedback: {
-      title: 'Feedback to the makers of Vlo',
-      when: 'Only when you press Send feedback.',
+      title: 'Feedback and notes to Sophie, who makes Vlo',
+      when: 'Only when you press Send feedback or Send the note.',
       sends:
-        'What you type, the kind of feedback, a rating if you pick one, a reply address if you type one, the screen that you came from, the kind of device and the Vlo version. When you are signed in, your account goes with it. No text of your projects goes.',
+        'What you type, the kind of feedback, a rating if you pick one, a reply address if you type one, the screen that you came from, the kind of device and the Vlo version. When you are signed in, your account goes with it. To stop spam, the server keeps a scrambled key of your internet address for 2 days, never the address itself. No text of your projects goes.',
     },
   } satisfies Record<NetPurpose, { title: string; when: string; sends: string }>,
   contact: {

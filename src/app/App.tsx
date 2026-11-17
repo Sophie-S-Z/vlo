@@ -35,6 +35,13 @@ export function App() {
       .then(({ startAccountSync }) => startAccountSync(guessDeviceName()))
       .catch(() => undefined);
   }, [signedIn, syncing]);
+  // The profile can change on another device, so the copy here follows the server as Vlo opens (ADR 0011).
+  useEffect(() => {
+    if (!signedIn) return;
+    void import('@/features/account/profileServer')
+      .then(({ refreshProfile }) => refreshProfile())
+      .catch(() => undefined);
+  }, [signedIn]);
   // Persistent storage: Vlo asks again at start, and at once after an install, because Chrome and Safari
   // often grant it to an installed app.
   useEffect(() => {
@@ -45,14 +52,16 @@ export function App() {
       window.removeEventListener('appinstalled', installed);
     };
   }, []);
-  // The daily count (Phase 18, decision A3): a few seconds after Vlo opens, each minute while it is on the
-  // screen, and as it leaves the screen. The count goes only on a new day or after the projects change, so
-  // most checks send nothing. A visitor who is not signed in counts too. A share link's reader never counts.
+  // The daily count (Phase 18, decision A3) and the weekly usage counts (plan Task E5): a few seconds after
+  // Vlo opens, each minute while it is on the screen, and as it leaves the screen. The daily count goes only
+  // on a new day or after the projects change, and the weekly report once a week, so most checks send
+  // nothing. A visitor who is not signed in counts too. A share link's reader never counts.
   useEffect(() => {
     const count = () => {
       if (window.location.pathname.startsWith('/r/')) return;
       const leaving = document.visibilityState !== 'visible';
       void import('@/features/account/dailyCount').then(({ sendDailyCount }) => sendDailyCount(leaving));
+      void import('@/features/usage/usage').then(({ sendWeeklyReport }) => sendWeeklyReport());
     };
     const timer = setTimeout(count, 5_000);
     const tick = setInterval(() => {

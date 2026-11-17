@@ -20,6 +20,17 @@ Last update: 2026-11-17
     keyboard, with a Hide keyboard button.
   - Not built yet: a command menu entry for the word target, and a bar in the binder (the binder shows a
     text label).
+  - Fixed: "Blur the words" and "Cover the words with bars" in the Focus menu did not turn Hide the
+    text off on a second click.
+
+- Profiles (2026-11-17, ADR 0011, migration 0011), from the product owner's ask:
+  - A new account gives its name after the sign-in code (`/profile/new`), with an optional photo that the
+    writer places in a circle. Google's name fills the field. An older account gives its name once.
+  - The Library says "Welcome back to your library, <name>". The header shows the photo or the initials,
+    with a menu for Your profile and Account and sync.
+  - `/profile`: the photo, the full name, the name of the greeting, a pen name and a bio, with a preview of
+    where each shows. New projects take the pen name as their author; the Book page can take the bio.
+  - The owner page shows each account's name. Privacy version 15. Migration 0011 needs the live database.
 
 - Separate accounts (2026-11-17, ADR 0010), from the product owner's ask:
   - Each account has its own library on the device: its own database and item texts. A sign-in no longer
@@ -66,7 +77,7 @@ Last update: 2026-11-17
     relay keeps cipher text. Sign out (this device stops sync and keeps its projects) and Delete my account.
     The pairing link stays.
   - The daily count (purpose `ping`): once a UTC day, a random install id, the version, the kind of device and
-    whether Vlo is installed. On by default, with a switch in Settings under Usage counts.
+    whether Vlo is installed. Always on, and Settings under Usage counts says what it sends.
   - Send feedback (`/send-feedback`, purpose `feedback`): from the footer, Settings, Help and the command menu.
   - The owner page (`/owner`): tiles, a 30-day chart with a table view, breakdowns, every account, and a
     feedback inbox with a status, a note and a CSV download. Only accounts in `app_owners`.

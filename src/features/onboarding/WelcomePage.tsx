@@ -19,7 +19,8 @@ export function WelcomePage() {
   useDocumentTitle('Welcome');
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const { pick, toggle } = useTemplatePick();
+  // No card starts picked: the writer picks what they write.
+  const { pick, toggle } = useTemplatePick(false);
   // null keeps the templates' default title until the writer types.
   const [title, setTitle] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +149,7 @@ export function WelcomePage() {
                 onClick={() => {
                   setStep(step + 1);
                 }}
+                disabled={step === 0 && pick.value.length === 0}
                 className="min-h-12 px-6 text-base"
               >
                 Next

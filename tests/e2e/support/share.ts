@@ -9,7 +9,7 @@ import { FakeSyncRelay } from '../../fixtures/syncRelay';
 const RPC = 'https://vlo-test.supabase.co/rest/v1/rpc/';
 const CORS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
   'access-control-allow-headers': 'apikey, authorization, content-type',
 };
 export const DAY = 86_400_000;

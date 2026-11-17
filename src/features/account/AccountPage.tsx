@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { guessDeviceName } from '@/features/sync/deviceName';
@@ -15,6 +15,8 @@ import {
   AlertDialogTitle,
 } from '@/ui/alert-dialog';
 import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
 import { openLibrary } from '@/lib/library';
 import {
   accountSyncState,
@@ -24,7 +26,17 @@ import {
   stopAccountSyncHere,
   type AccountSyncState,
 } from './accountSync';
-import { accountsReady, AuthError, deleteAccount, finishGoogle, signOut } from './auth';
+import {
+  accountsReady,
+  AuthError,
+  deleteAccount,
+  finishGoogle,
+  passwordProblem,
+  PASSWORD_LIMITS,
+  sendPasswordCode,
+  setPassword,
+  signOut,
+} from './auth';
 import {
   bringWorks,
   enterAccount,
@@ -172,6 +184,128 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
         Sync on all your devices
       </h2>
       {body}
+      <Status text={message} />
+    </section>
+  );
+}
+
+/**
+ * A password for the account, so the writer can sign in with the email and the password, with no code. A
+ * server with "Secure password change" on asks for a code from the email first.
+ */
+function PasswordPanel({ email }: { email: string }) {
+  const id = useId();
+  const [password, setPasswordText] = useState('');
+  const [again, setAgain] = useState('');
+  const [code, setCode] = useState('');
+  const [asked, setAsked] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function save() {
+    const problem = passwordProblem(password, again);
+    if (problem) {
+      setMessage(problem);
+      return;
+    }
+    setBusy(true);
+    setMessage('');
+    try {
+      await setPassword(password, asked ? code : undefined);
+      setPasswordText('');
+      setAgain('');
+      setCode('');
+      setAsked(false);
+      setMessage(
+        `Your password is saved. Next time, sign in with ${email || 'your email'} and this password.`,
+      );
+    } catch (error) {
+      if (error instanceof AuthError && error.kind === 'needs-code' && !asked) {
+        try {
+          await sendPasswordCode();
+          setAsked(true);
+          setMessage(
+            `For your safety, Vlo sent a code to ${email || 'your email'}. Type it, then save again.`,
+          );
+        } catch (sendError) {
+          setMessage(accountErrorText(sendError));
+        }
+      } else setMessage(accountErrorText(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section aria-labelledby="password-heading" className="grid gap-3 border-t border-rule pt-6">
+      <h2 id="password-heading" className="font-display text-2xl font-semibold">
+        Password
+      </h2>
+      <p>
+        Set a password to sign in with your email and the password, with no code. You can always sign in with
+        a code too. To change your password, set a new one here.
+      </p>
+      <form
+        className="grid max-w-sm gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save();
+        }}
+      >
+        {/* A password manager keeps the password with this email. */}
+        <input type="email" autoComplete="username" value={email} readOnly hidden />
+        <div className="grid gap-1.5">
+          <Label htmlFor={`${id}-new`}>New password</Label>
+          <Input
+            id={`${id}-new`}
+            type="password"
+            autoComplete="new-password"
+            maxLength={PASSWORD_LIMITS.max}
+            aria-describedby={`${id}-hint`}
+            value={password}
+            onChange={(event) => {
+              setPasswordText(event.target.value);
+            }}
+          />
+          <p id={`${id}-hint`} className="text-sm text-muted">
+            At least {PASSWORD_LIMITS.min} characters. A long phrase is easy to remember and hard to guess.
+          </p>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor={`${id}-again`}>Type the password again</Label>
+          <Input
+            id={`${id}-again`}
+            type="password"
+            autoComplete="new-password"
+            maxLength={PASSWORD_LIMITS.max}
+            value={again}
+            onChange={(event) => {
+              setAgain(event.target.value);
+            }}
+          />
+        </div>
+        {asked && (
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${id}-code`}>Code from the email</Label>
+            <Input
+              id={`${id}-code`}
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              maxLength={10}
+              className="font-mono tracking-widest"
+              value={code}
+              onChange={(event) => {
+                setCode(event.target.value);
+              }}
+            />
+          </div>
+        )}
+        <div>
+          <Button type="submit" disabled={busy || password === '' || (asked && code.trim() === '')}>
+            Save password
+          </Button>
+        </div>
+      </form>
       <Status text={message} />
     </section>
   );
@@ -372,6 +506,7 @@ function SignedIn({ session }: { session: AccountSession }) {
         </div>
       )}
       {state ? <SyncPanel state={state} onChange={load} /> : <Status text={message} />}
+      <PasswordPanel email={session.email} />
       <LibrariesPanel />
       <section aria-labelledby="account-heading" className="grid gap-3 border-t border-rule pt-6">
         <h2 id="account-heading" className="font-display text-2xl font-semibold">
@@ -479,7 +614,8 @@ export function AccountPage() {
       <div className="grid max-w-md gap-4">
         <p>
           Sign in to keep your projects the same on your phone, your laptop and any other device. Vlo sends a
-          6-digit code to your email. You need no password. Each account has its own projects.
+          6-digit code to your email. After you sign in, you can set a password on this page. Each account has
+          its own projects.
         </p>
         <SignInForm next="/account" onSession={(signedIn) => enterAccount(signedIn, '/account')} />
       </div>

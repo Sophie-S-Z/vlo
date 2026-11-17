@@ -8,6 +8,7 @@ import { recordPersistence } from '@/lib/storage';
 import { recountItems } from '@/lib/wordcount';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { dropBook } from '@/features/series/series';
+import { byline, readProfile } from '@/features/account/profile';
 import { cleanTemplates, misfits, projectDef, TEMPLATES, type StarterItem } from './templates';
 
 export interface NewProjectInput {
@@ -50,7 +51,9 @@ export async function createProject(
   input: NewProjectInput,
 ): Promise<{ project: Project; firstItemId: string }> {
   const now = clock.now();
-  const project = newProject(input, now);
+  // A signed-in writer's byline is the author of each new project (ADR 0011).
+  const profile = input.authorName === undefined ? await readProfile().catch(() => null) : null;
+  const project = newProject(profile ? { ...input, authorName: byline(profile) } : input, now);
   const def = projectDef(project.templates);
   // Each template starts from its chosen structure, or from its own starter items.
   const picked = input.structures ?? {};

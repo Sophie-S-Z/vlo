@@ -3,24 +3,41 @@ import { clock } from '@/lib/clock';
 import { withLock } from '@/lib/lock';
 import { toBase64Url } from '@/lib/crypto';
 import { rememberAccount } from '@/lib/library';
-import { supabaseUrl, vloFetch } from '@/lib/net';
+import { supabaseUrl, vloFetch, type VloRequest } from '@/lib/net';
 import { forgetSession, readSession, saveSession, type AccountSession } from './session';
 
 /*
  * Accounts (Phase 18, decision A2): Supabase Auth through its REST paths, so Vlo loads no auth package and
  * each request goes through the network module with the purpose `account`. A writer signs in with a
- * 6-digit code from an email, or with Google in a build that sets `VITE_AUTH_GOOGLE`. No password.
+ * 6-digit code from an email, or with Google in a build that sets `VITE_AUTH_GOOGLE`. A signed-in writer
+ * can set a password, and then sign in with the email and the password, with no code.
  */
 
 export type AuthErrorKind =
-  'not-set-up' | 'offline' | 'bad-code' | 'bad-email' | 'too-many' | 'mail' | 'signed-out' | 'server';
+  | 'not-set-up'
+  | 'offline'
+  | 'bad-code'
+  | 'bad-email'
+  | 'bad-password'
+  | 'weak-password'
+  | 'same-password'
+  | 'needs-code'
+  | 'too-many'
+  | 'mail'
+  | 'signed-out'
+  | 'server';
 
 const MESSAGES: Record<AuthErrorKind, string> = {
   'not-set-up': 'Accounts are not set up in this build.',
   offline: 'Vlo could not reach the account server. Check the connection, then try again.',
   'bad-code': 'This code is wrong or too old. Ask for a new code.',
   'bad-email': 'The account server did not take this email address. Check it, then try again.',
-  'too-many': 'Vlo asked for too many codes. Wait a minute, then try again.',
+  'bad-password': 'This email and password do not match. Check them, or sign in with a code.',
+  'weak-password':
+    'The account server did not take this password. Use a longer password with letters, numbers and symbols.',
+  'same-password': 'This is your password now. Type a new password.',
+  'needs-code': 'Type the code from the email to save your password.',
+  'too-many': 'The account server had too many requests from you. Wait a minute, then try again.',
   mail: 'The account server could not send the email. Try again later.',
   'signed-out': 'You are signed out. Sign in again.',
   server: 'The account server refused the request. Try again later.',
@@ -46,19 +63,24 @@ export function looksLikeEmail(text: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim()) && text.trim().length <= 254;
 }
 
-async function auth(path: string, body: unknown, token?: string): Promise<unknown> {
+async function auth(
+  path: string,
+  body: unknown,
+  token?: string,
+  method: VloRequest['method'] = 'POST',
+): Promise<unknown> {
   if (!accountsReady()) throw new AuthError('not-set-up');
   let response: Response;
   try {
     response = await vloFetch(`${supabaseUrl()}/auth/v1/${path}`, {
       purpose: 'account',
-      method: 'POST',
+      method,
       headers: {
         apikey: anonKey(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        'Content-Type': 'application/json',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
-      body: JSON.stringify(body),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   } catch {
     throw new AuthError('offline');
@@ -77,6 +99,8 @@ async function auth(path: string, body: unknown, token?: string): Promise<unknow
   throw new AuthError(refusal(path, response.status, code));
 }
 
+const PASSWORD_GRANT = 'token?grant_type=password';
+
 /**
  * What a refused request of an /auth/v1 path means. Only a refusal of the request itself (a 4xx) can
  * sign the device out or call a code wrong. A fault of the server (a 5xx) never does.
@@ -89,6 +113,13 @@ export function refusal(path: string, status: number, code: string): AuthErrorKi
     return /email|invalid/i.test(code) ? 'bad-email' : 'server';
   }
   if (status >= 500) return 'server';
+  if (path === PASSWORD_GRANT) return 'bad-password';
+  if (path === 'user' || path === 'reauthenticate') {
+    if (/weak_password/i.test(code)) return 'weak-password';
+    if (/same_password/i.test(code)) return 'same-password';
+    if (/reauthentication_needed/i.test(code)) return 'needs-code';
+    return /reauthentication_not_valid/i.test(code) ? 'bad-code' : 'server';
+  }
   if (status >= 400) return path.startsWith('token') && !path.includes('pkce') ? 'signed-out' : 'bad-code';
   return 'server';
 }
@@ -97,7 +128,12 @@ interface TokenAnswer {
   access_token: string;
   refresh_token: string;
   expires_in: number;
-  user: { id: string; email?: string; app_metadata?: { provider?: string } };
+  user: {
+    id: string;
+    email?: string;
+    app_metadata?: { provider?: string };
+    user_metadata?: { full_name?: unknown; name?: unknown };
+  };
 }
 
 function isTokenAnswer(value: unknown): value is TokenAnswer {
@@ -120,6 +156,10 @@ async function keep(answer: unknown): Promise<AccountSession> {
     email: answer.user.email ?? '',
     provider: answer.user.app_metadata?.provider ?? 'email',
   };
+  // Google gives the writer's name, so the profile step can start with it.
+  const { full_name: fullName, name } = answer.user.user_metadata ?? {};
+  const given = typeof fullName === 'string' ? fullName : typeof name === 'string' ? name : '';
+  if (given.trim() !== '') session.name = given.trim();
   await saveSession(session);
   rememberAccount(session.userId, session.email);
   return session;
@@ -133,6 +173,63 @@ export async function sendCode(email: string): Promise<void> {
 /** Checks the code of the email, and keeps the session on this device. */
 export async function verifyCode(email: string, code: string): Promise<AccountSession> {
   return keep(await auth('verify', { type: 'email', email: email.trim(), token: code.replace(/\s/g, '') }));
+}
+
+/** The shortest and the longest password. The server cuts a password after 72 bytes. */
+export const PASSWORD_LIMITS = { min: 8, max: 72 } as const;
+
+/** The problem of a new password in words for the writer, or '' when it can go to the server. */
+export function passwordProblem(password: string, again: string): string {
+  if (password.length < PASSWORD_LIMITS.min) return `Use at least ${String(PASSWORD_LIMITS.min)} characters.`;
+  if (new TextEncoder().encode(password).length > PASSWORD_LIMITS.max)
+    return `Use at most ${String(PASSWORD_LIMITS.max)} characters.`;
+  if (password !== again) return 'The two passwords are not the same. Type them again.';
+  return '';
+}
+
+/** Signs in with the email and the password, and keeps the session on this device. */
+export async function passwordSignIn(email: string, password: string): Promise<AccountSession> {
+  const session = await keep(await auth(PASSWORD_GRANT, { email: email.trim(), password }));
+  rememberPasswordSignIn();
+  return session;
+}
+
+/**
+ * Sets the password of the signed-in account. A server that asks for a fresh sign-in refuses with
+ * AuthError('needs-code'): then `sendPasswordCode` emails a code, and the call goes again with it.
+ */
+export async function setPassword(password: string, code?: string): Promise<void> {
+  const session = await currentSession();
+  if (!session) throw new AuthError('signed-out');
+  const nonce = code?.replace(/\s/g, '');
+  await auth('user', { password, ...(nonce ? { nonce } : {}) }, session.accessToken, 'PUT');
+  rememberPasswordSignIn();
+}
+
+/** Emails a code to the signed-in account, for `setPassword`. */
+export async function sendPasswordCode(): Promise<void> {
+  const session = await currentSession();
+  if (!session) throw new AuthError('signed-out');
+  await auth('reauthenticate', undefined, session.accessToken, 'GET');
+}
+
+const SIGN_IN_WAY = 'vlo:sign-in';
+
+/** True when this browser signed in or set a password before, so the sign-in form starts with a password. */
+export function prefersPassword(): boolean {
+  try {
+    return localStorage.getItem(SIGN_IN_WAY) === 'password';
+  } catch {
+    return false;
+  }
+}
+
+function rememberPasswordSignIn(): void {
+  try {
+    localStorage.setItem(SIGN_IN_WAY, 'password');
+  } catch {
+    // Blocked storage: the form starts with a code.
+  }
 }
 
 const PKCE = 'vlo:pkce';
