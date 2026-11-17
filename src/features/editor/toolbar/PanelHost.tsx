@@ -132,7 +132,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   color: 'Font color',
   highlight: 'Highlight',
   size: 'Font size',
-  spacing: 'Line spacing',
+  spacing: 'Spacing',
   link: 'Link',
   characters: 'Special characters',
   footnote: 'Footnote',

@@ -9,4 +9,5 @@ export const FIRST_STRUCTURE: Readonly<Partial<Record<Template, string>>> = {
   essay: 'five-paragraph',
   article: 'blog-post',
   research: 'imrad',
+  comedy: 'stand-up',
 };

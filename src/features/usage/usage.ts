@@ -41,6 +41,7 @@ const TEMPLATES: readonly Template[] = [
   'essay',
   'article',
   'research',
+  'comedy',
 ];
 
 export const BANDS = ['0', '1-249', '250-999', '1000-4999', '5000+'] as const;

@@ -426,3 +426,68 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
   await writerContext.close();
   await ownerContext.close();
 });
+
+test('the leaderboard ranks the signed-in writers, crowns the first, and a writer can leave it', async ({
+  page,
+  context,
+}) => {
+  const fake = await fakeSupabase(context);
+  await skipOnboarding(page);
+  await signIn(page, 'mira@example.com');
+  const accounts = fake.accounts;
+  if (!accounts) throw new Error('No fake accounts.');
+  const mira = [...accounts.users.values()].find((u) => u.email === 'mira@example.com');
+  if (!mira) throw new Error('No account for Mira.');
+  const today = await page.evaluate(() => {
+    const d = new Date();
+    return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+  const writer = (id: string, name: string, words: number) => {
+    accounts.profiles.set(id, { name, called: '', pen_name: '', bio: '', photo: null, updated_at: today });
+    accounts.pings.set(`${id}|${today}`, {
+      install: id,
+      day: today,
+      user_id: id,
+      device: 'computer',
+      words,
+      total: words,
+      country: null,
+    });
+  };
+  writer('w1', 'Ada Quill', 2400);
+  writer('w2', 'Basho Frog', 900);
+  writer('w3', 'Colette Ink', 450);
+  accounts.pings.set(`m|${today}`, {
+    install: 'm',
+    day: today,
+    user_id: mira.id,
+    device: 'computer',
+    words: 120,
+    total: 120,
+    country: null,
+  });
+
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Leaderboard' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Leaderboard' })).toBeVisible();
+  const rows = page.getByRole('list', { name: 'Leaderboard, Today' }).getByRole('listitem');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toHaveAttribute('data-medal', 'gold');
+  await expect(rows.nth(0)).toContainText('Ada');
+  await expect(rows.nth(0).locator('.vlo-crown')).toBeVisible();
+  await expect(rows.nth(1)).toHaveAttribute('data-medal', 'silver');
+  await expect(rows.nth(2)).toHaveAttribute('data-medal', 'bronze');
+  await expect(rows.nth(3)).toContainText('(you)');
+  await expect(rows.nth(3)).not.toHaveAttribute('data-medal');
+  expect(await seriousIssues(page)).toEqual([]);
+
+  await page.getByRole('button', { name: 'This year' }).click();
+  await expect(page.getByRole('list', { name: 'Leaderboard, This year' }).getByRole('listitem')).toHaveCount(
+    4,
+  );
+
+  await page.getByRole('switch', { name: 'Show me on the leaderboard' }).click();
+  await expect(page.getByRole('list', { name: 'Leaderboard, This year' }).getByRole('listitem')).toHaveCount(
+    3,
+  );
+  expect(accounts.offBoard.has(mira.id)).toBe(true);
+});

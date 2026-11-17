@@ -1,31 +1,12 @@
 import { useId } from 'react';
-import {
-  LETTER_SPACINGS,
-  LINE_HEIGHTS,
-  setWritingPrefs,
-  useWritingPrefs,
-  WORD_SPACINGS,
-  type WritingPrefs,
-} from '@/features/editor/writingPrefs';
-import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { SpacingControls } from '@/features/editor/SpacingControls';
+import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { Switch } from '@/ui/switch';
 
 /*
  * Reading comfort on this device (roadmap F37, decision P5). Each choice changes the text on the screen
- * only. The project font and the exports stay as they are.
+ * only. The project font and the exports stay as they are. The editor's Spacing panel has the same spacing.
  */
-
-const STEPS = ['Standard', 'Wider', 'Widest'] as const;
-
-const SPACINGS: readonly {
-  key: 'letterSpacing' | 'wordSpacing' | 'lineHeight';
-  label: string;
-  values: readonly number[];
-}[] = [
-  { key: 'letterSpacing', label: 'Space between letters', values: LETTER_SPACINGS },
-  { key: 'wordSpacing', label: 'Space between words', values: WORD_SPACINGS },
-  { key: 'lineHeight', label: 'Space between lines', values: LINE_HEIGHTS },
-];
 
 export function ComfortSettings({ onAnnounce }: { onAnnounce: (message: string) => void }) {
   const writing = useWritingPrefs();
@@ -56,31 +37,7 @@ export function ComfortSettings({ onAnnounce }: { onAnnounce: (message: string) 
           </p>
         </div>
       </div>
-      {SPACINGS.map(({ key, label, values }) => (
-        <div key={key} className="grid gap-2">
-          <p id={`${id}-${key}`}>{label}</p>
-          <RadioGroup
-            aria-labelledby={`${id}-${key}`}
-            className="flex flex-wrap gap-x-6 gap-y-2"
-            value={String(values.indexOf(writing[key]))}
-            onValueChange={(value) => {
-              const step = Number(value);
-              const change: Partial<WritingPrefs> = { [key]: values[step] };
-              setWritingPrefs(change);
-              onAnnounce(`${label}: ${STEPS[step] ?? ''}.`);
-            }}
-          >
-            {STEPS.map((step, index) => (
-              <div key={step} className="flex min-h-11 items-center gap-2">
-                <RadioGroupItem id={`${id}-${key}-${String(index)}`} value={String(index)} />
-                <label htmlFor={`${id}-${key}-${String(index)}`} className="cursor-pointer">
-                  {step}
-                </label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-      ))}
+      <SpacingControls />
     </div>
   );
 }

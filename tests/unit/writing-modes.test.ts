@@ -14,7 +14,7 @@ import { item, project, updateOf } from './export-fixtures';
 
 /* Phase 17 Q-B: the Essay, Article and Research paper modes, their structures, guides and References page. */
 
-const MODES: Template[] = ['essay', 'article', 'research'];
+const MODES: Template[] = ['essay', 'article', 'research', 'comedy'];
 
 describe('the structures', () => {
   test('each new mode has structures, each with a unique id and a section to type in first', () => {

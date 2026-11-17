@@ -46,7 +46,10 @@ export type RpcName =
   | 'owner_set_feedback'
   // The writer's profile (migration 0011).
   | 'profile_get'
-  | 'profile_put';
+  | 'profile_put'
+  // The writing leaderboard (migration 0012).
+  | 'leaderboard'
+  | 'leaderboard_show';
 
 export type ShareErrorKind =
   'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'busy' | 'server';

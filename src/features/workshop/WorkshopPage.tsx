@@ -10,6 +10,7 @@ import { useProject } from '@/features/project/useProject';
 import { ViewTabs } from '@/features/project/ViewTabs';
 import { db, type Item, type Project } from '@/lib/db';
 import { Segmented } from '@/ui/segmented';
+import { PremiseTool, PunchTool } from './ComedyTools';
 import { CitationTool, HeadlineTool, SpineTool } from './ProseTools';
 import { EchoesTool, EndingsTool, ErasureTool, ShovelTool } from './PoetryTools';
 import { workshopTools, type WorkshopToolId } from './tools';
@@ -17,7 +18,8 @@ import { workshopTools, type WorkshopToolId } from './tools';
 /*
  * The Workshop (Phase 17 decision D1): one screen of deeper tools for each mode, behind the More menu. A
  * poetry collection gets the most: erasure, golden shovel, echoes and line endings. Essays, articles and
- * research papers get the spine, and articles and papers get a tool of their own.
+ * research papers get the spine, and articles and papers get a tool of their own. Comedy gets punch words
+ * and a premise machine.
  */
 
 /** An item that holds text, with its stored plain text without notes. */
@@ -73,8 +75,8 @@ export function WorkshopPage() {
         <h2 className="font-display text-2xl font-semibold">Workshop</h2>
         {!tool ? (
           <p className="max-w-prose text-muted">
-            The Workshop has tools for poetry collections, essays, articles and research papers. This project
-            has none of them.
+            The Workshop has tools for poetry collections, essays, articles, research papers and comedy. This
+            project has none of them.
           </p>
         ) : (
           <>
@@ -111,6 +113,8 @@ export function WorkshopPage() {
           {tool.id === 'spine' && <SpineTool project={project} texts={texts} />}
           {tool.id === 'headlines' && <HeadlineTool project={project} />}
           {tool.id === 'citations' && <CitationTool project={project} texts={texts} />}
+          {tool.id === 'punchlines' && <PunchTool project={project} texts={texts} />}
+          {tool.id === 'premises' && <PremiseTool />}
         </div>
       )}
     </section>

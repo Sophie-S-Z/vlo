@@ -98,6 +98,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       'superscript',
       'subscript',
       'size',
+      'spacing',
       'find',
       'replace',
       'read-aloud',
@@ -121,6 +122,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     more: [
       'comment',
       'track-changes',
+      'spacing',
       'find',
       'replace',
       'read-aloud',

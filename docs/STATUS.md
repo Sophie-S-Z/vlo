@@ -4,6 +4,19 @@ Last update: 2026-11-17
 
 ## Done
 
+- Leaderboard, comedy and spacing (2026-11-17, ADR 0012, migration 0012), from the product owner's ask:
+  - `/leaderboard`: the signed-in writers who wrote the most words today, this week, this month and this
+    year, live. The first three glow and shimmer in gold, silver and bronze, and the first wears a crown.
+    A switch takes a writer off the board. Privacy version 16. Migration 0012 needs the live database.
+  - The Comedy mode: bits in sets, six structures (stand-up set, sketch, parody, roast, top ten list,
+    satirical news story), Punch words and Premise machine in the Workshop, and a /rimshot. Backup 15.
+  - Spacing in More tools for every kind of writing: free sliders and number fields for the space between
+    letters, words and lines on the screen. Settings has the same controls.
+  - Fixed: the Shelf and Stack switch kept its thumb on Shelf; the caret after the Library greeting stayed
+    after it stopped blinking; the haze behind the greeting showed its edges and did not follow the theme.
+  - Settings, Storage says that the browser sets the limit, and offers to ask for protected storage,
+    which gives the largest limit in Firefox.
+
 - Profiles (2026-11-17, ADR 0011, migration 0011), from the product owner's ask:
   - A new account gives its name after the sign-in code (`/profile/new`), with an optional photo that the
     writer places in a circle. Google's name fills the field. An older account gives its name once.

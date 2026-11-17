@@ -33,6 +33,7 @@ const HEIGHT: Record<Template, number> = {
   essay: 266,
   article: 258,
   research: 296,
+  comedy: 248,
 };
 
 export type Finish = 'cloth' | 'gloss' | 'matte';

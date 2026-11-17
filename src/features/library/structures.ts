@@ -410,6 +410,152 @@ const ALL: readonly Structure[] = [
       page('Conclusion', 'The one thing to remember.', 30, 120),
     ],
   },
+
+  /* ------------------------------------------------------------------ Comedy */
+  {
+    id: 'stand-up',
+    template: 'comedy',
+    label: 'Stand-up set',
+    description: 'An opener, three bits and a closer that calls back to the start. About five minutes.',
+    items: [
+      page(
+        'Opener',
+        'Get a laugh in the first 15 seconds. Tell them who you are with a joke, not a résumé.',
+        20,
+        80,
+      ),
+      page(
+        'Bit 1',
+        'One premise and one attitude: weird, scary, hard or stupid. Act it out. End on the punch word.',
+        100,
+        250,
+      ),
+      page(
+        'Bit 2',
+        'A new topic, the same you. If the room is quiet, it is a pause for effect. Probably.',
+        100,
+        250,
+      ),
+      page(
+        'Bit 3',
+        'Your second-best material. Tag each punchline at least twice. Three times if you dare.',
+        100,
+        250,
+      ),
+      page(
+        'Closer',
+        'Your strongest joke. Call back to the opener, then leave while they still laugh.',
+        40,
+        150,
+      ),
+    ],
+  },
+  {
+    id: 'sketch',
+    template: 'comedy',
+    label: 'Sketch',
+    description: 'A normal world, one unusual thing, and a heighten that never stops.',
+    items: [
+      page('The normal', 'Set the ordinary world fast. Who is here, and what do they want?', 30, 120),
+      page(
+        'The unusual thing',
+        'The first odd thing. Everyone else treats it as normal, or nobody does. Pick one and commit.',
+        30,
+        150,
+      ),
+      page(
+        'Heighten',
+        'If this is true, what else is true? Make each beat bigger than the last. Then bigger again.',
+        150,
+        500,
+      ),
+      page('The button', 'One last surprise, then lights out. Never explain the joke.', 10, 80),
+    ],
+  },
+  {
+    id: 'parody',
+    template: 'comedy',
+    label: 'Parody',
+    description: 'Take something famous, keep its shape, and change what it says.',
+    items: [
+      page(
+        'The original',
+        'What you parody, and the habits that everyone knows about it. A note for you, so be honest.',
+        20,
+        150,
+      ),
+      page('The twist', 'The one wrong idea that you put inside the famous shape, in one sentence.', 5, 40),
+      page(
+        'The parody',
+        'Copy the voice and the form exactly. The more serious it sounds, the funnier it gets.',
+        150,
+        800,
+      ),
+    ],
+  },
+  {
+    id: 'roast',
+    template: 'comedy',
+    label: 'Roast',
+    description: 'Affectionate insults, one target at a time, with one kind sentence at the end.',
+    items: [
+      page('Warm-up', 'Roast yourself first. Then they cannot say that you did not see it coming.', 30, 120),
+      page(
+        'Target 1',
+        'Pick their most famous habit. Exaggerate it until it needs its own postcode.',
+        50,
+        200,
+      ),
+      page(
+        'Target 2',
+        'Punch up, never down. Mock the choices, not the things that they cannot change.',
+        50,
+        200,
+      ),
+      page('Target 3', 'Save the best burn for the guest of honor. They came for this.', 50, 200),
+      page(
+        'The kind part',
+        'One true, warm sentence. Then one more joke, because you are not made of stone.',
+        20,
+        100,
+      ),
+    ],
+  },
+  {
+    id: 'top-ten',
+    template: 'comedy',
+    label: 'Top ten list',
+    description: 'Ten items, each one funnier than the one before it.',
+    items: [
+      page(
+        'The topic',
+        'The title of the list, in a straight face. "Top ten signs that your cat is a spy."',
+        5,
+        30,
+      ),
+      page(
+        'The list',
+        'Ten lines, from number 10 down to number 1. Number 3 is for the weird one. Number 1 is the best.',
+        100,
+        400,
+      ),
+    ],
+  },
+  {
+    id: 'satirical-news',
+    template: 'comedy',
+    label: 'Satirical news story',
+    description: 'A ridiculous event, reported with a completely straight face.',
+    items: [
+      page('Headline', 'The whole joke in one line, in the dry voice of a real newspaper.', 5, 25),
+      page(
+        'Story',
+        'Report it straight. Add a quote from an expert who takes it far too seriously.',
+        150,
+        500,
+      ),
+    ],
+  },
 ];
 
 /**
