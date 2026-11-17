@@ -768,12 +768,12 @@ export class SoundEngine {
     this.music?.tick(until);
   }
 
-  /** Fades all sound out over `seconds`, then pauses. Key sounds keep working. */
-  async fadeOut(seconds: number): Promise<void> {
-    const now = this.ctx.currentTime;
-    this.master.gain.setTargetAtTime(0, now, seconds / 4);
-    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
-    this.stopAll();
+  /**
+   * Fades all sound out over `seconds`. The caller pauses at the end, so a Play during the fade keeps its
+   * sound: `start` cancels the fade. Key sounds keep working.
+   */
+  fadeOut(seconds: number): void {
+    this.master.gain.setTargetAtTime(0, this.ctx.currentTime, seconds / 4);
   }
 
   /** Stops every layer and the music at once. */
@@ -806,10 +806,5 @@ export class SoundEngine {
       decay: space ? 0.03 : 0.012,
     });
     tone(this, out, at, { freq: space ? 95 : rand(140, 170), peak: 0.12 * volume, decay: 0.03 });
-  }
-
-  async close(): Promise<void> {
-    this.stopAll();
-    await this.ctx.close();
   }
 }

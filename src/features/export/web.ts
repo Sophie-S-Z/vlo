@@ -10,6 +10,7 @@ import {
   type Run,
   type RunStyle,
 } from './model';
+import { xmlText } from './xml';
 
 /*
  * Web copies (roadmap F52, plan Task J2). A poem keeps each line break and each indent when the writer
@@ -48,10 +49,6 @@ const DEFAULT_OPTIONS: Required<WebOptions> = {
 
 const NBSP = '\u00a0';
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 /** A link that a site keeps: web and mail addresses only. */
 function safeLink(url: string): string | null {
   return /^(https?:|mailto:)/i.test(url) ? url : null;
@@ -85,16 +82,16 @@ function wrap(html: string, style: RunStyle): string {
   if (style.italic) out = `<em>${out}</em>`;
   if (style.bold) out = `<strong>${out}</strong>`;
   const link = style.link ? safeLink(style.link) : null;
-  if (link) out = `<a href="${escapeHtml(link)}">${out}</a>`;
+  if (link) out = `<a href="${xmlText(link)}">${out}</a>`;
   return lead + out + trail;
 }
 
 function inline(runs: readonly Run[], spaces: Spaces | null): string {
   let out = '';
   for (const run of runs) {
-    if (run.type === 'text') out += wrap(escapeHtml(spaces ? spaces.keep(run.text) : run.text), run.style);
+    if (run.type === 'text') out += wrap(xmlText(spaces ? spaces.keep(run.text) : run.text), run.style);
     else if (run.type === 'break') out += spaces ? ' ' : '<br>';
-    else if (run.type === 'math') out += escapeHtml(`$${run.latex}$`);
+    else if (run.type === 'math') out += xmlText(`$${run.latex}$`);
     else out += `<sup>${String(run.number)}</sup>`;
   }
   return out;
@@ -116,14 +113,14 @@ function blockHtml(block: Block, options: Required<WebOptions>): string {
     case 'sceneBreak':
       return `<p${center}>*&#160;&#160;*&#160;&#160;*</p>`;
     case 'math':
-      return `<p${center}>${escapeHtml(`$$${block.latex}$$`)}</p>`;
+      return `<p${center}>${xmlText(`$$${block.latex}$$`)}</p>`;
     case 'image': {
       const src = options.image(block);
       // A site takes no image from the clipboard, so the copy names the image where it stands.
-      if (src === null) return `<p${center}><i>${escapeHtml(imageStandIn(block))}</i></p>`;
+      if (src === null) return `<p${center}><i>${xmlText(imageStandIn(block))}</i></p>`;
       const alt = block.decorative ? '' : block.alt;
-      const caption = block.caption === '' ? '' : `<figcaption>${escapeHtml(block.caption)}</figcaption>`;
-      return `<figure><img src="${src}" alt="${escapeHtml(alt)}" style="width:${String(block.width)}%">${caption}</figure>`;
+      const caption = block.caption === '' ? '' : `<figcaption>${xmlText(block.caption)}</figcaption>`;
+      return `<figure><img src="${src}" alt="${xmlText(alt)}" style="width:${String(block.width)}%">${caption}</figure>`;
     }
     case 'quote':
       return `<blockquote>${block.blocks.map((b) => blockHtml(b, options)).join('')}</blockquote>`;
@@ -145,7 +142,7 @@ function noteHtml(note: NoteContent): string {
   return note
     .map((run) => {
       const marks = new Set(run.marks?.map((m) => m.type));
-      return wrap(escapeHtml(run.text), {
+      return wrap(xmlText(run.text), {
         ...(marks.has('bold') ? { bold: true } : {}),
         ...(marks.has('italic') ? { italic: true } : {}),
         ...(marks.has('underline') ? { underline: true } : {}),
@@ -262,18 +259,18 @@ export function toHtmlFile(doc: ExportDoc): string {
       return image ? `data:${image.type};base64,${base64(image.data)}` : null;
     },
   });
-  const author = doc.author ? `\n<p>${escapeHtml(doc.author)}</p>` : '';
+  const author = doc.author ? `\n<p>${xmlText(doc.author)}</p>` : '';
   return `<!doctype html>
-<html lang="${escapeHtml(doc.language)}" dir="${textDirection(doc.language)}">
+<html lang="${xmlText(doc.language)}" dir="${textDirection(doc.language)}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(doc.title)}</title>
+<title>${xmlText(doc.title)}</title>
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
 <header>
-<h1>${escapeHtml(doc.title)}</h1>${author}
+<h1>${xmlText(doc.title)}</h1>${author}
 </header>
 ${body}
 </body>

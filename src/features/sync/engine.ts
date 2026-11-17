@@ -27,7 +27,15 @@ import {
 } from './blobs';
 import { clockKey, onLocalChange, remoteTransaction, SYNC_TABLES } from './clock';
 import { mergeRows, type Version } from './merge';
-import { dropped, readSpace, SYNC_META, updateSpace, withSyncLock, type SyncSpace } from './space';
+import {
+  ACCOUNT_SYNC_PAUSED,
+  dropped,
+  readSpace,
+  SYNC_META,
+  updateSpace,
+  withSyncLock,
+  type SyncSpace,
+} from './space';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
@@ -436,13 +444,17 @@ async function round(): Promise<SyncResult> {
     await updateSpace(space.spaceId, { syncedAt: clock.now(), blocked: result.blocked !== undefined });
     return result;
   } catch (error) {
-    // "Stop sync on all devices" on another device deleted the space, so sync ends here too.
+    // "Stop sync on all devices" on another device deleted the space, so sync ends here too, and a
+    // signed-in device does not make a new space by itself.
     if (error instanceof ShareError && error.kind === 'unavailable')
-      await db.appMeta
-        .where('key')
-        .equals(SYNC_META)
-        .filter((m) => (m.value as SyncSpace).spaceId === space.spaceId)
-        .delete();
+      await db.transaction('rw', db.appMeta, async () => {
+        const gone = await db.appMeta
+          .where('key')
+          .equals(SYNC_META)
+          .filter((m) => (m.value as SyncSpace).spaceId === space.spaceId)
+          .delete();
+        if (gone > 0) await db.appMeta.put({ key: ACCOUNT_SYNC_PAUSED, value: true });
+      });
     throw error;
   }
 }

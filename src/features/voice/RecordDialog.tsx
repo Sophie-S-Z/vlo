@@ -1,7 +1,8 @@
 import type { Editor } from '@tiptap/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Mic, Shuffle, Square } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useBlobSource } from '@/app/useBlobSource';
 import { addRecording } from '@/features/research/research';
 import { db, type ResearchFile } from '@/lib/db';
 import { Button } from '@/ui/button';
@@ -28,20 +29,14 @@ function Clip({
   busy: boolean;
   onText: (clip: ResearchFile) => void;
 }) {
-  const url = useMemo(() => (clip.data ? URL.createObjectURL(clip.data) : null), [clip.data]);
-  useEffect(
-    () => () => {
-      if (url) URL.revokeObjectURL(url);
-    },
-    [url],
-  );
+  const source = useBlobSource(clip.data);
   return (
     <li className="grid gap-2 rounded-md border border-rule p-3">
       <p className="text-sm [overflow-wrap:anywhere]">{clip.name}</p>
-      {url && (
+      {clip.data && (
         // A recording of the writer's own voice has no captions.
         // eslint-disable-next-line jsx-a11y/media-has-caption
-        <audio controls src={url} className="w-full" aria-label={`Play ${clip.name}`} />
+        <audio controls ref={source} className="w-full" aria-label={`Play ${clip.name}`} />
       )}
       <Button
         variant="outline"

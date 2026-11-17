@@ -1,4 +1,3 @@
-import { FileInput } from 'lucide-react';
 import { useId, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
 import type { ImportHandle } from '@/features/backup/ImportBackup';
 import { useNavigate } from 'react-router';
@@ -7,14 +6,7 @@ import { importTextKind, projectDef } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { countWords } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from '@/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import type { PickedFile } from './read';
@@ -53,11 +45,8 @@ function summary(nodes: readonly ImportNode[]) {
   return { texts, words, indented, script };
 }
 
-/**
- * With `trigger` false it draws no button, and the Library's Import menu opens the dialog through `ref`
- * (Phase 17 decision S4).
- */
-export function ImportWriting({ ref, trigger = true }: { ref?: Ref<ImportHandle>; trigger?: boolean }) {
+/** It draws no button: the Library's Import menu opens the dialog through `ref` (Phase 17 decision S4). */
+export function ImportWriting({ ref }: { ref?: Ref<ImportHandle> }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   useImperativeHandle(ref, () => ({
@@ -171,14 +160,6 @@ export function ImportWriting({ ref, trigger = true }: { ref?: Ref<ImportHandle>
   const losesRoles = counts?.script === true && textForm !== 'script';
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      {trigger && (
-        <DialogTrigger asChild>
-          <Button type="button" variant="ghost">
-            <FileInput aria-hidden="true" className="size-4" />
-            Import writing
-          </Button>
-        </DialogTrigger>
-      )}
       <DialogContent className="max-w-2xl">
         <DialogTitle>Import writing</DialogTitle>
         <DialogDescription>

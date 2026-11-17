@@ -1,3 +1,4 @@
+import { clock } from '@/lib/clock';
 import { vloFetch } from '@/lib/net';
 
 /*
@@ -63,7 +64,7 @@ let held: WpcomToken | null = null;
 let stopWaiting: (() => void) | null = null;
 
 /** The token of this tab, while it works. */
-export function heldToken(now = Date.now()): WpcomToken | null {
+export function heldToken(now = clock.now()): WpcomToken | null {
   return held && held.expiresAt > now + 60_000 ? held : null;
 }
 
@@ -109,7 +110,7 @@ export function connectWpcom(clientId: string): Promise<WpcomToken> {
         stop(new Error('WordPress.com did not give access. You can try again.'));
         return;
       }
-      const token = readFragment(event.data, state, Date.now());
+      const token = readFragment(event.data, state, clock.now());
       if (!token) {
         stop(new Error('WordPress.com sent an answer that Vlo cannot read.'));
         return;

@@ -29,12 +29,9 @@ const JOINER = /(?<=[\p{L}\p{N}\p{M}])[-\u2010\u2011/](?=[\p{L}\p{N}])/gu;
 // A time such as 10:30 is one word.
 const TIME = /(?<=\d):(?=\d)/gu;
 
-/**
- * The count rule (Ellipsus comparison, October 2026). Rule 2 counts "state-of-the-art", "and/or", a web
- * address and a time as one word each, as Word and Scrivener do. An em dash between two words still
- * splits them. A change of rule counts every item again (database version 14 and a backup import).
- */
-export const COUNT_RULE = 2;
+// The count rule (Ellipsus comparison, October 2026) counts "state-of-the-art", "and/or", a web address
+// and a time as one word each, as Word and Scrivener do. An em dash between two words still splits them.
+// A change of rule counts every item again (database version 14 and a backup import).
 
 /** The text with each address as one plain word and each joined word as one run of letters. */
 function joined(text: string): string {

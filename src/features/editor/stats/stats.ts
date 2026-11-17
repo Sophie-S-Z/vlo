@@ -1,4 +1,5 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { dayKey } from '@/features/progress/streaks';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { countLines, countWords } from '@/lib/wordcount';
@@ -89,9 +90,7 @@ export function minutesLabel(minutes: number): string {
 /* Words written today: the project total now, less the total at the first look today. */
 
 export function localDay(time = clock.now()): string {
-  const date = new Date(time);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return dayKey(time);
 }
 
 /**

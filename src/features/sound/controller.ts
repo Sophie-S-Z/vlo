@@ -304,7 +304,7 @@ export function setSleep(minutes: number): void {
   sleepTimer = setTimeout(() => {
     const steps = SLEEP_FADE_SECONDS * 4;
     let step = 0;
-    void engine?.fadeOut(SLEEP_FADE_SECONDS);
+    engine?.fadeOut(SLEEP_FADE_SECONDS);
     fadeTimer = setInterval(() => {
       step += 1;
       fade = Math.max(0, 1 - step / steps);

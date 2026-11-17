@@ -28,6 +28,15 @@ let worker: Worker | null = null;
 let nextId = 0;
 const waiting = new Map<number, { resolve: (text: string) => void; reject: (problem: Error) => void }>();
 
+/** Ends the worker and rejects each request that it has not answered. The next request gets a new worker. */
+function endWorker(made: Worker, problem: Error): void {
+  made.terminate();
+  if (worker !== made) return;
+  worker = null;
+  for (const job of waiting.values()) job.reject(problem);
+  waiting.clear();
+}
+
 function speechWorker(): Worker {
   if (worker) return worker;
   const made = new Worker(new URL('./transcribe.worker.ts', import.meta.url), { type: 'module' });
@@ -40,9 +49,11 @@ function speechWorker(): Worker {
       return;
     }
     job?.reject(new Error(reply.error));
-    // A worker whose model failed fails each later request, so the next request gets a new worker.
-    made.terminate();
-    if (worker === made) worker = null;
+    // A worker whose model failed fails each later request.
+    endWorker(made, new Error(reply.error));
+  };
+  made.onerror = () => {
+    endWorker(made, new Error('The speech worker stopped.'));
   };
   worker = made;
   return made;

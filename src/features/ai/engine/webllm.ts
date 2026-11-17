@@ -86,20 +86,15 @@ async function logDownloads<T>(work: () => Promise<T>): Promise<T> {
 let scoring = false;
 let generating = 0;
 
-/** Loads a model (downloading it the first time) and gives the library's engine. */
-async function engineFor(
-  modelId: string,
-  onProgress: (share: number, text: string) => void,
-): Promise<{ model: WebLlmModel; engine: MLCEngine }> {
-  const model = WEBLLM_MODELS.find((m) => m.id === modelId);
-  if (!model) throw new RangeError(`Vlo does not offer the model ${modelId}.`);
-  if (!(await hasWebGpu()))
-    throw new EngineError(
-      'no-gpu',
-      'This browser has no WebGPU, so it cannot run a model. Use a recent Chrome or Edge, or pick your own key or a server on your computer.',
-    );
-  if (loaded?.model !== modelId) {
-    const started = generation;
+/** One load at a time, so two callers never make two engines and leave one in GPU memory. */
+let loading: Promise<unknown> = Promise.resolve();
+
+/** Loads `modelId` into the one engine, after any load that runs now. */
+function switchTo(modelId: string, onProgress: (share: number, text: string) => void): Promise<MLCEngine> {
+  // A cancel or an unload while this load waits its turn also stops it.
+  const started = generation;
+  const turn = loading.then(async () => {
+    if (loaded?.model === modelId) return loaded.engine;
     const webllm = await import('@mlc-ai/web-llm');
     if (started !== generation) throw new EngineError('cancelled', LOAD_CANCELLED);
     const progress = (report: { progress: number; text: string }) => {
@@ -132,8 +127,26 @@ async function engineFor(
       }
       loaded = { model: modelId, engine };
     }
-  }
-  return { model, engine: loaded.engine };
+    return loaded.engine;
+  });
+  loading = turn.catch(() => undefined);
+  return turn;
+}
+
+/** Loads a model (downloading it the first time) and gives the library's engine. */
+async function engineFor(
+  modelId: string,
+  onProgress: (share: number, text: string) => void,
+): Promise<{ model: WebLlmModel; engine: MLCEngine }> {
+  const model = WEBLLM_MODELS.find((m) => m.id === modelId);
+  if (!model) throw new RangeError(`Vlo does not offer the model ${modelId}.`);
+  if (!(await hasWebGpu()))
+    throw new EngineError(
+      'no-gpu',
+      'This browser has no WebGPU, so it cannot run a model. Use a recent Chrome or Edge, or pick your own key or a server on your computer.',
+    );
+  const engine = loaded?.model === modelId ? loaded.engine : await switchTo(modelId, onProgress);
+  return { model, engine };
 }
 
 /** Loads a model (downloading it the first time) and gives its engine. */

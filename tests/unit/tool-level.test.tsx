@@ -74,6 +74,14 @@ describe('the first tool level', () => {
     expect(getWritingPrefs().toolLevel).toBe('simple');
   });
 
+  test('a new writer who changed another switch first still starts at Simple', () => {
+    localStorage.clear();
+    setWritingPrefs({ zoom: 120 });
+    startWithSimpleTools();
+    expect(getWritingPrefs().toolLevel).toBe('simple');
+    expect(getWritingPrefs().zoom).toBe(120);
+  });
+
   test('a level that the writer chose stays', () => {
     setWritingPrefs({ toolLevel: 'full' });
     startWithSimpleTools();

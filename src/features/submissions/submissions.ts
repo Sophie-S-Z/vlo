@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { dayKey } from '@/features/progress/streaks';
 import { clock } from '@/lib/clock';
 import { db, type Project, type Submission, type SubmissionStatus } from '@/lib/db';
 import { newId } from '@/lib/ids';
@@ -35,9 +36,7 @@ const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** The local calendar date as YYYY-MM-DD. */
 export function todayIso(now: number = clock.now()): string {
-  const date = new Date(now);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return dayKey(now);
 }
 
 /** The day number of a YYYY-MM-DD date, or null for a value that is not a real date. */
