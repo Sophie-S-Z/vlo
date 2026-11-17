@@ -151,6 +151,18 @@ export default defineConfig({
             },
           },
           {
+            // The photographs of the scenes and atmospheres are not in the install cache either. Each one is
+            // cached the first time it shows.
+            urlPattern: /\/assets\/(?:scene|atmo)-[^/]+\.webp$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-backdrops',
+              // File names carry a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 40 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
             urlPattern: /\/assets\/fonts\/[^/]+\.woff2?$/,
             handler: 'CacheFirst',
             options: {

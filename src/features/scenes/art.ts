@@ -1,20 +1,28 @@
 import type { SceneId } from './scenes';
 
 /*
- * The artwork for each scene, drawn with the canvas 2D API. The same code runs in the scene worker with an
- * OffscreenCanvas and on the main thread with a canvas element. Each scene paints its still parts once per
- * size into a cache, and each frame copies the cache and draws the moving parts.
+ * The motion over each scene's photograph, drawn with the canvas 2D API on a clear canvas. The photograph is
+ * the canvas's CSS background, so the canvas only adds light that moves: drops on the glass, sparks, stars,
+ * fireflies, snow and glints. The same code runs in the scene worker with an OffscreenCanvas and on the
+ * main thread with a canvas element. Each scene makes its soft dots (sprites) once per size, and each frame
+ * clears the canvas and copies sprites, which costs far less than a gradient per dot.
  */
 
 export type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 type Surface = HTMLCanvasElement | OffscreenCanvas;
 
 export interface SceneArt {
-  /** Paints the still parts for a canvas of this size in device pixels. */
+  /** Makes the sprites for a canvas of this size in device pixels. */
   resize: (width: number, height: number) => void;
-  /** Draws the scene at `t` seconds. */
+  /** Draws the motion at `t` seconds. */
   draw: (t: number) => void;
 }
+
+/** The time Vlo draws for a still scene: late enough that every moving part is spread out. */
+export const STILL_TIME = 12.5;
+
+/** Width over height of every scene photograph (src/assets/backdrops). */
+const PHOTO_ASPECT = 1.5;
 
 /** A small seeded random number source, so a scene looks the same on each visit. */
 export function seeded(seed: number): () => number {
@@ -49,497 +57,350 @@ function context(target: Surface): Ctx {
   return ctx;
 }
 
-function vertical(ctx: Ctx, height: number, stops: readonly [number, string][]): CanvasGradient {
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  for (const [at, color] of stops) gradient.addColorStop(at, color);
-  return gradient;
+/** A soft round dot of `color` ("r g b"), `r` pixels wide to its faint edge. */
+function dot(r: number, color: string, core = 0.18): Surface {
+  const size = Math.max(2, Math.ceil(r * 2));
+  const sprite = surface(size, size);
+  const s = context(sprite);
+  const g = s.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, `rgb(${color} / 1)`);
+  g.addColorStop(core, `rgb(${color} / 0.85)`);
+  g.addColorStop(0.45, `rgb(${color} / 0.22)`);
+  g.addColorStop(1, `rgb(${color} / 0)`);
+  s.fillStyle = g;
+  s.fillRect(0, 0, size, size);
+  return sprite;
 }
 
-function glow(ctx: Ctx, x: number, y: number, r: number, inner: string, outer = 'rgb(0 0 0 / 0)'): void {
-  const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-  gradient.addColorStop(0, inner);
-  gradient.addColorStop(1, outer);
-  ctx.fillStyle = gradient;
-  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+/** Draws a sprite centered on (x, y) at `alpha`, `scale` times its size. */
+function stamp(ctx: Ctx, sprite: Surface, x: number, y: number, alpha: number, scale = 1): void {
+  if (alpha <= 0.005) return;
+  const w = sprite.width * scale;
+  const h = sprite.height * scale;
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.drawImage(sprite, x - w / 2, y - h / 2, w, h);
 }
 
-/** A hill line across the canvas from summed sine waves. */
-function hills(
+/** Where a point of the photograph lands on the canvas: the photograph covers the canvas, centered. */
+interface Frame {
+  w: number;
+  h: number;
+  /** Pixels per photo-width unit, so sizes follow the photograph. */
+  scale: number;
+  x: (u: number) => number;
+  y: (v: number) => number;
+}
+
+function frameFor(w: number, h: number): Frame {
+  const photoW = Math.max(w, h * PHOTO_ASPECT);
+  const photoH = photoW / PHOTO_ASPECT;
+  const left = (w - photoW) / 2;
+  const top = (h - photoH) / 2;
+  return { w, h, scale: photoW, x: (u) => left + u * photoW, y: (v) => top + v * photoH };
+}
+
+/** A smooth pulse from 0 to 1 and back, `width` of each cycle long, once per `period` seconds. */
+function pulse(t: number, period: number, phase: number, width: number): number {
+  const at = (((t / period + phase) % 1) + 1) % 1;
+  if (at > width) return 0;
+  return Math.sin((at / width) * Math.PI) ** 2;
+}
+
+/**
+ * The plumbing every scene shares: the frame, sprites made once per size, and a clear canvas each draw.
+ * `sprites` makes the scene's sprites for a frame; `paint` draws one moment with them.
+ */
+function scene<S>(
   ctx: Ctx,
-  width: number,
-  height: number,
-  base: number,
-  amp: number,
-  color: string,
-  phase: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(0, height);
-  for (let x = 0; x <= width; x += Math.max(4, width / 120)) {
-    const y =
-      base +
-      Math.sin(x / (width * 0.18) + phase) * amp +
-      Math.sin(x / (width * 0.07) + phase * 2.3) * amp * 0.35;
-    ctx.lineTo(x, y);
-  }
-  ctx.lineTo(width, height);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
-}
-
-function pine(ctx: Ctx, x: number, ground: number, h: number, color: string): void {
-  const w = h * 0.42;
-  ctx.fillStyle = color;
-  for (let tier = 0; tier < 4; tier++) {
-    const top = ground - h + tier * h * 0.2;
-    const spread = w * (0.45 + tier * 0.18);
-    ctx.beginPath();
-    ctx.moveTo(x, top);
-    ctx.lineTo(x - spread, top + h * 0.34);
-    ctx.lineTo(x + spread, top + h * 0.34);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.fillRect(x - h * 0.03, ground - h * 0.12, h * 0.06, h * 0.12);
-}
-
-/** Shared frame plumbing: a cache for the still parts, and the size. */
-function base(ctx: Ctx, paintStill: (still: Ctx, w: number, h: number) => void) {
-  let cache: Surface | null = null;
-  const size = { w: 1, h: 1 };
+  sprites: (frame: Frame) => S,
+  paint: (frame: Frame, s: S, t: number) => void,
+): SceneArt {
+  let frame = frameFor(1, 1);
+  let made: S | null = null;
   return {
-    size,
-    resize: (width: number, height: number) => {
-      size.w = Math.max(1, Math.round(width));
-      size.h = Math.max(1, Math.round(height));
-      cache = surface(size.w, size.h);
-      paintStill(context(cache), size.w, size.h);
+    resize(width, height) {
+      frame = frameFor(Math.max(1, Math.round(width)), Math.max(1, Math.round(height)));
+      made = sprites(frame);
     },
-    still: () => {
-      if (cache) ctx.drawImage(cache, 0, 0);
+    draw(t) {
+      ctx.clearRect(0, 0, frame.w, frame.h);
+      if (!made) return;
+      ctx.save();
+      paint(frame, made, t);
+      ctx.restore();
     },
   };
 }
 
+/** Drops of rain that cling to the glass, then run down it, now and then. */
 function rain(ctx: Ctx): SceneArt {
   const rand = seeded(11);
-  const scene = base(ctx, (s, w, h) => {
-    s.fillStyle = vertical(s, h, [
-      [0, '#1b2333'],
-      [0.55, '#2c3a4f'],
-      [1, '#3b4a5e'],
-    ]);
-    s.fillRect(0, 0, w, h);
-    const lights = seeded(5);
-    const colors = ['255 190 110', '255 214 150', '120 200 210', '240 140 120', '200 210 255'];
-    for (let i = 0; i < 46; i++) {
-      const x = lights() * w;
-      const y = h * (0.35 + lights() * 0.6);
-      const r = (10 + lights() * 38) * (h / 900);
-      const color = colors[Math.floor(lights() * colors.length)] ?? colors[0];
-      glow(s, x, y, r, `rgb(${color ?? ''} / ${String(0.1 + lights() * 0.22)})`);
-    }
-    // The window frame: a cross of dark bars.
-    s.fillStyle = 'rgb(10 13 20 / 0.85)';
-    const bar = Math.max(6, w * 0.012);
-    s.fillRect(w * 0.5 - bar / 2, 0, bar, h);
-    s.fillRect(0, h * 0.42 - bar / 2, w, bar);
-  });
-  const drops = Array.from({ length: 150 }, () => ({
-    x: rand(),
-    y: rand(),
-    len: 0.5 + rand(),
-    v: 0.8 + rand() * 0.6,
+  const drops = Array.from({ length: 18 }, () => ({
+    u: 0.02 + rand() * 0.96,
+    v: rand() * 0.8,
+    size: 0.7 + rand() * 0.6,
+    period: 7 + rand() * 9,
+    phase: rand(),
+    run: 0.12 + rand() * 0.22,
   }));
-  const beads = Array.from({ length: 34 }, () => ({
-    x: rand(),
-    y: rand(),
-    r: 0.6 + rand(),
-    v: 0.004 + rand() * 0.02,
-  }));
-  return {
-    resize: scene.resize,
-    draw(t) {
-      const { w, h } = scene.size;
-      const k = h / 900;
-      scene.still();
-      ctx.strokeStyle = 'rgb(201 214 232 / 0.28)';
-      ctx.lineWidth = Math.max(1, k);
-      ctx.beginPath();
+  return scene(
+    ctx,
+    (f) => {
+      const r = Math.max(2, f.scale * 0.0028);
+      const sprite = surface(Math.ceil(r * 2.4), Math.ceil(r * 2.8));
+      const s = context(sprite);
+      const cx = sprite.width / 2;
+      const cy = sprite.height * 0.55;
+      // A drop bends the light behind it: a faint dark body, a thin bright edge below, and a glint above.
+      s.fillStyle = 'rgb(10 8 6 / 0.22)';
+      s.beginPath();
+      s.ellipse(cx, cy, r * 0.85, r, 0, 0, Math.PI * 2);
+      s.fill();
+      s.strokeStyle = 'rgb(255 222 180 / 0.6)';
+      s.lineWidth = Math.max(1, r * 0.18);
+      s.beginPath();
+      s.ellipse(cx, cy, r * 0.78, r * 0.92, 0, Math.PI * 0.15, Math.PI * 0.85);
+      s.stroke();
+      s.fillStyle = 'rgb(255 255 255 / 0.8)';
+      s.beginPath();
+      s.ellipse(cx - r * 0.3, cy - r * 0.42, r * 0.14, r * 0.2, -0.5, 0, Math.PI * 2);
+      s.fill();
+      return { sprite, r };
+    },
+    (f, { sprite, r }, t) => {
       for (const d of drops) {
-        const y = ((d.y + t * 0.9 * d.v) % 1.1) * h - 0.05 * h;
-        const x = (d.x * w + y * 0.08) % w;
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + 3 * k, y + 26 * d.len * k);
-      }
-      ctx.stroke();
-      for (const b of beads) {
-        const y = ((b.y + t * b.v) % 1) * h;
-        const r = (2 + b.r * 3) * k;
-        ctx.fillStyle = 'rgb(220 230 245 / 0.35)';
-        ctx.beginPath();
-        ctx.ellipse(b.x * w, y, r * 0.8, r, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgb(255 255 255 / 0.5)';
-        ctx.fillRect(b.x * w - r * 0.3, y - r * 0.5, Math.max(1, r * 0.3), Math.max(1, r * 0.3));
+        // Each cycle the drop rests, then runs down the glass, then the next drop takes its place.
+        const at = (((t / d.period + d.phase) % 1) + 1) % 1;
+        const moving = Math.max(0, (at - 0.55) / 0.45);
+        const travel = d.run * moving ** 1.6;
+        const x = f.x(d.u) + Math.sin(travel * 40 + d.phase * 9) * r * 0.5;
+        const y = f.y(d.v + travel);
+        const fade = Math.min(1, at / 0.08) * Math.min(1, (1 - at) / 0.05);
+        // A short wet streak stays behind a running drop and fades toward its top.
+        const streak = Math.min(y - f.y(d.v), r * 10);
+        if (streak > r) {
+          const wet = ctx.createLinearGradient(x, y - streak, x, y);
+          wet.addColorStop(0, 'rgb(255 228 196 / 0)');
+          wet.addColorStop(1, 'rgb(255 228 196 / 0.28)');
+          ctx.globalAlpha = fade;
+          ctx.fillStyle = wet;
+          ctx.fillRect(x - r * 0.22, y - streak, r * 0.44, streak);
+        }
+        stamp(ctx, sprite, x, y, fade, d.size);
       }
     },
-  };
+  );
 }
 
+/** Sparks that rise from the fire and fade, and the fire's light, which flickers. */
 function fireplace(ctx: Ctx): SceneArt {
   const rand = seeded(23);
-  /** The top of the hearth. The fire burns along the whole width, so it shows on both sides of the page. */
-  const hearth = 0.7;
-  const scene = base(ctx, (s, w, h) => {
-    s.fillStyle = vertical(s, h, [
-      [0, '#1a1210'],
-      [1, '#2a1a14'],
-    ]);
-    s.fillRect(0, 0, w, h);
-    // Bricks above the hearth.
-    const bw = Math.max(24, h / 16);
-    const bh = bw * 0.38;
-    s.fillStyle = 'rgb(90 45 30 / 0.22)';
-    for (let row = 0; row * bh < h * (hearth - 0.08); row++) {
-      const y = h * 0.04 + row * bh;
-      for (let x = (row % 2) * -bw * 0.5; x < w; x += bw) s.fillRect(x + 2, y + 2, bw - 4, bh - 4);
-    }
-    // The mantel and the dark hearth below it.
-    s.fillStyle = '#3a241a';
-    s.fillRect(0, h * (hearth - 0.05), w, h * 0.03);
-    s.fillStyle = '#0d0807';
-    s.fillRect(0, h * hearth, w, h * (1 - hearth));
-    // Logs along the hearth floor.
-    s.fillStyle = '#2b1a12';
-    const lw = h * 0.22;
-    for (let x = -lw * 0.3; x < w; x += lw * 0.9) {
-      s.beginPath();
-      s.ellipse(x + lw / 2, h * 0.965, lw / 2, h * 0.02, -0.05, 0, Math.PI * 2);
-      s.fill();
-    }
-  });
-  const embers = Array.from({ length: 70 }, () => ({
-    x: rand(),
-    p: rand(),
-    v: 0.05 + rand() * 0.08,
-    s: rand(),
+  const sparks = Array.from({ length: 70 }, () => ({
+    u: rand(),
+    speed: 0.05 + rand() * 0.09,
+    phase: rand(),
+    sway: 0.01 + rand() * 0.03,
+    size: 0.4 + rand() * 0.9,
+    warm: rand(),
   }));
-  const tongues = Array.from({ length: 40 }, () => ({
-    at: rand(),
-    phase: rand() * 6,
-    size: 0.6 + rand() * 0.5,
-  }));
-  return {
-    resize: scene.resize,
-    draw(t) {
-      const { w, h } = scene.size;
-      scene.still();
-      const floor = h * 0.95;
-      const flicker = 0.85 + Math.sin(t * 7.3) * 0.06 + Math.sin(t * 13.1) * 0.04;
-      ctx.globalCompositeOperation = 'lighter';
-      const warm = ctx.createLinearGradient(0, h, 0, h * 0.45);
-      warm.addColorStop(0, `rgb(255 140 60 / ${String(0.4 * flicker)})`);
-      warm.addColorStop(1, 'rgb(255 140 60 / 0)');
-      ctx.fillStyle = warm;
-      ctx.fillRect(0, h * 0.45, w, h * 0.55);
-      // About one flame for every tenth of the height across the width.
-      const count = Math.min(tongues.length, Math.ceil(w / (h * 0.1)));
-      for (let i = 0; i < count; i++) {
-        const tongue = tongues[i];
-        if (!tongue) continue;
-        const x = ((i + 0.5 + (tongue.at - 0.5) * 0.6) / count) * w;
-        const height = h * 0.2 * tongue.size * (0.75 + 0.25 * Math.sin(t * 5 + tongue.phase));
-        const half = h * 0.045;
-        const sway = Math.sin(t * 3.1 + tongue.phase) * half * 0.6;
-        const gradient = ctx.createLinearGradient(x, floor, x, floor - height);
-        gradient.addColorStop(0, 'rgb(255 220 120 / 0.85)');
-        gradient.addColorStop(0.45, 'rgb(255 130 50 / 0.65)');
-        gradient.addColorStop(1, 'rgb(200 50 20 / 0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.moveTo(x - half, floor);
-        ctx.quadraticCurveTo(x - half * 0.8 + sway, floor - height * 0.6, x + sway * 1.6, floor - height);
-        ctx.quadraticCurveTo(x + half * 0.8 + sway, floor - height * 0.6, x + half, floor);
-        ctx.closePath();
-        ctx.fill();
-      }
-      for (const e of embers) {
-        const life = (e.p + t * e.v) % 1;
-        const x = e.x * w + Math.sin(t * 1.3 + e.s * 9) * h * 0.03 * life;
-        const y = floor - life * h * 0.6;
-        const r = Math.max(1, (1 + e.s * 2) * (h / 900));
-        ctx.fillStyle = `rgb(255 ${String(150 + Math.round(e.s * 80))} 80 / ${String((1 - life) * 0.9)})`;
-        ctx.fillRect(x, y, r, r);
-      }
-      ctx.globalCompositeOperation = 'source-over';
+  return scene(
+    ctx,
+    (f) => {
+      const r = f.scale * 0.004;
+      const glow = surface(Math.max(2, Math.round(f.w / 4)), Math.max(2, Math.round(f.h / 4)));
+      const g = context(glow);
+      const gradient = g.createRadialGradient(
+        glow.width * 0.5,
+        glow.height * 1.05,
+        0,
+        glow.width * 0.5,
+        glow.height * 1.05,
+        glow.height * 1.1,
+      );
+      gradient.addColorStop(0, 'rgb(255 140 40 / 0.5)');
+      gradient.addColorStop(1, 'rgb(255 120 30 / 0)');
+      g.fillStyle = gradient;
+      g.fillRect(0, 0, glow.width, glow.height);
+      return { hot: dot(r, '255 214 140', 0.25), warm: dot(r, '255 150 60', 0.2), glow };
     },
-  };
+    (f, { hot, warm, glow }, t) => {
+      const flicker =
+        0.55 + 0.18 * Math.sin(t * 7.1) + 0.12 * Math.sin(t * 13.3 + 1) + 0.1 * Math.sin(t * 3.7);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.22 * flicker;
+      ctx.drawImage(glow, 0, 0, f.w, f.h);
+      for (const s of sparks) {
+        const life = (((t * s.speed + s.phase) % 1) + 1) % 1;
+        const y = f.h * (1.02 - life * 1.05);
+        const x =
+          f.x(s.u) + Math.sin(t * 1.3 + s.phase * 20) * f.scale * s.sway * life - life * f.scale * 0.04;
+        const twinkle = 0.65 + 0.35 * Math.sin(t * 9 + s.phase * 50);
+        const alpha = (1 - life) ** 1.4 * twinkle;
+        stamp(ctx, s.warm > 0.5 ? hot : warm, x, y, alpha, s.size * (1 - life * 0.5));
+      }
+    },
+  );
 }
 
+/** A few stars that twinkle over the photograph's own, and now and then a shooting star. */
 function night(ctx: Ctx): SceneArt {
   const rand = seeded(37);
-  const scene = base(ctx, (s, w, h) => {
-    s.fillStyle = vertical(s, h, [
-      [0, '#070b1a'],
-      [0.6, '#111a3a'],
-      [1, '#24305a'],
-    ]);
-    s.fillRect(0, 0, w, h);
-    // A faint band of distant stars.
-    const dust = seeded(3);
-    for (let i = 0; i < 900; i++) {
-      const u = dust();
-      const x = u * w;
-      const y = h * (0.7 - u * 0.55) + (dust() - 0.5) * h * 0.18;
-      s.fillStyle = `rgb(220 225 255 / ${String(0.05 + dust() * 0.12)})`;
-      s.fillRect(x, y, 1, 1);
-    }
-    // The page covers the middle, so the moon sits near the edge.
-    const mx = w * 0.88;
-    const my = h * 0.16;
-    const mr = Math.min(w, h) * 0.045;
-    glow(s, mx, my, mr * 5, 'rgb(242 236 216 / 0.18)');
-    s.fillStyle = '#f2ecd8';
-    s.beginPath();
-    s.arc(mx, my, mr, 0, Math.PI * 2);
-    s.fill();
-    hills(s, w, h, h * 0.8, h * 0.05, '#0b1022', 1.2);
-    hills(s, w, h, h * 0.88, h * 0.04, '#05070f', 3.1);
-  });
-  const stars = Array.from({ length: 190 }, () => ({
-    x: rand(),
-    y: rand() * 0.75,
-    r: rand(),
-    speed: 0.5 + rand() * 2,
-    phase: rand() * 6,
+  const stars = Array.from({ length: 44 }, () => ({
+    u: rand(),
+    v: rand() * 0.62,
+    size: 0.4 + rand() * 0.8,
+    speed: 0.6 + rand() * 1.8,
+    phase: rand() * 10,
+    blue: rand() > 0.6,
   }));
-  return {
-    resize: scene.resize,
-    draw(t) {
-      const { w, h } = scene.size;
-      const k = Math.max(1, h / 900);
-      scene.still();
-      for (const star of stars) {
-        const alpha = 0.45 + 0.4 * Math.sin(t * star.speed + star.phase);
-        ctx.fillStyle = `rgb(235 238 255 / ${String(Math.max(0.08, alpha))})`;
-        const r = (0.8 + star.r * 1.4) * k;
-        ctx.fillRect(star.x * w, star.y * h, r, r);
+  return scene(
+    ctx,
+    (f) => {
+      const r = f.scale * 0.003;
+      return { white: dot(r, '255 250 240', 0.12), blue: dot(r, '205 220 255', 0.12) };
+    },
+    (f, { white, blue }, t) => {
+      ctx.globalCompositeOperation = 'lighter';
+      for (const s of stars) {
+        const shine = (0.5 + 0.5 * Math.sin(t * s.speed + s.phase)) ** 3;
+        stamp(ctx, s.blue ? blue : white, f.x(s.u), f.y(s.v), 0.15 + 0.75 * shine, s.size);
       }
-      // A shooting star crosses for one second in every eight.
-      const cycle = t % 8;
-      if (cycle < 1) {
-        const n = Math.floor(t / 8);
-        const pick = seeded(n + 99);
-        const sx = w * (0.15 + pick() * 0.5);
-        const sy = h * (0.08 + pick() * 0.25);
-        const x = sx + cycle * w * 0.25;
-        const y = sy + cycle * h * 0.12;
-        const gradient = ctx.createLinearGradient(x, y, x - w * 0.08, y - h * 0.04);
-        gradient.addColorStop(0, `rgb(255 255 255 / ${String(0.9 * (1 - cycle))})`);
-        gradient.addColorStop(1, 'rgb(255 255 255 / 0)');
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 1.5 * k;
+      // A shooting star crosses the upper sky once every 11 seconds, for under a second.
+      const at = (((t / 11 + 0.3) % 1) + 1) % 1;
+      if (at < 0.07) {
+        const cycle = Math.floor(t / 11 + 0.3);
+        const from = seeded(cycle + 101);
+        const u0 = 0.1 + from() * 0.6;
+        const v0 = 0.05 + from() * 0.2;
+        const k = at / 0.07;
+        const x = f.x(u0 + k * 0.22);
+        const y = f.y(v0 + k * 0.09);
+        const tail = f.scale * 0.07;
+        const tx = x - tail * 0.92;
+        const ty = y - tail * 0.37;
+        const line = ctx.createLinearGradient(tx, ty, x, y);
+        line.addColorStop(0, 'rgb(255 255 255 / 0)');
+        line.addColorStop(1, `rgb(255 255 255 / ${String(0.85 * Math.sin(k * Math.PI))})`);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = line;
+        ctx.lineWidth = Math.max(1, f.scale * 0.0011);
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - w * 0.08, y - h * 0.04);
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(x, y);
         ctx.stroke();
       }
     },
-  };
+  );
 }
 
+/** Fireflies that wander and blink, and low mist that drifts across the wood. */
 function forest(ctx: Ctx): SceneArt {
   const rand = seeded(53);
-  const scene = base(ctx, (s, w, h) => {
-    s.fillStyle = vertical(s, h, [
-      [0, '#2f5444'],
-      [0.55, '#1d3a2f'],
-      [1, '#0f1f1a'],
-    ]);
-    s.fillRect(0, 0, w, h);
-    const trees = seeded(8);
-    const layers: [number, string, number][] = [
-      [0.62, '#24453a', 0.32],
-      [0.74, '#173229', 0.42],
-      [0.9, '#0c1a15', 0.55],
-    ];
-    for (const [ground, color, size] of layers) {
-      const count = Math.ceil(w / (h * size * 0.32));
-      for (let i = 0; i <= count; i++) {
-        const x = (i + trees() * 0.6) * (w / count);
-        pine(s, x, h * ground + trees() * h * 0.03, h * size * (0.7 + trees() * 0.4), color);
-      }
-      s.fillStyle = color;
-      s.fillRect(0, h * ground, w, h * (1 - ground));
-    }
-  });
-  const flies = Array.from({ length: 36 }, () => ({
-    x: rand(),
-    y: 0.45 + rand() * 0.5,
-    a: rand() * 6,
-    b: rand() * 6,
-    s: 0.2 + rand() * 0.4,
+  const flies = Array.from({ length: 30 }, () => ({
+    u: rand(),
+    v: 0.45 + rand() * 0.5,
+    reach: 0.02 + rand() * 0.05,
+    speed: 0.08 + rand() * 0.14,
+    phase: rand() * 10,
+    period: 2.8 + rand() * 4,
+    size: 0.6 + rand() * 0.8,
   }));
-  return {
-    resize: scene.resize,
-    draw(t) {
-      const { w, h } = scene.size;
-      scene.still();
-      // Mist drifts slowly across the middle trees.
-      const mx = ((t * 0.01) % 1.4) * w * 1.2 - w * 0.4;
-      ctx.fillStyle = 'rgb(190 220 205 / 0.06)';
-      ctx.beginPath();
-      ctx.ellipse(mx + w * 0.3, h * 0.7, w * 0.45, h * 0.06, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalCompositeOperation = 'lighter';
-      for (const f of flies) {
-        const x = (f.x + Math.sin(t * f.s + f.a) * 0.03) * w;
-        const y = (f.y + Math.cos(t * f.s * 0.8 + f.b) * 0.025) * h;
-        const pulse = 0.5 + 0.5 * Math.sin(t * 2 * f.s + f.a * 3);
-        glow(ctx, x, y, (6 + pulse * 6) * (h / 900), `rgb(220 255 140 / ${String(0.15 + pulse * 0.55)})`);
-      }
-      ctx.globalCompositeOperation = 'source-over';
+  return scene(
+    ctx,
+    (f) => {
+      const mist = surface(Math.max(2, Math.round(f.w / 3)), Math.max(2, Math.round(f.h / 6)));
+      const m = context(mist);
+      const g = m.createRadialGradient(
+        mist.width / 2,
+        mist.height / 2,
+        0,
+        mist.width / 2,
+        mist.height / 2,
+        mist.width / 2,
+      );
+      g.addColorStop(0, 'rgb(214 222 210 / 0.5)');
+      g.addColorStop(1, 'rgb(214 222 210 / 0)');
+      m.setTransform(1, 0, 0, 0.3, 0, mist.height * 0.35);
+      m.fillStyle = g;
+      m.fillRect(0, 0, mist.width, mist.width);
+      return { fly: dot(f.scale * 0.006, '226 240 140', 0.1), mist };
     },
-  };
+    (f, { fly, mist }, t) => {
+      for (let i = 0; i < 3; i++) {
+        const drift = ((((t * 0.012 + i / 3) % 1) + 1) % 1) * 1.6 - 0.3;
+        ctx.globalAlpha = 0.16;
+        ctx.drawImage(mist, f.w * drift - f.w * 0.5, f.y(0.62 + i * 0.1) - f.h * 0.08, f.w, f.h * 0.16);
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      for (const fl of flies) {
+        const a = t * fl.speed + fl.phase;
+        const x = f.x(fl.u + Math.sin(a) * fl.reach + Math.sin(a * 2.3) * fl.reach * 0.4);
+        const y = f.y(fl.v + Math.cos(a * 0.8) * fl.reach * 0.6);
+        stamp(ctx, fly, x, y, pulse(t, fl.period, fl.phase, 0.42), fl.size);
+      }
+    },
+  );
 }
 
+/** Snow in three depths: small far flakes, and large soft ones close to the glass. */
 function snow(ctx: Ctx): SceneArt {
   const rand = seeded(71);
-  const cabin = { x: 0.87, ground: 0.78 };
-  const scene = base(ctx, (s, w, h) => {
-    s.fillStyle = vertical(s, h, [
-      [0, '#1c2a44'],
-      [0.55, '#3a4f72'],
-      [0.8, '#8aa0bf'],
-      [1, '#a9b9d0'],
-    ]);
-    s.fillRect(0, 0, w, h);
-    hills(s, w, h, h * 0.72, h * 0.04, '#c5d1e2', 0.4);
-    const trees = seeded(4);
-    for (let i = 0; i < 9; i++) {
-      const x = trees() * w;
-      if (Math.abs(x - cabin.x * w) < h * 0.16) continue;
-      pine(s, x, h * (0.74 + trees() * 0.05), h * (0.16 + trees() * 0.1), '#1d2a3d');
-    }
-    hills(s, w, h, h * cabin.ground, h * 0.025, '#dfe7f2', 2.2);
-    // The cabin.
-    const cw = h * 0.16;
-    const cx = cabin.x * w;
-    const cy = h * cabin.ground;
-    s.fillStyle = '#141a26';
-    s.fillRect(cx - cw / 2, cy - cw * 0.55, cw, cw * 0.58);
-    s.fillRect(cx + cw * 0.22, cy - cw * 0.95, cw * 0.1, cw * 0.3);
-    s.fillStyle = '#eef3f9';
-    s.beginPath();
-    s.moveTo(cx - cw * 0.62, cy - cw * 0.5);
-    s.lineTo(cx, cy - cw * 0.92);
-    s.lineTo(cx + cw * 0.62, cy - cw * 0.5);
-    s.closePath();
-    s.fill();
-  });
-  const flakes = Array.from({ length: 170 }, () => ({
-    x: rand(),
-    y: rand(),
-    r: rand(),
-    v: 0.03 + rand() * 0.05,
-    p: rand() * 6,
+  const layers = [
+    { count: 90, size: 0.0024, fall: 0.035, sway: 0.006, alpha: 0.75 },
+    { count: 46, size: 0.0045, fall: 0.06, sway: 0.012, alpha: 0.7 },
+    { count: 14, size: 0.011, fall: 0.11, sway: 0.02, alpha: 0.4 },
+  ].map((layer) => ({
+    ...layer,
+    flakes: Array.from({ length: layer.count }, () => ({
+      x: rand(),
+      y: rand(),
+      phase: rand() * 10,
+      speed: 0.8 + rand() * 0.4,
+    })),
   }));
-  return {
-    resize: scene.resize,
-    draw(t) {
-      const { w, h } = scene.size;
-      const k = h / 900;
-      scene.still();
-      const cw = h * 0.16;
-      const wx = cabin.x * w - cw * 0.12;
-      const wy = h * cabin.ground - cw * 0.3;
-      const warm = 0.85 + Math.sin(t * 2.1) * 0.08 + Math.sin(t * 5.3) * 0.04;
-      glow(ctx, wx, wy, cw * 0.7 * warm, 'rgb(255 207 122 / 0.35)');
-      ctx.fillStyle = '#ffcf7a';
-      ctx.fillRect(wx - cw * 0.08, wy - cw * 0.08, cw * 0.16, cw * 0.14);
-      ctx.fillStyle = 'rgb(255 255 255 / 0.85)';
-      for (const f of flakes) {
-        const y = ((f.y + t * f.v) % 1.05) * h - 0.02 * h;
-        const x = (f.x * w + Math.sin(t * 0.8 + f.p) * 18 * k + w) % w;
-        const r = (1 + f.r * 2.5) * k;
-        ctx.beginPath();
-        ctx.arc(x, y, Math.max(0.8, r), 0, Math.PI * 2);
-        ctx.fill();
-      }
+  return scene(
+    ctx,
+    (f) => layers.map((layer, i) => dot(f.scale * layer.size, '250 252 255', i === 2 ? 0.05 : 0.35)),
+    (f, sprites, t) => {
+      layers.forEach((layer, i) => {
+        const sprite = sprites[i];
+        if (!sprite) return;
+        for (const s of layer.flakes) {
+          const y = (((s.y + t * layer.fall * s.speed) % 1.1) + 1.1) % 1.1;
+          const x = s.x * f.w + Math.sin(t * 0.6 + s.phase) * f.scale * layer.sway;
+          stamp(ctx, sprite, x, (y - 0.05) * f.h, layer.alpha);
+        }
+      });
     },
-  };
+  );
 }
 
-/** The page covers the middle of the scene, so the sun sets near the right edge. */
-const SUN_X = 0.86;
-
+/** Light that glints on the waves and the wet sand. */
 function ocean(ctx: Ctx): SceneArt {
-  const rand = seeded(97);
-  const horizon = 0.6;
-  const scene = base(ctx, (s, w, h) => {
-    s.fillStyle = vertical(s, h * horizon, [
-      [0, '#2b2350'],
-      [0.55, '#6b3f6e'],
-      [0.88, '#e0866a'],
-      [1, '#f6c27a'],
-    ]);
-    s.fillRect(0, 0, w, h * horizon);
-    const sx = w * SUN_X;
-    const sy = h * horizon;
-    const sr = Math.min(w, h) * 0.07;
-    glow(s, sx, sy, sr * 4, 'rgb(255 200 140 / 0.35)');
-    s.fillStyle = '#ffd9a0';
-    s.beginPath();
-    s.arc(sx, sy, sr, Math.PI, 0);
-    s.fill();
-    const sea = s.createLinearGradient(0, h * horizon, 0, h);
-    sea.addColorStop(0, '#5a3d64');
-    sea.addColorStop(0.4, '#3a2c55');
-    sea.addColorStop(1, '#1a1833');
-    s.fillStyle = sea;
-    s.fillRect(0, h * horizon, w, h * (1 - horizon));
+  const rand = seeded(89);
+  const glints = Array.from({ length: 70 }, () => {
+    const v = 0.58 + rand() * 0.36;
+    return {
+      // The water and the wet sand narrow toward the dark shore on the right.
+      u: rand() * (0.55 + (v - 0.58) * 0.4),
+      v,
+      period: 1.6 + rand() * 2.4,
+      phase: rand(),
+      size: 0.5 + rand() * 0.9,
+    };
   });
-  const glints = Array.from({ length: 70 }, () => ({
-    y: rand(),
-    x: rand() - 0.5,
-    len: 0.3 + rand(),
-    p: rand() * 6,
-  }));
-  return {
-    resize: scene.resize,
-    draw(t) {
-      const { w, h } = scene.size;
-      const k = h / 900;
-      scene.still();
-      const top = h * horizon;
-      // Slow wave lines across the sea.
-      ctx.strokeStyle = 'rgb(255 220 200 / 0.08)';
-      ctx.lineWidth = Math.max(1, k);
-      for (let i = 1; i < 9; i++) {
-        const y = top + (h - top) * (i / 9) ** 1.4;
-        ctx.beginPath();
-        for (let x = 0; x <= w; x += Math.max(8, w / 80)) {
-          const yy = y + Math.sin(x / (w * 0.08) + t * 0.6 + i) * 2.5 * k * i * 0.4;
-          if (x === 0) ctx.moveTo(x, yy);
-          else ctx.lineTo(x, yy);
-        }
-        ctx.stroke();
-      }
-      // The sun's path on the water.
+  return scene(
+    ctx,
+    (f) => ({ glint: dot(f.scale * 0.004, '255 236 200', 0.2) }),
+    (f, { glint }, t) => {
+      ctx.globalCompositeOperation = 'lighter';
       for (const g of glints) {
-        const depth = g.y ** 1.3;
-        const y = top + 4 * k + depth * (h - top) * 0.9;
-        const spread = (0.04 + depth * 0.16) * w;
-        const x = w * SUN_X + g.x * spread;
-        const alpha = 0.25 + 0.35 * Math.sin(t * 1.7 + g.p);
-        if (alpha <= 0) continue;
-        ctx.fillStyle = `rgb(255 214 160 / ${String(alpha * (1 - depth * 0.6))})`;
-        ctx.fillRect(x, y, g.len * 26 * k * (0.4 + depth), Math.max(1, 1.5 * k));
+        const x = f.x(g.u + Math.sin(t * 0.4 + g.phase * 6) * 0.004);
+        stamp(ctx, glint, x, f.y(g.v), 0.85 * pulse(t, g.period, g.phase, 0.3), g.size);
       }
     },
-  };
+  );
 }
 
 const MAKERS: Readonly<Record<SceneId, (ctx: Ctx) => SceneArt>> = {
@@ -554,6 +415,3 @@ const MAKERS: Readonly<Record<SceneId, (ctx: Ctx) => SceneArt>> = {
 export function createArt(id: SceneId, ctx: Ctx): SceneArt {
   return MAKERS[id](ctx);
 }
-
-/** The time Vlo draws for a still scene: late enough that every moving part is spread out. */
-export const STILL_TIME = 12.5;

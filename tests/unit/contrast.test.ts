@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { RESOLVED_THEMES } from '@/app/preferences';
 import { THEMES } from '@/app/themes';
@@ -117,13 +117,22 @@ test('dimmed lines in focus mode still meet WCAG AA in every theme', () => {
   }
 });
 
-test('each atmosphere has a scene and a color scheme that matches its tone, and plain themes have no scene', () => {
+test('each atmosphere has a photograph, a picture for Settings and a color scheme that matches its tone', () => {
   const atmospheres = readFileSync('src/styles/atmospheres.css', 'utf8');
   for (const theme of RESOLVED_THEMES) {
     const info = THEMES[theme];
-    const scene = new RegExp(`\\[data-theme='${theme}'\\] \\{[^}]*--atmosphere:`).test(atmospheres);
-    expect(scene, theme).toBe(info.atmosphere);
-    const block = new RegExp(`\\[data-theme='${theme}'\\][^{]*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
-    expect(block, theme).toContain(`color-scheme: ${info.tone};`);
+    const block = new RegExp(`\\[data-theme='${theme}'\\] \\{([^}]*)\\}`).exec(atmospheres)?.[1] ?? '';
+    for (const layer of ['photo', 'thumb']) {
+      const url = new RegExp(
+        `--atmosphere-${layer}: url\\('\\.\\./(assets/backdrops/[\\w-]+\\.webp)'\\)`,
+      ).exec(block)?.[1];
+      expect(url !== undefined, `${theme} ${layer}`).toBe(info.atmosphere);
+      if (url) expect(existsSync(`src/${url}`), url).toBe(true);
+    }
+    // The veil keeps text readable: most of the middle of the screen is the theme color.
+    if (info.atmosphere)
+      expect(Number(/--veil-mid: (\d+)%/.exec(block)?.[1]), theme).toBeGreaterThanOrEqual(55);
+    const colors = new RegExp(`\\[data-theme='${theme}'\\][^{]*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+    expect(colors, theme).toContain(`color-scheme: ${info.tone};`);
   }
 });

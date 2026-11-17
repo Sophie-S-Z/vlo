@@ -153,8 +153,8 @@ export function SettingsPage() {
             })}
             <h3 className="mt-5 font-display text-lg font-semibold">Atmospheres</h3>
             <p className="-mt-1 mb-1 text-sm text-muted">
-              A scene around your work, with its own colors. Its small lights move only while you rest, and
-              stay still in Calm mode.
+              A photograph behind your work, with colors to match. It drifts slowly while you rest, and stays
+              still in Calm mode.
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {ATMOSPHERES.map((theme) => {
@@ -170,10 +170,12 @@ export function SettingsPage() {
                     <span
                       aria-hidden="true"
                       data-theme={theme}
-                      className="vlo-atmosphere-preview relative flex aspect-[16/10] items-end justify-between overflow-hidden rounded-md border border-rule p-2.5 text-text group-data-[state=checked]:ring-2 group-data-[state=checked]:ring-accent"
+                      className="vlo-atmosphere-preview relative flex aspect-[16/10] items-end overflow-hidden rounded-md border border-rule p-2 text-text group-data-[state=checked]:ring-2 group-data-[state=checked]:ring-accent"
                     >
-                      <span className="font-display text-2xl leading-none font-semibold">Aa</span>
-                      <span className="mb-1 size-2 rounded-full bg-accent" />
+                      <span className="flex items-center gap-1.5 rounded-md bg-bg px-2 py-1 shadow-sm">
+                        <span className="font-display text-base leading-none font-semibold">Aa</span>
+                        <span className="size-1.5 rounded-full bg-accent" />
+                      </span>
                       {prefs.theme === theme && (
                         <span className="absolute top-1.5 right-1.5 rounded-full bg-accent p-0.5 text-on-accent">
                           <Check className="size-3" />
