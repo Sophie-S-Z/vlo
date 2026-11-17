@@ -1,4 +1,5 @@
 import * as Y from 'yjs';
+import { itemDocName } from '@/lib/itemDocName';
 import { DOC_SCHEMA } from './docSchema';
 
 /** The origin for updates that came from another tab. */
@@ -35,9 +36,10 @@ export function shareWithTabs(
   const tab = crypto.randomUUID();
   const peers = new Set<string>();
   const others = new Map<string, number>();
-  const channel = new BroadcastChannel(`vlo-item-${itemId}-s${String(DOC_SCHEMA)}`);
-  // Phase 1 tabs use this name, and send no schema. Only presence goes here, never an edit.
-  const presence = new BroadcastChannel(`vlo-item-${itemId}`);
+  const channel = new BroadcastChannel(`${itemDocName(itemId)}-s${String(DOC_SCHEMA)}`);
+  // Phase 1 tabs use this name, and send no schema. Only presence goes here, never an edit. The names hold
+  // the library, so a tab of another account never gets an edit.
+  const presence = new BroadcastChannel(itemDocName(itemId));
   const post = (message: TabMessage) => {
     channel.postMessage(message);
   };
@@ -128,7 +130,7 @@ export function shareWithTabs(
  */
 export function sendToTabs(itemId: string, update: Uint8Array): void {
   if (typeof BroadcastChannel === 'undefined') return;
-  const channel = new BroadcastChannel(`vlo-item-${itemId}-s${String(DOC_SCHEMA)}`);
+  const channel = new BroadcastChannel(`${itemDocName(itemId)}-s${String(DOC_SCHEMA)}`);
   channel.postMessage({ type: 'update', tab: crypto.randomUUID(), update } satisfies TabMessage);
   channel.close();
 }

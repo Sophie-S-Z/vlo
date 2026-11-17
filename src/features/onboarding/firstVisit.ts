@@ -2,7 +2,7 @@ import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { startWithSimpleTools } from '@/features/editor/writingPrefs';
 
-const ONBOARDED = 'onboardedAt';
+export const ONBOARDED = 'onboardedAt';
 
 /** True on a first visit: no projects and no finished or skipped welcome. */
 export async function needsOnboarding(): Promise<boolean> {

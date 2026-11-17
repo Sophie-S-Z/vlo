@@ -1,8 +1,18 @@
 # Vlo status
 
-Last update: 2026-11-14
+Last update: 2026-11-17
 
 ## Done
+
+- Separate accounts (2026-11-17, ADR 0010), from the product owner's ask:
+  - Each account has its own library on the device: its own database and item texts. A sign-in no longer
+    gives the device's projects to the account. The account that was signed in before the upgrade keeps
+    the first database, so no word moves.
+  - "Bring its projects here" on the Account page copies the projects of the library with no account, or
+    of another account that is signed in on the device. "Sign in to another account" and "Switch to this
+    account" keep more than one account on a device.
+  - A sign-in screen (`/sign-in`) opens on each signed-out visit, with "Write without an account".
+  - Sync starts after a sign-in on any screen, not only on the Account page.
 
 - Second hardening pass (2026-11-14), from a code review of the editor and sync code and a beta tester's
   screenshot:

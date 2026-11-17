@@ -2,8 +2,13 @@ import { randomBytes, webcrypto } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { expect, test, type Request } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { BUNDLE, DAY, fakeSupabase, shareOf } from './support/share';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /*
  * Plan Task E4 (spec section 11, US12, US13, Review Focus 1 and 4): the reader view of a share link,

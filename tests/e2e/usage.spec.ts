@@ -1,7 +1,12 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { seedProjects } from './support/seed';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task E5 (spec F30, decision S6): opt-in usage counts, with the exact JSON before each send. */
 

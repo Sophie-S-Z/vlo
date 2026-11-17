@@ -1,6 +1,11 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /*
  * Plan Tasks C2 and C3: the Story Board, its List view and the Plot Grid. A novel starts with Chapter 1

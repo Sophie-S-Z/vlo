@@ -45,7 +45,21 @@ async function newProject(page: Page, poetry: boolean, words: string) {
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
 }
 
-test('a writer signs in on a laptop and a phone, and both keep every project', async ({ browser }) => {
+/** Brings the projects of the library with no account into the signed-in account. */
+async function bringDeviceProjects(page: Page, count: string) {
+  const library = page
+    .getByRole('list', { name: 'Other libraries on this device' })
+    .getByRole('listitem')
+    .filter({ hasText: 'This device, with no account' });
+  await expect(library).toContainText(count);
+  await library.getByRole('button', { name: 'Bring its projects here' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Bring them in' }).click();
+  await expect(page.getByRole('status').filter({ hasText: `${count} came in.` })).toBeVisible();
+}
+
+test('a writer signs in on a laptop and a phone, brings in the projects, and both keep them', async ({
+  browser,
+}) => {
   test.setTimeout(120_000);
   const laptopContext = await browser.newContext();
   const fake = await fakeSupabase(laptopContext);
@@ -57,10 +71,12 @@ test('a writer signs in on a laptop and a phone, and both keep every project', a
   expect(await seriousIssues(laptop)).toEqual([]);
   // A sign-in turns sync on by itself.
   const sync = laptop.getByRole('region', { name: 'Sync on all your devices' });
-  await expect(sync.getByRole('status')).toHaveText(
-    'Sync is on. Sign in on your other devices with the same email.',
-  );
   await expect(sync).toContainText('This device syncs with your account.');
+  // The account has its own library. The project written with no account comes in only when asked.
+  await laptop.goto('/');
+  await expect(projects(laptop)).toHaveCount(0);
+  await laptop.goto('/account');
+  await bringDeviceProjects(laptop, '1 project');
   await syncNow(laptop);
   expect(fake.accounts?.vaults.size).toBe(1);
   // The relay gets sealed copies only.
@@ -73,9 +89,8 @@ test('a writer signs in on a laptop and a phone, and both keep every project', a
   await newProject(phone, true, 'Gulls on the wall');
   await signIn(phone, 'mira@example.com');
   const phoneSync = phone.getByRole('region', { name: 'Sync on all your devices' });
-  await expect(phoneSync.getByRole('status')).toHaveText(
-    'This device syncs now. Your projects come to the Library.',
-  );
+  await expect(phoneSync).toContainText('This device syncs with your account.');
+  await bringDeviceProjects(phone, '1 project');
   await syncNow(phone);
   await syncNow(laptop);
 
@@ -97,17 +112,89 @@ test('a writer signs in on a laptop and a phone, and both keep every project', a
   await sync.getByRole('button', { name: 'Sync this device with my account' }).click();
   await expect(sync).toContainText('This device syncs with your account.');
 
-  // Sign out on the phone: it stops sync and keeps both projects.
+  // Sign out on the phone: it stops sync, and the account's projects stay hidden until the next sign-in.
   await phone.goto('/account');
   await phone.getByRole('button', { name: 'Sign out' }).click();
-  await expect(phone.getByRole('button', { name: 'Send me a code' })).toBeVisible();
-  await phone.goto('/');
-  await expect(projects(phone)).toHaveCount(2);
+  await expect(phone.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+  await expect(projects(phone)).toHaveCount(1);
   await phone.goto('/settings');
   await expect(phone.getByRole('button', { name: 'Sync my writing' })).toBeVisible();
+  await signIn(phone, 'mira@example.com');
+  await phone.goto('/');
+  await expect(projects(phone)).toHaveCount(2);
 
   await laptopContext.close();
   await phoneContext.close();
+});
+
+test('two accounts in one browser keep their own projects until the writer merges them', async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(90_000);
+  await fakeSupabase(context);
+  await skipOnboarding(page);
+  await signIn(page, 'ada@example.com');
+  await newProject(page, false, 'Ada wrote this.');
+
+  await page.goto('/account');
+  await page.getByRole('button', { name: 'Sign in to another account' }).click();
+  const other = page.getByRole('region', { name: 'Your accounts on this device' });
+  await other.getByLabel('Email').fill('ben@example.com');
+  await other.getByRole('button', { name: 'Send me a code' }).click();
+  await other.getByLabel('Code from the email').fill(CODE);
+  await other.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByText('Signed in as ben@example.com')).toBeVisible();
+  await page.goto('/');
+  await expect(projects(page)).toHaveCount(0);
+
+  // Ada's account is signed in here too, so Ben can bring in its projects or switch to it.
+  await page.goto('/account');
+  const ada = page
+    .getByRole('list', { name: 'Other libraries on this device' })
+    .getByRole('listitem')
+    .filter({ hasText: 'ada@example.com' });
+  await expect(ada).toContainText('1 project');
+  await ada.getByRole('button', { name: 'Bring its projects here' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Bring them in' }).click();
+  await expect(page.getByRole('status').filter({ hasText: '1 project came in.' })).toBeVisible();
+  await page.goto('/');
+  await expect(projects(page)).toHaveCount(1);
+
+  await page.goto('/account');
+  await ada.getByRole('button', { name: 'Switch to this account' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+  await page.goto('/account');
+  await expect(page.getByText('Signed in as ada@example.com')).toBeVisible();
+});
+
+test('a signed-out visit opens on the sign-in screen, which can make an account or go on alone', async ({
+  page,
+  context,
+}) => {
+  await fakeSupabase(context);
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/sign-in\?next=%2F$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
+  expect(await seriousIssues(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Create an account' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible();
+  await page.getByLabel('Email').fill('new@example.com');
+  await page.getByRole('button', { name: 'Send me a code' }).click();
+  await page.getByLabel('Code from the email').fill(CODE);
+  await page.getByRole('button', { name: 'Create my account' }).click();
+  // A new account with nothing waiting goes to the screen it asked for: here, the welcome.
+  await expect(page).toHaveURL(/\/welcome$/);
+});
+
+test('a visitor writes without an account, and the choice holds in that tab', async ({ page, context }) => {
+  await fakeSupabase(context);
+  await page.goto('/settings');
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fsettings$/);
+  await page.getByRole('button', { name: 'Write without an account' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/welcome$/);
 });
 
 test('the daily count goes once a day with numbers and no text, and Settings turns it off', async ({

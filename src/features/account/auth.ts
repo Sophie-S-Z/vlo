@@ -2,6 +2,7 @@ import { anonKey, rpc, sharingReady } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
 import { withLock } from '@/lib/lock';
 import { toBase64Url } from '@/lib/crypto';
+import { rememberAccount } from '@/lib/library';
 import { supabaseUrl, vloFetch } from '@/lib/net';
 import { forgetSession, readSession, saveSession, type AccountSession } from './session';
 
@@ -120,6 +121,7 @@ async function keep(answer: unknown): Promise<AccountSession> {
     provider: answer.user.app_metadata?.provider ?? 'email',
   };
   await saveSession(session);
+  rememberAccount(session.userId, session.email);
   return session;
 }
 

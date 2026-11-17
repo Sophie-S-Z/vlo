@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { seriousIssues } from './support/axe';
+import { writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task G6 (roadmap F36, decision P4): a new writer starts with the Simple toolbar. */
 

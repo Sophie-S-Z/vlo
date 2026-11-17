@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
+import { writeWithoutAccount } from './support/onboarding';
 
 async function holdToOpen(page: Page) {
   const hold = page.getByRole('button', { name: 'Hold to open your first page' });
@@ -8,6 +9,10 @@ async function holdToOpen(page: Page) {
   await page.waitForTimeout(1_400);
   await page.mouse.up();
 }
+
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 test('US15: a first visit reaches typing in the first poem in five actions, with Skip on every step', async ({
   page,

@@ -1,13 +1,21 @@
-import { redirect, type RouteObject } from 'react-router';
+import { redirect, type LoaderFunctionArgs, type RouteObject } from 'react-router';
+import { readSession } from '@/features/account/session';
 import { LibraryPage } from '@/features/library/LibraryPage';
+import { sharingReady } from '@/features/share/rpc';
+import { ACTIVE_ACCOUNT, guestChosen } from '@/lib/library';
 import { needsOnboarding } from '@/features/onboarding/firstVisit';
 import { WelcomePage } from '@/features/onboarding/WelcomePage';
 import { AppShell } from './AppShell';
 import { NotFound } from './NotFound';
 import { RouteError } from './RouteError';
 
-/** A first visit to the Library goes to the welcome screen. If storage fails, the Library shows why. */
-async function firstVisitLoader() {
+/**
+ * A first visit to the Library goes to the welcome screen, after the sign-in screen when the visit is
+ * signed out. If storage fails, the Library shows why.
+ */
+async function firstVisitLoader(args: LoaderFunctionArgs) {
+  const signIn = await signInLoader(args);
+  if (signIn) return signIn;
   try {
     if (await needsOnboarding()) return redirect('/welcome');
   } catch {
@@ -16,9 +24,34 @@ async function firstVisitLoader() {
   return null;
 }
 
+/** Screens that a signed-out visitor opens with no sign-in first: a sign-in itself, a pairing link and help. */
+const OPEN_PATHS = ['/account', '/pair', '/privacy', '/ai-policy', '/help', '/verify'];
+
+/**
+ * A signed-out visit opens on the sign-in screen, in a build with accounts. A writer who chose to write
+ * with no account in this tab goes on. Storage that fails lets the visit through, so no one is locked out.
+ */
+async function signInLoader({ request }: LoaderFunctionArgs) {
+  if (!sharingReady()) return null;
+  const { pathname, search } = new URL(request.url);
+  if (OPEN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;
+  if (guestChosen() && ACTIVE_ACCOUNT === null) return null;
+  try {
+    if (await readSession()) return null;
+  } catch {
+    return null;
+  }
+  return redirect(`/sign-in?next=${encodeURIComponent(pathname + search)}`);
+}
+
 /** The route table. Each phase adds the routes for the screens it builds (spec section 4). */
 export const routes: RouteObject[] = [
   { path: '/welcome', element: <WelcomePage />, errorElement: <RouteError /> },
+  {
+    path: '/sign-in',
+    errorElement: <RouteError />,
+    lazy: async () => ({ Component: (await import('@/features/account/SignInPage')).SignInPage }),
+  },
   // A share link's reader view (plan Task E4): outside the app shell and the welcome redirect.
   {
     path: '/r/:shareId',
@@ -29,6 +62,9 @@ export const routes: RouteObject[] = [
     path: '/',
     element: <AppShell />,
     errorElement: <RouteError />,
+    loader: signInLoader,
+    // The check runs as Vlo opens, not at each move between screens.
+    shouldRevalidate: () => false,
     children: [
       { index: true, loader: firstVisitLoader, element: <LibraryPage /> },
       {

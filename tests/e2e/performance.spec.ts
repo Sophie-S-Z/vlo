@@ -1,11 +1,16 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import JSZip from 'jszip';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { useTool } from './support/tools';
 import { seedProjects } from './support/seed';
 import { seedLarge } from './support/seed-bundle';
 import { openView } from './support/views';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Gate 1: the budgets in VLO_SPEC section 12, measured on the seeded 100,000-word and 200,000-word projects. */
 

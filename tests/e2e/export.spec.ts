@@ -3,8 +3,13 @@ import { expect, test, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { PDFDict, PDFDocument, PDFName } from 'pdf-lib';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { useTool } from './support/tools';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Tasks B1 to B3: the export dialog makes Word, PDF, EPUB and Markdown files from the stored text. */
 

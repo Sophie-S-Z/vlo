@@ -22,9 +22,10 @@ export interface OpenItemDoc {
 /** Never settles. Used so a race ends only by rejection on this side. */
 const forever = new Promise<never>(() => undefined);
 
-export function openItemDoc(itemId: string): OpenItemDoc {
+/** Opens an item's text. `library` is the database name of another library on this device, for a merge. */
+export function openItemDoc(itemId: string, library?: string): OpenItemDoc {
   const doc = new Y.Doc();
-  const persistence = new IndexeddbPersistence(itemDocName(itemId), doc);
+  const persistence = new IndexeddbPersistence(itemDocName(itemId, library), doc);
   // y-indexeddb never rejects whenSynced, so a failed open would wait forever. Race it with the open.
   const ready = Promise.race([
     persistence.whenSynced.then(() => undefined),
@@ -97,8 +98,8 @@ function markSaved(persistence: IndexeddbPersistence, now: number): Promise<void
 }
 
 /** The stored text of an item, as one Yjs update. An item with no stored text gives an empty document. */
-export async function readItemUpdate(itemId: string): Promise<Uint8Array> {
-  const open = openItemDoc(itemId);
+export async function readItemUpdate(itemId: string, library?: string): Promise<Uint8Array> {
+  const open = openItemDoc(itemId, library);
   try {
     await open.ready;
     return encodeDoc(open.doc);
@@ -119,8 +120,11 @@ export async function inBatches<T, R>(values: readonly T[], run: (value: T) => P
 }
 
 /** The stored text of each item, as one Yjs update each, in the order of `itemIds`. */
-export async function readItemUpdates(itemIds: readonly string[]): Promise<[string, Uint8Array][]> {
-  const updates = await inBatches(itemIds, readItemUpdate);
+export async function readItemUpdates(
+  itemIds: readonly string[],
+  library?: string,
+): Promise<[string, Uint8Array][]> {
+  const updates = await inBatches(itemIds, (id) => readItemUpdate(id, library));
   return itemIds.flatMap((id, i) => {
     const update = updates[i];
     return update ? [[id, update] as [string, Uint8Array]] : [];
@@ -128,8 +132,13 @@ export async function readItemUpdates(itemIds: readonly string[]): Promise<[stri
 }
 
 /** Stores a Yjs update as an item's text, and resolves when IndexedDB holds it. */
-export async function writeItemUpdate(itemId: string, update: Uint8Array, now: number): Promise<void> {
-  const open = openItemDoc(itemId);
+export async function writeItemUpdate(
+  itemId: string,
+  update: Uint8Array,
+  now: number,
+  library?: string,
+): Promise<void> {
+  const open = openItemDoc(itemId, library);
   try {
     await open.ready;
     Y.applyUpdate(open.doc, update);

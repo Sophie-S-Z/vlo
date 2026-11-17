@@ -1,6 +1,7 @@
 import { Dexie, type Table } from 'dexie';
 import type { PoemForm } from '@/features/craft/forms';
 import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
+import { LIBRARY } from './library';
 import { countUnit, recountItems } from './wordcount';
 
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
@@ -706,7 +707,8 @@ export class VloDb extends Dexie {
   }
 }
 
-export const db = new VloDb();
+/** The library of this page: the one of the signed-in account, or the one with no account. */
+export const db = new VloDb(LIBRARY);
 
 /**
  * The view tables (Phase 3, the Codex of Phase 8 and the sources of Phase 13). Each row has an `id` and a
