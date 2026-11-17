@@ -87,8 +87,9 @@ export const HELP = {
     {
       title: 'Hear your text read aloud',
       steps: [
-        'Choose Read aloud in Review. Vlo reads from the cursor, or only the selected words.',
-        'Vlo uses only the voices on this device, so your text stays here.',
+        'Choose Read aloud in Review. Vlo reads from the cursor to the end, or only the selected words. There is no limit on the length.',
+        'Pick a voice. The ten natural voices, five female and five male, sound the same on every device. They download once (263 MB) the first time that you read with one. They speak English, Spanish, French, Portuguese and Korean.',
+        'The voices of your device are in the list too. Every voice runs on this device, so your text stays here. To free the space, choose Delete the natural voices in Settings.',
         'When the Codex has characters, turn on Table read. Each character speaks in a voice of their own, and you can pick each voice.',
       ],
     },
@@ -357,8 +358,9 @@ export const HELP = {
       title: 'Speak to write',
       steps: [
         'Put the cursor where the words go, then choose Speak to write in Review, the / menu or the command menu.',
-        'Choose Speak and talk. Choose Stop and write, or stop after 30 seconds, and your words go in at the cursor.',
-        'The first time, Vlo downloads the speech model. The model runs on this device, the audio never leaves it, and Vlo does not keep the audio.',
+        'Choose Speak and talk for as long as you like. Your words go in at the cursor each time that you pause. Choose Stop when you finish.',
+        'The first time, Vlo downloads a speech model. Whisper small (252 MB) makes the fewest mistakes, and Whisper base (80 MB) is faster on an older device. You can change the model in Settings, under Speech to text.',
+        'The model runs on this device. The audio never leaves it, and Vlo does not keep the audio.',
         'The authorship record counts these words as dictated, and they are your own words, with no AI mark.',
       ],
     },
@@ -369,7 +371,7 @@ export const HELP = {
         'A card asks a question about one stage of your life. Choose Next or Shuffle for another question.',
         'Choose Record, answer out loud, then choose Stop. The recording stays with the memory, in its research files.',
         'Choose Turn into text to put your words in at the cursor. The first time, Vlo downloads the speech model, and the audio never leaves this device.',
-        'To free the space, choose Delete the model in Settings, under Speech to text.',
+        'To free the space, choose Delete the speech models in Settings, under Speech to text.',
       ],
     },
     {

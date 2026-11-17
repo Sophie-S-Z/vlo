@@ -4,15 +4,31 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { useSyncExternalStore } from 'react';
 import { setDucked } from '@/features/sound/controller';
 import type { CodexMatch } from '@/features/codex/codex';
+import {
+  NATURAL_DEFAULT,
+  NATURAL_MAX_RATE,
+  NATURAL_MIN_RATE,
+  naturalLanguage,
+  naturalVoiceOf,
+} from '@/features/voice/natural';
+import {
+  forgetAudio,
+  naturalAudio,
+  playAudio,
+  stopAudio,
+  unlockAudio,
+  type NaturalAudio,
+} from '@/features/voice/naturalSpeech';
 import { castSentences } from './dialogue';
 import { sentencesIn, spokenText, type Sentence } from './sentences';
 import { findLocalVoice, speechAvailable } from './voices';
 
 /*
- * Read aloud (plan E2). It speaks one sentence at a time with an on-device voice and marks the sentence
- * that it speaks. Pause stops after the current word and Resume starts that sentence again, which works
- * the same in every browser. The writer can edit while it reads: the sentences move with the text.
- * Background sound plays more quietly while Vlo reads.
+ * Read aloud (plan E2). It speaks one sentence at a time and marks the sentence that it speaks, with no
+ * limit on the length of the text. A natural voice makes the audio of the next sentences while one plays;
+ * a device voice speaks through the browser. Both run on this device. Pause stops the voice and Resume
+ * starts that sentence again, which works the same in every browser. The writer can edit while it reads:
+ * the sentences move with the text. Background sound plays more quietly while Vlo reads.
  */
 
 export type ReadStatus = 'idle' | 'reading' | 'paused';
@@ -27,14 +43,14 @@ export interface ReadState {
 }
 
 export interface ReadSettings {
-  /** The URI of the chosen voice, or null for the device default. */
+  /** The URI of the chosen voice: a natural voice, a device voice, or null for the device default. */
   voice: string | null;
   /** 0.5 to 2, where 1 is the voice's own speed. */
   rate: number;
 }
 
 const SETTINGS_KEY = 'vlo:readAloud';
-export const READ_DEFAULTS: ReadSettings = { voice: null, rate: 1 };
+export const READ_DEFAULTS: ReadSettings = { voice: NATURAL_DEFAULT, rate: 1 };
 export const MIN_RATE = 0.5;
 export const MAX_RATE = 2;
 
@@ -42,7 +58,12 @@ export function cleanReadSettings(value: unknown): ReadSettings {
   const raw = (typeof value === 'object' && value !== null ? value : {}) as Partial<Record<string, unknown>>;
   const rate = typeof raw.rate === 'number' && Number.isFinite(raw.rate) ? raw.rate : READ_DEFAULTS.rate;
   return {
-    voice: typeof raw.voice === 'string' && raw.voice !== '' ? raw.voice : null,
+    voice:
+      typeof raw.voice === 'string' && raw.voice !== ''
+        ? raw.voice
+        : raw.voice === null
+          ? null
+          : READ_DEFAULTS.voice,
     rate: Math.min(MAX_RATE, Math.max(MIN_RATE, Math.round(rate * 10) / 10)),
   };
 }
@@ -107,6 +128,12 @@ let sentences: Sentence[] = [];
 /** Bumped on every start and stop, so the events of an old utterance do nothing. */
 let run = 0;
 let unhook: (() => void) | null = null;
+/** The language of the text, for the natural voices. */
+let language: string | undefined;
+/** The audio of natural voices for the sentence that is spoken and the next ones, by index. */
+const ahead = new Map<number, { key: string; audio: Promise<NaturalAudio> }>();
+/** The sentences after the one that is spoken whose audio a natural voice makes in advance. */
+const AHEAD = 2;
 
 function setState(change: Partial<ReadState>): void {
   state = { ...state, ...change };
@@ -161,6 +188,59 @@ function follow(editor: Editor): () => void {
   };
 }
 
+/**
+ * The voice that reads with the URI `uri`. A natural voice gives way to the device default in a language
+ * that the natural voices do not speak.
+ */
+export function voiceIn(uri: string | null, lang: string | undefined): string | null {
+  return naturalVoiceOf(uri) && naturalLanguage(lang) === null ? null : uri;
+}
+
+const voiceOfSentence = (sentence: Sentence) =>
+  voiceIn(sentence.voice === undefined ? getReadSettings().voice : sentence.voice, language);
+
+/** The words of a sentence as they are now, in case the writer changed it. */
+const wordsOf = (editor: Editor, sentence: Sentence) =>
+  editor.state.doc.textBetween(sentence.from, sentence.to, ' ', ' ').trim() || sentence.text;
+
+/** The audio of sentence `index` in its natural voice, made once, or null for a device voice. */
+function audioFor(editor: Editor, index: number): Promise<NaturalAudio> | null {
+  const sentence = sentences[index];
+  const voice = sentence ? naturalVoiceOf(voiceOfSentence(sentence)) : null;
+  const lang = naturalLanguage(language);
+  if (!sentence || !voice || !lang || sentence.to <= sentence.from) return null;
+  const rate = Math.min(NATURAL_MAX_RATE, Math.max(NATURAL_MIN_RATE, getReadSettings().rate));
+  // The model's own pace is 1.05 times its speed 1, which sounds the most natural.
+  const speed = Math.round(rate * 1.05 * 100) / 100;
+  const text = wordsOf(editor, sentence);
+  const key = [voice, speed, lang, text].join('\n');
+  const made = ahead.get(index);
+  if (made?.key === key) return made.audio;
+  const audio = naturalAudio(text, voice, speed, lang);
+  // A rejection here is handled where the audio plays.
+  audio.catch(() => undefined);
+  ahead.set(index, { key, audio });
+  return audio;
+}
+
+function speakNatural(editor: Editor, index: number, audio: Promise<NaturalAudio>, mine: number): void {
+  for (const at of ahead.keys()) if (at < index) ahead.delete(at);
+  // The audio of the next sentences, made while this one plays.
+  for (let next = index + 1; next <= index + AHEAD; next++) void audioFor(editor, next);
+  audio.then(
+    (made) => {
+      if (mine !== run || state.status !== 'reading') return;
+      playAudio(made, () => {
+        if (mine === run && state.status === 'reading') speak(editor, index + 1);
+      });
+    },
+    () => {
+      if (mine === run)
+        finish(editor, 'The natural voice stopped with an error. Press Read aloud to try again.');
+    },
+  );
+}
+
 function speak(editor: Editor, index: number): void {
   const mine = ++run;
   const sentence = sentences[index];
@@ -172,14 +252,20 @@ function speak(editor: Editor, index: number): void {
     speak(editor, index + 1);
     return;
   }
+  const audio = audioFor(editor, index);
+  if (audio) {
+    setState({ index, status: 'reading' });
+    mark(editor, sentence);
+    speakNatural(editor, index, audio, mine);
+    return;
+  }
   const settings = getReadSettings();
-  const voice = findLocalVoice(sentence.voice === undefined ? settings.voice : sentence.voice);
+  const voice = findLocalVoice(voiceOfSentence(sentence));
   if (!voice) {
     finish(editor, 'This device has no on-device voice now, so Vlo stopped reading.');
     return;
   }
-  // The words as they are now, in case the writer changed the sentence.
-  const text = editor.state.doc.textBetween(sentence.from, sentence.to, ' ', ' ').trim() || sentence.text;
+  const text = wordsOf(editor, sentence);
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.voice = voice;
   utterance.lang = voice.lang;
@@ -201,6 +287,9 @@ function speak(editor: Editor, index: number): void {
 
 function finish(editor: Editor, message: string | null): void {
   run += 1;
+  stopAudio();
+  forgetAudio();
+  ahead.clear();
   if (speechAvailable()) window.speechSynthesis.cancel();
   unhook?.();
   unhook = null;
@@ -221,15 +310,18 @@ export interface Cast {
 /**
  * Reads the selection, or from the sentence at the cursor to the end of the text. Call it from the
  * writer's click or key, so the browser lets the voice speak. With a cast, each character's quotes
- * get the character's voice.
+ * get the character's voice. `textLanguage` is the language of the text, for the natural voices.
  */
-export function startReading(editor: Editor, cast?: Cast): void {
+export function startReading(editor: Editor, cast?: Cast, textLanguage?: string): void {
   if (state.editor && state.status !== 'idle') finish(state.editor, null);
-  if (!speechAvailable()) {
+  language = textLanguage;
+  const natural = naturalVoiceOf(voiceIn(getReadSettings().voice, language)) !== null;
+  if (natural || cast) unlockAudio();
+  if (!natural && !speechAvailable()) {
     setState({ message: 'This browser cannot read aloud.' });
     return;
   }
-  if (!findLocalVoice(getReadSettings().voice)) {
+  if (!natural && !findLocalVoice(getReadSettings().voice)) {
     setState({
       message:
         'This device has no on-device voice. Vlo reads only with on-device voices, so your words stay on this device.',
@@ -264,19 +356,21 @@ export function startReading(editor: Editor, cast?: Cast): void {
   unhook = follow(editor);
   setState({ status: 'reading', editor, index: 0, count: found.length, message: null });
   setDucked(true);
-  window.speechSynthesis.cancel();
+  if (speechAvailable()) window.speechSynthesis.cancel();
   speak(editor, 0);
 }
 
 export function pauseReading(): void {
   if (state.status !== 'reading') return;
   run += 1;
-  window.speechSynthesis.cancel();
+  stopAudio();
+  if (speechAvailable()) window.speechSynthesis.cancel();
   setState({ status: 'paused' });
 }
 
 export function resumeReading(): void {
   if (state.status !== 'paused' || !state.editor) return;
+  unlockAudio();
   speak(state.editor, state.index);
 }
 

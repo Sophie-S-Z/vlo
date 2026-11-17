@@ -4,6 +4,18 @@ Last update: 2026-11-17
 
 ## Done
 
+- Voice typing and natural voices (2026-11-17), from the product owner's ask. Nothing is paid, and
+  nothing leaves the device:
+  - Speak to write has no time limit. An audio worklet hears the microphone, and Vlo writes the words
+    of each pause at the cursor while the writer speaks on (`src/features/voice/segments.ts`). A clip
+    with no speech goes nowhere, as Whisper invents words for silence.
+  - Whisper small (252 MB) is the default speech model, as it makes the fewest mistakes. Whisper base
+    (80 MB) stays as the fast model. The writer picks one at the first download or in Settings.
+  - Read aloud has ten natural voices, five female and five male: Supertonic 2 (OpenRAIL-M, 263 MB),
+    which runs in its own worker on WebGPU or WASM. The voices speak English, Spanish, French,
+    Portuguese and Korean. The device voices stay in the list. A natural voice is the default.
+  - Privacy version 17.
+
 - Phase 19, Part A: the editor menus, page look and word targets (2026-11-17, `docs/plans/phase-19.md`):
   - The toolbar has three named menus, Insert, Format and Review, in place of one long More tools list.
     Each menu puts its tools in labeled groups. A Mode menu changes between Editing, Suggesting and
@@ -1291,3 +1303,5 @@ Last update: 2026-11-17
 | 2026-11-07 | The Supabase URL and anon key go in a committed `.env`, and the host goes in `vercel.json` by hand. `vite preview` adds the build's host to the CSP.                                                                                                                                         | Vercel headers are static. A unit test checks that the CSP lists exactly the network module's hosts.                                                                                                                |
 | 2026-11-07 | `ai_mode_counts` counts AI requests by mode.                                                                                                                                                                                                                                                 | The spec names the key only. Requests by mode show which modes writers use.                                                                                                                                         |
 | 2026-11-07 | A usage report covers the last full ISO week, in local time, and the Library asks only when that week has writing or counts.                                                                                                                                                                 | A report of an empty week tells nothing, and the prompt would come every week.                                                                                                                                      |
+| 2026-11-17 | The natural voices are Supertonic 2 in Transformers.js, not Kokoro or Piper.                                                                                                                                                                                                                 | It reads the letters of the text, so it needs no eSpeak NG phonemizer (GPL-3.0), and invented names do not break it.                                                                                                |
+| 2026-11-17 | Live dictation does not end a clip at a pause while an earlier clip turns into text.                                                                                                                                                                                                         | A slow device then gets fewer, longer clips, so it never falls behind the writer.                                                                                                                                   |

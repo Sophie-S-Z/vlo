@@ -1,6 +1,6 @@
 import { Button } from '@/ui/button';
-import { MODEL_SIZE } from './model';
-import type { useSpeech } from './useSpeech';
+import { modelSize, SPEECH_MODELS, type SpeechModelId } from './model';
+import type { SpeechStep } from './useSpeech';
 
 /* The level meter and the speech-to-text status that "Record a memory" and "Speak to write" share. */
 
@@ -19,7 +19,16 @@ export function LevelMeter({ level }: { level: number }) {
 }
 
 /** The model question, the download and its progress, the work, and any error. */
-export function SpeechStatus({ speech }: { speech: ReturnType<typeof useSpeech> }) {
+export function SpeechStatus({
+  speech,
+}: {
+  speech: {
+    speech: SpeechStep;
+    download: (id: SpeechModelId) => Promise<void>;
+    cancel: () => void;
+    stopDownload: () => void;
+  };
+}) {
   const { speech: state } = speech;
   return (
     <>
@@ -29,12 +38,18 @@ export function SpeechStatus({ speech }: { speech: ReturnType<typeof useSpeech> 
           className="grid gap-3 rounded-[var(--radius-card)] border border-accent p-4"
         >
           <p className="text-sm">
-            To turn speech into text, Vlo downloads the Whisper base model once ({MODEL_SIZE}) from Hugging
-            Face. Then the model runs on this device, and the audio never leaves it. You can delete the model
-            in Settings.
+            To turn speech into text, Vlo downloads a speech model once from Hugging Face. Then the model runs
+            on this device, and the audio never leaves it. {SPEECH_MODELS.small.name} ({modelSize('small')})
+            makes the fewest mistakes. {SPEECH_MODELS.base.name} ({modelSize('base')}) is faster on an older
+            phone. You can change the model or delete it in Settings.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void speech.download()}>Download {MODEL_SIZE}</Button>
+            <Button onClick={() => void speech.download('small')}>
+              Download the accurate model ({modelSize('small')})
+            </Button>
+            <Button variant="outline" onClick={() => void speech.download('base')}>
+              Download the fast model ({modelSize('base')})
+            </Button>
             <Button variant="ghost" onClick={speech.cancel}>
               Cancel
             </Button>

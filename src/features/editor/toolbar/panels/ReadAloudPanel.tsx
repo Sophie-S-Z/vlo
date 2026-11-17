@@ -3,6 +3,19 @@ import { Pause, Play, Square } from 'lucide-react';
 import { useCallback, useId, useMemo, useState } from 'react';
 import { codexMatcher } from '@/features/codex/codex';
 import { useCodexState } from '@/features/codex/codexStore';
+import { sizeOf } from '@/features/voice/hosted';
+import {
+  NATURAL_MAX_RATE,
+  NATURAL_MIN_RATE,
+  NATURAL_VOICES,
+  naturalLanguage,
+  naturalUri,
+  naturalVoiceOf,
+  VOICE_IDS,
+  voiceName,
+} from '@/features/voice/natural';
+import { unlockAudio } from '@/features/voice/naturalSpeech';
+import { useNaturalVoices } from '@/features/voice/useNaturalVoices';
 import { Button } from '@/ui/button';
 import { getCast, setCast, voiceFor, type CastSettings } from '../../readAloud/cast';
 import { cueSpeaker } from '../../readAloud/dialogue';
@@ -17,19 +30,28 @@ import {
   startReading,
   stopReading,
   useReadState,
+  voiceIn,
   type ReadSettings,
 } from '../../readAloud/reader';
 import { speechAvailable, useLocalVoices, type VoiceChoice } from '../../readAloud/voices';
 
 const SELECT = 'min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9';
 
+const NATURAL: readonly VoiceChoice[] = VOICE_IDS.map((id) => ({
+  uri: naturalUri(id),
+  name: voiceName(id),
+  lang: '',
+}));
+
 function VoiceSelect({
   id,
+  natural,
   voices,
   value,
   onChange,
 }: {
   id: string;
+  natural: readonly VoiceChoice[];
   voices: readonly VoiceChoice[];
   value: string;
   onChange: (uri: string) => void;
@@ -43,26 +65,42 @@ function VoiceSelect({
       }}
       className={SELECT}
     >
-      {voices.map((v) => (
-        <option key={v.uri} value={v.uri}>
-          {v.name} ({v.lang})
-        </option>
-      ))}
+      {natural.length > 0 && (
+        <optgroup label="Natural voices">
+          {natural.map((v) => (
+            <option key={v.uri} value={v.uri}>
+              {v.name}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {voices.length > 0 && (
+        <optgroup label="Voices of this device">
+          {voices.map((v) => (
+            <option key={v.uri} value={v.uri}>
+              {v.name} ({v.lang})
+            </option>
+          ))}
+        </optgroup>
+      )}
     </select>
   );
 }
 
 /*
- * The read aloud panel (plan E2): a voice, a speed, and Read, Pause and Stop. The reading goes on when
- * the panel closes, and the toolbar button shows that it is on. With Codex characters, a table read
- * (F58) gives the narrator and each character a voice.
+ * The read aloud panel (plan E2): a voice, a speed, and Read, Pause and Stop. The natural voices come
+ * first; they download once, after the writer agrees. The reading goes on when the panel closes, and the
+ * toolbar button shows that it is on. With Codex characters, a table read (F58) gives the narrator and
+ * each character a voice.
  */
 
-export function ReadAloudPanel({ editor }: { editor: Editor }) {
+export function ReadAloudPanel({ editor, language }: { editor: Editor; language: string | undefined }) {
   const voiceId = useId();
   const rateId = useId();
   const [settings, setSettings] = useState<ReadSettings>(getReadSettings);
   const { ready, voices } = useLocalVoices();
+  const naturalVoices = useNaturalVoices();
+  const natural = naturalLanguage(language) === null ? [] : NATURAL;
   const read = useReadState();
   const codex = useCodexState();
   const projectId = codex.projectId;
@@ -94,7 +132,7 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
     if (projectId) setChanged({ projectId, cast: setCast(projectId, next) });
   };
 
-  if (!speechAvailable()) {
+  if (!speechAvailable() && natural.length === 0) {
     return (
       <div className="grid gap-2 text-sm">
         <h2 className="font-medium">Read aloud</h2>
@@ -104,17 +142,34 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
   }
 
   const selected = !editor.state.selection.empty;
-  const chosen = voices.find((v) => v.uri === settings.voice) ?? voices[0];
+  const wanted = voiceIn(settings.voice, language);
+  const chosen =
+    natural.find((v) => v.uri === wanted) ?? voices.find((v) => v.uri === wanted) ?? voices[0] ?? natural[0];
+  const chosenNatural = naturalVoiceOf(chosen?.uri) !== null;
+  // A natural voice that is not on this device asks for the download before it reads. While Vlo looks,
+  // neither button shows.
+  const looking = chosenNatural && naturalVoices.ready === null;
+  const needsDownload = chosenNatural && naturalVoices.ready === false;
+  const minRate = chosenNatural ? NATURAL_MIN_RATE : MIN_RATE;
+  const maxRate = chosenNatural ? NATURAL_MAX_RATE : MAX_RATE;
+  const rate = Math.min(maxRate, Math.max(minRate, settings.rate));
   const tableRead = projectId !== null && characters.length > 0;
   const speakers = characters.map((c) => c.id);
+  // The characters get natural voices only when the voices are on this device.
+  const castable = naturalVoices.ready === true ? [...natural, ...voices] : voices;
   const voiceOf = voiceFor(
     speakers,
-    voices.map((v) => v.uri),
+    castable.map((v) => v.uri),
     cast.voices,
     chosen?.uri ?? null,
   );
   const startRead = () => {
-    startReading(editor, tableRead && cast.on ? { match, voiceOf, cue } : undefined);
+    startReading(editor, tableRead && cast.on ? { match, voiceOf, cue } : undefined, language);
+  };
+  const downloadAndRead = async () => {
+    // The audio starts in this click, so it may play when the download ends.
+    unlockAudio();
+    if (await naturalVoices.get()) startRead();
   };
   let summary = '';
   if (status === 'reading') summary = `Reading sentence ${String(read.index + 1)} of ${String(read.count)}.`;
@@ -126,7 +181,7 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
       <div className="grid gap-1">
         <h2 className="font-medium">Read aloud</h2>
         <p className="text-xs text-muted">
-          Hear your words to catch slips. Vlo uses voices on this device only, so your text stays here.
+          Hear your words to catch slips. Every voice runs on this device, so your text stays here.
         </p>
       </div>
 
@@ -139,15 +194,16 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
         </div>
       )}
 
-      {!ready && <p className="text-muted">Looking for voices on this device.</p>}
-      {ready && voices.length === 0 && (
+      {!ready && natural.length === 0 && <p className="text-muted">Looking for voices on this device.</p>}
+      {ready && voices.length === 0 && natural.length === 0 && (
         <p className="text-muted">
-          This device has no on-device voices, so Vlo cannot read aloud here. Add a voice in your
-          system&apos;s speech settings, then open this panel again.
+          This device has no on-device voices, and the natural voices do not speak the language of this
+          project, so Vlo cannot read aloud here. Add a voice in your system&apos;s speech settings, then open
+          this panel again.
         </p>
       )}
 
-      {voices.length > 0 && (
+      {chosen && (
         <>
           <div className="grid gap-1">
             <label htmlFor={voiceId} className="text-xs text-muted">
@@ -155,8 +211,9 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
             </label>
             <VoiceSelect
               id={voiceId}
+              natural={natural}
               voices={voices}
-              value={chosen?.uri ?? ''}
+              value={chosen.uri}
               onChange={(voice) => {
                 change({ voice });
               }}
@@ -168,17 +225,17 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
                 Speed
               </label>
               <span aria-hidden="true" className="tabular-nums text-xs text-muted">
-                {settings.rate.toFixed(1)}×
+                {rate.toFixed(1)}×
               </span>
             </div>
             <input
               id={rateId}
               type="range"
-              min={MIN_RATE}
-              max={MAX_RATE}
+              min={minRate}
+              max={maxRate}
               step={0.1}
-              value={settings.rate}
-              aria-valuetext={`${settings.rate.toFixed(1)} times`}
+              value={rate}
+              aria-valuetext={`${rate.toFixed(1)} times`}
               onChange={(event) => {
                 change({ rate: Number(event.target.value) });
               }}
@@ -214,6 +271,7 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
                         </label>
                         <VoiceSelect
                           id={`${voiceId}-${c.id}`}
+                          natural={naturalVoices.ready === true ? natural : []}
                           voices={voices}
                           value={voiceOf(c.id) ?? ''}
                           onChange={(uri) => {
@@ -232,8 +290,47 @@ export function ReadAloudPanel({ editor }: { editor: Editor }) {
             </fieldset>
           )}
 
+          {status === 'idle' && needsDownload && (
+            <section
+              aria-label="Download the natural voices"
+              className="grid gap-2 rounded-md border border-accent p-3"
+            >
+              <p>
+                The natural voices download once from Hugging Face ({sizeOf(NATURAL_VOICES)}). Then they run
+                on this device, and your text never leaves it. You can delete them in Settings.
+              </p>
+              {naturalVoices.download.step === 'download' ? (
+                <>
+                  <p role="status" className="text-muted">
+                    Downloading the natural voices: {String(Math.floor(naturalVoices.download.share * 100))}%.
+                  </p>
+                  <Button
+                    variant="ghost"
+                    className="min-h-11 justify-self-start pointer-fine:min-h-9"
+                    onClick={naturalVoices.stop}
+                  >
+                    Stop the download
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  className="min-h-11 justify-self-start pointer-fine:min-h-9"
+                  onClick={() => void downloadAndRead()}
+                >
+                  <Play aria-hidden="true" className="size-4" />
+                  Download and read
+                </Button>
+              )}
+              {naturalVoices.download.step === 'error' && (
+                <p role="alert" className="text-accent-text">
+                  {naturalVoices.download.message}
+                </p>
+              )}
+            </section>
+          )}
+
           <div className="flex flex-wrap gap-2">
-            {status === 'idle' && (
+            {status === 'idle' && !needsDownload && !looking && (
               <Button className="min-h-11 pointer-fine:min-h-9" onClick={startRead}>
                 <Play aria-hidden="true" className="size-4" />
                 {selected ? 'Read the selection' : 'Read from the cursor'}
