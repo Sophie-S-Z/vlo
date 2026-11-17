@@ -17,8 +17,8 @@ import { setWritingPrefs, useWritingPrefs } from './writingPrefs';
 
 /** The outline builds again after this pause in typing. */
 const REBUILD_MS = 400;
-/** The free margin left of the page that the rail needs: its 13rem and its 1.5rem gap, with some air. */
-const RAIL_ROOM = 256;
+/** The free margin left of the page that the rail needs: its 13rem, and a 2.5rem gap for the block handle. */
+const RAIL_ROOM = 264;
 
 /** The outline of the editor's document while `enabled`, and the index of the entry at the caret. */
 function useItemOutline(editor: Editor | null, language: string | undefined, enabled: boolean) {
@@ -124,7 +124,7 @@ export function OutlineRail({ editor, language }: OutlineProps) {
     <nav
       aria-label="Item outline"
       data-typing-hide
-      className="absolute top-0 right-full bottom-0 mr-6 w-52 print:hidden"
+      className="absolute top-0 right-full bottom-0 mr-10 w-52 print:hidden"
     >
       <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[var(--radius-card)] bg-bg p-1">
         <h2 className="px-2 pt-1 pb-2 text-xs font-medium text-muted">Outline</h2>

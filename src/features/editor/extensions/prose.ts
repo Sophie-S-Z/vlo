@@ -15,6 +15,7 @@ import { SuggestionMark } from './suggestion';
 import { CleanPaste } from './cleanPaste';
 import { PageBreak } from './pageBreak';
 import { PaintFormat } from './paintFormat';
+import { MoveBlocks } from './moveBlocks';
 import { TextCaseCommands } from './textCase';
 import { SceneBreak } from './sceneBreak';
 import { Cite } from './cite';
@@ -36,6 +37,7 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     ClearFormatting,
     PaintFormat,
     TextCaseCommands,
+    MoveBlocks,
     CleanPaste,
     SceneBreak,
     PageBreak,

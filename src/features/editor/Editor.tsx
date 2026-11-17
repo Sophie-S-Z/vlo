@@ -53,6 +53,7 @@ import { SlashMenuList } from './toolbar/SlashMenuList';
 import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
 import { restorePlace, savePlace, scrollToCaret } from './lastPlace';
+import { BlockHandle } from './BlockHandle';
 import { PasteNotice } from './PasteNotice';
 import { watchPhoneTyping } from './phoneTyping';
 import { useTracking } from './trackingStore';
@@ -421,6 +422,7 @@ export function Editor({
       </div>
       <ChangesList editor={editor} />
       <CommentList editor={editor} />
+      {kind === 'prose' && <BlockHandle editor={editor} />}
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />
       <PanelHost

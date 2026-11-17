@@ -35,6 +35,8 @@ import {
   Link,
   MessageSquareText,
   Mic,
+  MoveDown,
+  MoveUp,
   Music,
   Omega,
   Paintbrush,
@@ -124,6 +126,7 @@ export type CommandGroup =
   | 'align'
   | 'paragraph'
   | 'indent'
+  | 'move'
   | 'insert'
   | 'review'
   | 'names'
@@ -139,6 +142,7 @@ export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   align: 'Alignment',
   paragraph: 'Paragraph',
   indent: 'Indent',
+  move: 'Move',
   insert: 'Insert',
   review: 'Find and read aloud',
   names: 'Private names',
@@ -1080,6 +1084,50 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     run: (e) => e.commands.clearFormatting(),
+  },
+  {
+    kind: 'run',
+    id: 'move-up',
+    label: 'Move up',
+    icon: MoveUp,
+    group: 'move',
+    forms: ALL,
+    keys: 'Alt-Shift-ArrowUp',
+    keywords: ['move paragraph', 'move line', 'reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(-1),
+  },
+  {
+    kind: 'run',
+    id: 'move-down',
+    label: 'Move down',
+    icon: MoveDown,
+    group: 'move',
+    forms: ALL,
+    keys: 'Alt-Shift-ArrowDown',
+    keywords: ['move paragraph', 'move line', 'reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(1),
+  },
+  {
+    kind: 'run',
+    id: 'move-stanza-up',
+    label: 'Move stanza up',
+    icon: MoveUp,
+    group: 'move',
+    forms: POEM,
+    keys: 'Mod-Alt-Shift-ArrowUp',
+    keywords: ['reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(-1, true),
+  },
+  {
+    kind: 'run',
+    id: 'move-stanza-down',
+    label: 'Move stanza down',
+    icon: MoveDown,
+    group: 'move',
+    forms: POEM,
+    keys: 'Mod-Alt-Shift-ArrowDown',
+    keywords: ['reorder', 'swap'],
+    run: (e) => e.commands.moveBlocks(1, true),
   },
   {
     kind: 'run',
