@@ -64,6 +64,7 @@
     "@tiptap/extension-bubble-menu": "3.32.2",
     "@tiptap/extension-collaboration": "3.32.2",
     "@tiptap/extension-highlight": "3.32.2",
+    "@tiptap/extension-list": "3.32.2",
     "@tiptap/extension-subscript": "3.32.2",
     "@tiptap/extension-superscript": "3.32.2",
     "@tiptap/extension-text-align": "3.32.2",

@@ -96,8 +96,8 @@ export interface ParagraphBlock {
 
 export interface HeadingBlock {
   type: 'heading';
-  /** 1 for a part or section, 2 for a chapter or item title, 3 and 4 for headings in the text. */
-  level: 1 | 2 | 3 | 4;
+  /** 1 for a part or section, 2 for a chapter or item title, 3 to 5 for Heading 2 to 4 in the text. */
+  level: 1 | 2 | 3 | 4 | 5;
   runs: Run[];
   align?: Align;
 }
@@ -108,6 +108,28 @@ export interface ListBlock {
   start: number;
   /** Each list item holds its own blocks. */
   items: Block[][];
+  /** A checklist (Phase 19): true for each item that is done. A checklist is never ordered. */
+  checked?: boolean[];
+}
+
+/** The box before a checklist item, for a format with no checklist of its own. */
+export function checkBox(done: boolean): string {
+  return done ? '☑' : '☐';
+}
+
+/**
+ * The items of a list, each checklist item with its box at the start of its first paragraph. A format
+ * with no checklist of its own shows these items with no bullet.
+ */
+export function boxedItems(block: ListBlock): Block[][] {
+  const { checked } = block;
+  if (!checked) return block.items;
+  return block.items.map((item, i) => {
+    const box: Run = { type: 'text', text: `${checkBox(checked[i] === true)} `, style: {} };
+    const [first, ...rest] = item;
+    if (first?.type !== 'paragraph') return [{ type: 'paragraph', runs: [box] }, ...item];
+    return [{ ...first, runs: [box, ...first.runs] }, ...rest];
+  });
 }
 
 export interface QuoteBlock {
@@ -153,6 +175,8 @@ export type Block =
   | QuoteBlock
   | StanzaBlock
   | { type: 'sceneBreak' }
+  /** A page break (Phase 19): the next block starts a new page in a format with pages. */
+  | { type: 'pageBreak' }
   | { type: 'math'; latex: string }
   | ImageBlock;
 

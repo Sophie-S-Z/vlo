@@ -44,12 +44,43 @@ function frontMatter(text: string): { body: string; fields: Record<string, strin
   return { body: text.slice(match[0].length), fields };
 }
 
+/** A task list item of GitHub Markdown: "- [ ] " or "- [x] " at the start of the item. */
+const TASK = /^\[([ xX])\]\s+/;
+
+/** Makes each list whose items all start with a task box a checklist, as the editor reads one. */
+function taskLists(html: string): string {
+  if (!html.includes('[')) return html;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  for (const list of doc.querySelectorAll('ul')) {
+    const items = [...list.children].filter((child) => child.tagName === 'LI');
+    // The box is in the first text of the item, or of its first paragraph in a loose list.
+    const firsts = items.map(
+      (item) => (item.firstElementChild?.tagName === 'P' ? item.firstElementChild : item).firstChild,
+    );
+    if (
+      items.length === 0 ||
+      !firsts.every((node) => node?.nodeType === Node.TEXT_NODE && TASK.test(node.textContent ?? ''))
+    )
+      continue;
+    list.setAttribute('data-type', 'taskList');
+    items.forEach((item, i) => {
+      const text = firsts[i];
+      if (!text) return;
+      const done = TASK.exec(text.textContent ?? '')?.[1] !== ' ';
+      text.textContent = (text.textContent ?? '').replace(TASK, '');
+      item.setAttribute('data-type', 'taskItem');
+      item.setAttribute('data-checked', String(done));
+    });
+  }
+  return doc.body.innerHTML;
+}
+
 /** A Markdown file. Its `#` and `##` headings split it into a folder and items. */
 export function readMarkdown(name: string, text: string): ImportNode[] {
   const { body, fields } = frontMatter(text.replace(/^\uFEFF/, ''));
   const plain = body.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2').replace(/\[\[([^\]]+)\]\]/g, '$1');
   const title = fields.title ?? titleOfFile(name);
-  const nodes = outline(title, markdown.render(footnotes(plain)), '\n\n');
+  const nodes = outline(title, taskLists(markdown.render(footnotes(plain))), '\n\n');
   // A file that is one item keeps the title and the synopsis from its front matter.
   const [only] = nodes;
   if (nodes.length === 1 && only && !only.children)

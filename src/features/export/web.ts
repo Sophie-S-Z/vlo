@@ -1,6 +1,8 @@
 import type { NoteContent } from '@/features/editor/format/notes';
 import { textDirection } from '@/lib/language';
 import {
+  boxedItems,
+  checkBox,
   footnotesOf,
   imageStandIn,
   repeatsTitle,
@@ -115,6 +117,9 @@ function blockHtml(block: Block, options: Required<WebOptions>): string {
     }
     case 'sceneBreak':
       return `<p${center}>*&#160;&#160;*&#160;&#160;*</p>`;
+    // A web page has no pages, and AO3 keeps no style for a print break.
+    case 'pageBreak':
+      return '';
     case 'math':
       return `<p${center}>${escapeHtml(`$$${block.latex}$$`)}</p>`;
     case 'image': {
@@ -130,7 +135,8 @@ function blockHtml(block: Block, options: Required<WebOptions>): string {
     case 'list': {
       const tag = block.ordered ? 'ol' : 'ul';
       const start = block.ordered && block.start !== 1 ? ` start="${String(block.start)}"` : '';
-      const items = block.items
+      // A checklist item starts with its box. AO3 keeps no style, so the bullet stays.
+      const items = boxedItems(block)
         .map((item) => `<li>${item.map((b) => blockHtml(b, options)).join('')}</li>`)
         .join('');
       return `<${tag}${start}>${items}</${tag}>`;
@@ -163,7 +169,8 @@ export function toWebHtml(doc: ExportDoc, options: WebOptions = {}): string {
   const parts: string[] = [];
   for (const section of doc.sections) {
     for (const block of section.blocks) {
-      if (!repeatsTitle(doc, section, block)) parts.push(blockHtml(block, full));
+      if (block.type !== 'pageBreak' && !repeatsTitle(doc, section, block))
+        parts.push(blockHtml(block, full));
     }
   }
   const notes = footnotesOf(doc);
@@ -198,6 +205,8 @@ function blockText(block: Block, nbsp: boolean): string {
       return runs(block.runs, null);
     case 'sceneBreak':
       return '*  *  *';
+    case 'pageBreak':
+      return '';
     case 'math':
       return `$$${block.latex}$$`;
     case 'image':
@@ -206,10 +215,15 @@ function blockText(block: Block, nbsp: boolean): string {
       return block.blocks.map((b) => blockText(b, nbsp)).join('\n\n');
     case 'list':
       return block.items
-        .map(
-          (item, i) =>
-            `${block.ordered ? `${String(block.start + i)}.` : '-'} ${item.map((b) => blockText(b, nbsp)).join(' ')}`,
-        )
+        .map((item, i) => {
+          const done = block.checked?.[i];
+          const marker = block.ordered
+            ? `${String(block.start + i)}.`
+            : done === undefined
+              ? '-'
+              : checkBox(done);
+          return `${marker} ${item.map((b) => blockText(b, nbsp)).join(' ')}`;
+        })
         .join('\n');
     case 'stanza':
       return block.lines.map((line) => runs(line.runs, poemSpaces())).join('\n');
@@ -221,7 +235,8 @@ function textParts(doc: ExportDoc, nbsp: boolean): string[] {
   const parts: string[] = [];
   for (const section of doc.sections) {
     for (const block of section.blocks) {
-      if (!repeatsTitle(doc, section, block)) parts.push(blockText(block, nbsp));
+      if (block.type !== 'pageBreak' && !repeatsTitle(doc, section, block))
+        parts.push(blockText(block, nbsp));
     }
   }
   const notes = footnotesOf(doc);

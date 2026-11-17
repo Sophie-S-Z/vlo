@@ -72,17 +72,19 @@ test('"/" inside a word stays a plain slash, and "/" after a space opens the men
 
 test('arrow keys move and wrap, and Enter runs the tool and removes "/query"', () => {
   editor.commands.setTextSelection(5);
+  // Heading 2, Heading 3 and Heading 4.
   type(' /head');
   key('ArrowDown');
   expect(menu()?.index).toBe(1);
   key('ArrowDown');
+  key('ArrowDown');
   expect(menu()?.index).toBe(0);
   key('ArrowUp');
-  expect(menu()?.matches[menu()?.index ?? 0]?.id).toBe('heading-3');
+  expect(menu()?.matches[menu()?.index ?? 0]?.id).toBe('heading-4');
   key('Enter');
-  expect(chosen.map((c) => c.id)).toEqual(['heading-3']);
+  expect(chosen.map((c) => c.id)).toEqual(['heading-4']);
   expect(text()).toBe('Salt ');
-  expect(editor.isActive('heading', { level: 3 })).toBe(true);
+  expect(editor.isActive('heading', { level: 4 })).toBe(true);
   expect(menu()?.from).toBeNull();
 });
 

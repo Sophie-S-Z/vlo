@@ -81,7 +81,16 @@ const SPACE: Section = { label: 'Spacing', tools: ['spacing'] };
 
 const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
   prose: {
-    blockMenu: ['paragraph', 'heading-2', 'heading-3', 'quote', 'bullets', 'numbers'],
+    blockMenu: [
+      'paragraph',
+      'heading-2',
+      'heading-3',
+      'heading-4',
+      'quote',
+      'bullets',
+      'numbers',
+      'checklist',
+    ],
     segments: [
       { tools: ['undo', 'redo'] },
       { tools: ['bold', 'italic'] },
@@ -91,7 +100,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
       insert: [
         { label: 'Notes', tools: ['footnote'] },
         { label: 'Media', tools: ['image', 'math', 'math-block'] },
-        { label: 'Breaks and characters', tools: ['scene-break', 'characters'] },
+        { label: 'Breaks and characters', tools: ['scene-break', 'page-break', 'characters'] },
       ],
       format: [
         {

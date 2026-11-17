@@ -47,6 +47,8 @@ export interface BlockBox {
    * block that never splits, such as an equation or a scene break.
    */
   line: number | null;
+  /** True for a page break (Phase 19): the next block starts a new page. */
+  breakAfter?: boolean;
 }
 
 /**
@@ -76,6 +78,10 @@ export function pageBreaks(blocks: readonly BlockBox[], pageHeight: number): num
       if (!(next > start)) next = end;
       breaks.push(next);
       start = next;
+    }
+    if (block.breakAfter && block.bottom > start) {
+      breaks.push(block.bottom);
+      start = block.bottom;
     }
   }
   return breaks;

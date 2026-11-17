@@ -10,6 +10,7 @@ import { isNumbered } from '@/features/book/book';
 import type { BookSettings } from '@/lib/db';
 import {
   imageNames,
+  boxedItems,
   imageStandIn,
   repeatsTitle,
   runsText,
@@ -269,6 +270,8 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
         kind === 'stars' ? '*\u2003*\u2003*' : kind === 'fleuron' ? '\u2766' : kind === 'space' ? NBSP : '#';
       return `<p class="scene-break" role="separator">${mark}</p>`;
     }
+    case 'pageBreak':
+      return '<div class="page-break"></div>';
     case 'math':
       return `<div class="equation">${equation(book, block.latex, true)}</div>`;
     case 'image': {
@@ -284,8 +287,10 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
     case 'list': {
       const tag = block.ordered ? 'ol' : 'ul';
       const start = block.ordered && block.start !== 1 ? ` start="${String(block.start)}"` : '';
-      const items = block.items.map((item) => `<li>${blocksHtml(book, item, ctx)}</li>`).join('');
-      return `<${tag}${start}>${items}</${tag}>`;
+      const items = boxedItems(block)
+        .map((item) => `<li>${blocksHtml(book, item, ctx)}</li>`)
+        .join('');
+      return `<${tag}${start}${block.checked ? ' class="checklist"' : ''}>${items}</${tag}>`;
     }
     case 'stanza': {
       // The hanging indent is on the side where a line starts, so right-to-left poems keep it too.
@@ -431,6 +436,8 @@ section.folder h1, section.folder h2 { margin-top: 3em; text-align: center; }
 .drop-cap { float: left; font-size: 3.4em; line-height: 0.85; padding: 0.06em 0.1em 0 0; }
 p.has-drop-cap { text-indent: 0; }
 .scene-break { text-align: center; margin: 1em 0; text-indent: 0; }
+.page-break { page-break-after: always; break-after: page; }
+ul.checklist { list-style: none; }
 .equation { text-align: center; margin: 0.8em 0; }
 figure.image { margin: 1em auto; text-indent: 0; page-break-inside: avoid; break-inside: avoid; }
 figure.image.align-left { margin-left: 0; }

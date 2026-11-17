@@ -15,7 +15,7 @@ export const PAGE_LINES_PAUSE_MS = 600;
 export const PAGE_LINES_MEASURE = 'vlo-page-lines';
 
 /** Blocks that move whole to the next page. Every other block can split between two lines. */
-const WHOLE = '[data-math-block], [data-scene-break], hr, img, figure';
+const WHOLE = '[data-math-block], [data-scene-break], [data-page-break], hr, img, figure';
 
 function lineHeight(element: Element): number | null {
   if (element.matches(WHOLE)) return null;
@@ -84,7 +84,12 @@ export function PageFrame({ editor, format, zoom, layoutKey, onPages, children }
       ];
       for (const element of elements) {
         const rect = element.getBoundingClientRect();
-        blocks.push({ top: rect.top - base, bottom: rect.bottom - base, line: lineHeight(element) });
+        blocks.push({
+          top: rect.top - base,
+          bottom: rect.bottom - base,
+          line: lineHeight(element),
+          ...(element.matches('[data-page-break]') ? { breakAfter: true } : {}),
+        });
       }
       const next = pageBreaks(blocks, pageHeight);
       performance.clearMeasures(PAGE_LINES_MEASURE);
