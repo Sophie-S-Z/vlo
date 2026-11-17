@@ -54,6 +54,7 @@ import {
   RemoveFormatting,
   Sigma,
   Speech,
+  SpellCheck,
   SpellCheck2,
   ScanSearch,
   TextSearch,
@@ -85,6 +86,8 @@ import { ROLE_LABELS, SCRIPT_LINE, SCRIPT_ROLES, type ScriptRole } from '../scri
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
 import { canStyleCheck } from '../extensions/styleCheck';
+import { canCheckGrammar } from '../extensions/grammar';
+import { getGrammarPrefs, setGrammarOn } from '@/features/grammar/grammarPrefs';
 import { rimshot } from '../rimshot';
 import { changesOf } from '../extensions/suggestion';
 import { getTracking, saveTracking } from '../trackingStore';
@@ -1046,6 +1049,22 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: () => getCodex().show,
+  },
+  {
+    kind: 'run',
+    id: 'grammar-check',
+    label: 'Spelling and grammar',
+    icon: SpellCheck,
+    group: 'review',
+    forms: ['prose'],
+    keywords: ['spell check', 'spelling', 'grammar', 'typos', 'proofread', 'harper'],
+    run: () => {
+      setGrammarOn(!getGrammarPrefs().on);
+      return true;
+    },
+    isActive: () => getGrammarPrefs().on,
+    // Harper checks English, so a project in another language keeps the browser's spell check.
+    isEnabled: (e) => canCheckGrammar(e.state),
   },
   {
     kind: 'run',

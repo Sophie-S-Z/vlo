@@ -967,6 +967,24 @@ html[data-calm='true'] .vlo-fill-shimmer {
   box-decoration-break: clone;
 }
 
+/*
+ * Spelling and grammar (Phase 19, Task D1): a rose wavy line under a spelling mark and a sky dotted line
+ * under a grammar mark, so the two differ by shape as well as by color.
+ */
+.vlo-manuscript .vlo-spelling {
+  text-decoration: underline wavy var(--vlo-text-rose);
+  text-decoration-skip-ink: none;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.25em;
+}
+
+.vlo-manuscript .vlo-grammar {
+  text-decoration: underline dotted var(--vlo-text-sky);
+  text-decoration-skip-ink: none;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3em;
+}
+
 /* The continuity check (F66): a double underline, so it differs from the wavy style check mark by shape. */
 .vlo-manuscript .vlo-continuity {
   text-decoration: underline double var(--accent);
@@ -1252,6 +1270,8 @@ html[data-vlo-typing] [data-vlo-keyboard-bar] [data-vlo-toolbar] {
       .vlo-find-current,
       .vlo-style,
       .vlo-style-long,
+      .vlo-spelling,
+      .vlo-grammar,
       .vlo-continuity,
       .vlo-codex,
       .vlo-comment,

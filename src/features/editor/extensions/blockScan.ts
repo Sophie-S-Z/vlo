@@ -25,7 +25,7 @@ export interface ScanState {
 }
 
 /** The text of a paragraph or line with one character for each position, so an offset is a position. */
-function blockText(block: ProseMirrorNode): string {
+export function blockText(block: ProseMirrorNode): string {
   let text = '';
   block.forEach((child) => {
     if (child.isText) text += child.text ?? '';

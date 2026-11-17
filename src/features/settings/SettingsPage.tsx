@@ -20,6 +20,8 @@ import { UsageSettings } from '@/features/usage/UsageSettings';
 import { sharingReady } from '@/features/share/rpc';
 import { Link } from 'react-router';
 import { SpeechSettings, VoiceSettings } from '@/features/voice/SpeechSettings';
+import { GrammarSettings } from '@/features/grammar/GrammarSettings';
+import { TextShortcutSettings } from './TextShortcutSettings';
 
 // Sync loads with Settings only when it opens, so the first screen stays small.
 const DevicesSection = lazy(async () => ({
@@ -254,6 +256,7 @@ export function SettingsPage() {
                 setAnnouncement(on ? 'All tools in the toolbar.' : 'Main tools in the toolbar.');
               }}
             />
+            <TextShortcutSettings onAnnounce={setAnnouncement} />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="grid gap-0.5">
                 <p className="text-sm font-medium">Tips</p>
@@ -273,6 +276,10 @@ export function SettingsPage() {
               </Button>
             </div>
           </div>
+        </Section>
+
+        <Section title="Spelling and grammar" id="grammar">
+          <GrammarSettings onAnnounce={setAnnouncement} />
         </Section>
 
         <Section title="Speech to text">

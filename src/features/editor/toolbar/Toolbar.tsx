@@ -72,7 +72,10 @@ interface Layout {
 
 const FIND: Section = { label: 'Find', tools: ['find', 'replace'] };
 const LISTEN: Section = { label: 'Listen and speak', tools: ['read-aloud', 'speak'] };
-const CHECKS: Section = { label: 'Checks', tools: ['style-check', 'continuity-check', 'track-changes'] };
+const CHECKS: Section = {
+  label: 'Checks',
+  tools: ['grammar-check', 'style-check', 'continuity-check', 'track-changes'],
+};
 const COMMENTS: Section = {
   label: 'Comments and changes',
   tools: ['all-comments', 'accept-all-changes', 'reject-all-changes'],

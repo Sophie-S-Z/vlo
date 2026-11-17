@@ -40,6 +40,43 @@ export interface WritingPrefs {
   looks: SavedLook[];
   /** The item outline (Phase 19, Task B1) stays open in the margin, where the window has room for it. */
   outline: boolean;
+  /** Text shortcuts (Phase 19, Task D3): each "type this" becomes "get this" after a space or a mark. */
+  shortcuts: TextShortcut[];
+  /** The starter list of common typos, such as "teh", in English prose. */
+  typoFixes: boolean;
+}
+
+export interface TextShortcut {
+  /** What the writer types: one word with no space. */
+  from: string;
+  /** What the shortcut puts in its place. */
+  to: string;
+  on: boolean;
+}
+
+export const MAX_SHORTCUTS = 200;
+export const MAX_SHORTCUT_FROM = 32;
+export const MAX_SHORTCUT_TO = 500;
+
+/** A shortcut with a word to type and a text to get, or null. */
+export function cleanShortcut(value: unknown): TextShortcut | null {
+  if (!value || typeof value !== 'object') return null;
+  const { from, to, on } = value as Record<string, unknown>;
+  if (typeof from !== 'string' || typeof to !== 'string') return null;
+  const word = from.trim();
+  if (word === '' || word.length > MAX_SHORTCUT_FROM || /\s/.test(word)) return null;
+  if (to === '' || to.length > MAX_SHORTCUT_TO || to === word) return null;
+  return { from: word, to, on: on !== false };
+}
+
+function cleanShortcuts(value: unknown): TextShortcut[] {
+  if (!Array.isArray(value)) return [];
+  const shortcuts: TextShortcut[] = [];
+  for (const entry of value as unknown[]) {
+    const shortcut = cleanShortcut(entry);
+    if (shortcut && !shortcuts.some((s) => s.from === shortcut.from)) shortcuts.push(shortcut);
+  }
+  return shortcuts.slice(0, MAX_SHORTCUTS);
 }
 
 export type ParagraphLook = 'spaced' | 'indented' | 'airy';
@@ -112,6 +149,8 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   screenFont: null,
   looks: [],
   outline: false,
+  shortcuts: [],
+  typoFixes: true,
 };
 
 /** A page width in the range, on a step; anything else gives null. */
@@ -200,6 +239,8 @@ function load(): WritingPrefs {
     screenFont: value.screenFont === undefined ? null : cleanFontValue(value.screenFont),
     looks: cleanLooks(value.looks),
     outline: value.outline === true,
+    shortcuts: cleanShortcuts(value.shortcuts),
+    typoFixes: value.typoFixes !== false,
   };
 }
 

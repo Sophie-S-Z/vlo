@@ -93,7 +93,8 @@ export default defineConfig({
         // The speech-to-text worker and its ONNX Runtime file (about 7 MB gzip, Phase 11 plan Task K9) are
         // cached the first time a writer turns speech into text. The worker of the natural voices is cached
         // the first time a writer reads with one, and it runs the same ONNX Runtime file. The PDF reader's
-        // worker (about 400 KB gzip) is cached the first time a writer imports a PDF.
+        // worker (about 400 KB gzip) is cached the first time a writer imports a PDF. The spelling and grammar
+        // check (Harper, about 8.5 MB gzip with its dictionary) is cached the first time a writer turns it on.
         globIgnores: [
           'assets/fonts/**',
           'assets/craft/**',
@@ -101,6 +102,8 @@ export default defineConfig({
           'assets/transcribe.worker-*',
           'assets/speak.worker-*',
           'assets/pdf.worker-*',
+          'assets/grammar.worker-*',
+          'assets/grammar/**',
         ],
         runtimeCaching: [
           {
@@ -140,6 +143,16 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           })),
+          {
+            urlPattern: /\/assets\/(?:grammar\.worker-[^/]+\.js|grammar\/[^/]+\.js|harper_wasm_[^/]+\.wasm)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-grammar-check',
+              // The file names carry a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 8 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
           {
             urlPattern: /\/assets\/pdf\.worker-[^/]+\.js$/,
             handler: 'CacheFirst',
@@ -196,11 +209,14 @@ export default defineConfig({
     format: 'es',
     rolldownOptions: {
       output: {
-        // The Craft worker's dictionary goes under assets/craft/, so the install leaves it out.
+        // The Craft worker's dictionary goes under assets/craft/, and Harper under assets/grammar/, so the
+        // install leaves them out.
         chunkFileNames: (chunk) =>
           chunk.moduleIds.some((id) => id.includes('cmu-pronouncing-dictionary'))
             ? 'assets/craft/[name]-[hash].js'
-            : 'assets/[name]-[hash].js',
+            : chunk.moduleIds.some((id) => id.includes('harper.js'))
+              ? 'assets/grammar/[name]-[hash].js'
+              : 'assets/[name]-[hash].js',
       },
     },
   },
