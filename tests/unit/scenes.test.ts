@@ -56,13 +56,15 @@ afterEach(() => {
 });
 
 describe('the scene list', () => {
-  it('has six scenes with unique ids, a label, a hint, a still and a sound', () => {
+  it('has six scenes with unique ids, a label, a hint, a photograph, its color and a sound', () => {
     expect(SCENES).toHaveLength(6);
     expect(new Set(SCENES.map((s) => s.id)).size).toBe(6);
     for (const scene of SCENES) {
       expect(scene.label.length).toBeGreaterThan(0);
       expect(scene.hint).toMatch(/\.$/);
-      expect(scene.still).toMatch(/gradient\(/);
+      expect(scene.photo).toMatch(new RegExp(`scene-${scene.id}\\b[^/]*\\.webp$`));
+      expect(scene.thumb).toMatch(/thumb|^data:image\/webp/);
+      expect(scene.tone).toMatch(/^#[0-9a-f]{6}$/);
       expect(['rain', 'fire', 'crickets', 'forest', 'wind', 'waves']).toContain(scene.sound);
     }
   });
@@ -101,29 +103,31 @@ describe('seeded', () => {
 });
 
 describe('the art', () => {
-  it.each(SCENES.map((s) => s.id))('%s paints its still parts once per size and draws each frame', (id) => {
-    const frame: Call[] = [];
-    const art = createArt(id, recordingContext(frame));
-    art.resize(1200.4, 800.6);
-    const stillCount = stillCalls.length;
-    expect(stillCount).toBeGreaterThan(5);
+  it.each(SCENES.map((s) => s.id))(
+    '%s makes its sprites once per size and clears the canvas each frame',
+    (id) => {
+      const frame: Call[] = [];
+      const art = createArt(id, recordingContext(frame));
+      art.resize(1200.4, 800.6);
+      const spriteCount = stillCalls.length;
+      expect(spriteCount).toBeGreaterThan(2);
 
-    for (const t of [0, STILL_TIME, 100.25]) {
-      frame.length = 0;
-      art.draw(t);
-      // Each frame starts from the cached still parts at the top left.
-      expect(frame[0]).toMatchObject({ name: 'drawImage' });
-      expect(frame[0]?.args.slice(1)).toEqual([0, 0]);
-      expect(frame.length).toBeGreaterThan(5);
-      for (const call of frame) {
-        for (const arg of call.args) {
-          if (typeof arg === 'number') expect(Number.isFinite(arg)).toBe(true);
+      for (const t of [0, STILL_TIME, 100.25]) {
+        frame.length = 0;
+        art.draw(t);
+        // Each frame starts from a clear canvas, so the photograph shows through.
+        expect(frame[0]).toMatchObject({ name: 'clearRect', args: [0, 0, 1200, 801] });
+        expect(frame.filter((c) => c.name === 'drawImage').length).toBeGreaterThan(3);
+        for (const call of frame) {
+          for (const arg of call.args) {
+            if (typeof arg === 'number') expect(Number.isFinite(arg)).toBe(true);
+          }
         }
       }
-    }
-    // Frames do not paint the still parts again.
-    expect(stillCalls.length).toBe(stillCount);
-  });
+      // Frames do not make the sprites again.
+      expect(stillCalls.length).toBe(spriteCount);
+    },
+  );
 
   it.each(SCENES.map((s) => s.id))('%s draws the same still frame each time', (id) => {
     const record = () => {
@@ -145,6 +149,12 @@ describe('the art', () => {
     art.draw(3.3);
     const numbers = frame.flatMap((c) => c.args).filter((a): a is number => typeof a === 'number');
     expect(numbers.every((n) => Number.isFinite(n))).toBe(true);
+  });
+
+  it('draws nothing before it knows its size', () => {
+    const frame: Call[] = [];
+    createArt('snow', recordingContext(frame)).draw(1);
+    expect(frame.map((c) => c.name)).toEqual(['clearRect']);
   });
 });
 
@@ -183,7 +193,7 @@ describe('SceneRunner', () => {
       tick: (ms: number) => {
         clock += ms;
       },
-      draws: () => frame.filter((c) => c.name === 'drawImage').length,
+      draws: () => frame.filter((c) => c.name === 'clearRect').length,
     };
   }
 

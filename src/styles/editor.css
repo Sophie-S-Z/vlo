@@ -785,7 +785,7 @@ html[data-calm='true'] .vlo-fill-shimmer {
 }
 
 /*
- * Cozy scenes (plan Task A8, decision 11). The scene is artwork around the page: it fills the manuscript
+ * Cozy scenes (plan Task A8, decision 11). The scene is a photograph around the page: it fills the manuscript
  * column and stays in view while the text scrolls. The page is a card on its theme color, so text
  * contrast never depends on the scene.
  */
@@ -813,6 +813,11 @@ html[data-calm='true'] .vlo-fill-shimmer {
   max-height: 100dvh;
   margin: calc(-1 * var(--vlo-stage-y)) calc(-1 * var(--vlo-stage-x));
   pointer-events: none;
+  /* The photograph covers the scene, a little darker at its edges, on its average color until it loads. */
+  background:
+    radial-gradient(130% 110% at 50% 45%, transparent 50%, rgb(0 0 0 / 0.38)),
+    var(--scene-photo, none) center / cover no-repeat,
+    var(--scene-tone, var(--surface));
   /*
    * The scene gets its own layer, and the page over it then gets one too, so a new scene frame does not
    * repaint the page, its text and its wide shadow. Without it, the CI WebKit, which paints in software,

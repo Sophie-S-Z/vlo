@@ -9,9 +9,20 @@ test.beforeEach(async ({ page }) => {
 });
 
 /*
- * Atmosphere themes and Type play. An atmosphere paints a scene behind the app, its lights stand still in
- * Calm mode, and Type play shapes the selected words and turns each effect off with a second press.
+ * Atmosphere themes and Type play. An atmosphere puts a photograph behind the app, which the browser fetches
+ * only for that theme, and which stands still in Calm mode. Type play shapes the selected words and turns
+ * each effect off with a second press.
  */
+
+/** The backdrop photographs that the page fetched. */
+function backdropsFetched(page: Page) {
+  return page.evaluate(() =>
+    performance
+      .getEntriesByType('resource')
+      .map((entry) => entry.name)
+      .filter((name) => /\/(atmo|scene)-[\w-]+\.webp/.test(name)),
+  );
+}
 
 /** The animation name and background of a layer of the scene. */
 function layer(page: Page, selector: 'body::before' | 'body::after') {
@@ -25,21 +36,27 @@ function layer(page: Page, selector: 'body::before' | 'body::after') {
   );
 }
 
-test('an atmosphere paints its scene, keeps its lights still in Calm mode, and has no serious axe issues', async ({
+test('an atmosphere shows its photograph, stands still in Calm mode, and has no serious axe issues', async ({
   page,
 }) => {
   await page.goto('/settings');
+  // Settings shows small pictures of the atmospheres, and no full photograph before one is chosen.
+  await expect(page.getByRole('radio', { name: /^Deep forest/ })).toBeVisible();
+  expect((await backdropsFetched(page)).every((name) => name.includes('-thumb'))).toBe(true);
   await page.getByRole('radio', { name: /^Deep forest/ }).click();
   const html = page.locator('html');
   await expect(html).toHaveAttribute('data-theme', 'forest');
   await expect(html).toHaveAttribute('data-tone', 'dark');
   await expect(html).toHaveAttribute('data-atmosphere', '');
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#0c1511');
-  expect((await layer(page, 'body::before')).image).toContain('gradient');
-  expect((await layer(page, 'body::after')).animation).toBe('vlo-twinkle');
+  expect((await layer(page, 'body::before')).image).toMatch(/atmo-forest[\w-]*\.webp/);
+  expect((await layer(page, 'body::before')).animation).toBe('vlo-drift');
+  await expect
+    .poll(async () => (await backdropsFetched(page)).some((n) => /atmo-forest(?!-thumb)[\w-]*\.webp/.test(n)))
+    .toBe(true);
 
   await page.getByRole('switch', { name: 'Calm mode' }).click();
-  expect((await layer(page, 'body::after')).animation).toBe('none');
+  expect((await layer(page, 'body::before')).animation).toBe('none');
   expect(await seriousIssues(page)).toEqual([]);
 
   await page.reload();
