@@ -272,7 +272,7 @@ export function SettingsPage() {
                 Sign in and sync
               </Link>
               <Link to="/send-feedback" state={{ from: '/settings' }} className="underline">
-                Send feedback to the makers of Vlo
+                Send feedback or a note to Sophie, who makes Vlo
               </Link>
             </p>
           </Section>

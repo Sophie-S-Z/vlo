@@ -73,6 +73,7 @@ test('with Calm mode the hold becomes a plain button', async ({ page }) => {
     localStorage.setItem('vlo:preferences', JSON.stringify({ theme: 'system', calm: true }));
   });
   await page.goto('/welcome');
+  await page.getByRole('checkbox', { name: /Novel/ }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Open your first page' }).click();
@@ -87,6 +88,7 @@ test('every welcome step has no serious axe issues and no horizontal scroll at 3
     expect(await seriousIssues(page)).toEqual([]);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+    if (heading === 'What do you write?') await page.getByRole('checkbox', { name: /Novel/ }).click();
     if (heading !== 'Name it') await page.getByRole('button', { name: 'Next' }).click();
   }
 });

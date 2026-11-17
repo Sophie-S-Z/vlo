@@ -5,8 +5,8 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 
 /*
- * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page), 0010 (places) and 0011
- * (profiles) in PGlite. The app calls each function through
+ * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page), 0010 (places), 0011
+ * (profiles) and 0012 (feedback guards) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -23,6 +23,7 @@ const MIGRATIONS = [
   '0009_live_owner.sql',
   '0010_places.sql',
   '0011_profiles.sql',
+  '0012_feedback_guards.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -64,7 +65,8 @@ beforeEach(async () => {
   await db.exec(`
     reset role;
     select set_config('request.jwt.claim.sub', '', false);
-    delete from app_feedback; delete from app_pings; delete from sync_vaults; delete from app_owners;
+    select set_config('request.headers', '', false);
+    delete from app_feedback_blocks; delete from app_feedback; delete from app_pings; delete from sync_vaults; delete from app_owners;
     delete from sync_spaces; delete from usage_reports; delete from auth.users;
     delete from shares; delete from sprint_rooms;
     insert into auth.users (id, email, raw_app_meta_data) values
@@ -104,6 +106,15 @@ const feedback = (who: string, install: string, message = 'More fonts, please.',
     "select public.send_feedback($1, $2, $3, 4, '', '0.1.0', 'computer', 'settings') as id",
     [install, kind, message],
   );
+
+/** Makes each message older by a minute, so the next one passes the pause of 30 seconds. */
+const later = () => db.exec("update app_feedback set created_at = created_at - interval '1 minute'");
+
+/** The internet address that PostgREST gives the next requests. */
+const fromAddress = (ip: string) =>
+  db.query("select set_config('request.headers', $1, false)", [
+    JSON.stringify({ 'x-forwarded-for': `${ip}, 10.0.0.1` }),
+  ]);
 
 describe('sync vaults (decision A1)', () => {
   test('an account saves and reads its own vault, and another account sees none of it', async () => {
@@ -202,9 +213,52 @@ describe('feedback (decision A5)', () => {
         INSTALL('a'),
       ]),
     ).rejects.toThrow('bad rating');
-    for (let i = 0; i < 10; i++) await feedback('anon', INSTALL('a'));
-    await expect(feedback('anon', INSTALL('a'))).rejects.toThrow('feedback limit');
-    await feedback('anon', INSTALL('b'));
+    for (let i = 0; i < 10; i++) {
+      await feedback('anon', INSTALL('a'), `Idea ${String(i)}`);
+      await later();
+    }
+    await expect(feedback('anon', INSTALL('a'), 'Idea 10')).rejects.toThrow('feedback limit');
+    await feedback('anon', INSTALL('b'), 'Idea 10');
+  });
+
+  test('takes a note to Sophie, and refuses a fast or a repeated message', async () => {
+    await feedback('anon', INSTALL('a'), 'Thank you for Vlo.', 'note');
+    await expect(feedback('anon', INSTALL('a'), 'Another note.', 'note')).rejects.toThrow(
+      'feedback too fast',
+    );
+    await later();
+    await expect(feedback('anon', INSTALL('a'), ' Thank you for Vlo. ', 'note')).rejects.toThrow(
+      'feedback duplicate',
+    );
+    await feedback('anon', INSTALL('a'), 'Another note.', 'note');
+    expect((await db.query('select kind from app_feedback')).rows).toEqual([
+      { kind: 'note' },
+      { kind: 'note' },
+    ]);
+  });
+
+  test('counts an account on each of its devices, and an address across installs', async () => {
+    for (let i = 0; i < 10; i++) {
+      await feedback(BOB, INSTALL(`b${String(i)}`), `Idea ${String(i)}`);
+      await later();
+    }
+    await expect(feedback(BOB, INSTALL('b-new'), 'Idea 10')).rejects.toThrow('feedback limit');
+    await fromAddress('203.0.113.7');
+    for (let i = 0; i < 20; i++) {
+      await feedback('anon', INSTALL(`ip${String(i)}`), `Spam ${String(i)}`);
+      await later();
+    }
+    await expect(feedback('anon', INSTALL('ip-new'), 'Spam 20')).rejects.toThrow('feedback limit');
+    await fromAddress('198.51.100.1');
+    await feedback('anon', INSTALL('ip-new'), 'Spam 20');
+    // The key of an address is md5, never the address itself, and the clean-up removes it after 2 days.
+    const keys = (await db.query<{ k: string }>('select distinct sender_key as k from app_feedback')).rows;
+    expect(keys.map((r) => r.k)).not.toContain('203.0.113.7');
+    await db.exec("update app_feedback set created_at = created_at - interval '3 days'");
+    await db.query('select public.cleanup_pings()');
+    expect((await db.query('select sender_key from app_feedback where sender_key is not null')).rows).toEqual(
+      [],
+    );
   });
 });
 
@@ -292,6 +346,26 @@ describe('the owner page (decision A6)', () => {
       'select * from public.owner_feedback()',
     );
     expect(item).toMatchObject({ status: 'planned', note: 'In the next phase.', email: 'bob@example.com' });
+  });
+
+  test('the owner blocks the sender of a message on each device and address, and unblocks it', async () => {
+    await fromAddress('203.0.113.7');
+    const [sent] = await feedback('anon', INSTALL('a'), 'Spam.');
+    await later();
+    await expect(as(BOB, 'select public.owner_block_sender($1, true)', [sent?.id])).rejects.toThrow(
+      'not owner',
+    );
+    await as(ALICE, 'select public.owner_block_sender($1, true)', [sent?.id]);
+    const [item] = await as<{ blocked: boolean }>(ALICE, 'select * from public.owner_feedback()');
+    expect(item?.blocked).toBe(true);
+    await expect(feedback('anon', INSTALL('a'), 'More spam.')).rejects.toThrow('feedback blocked');
+    await expect(feedback('anon', INSTALL('other'), 'More spam.')).rejects.toThrow('feedback blocked');
+    await fromAddress('198.51.100.1');
+    await feedback('anon', INSTALL('other'), 'A real idea.');
+    await later();
+    await as(ALICE, 'select public.owner_block_sender($1, false)', [sent?.id]);
+    await fromAddress('203.0.113.7');
+    await feedback('anon', INSTALL('a'), 'Sorry.');
   });
 });
 
@@ -483,7 +557,14 @@ test('each new function sets pg_temp last on its path, and no role reads a new t
     )
   ).rows;
   for (const row of rows) expect(row.config?.find((c) => c.startsWith('search_path='))).toMatch(/pg_temp$/);
-  for (const table of ['app_owners', 'sync_vaults', 'app_pings', 'app_feedback', 'profiles'])
+  for (const table of [
+    'app_owners',
+    'sync_vaults',
+    'app_pings',
+    'app_feedback',
+    'app_feedback_blocks',
+    'profiles',
+  ])
     for (const who of ['anon', ALICE])
       await expect(as(who, `select * from ${table}`)).rejects.toThrow(/permission denied/);
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { refusal } from '@/features/account/auth';
+import { passwordProblem, refusal } from '@/features/account/auth';
 import { sendDailyCount, writingNumbers } from '@/features/account/dailyCount';
 import { installId, readDailyCount, setDailyCountOn } from '@/features/account/dailyCountState';
 import { benchmarks, feedbackCsv, ranked, type OwnerDay, type OwnerFeedback } from '@/features/account/owner';
@@ -66,10 +66,11 @@ describe('feedback (decisions A5 and A6)', () => {
       place: 'settings',
       status: 'new',
       note: '',
+      blocked: false,
     };
     const csv = feedbackCsv([row]);
     expect(csv.split('\r\n')[0]).toBe(
-      'date,kind,status,rating,message,email,reply to,device,version,screen,note',
+      'date,kind,status,rating,message,email,reply to,device,version,screen,note,blocked',
     );
     expect(csv).toContain('"\'=HYPERLINK(""x"")\nand, more"');
     expect(ranked({ b: 1, a: 3, c: 1 })).toEqual([
@@ -119,5 +120,21 @@ describe('a refused sign-in request', () => {
     expect(refusal('otp', 400, 'email_address_not_authorized')).toBe('mail');
     expect(refusal('otp', 500, 'Error sending magic link email')).toBe('mail');
     expect(refusal('otp', 429, 'over_email_send_rate_limit')).toBe('too-many');
+  });
+
+  it('names a wrong password, a weak or same password, and a password change that needs a code', () => {
+    expect(refusal('token?grant_type=password', 400, 'invalid_credentials')).toBe('bad-password');
+    expect(refusal('token?grant_type=password', 500, '')).toBe('server');
+    expect(refusal('user', 422, 'weak_password')).toBe('weak-password');
+    expect(refusal('user', 422, 'same_password')).toBe('same-password');
+    expect(refusal('user', 400, 'reauthentication_needed')).toBe('needs-code');
+    expect(refusal('user', 400, 'reauthentication_not_valid')).toBe('bad-code');
+  });
+
+  it('checks a new password before it goes', () => {
+    expect(passwordProblem('short', 'short')).toBe('Use at least 8 characters.');
+    expect(passwordProblem('x'.repeat(73), 'x'.repeat(73))).toBe('Use at most 72 characters.');
+    expect(passwordProblem('salt and harbour', 'salt and harbor')).toMatch(/not the same/);
+    expect(passwordProblem('salt and harbour', 'salt and harbour')).toBe('');
   });
 });

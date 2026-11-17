@@ -155,12 +155,13 @@ export const HELP = {
       ],
     },
     {
-      title: 'Send feedback',
+      title: 'Send feedback or a note to Sophie',
       needsSharing: true,
       steps: [
-        'Choose Send feedback at the bottom of any screen.',
-        'Pick idea, problem, praise or question, type your message, and pick a rating if you want.',
-        'Choose Send feedback. Only what you type goes, never the text of your projects.',
+        'Choose Send feedback or Write to Sophie at the bottom of any screen, or in the menu of your photo.',
+        'Pick idea, problem, praise, question or a personal note, type your message, and pick a rating if you want.',
+        'Choose Send. Only what you type goes, never the text of your projects.',
+        'You can send up to 10 messages in a day, with 30 seconds between messages.',
       ],
     },
     {
