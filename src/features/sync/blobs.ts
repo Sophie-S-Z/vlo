@@ -8,6 +8,7 @@ import {
   toBase64,
   type Sealed,
 } from '@/lib/crypto';
+import { bytesBuffer, type FileBytes } from '@/lib/db';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
 import { SYNC_TABLES } from './clock';
 import type { Version } from './merge';
@@ -56,7 +57,7 @@ export function blobKey(keys: SyncKeys, name: string): Promise<string> {
   return hmacName(keys.name, name);
 }
 
-/** The tables whose rows hold a file as a Blob: research files, and the images in the text (G7). */
+/** The tables whose rows hold a file's bytes: research files, and the images in the text (G7). */
 const FILE_TABLES: ReadonlySet<string> = new Set(['research', 'images']);
 
 /** A research file's or an image's bytes and an item version's Yjs state go in the JSON as base64. */
@@ -70,8 +71,11 @@ async function packRow(version: Version): Promise<Version> {
       row: { ...row, state: toBase64(new Uint8Array(state.buffer, state.byteOffset, state.byteLength)) },
     };
   const data = row?.data;
-  if (!FILE_TABLES.has(version.table) || !(data instanceof Blob)) return version;
-  return { ...version, row: { ...row, data: toBase64(new Uint8Array(await data.arrayBuffer())) } };
+  if (!FILE_TABLES.has(version.table) || typeof data !== 'object' || data === null) return version;
+  return {
+    ...version,
+    row: { ...row, data: toBase64(new Uint8Array(await bytesBuffer(data as FileBytes))) },
+  };
 }
 
 function unpackRow(version: Version): Version {
@@ -79,7 +83,7 @@ function unpackRow(version: Version): Version {
   if (version.table === 'itemVersions' && typeof row?.state === 'string')
     return { ...version, row: { ...row, state: fromBase64(row.state) } };
   if (!FILE_TABLES.has(version.table) || typeof row?.data !== 'string') return version;
-  return { ...version, row: { ...row, data: new Blob([fromBase64(row.data)], { type: String(row.type) }) } };
+  return { ...version, row: { ...row, data: fromBase64(row.data).buffer } };
 }
 
 export async function sealBlob(blob: RowsBlob | TextBlob, keys: SyncKeys): Promise<Sealed> {

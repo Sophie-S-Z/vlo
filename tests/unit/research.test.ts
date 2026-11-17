@@ -10,7 +10,7 @@ import {
   MB,
   researchView,
 } from '@/features/research/research';
-import { db } from '@/lib/db';
+import { bytesBuffer, db } from '@/lib/db';
 
 /* Plan Task H6 (roadmap F41): the research folder. */
 
@@ -67,6 +67,9 @@ describe('research files', () => {
     const project = await novel();
     const bytes = new Uint8Array([0, 1, 2, 250, 255]);
     await addResearchFiles(project.id, [new File([bytes], 'scan.png', { type: 'image/png' })]);
+    // Safari cannot store a Blob in a private window, so the row holds an ArrayBuffer.
+    const [stored] = await db.research.where('projectId').equals(project.id).toArray();
+    expect(Object.prototype.toString.call(stored?.data)).toBe('[object ArrayBuffer]');
     await addClipping(project.id, '', 'Tides turn twice a day.\nMore here.', 'https://example.com/tides');
 
     const backup = await backUpProject(project.id, { music: false });
@@ -77,7 +80,7 @@ describe('research files', () => {
     const rows = await db.research.where('projectId').equals(project.id).sortBy('addedAt');
     expect(rows.map((r) => r.name)).toEqual(['scan.png', 'Tides turn twice a day.']);
     const data = rows[0]?.data;
-    expect(data && new Uint8Array(await data.arrayBuffer())).toEqual(bytes);
+    expect(data && new Uint8Array(await bytesBuffer(data))).toEqual(bytes);
     expect(rows[1]?.clip).toEqual({
       text: 'Tides turn twice a day.\nMore here.',
       url: 'https://example.com/tides',

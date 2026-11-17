@@ -1,7 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useBlobSource } from '@/app/useBlobSource';
-import type { ResearchFile } from '@/lib/db';
+import { bytesBuffer, type ResearchFile } from '@/lib/db';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -25,7 +25,7 @@ const KIND_LABEL = { image: 'Image', pdf: 'PDF', audio: 'Audio', clip: 'Clipping
 export function ResearchView({ file, onDeleted }: { file: ResearchFile; onDeleted: () => void }) {
   const id = useId();
   const view = researchView(file);
-  const source = useBlobSource(file.data);
+  const source = useBlobSource(file.data, file.type);
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState(false);
 
@@ -110,9 +110,8 @@ export function ResearchView({ file, onDeleted }: { file: ResearchFile; onDelete
           <Button
             variant="outline"
             onClick={() => {
-              const blob = file.data;
-              if (blob)
-                void blob.arrayBuffer().then((bytes) => {
+              if (file.data)
+                void bytesBuffer(file.data).then((bytes) => {
                   downloadBytes(file.name, file.type, new Uint8Array(bytes));
                 });
             }}

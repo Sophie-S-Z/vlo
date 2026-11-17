@@ -189,7 +189,7 @@ describe('push', () => {
         .toJSON(),
     ).toContain('The harbour.');
     const file = (await mine('file:r1')) as RowsBlob;
-    expect(await (file.rows[0]?.row?.data as Blob).text()).toBe('tide');
+    expect(new TextDecoder().decode(file.rows[0]?.row?.data as ArrayBuffer)).toBe('tide');
     expect((await space()).pushedAt).toBe(2000);
 
     now = 3000;
@@ -469,14 +469,14 @@ describe('images in the text (Phase 16, decision G7)', () => {
     expect(rowsBlob.rows.some((v) => v.table === 'images')).toBe(false);
     const own = (await mine('image:g1')) as RowsBlob;
     expect(own.rows[0]).toMatchObject({ table: 'images', id: 'g1', row: { width: 40, height: 30 } });
-    expect(await (own.rows[0]?.row?.data as Blob).text()).toBe('jpeg');
+    expect(new TextDecoder().decode(own.rows[0]?.row?.data as ArrayBuffer)).toBe('jpeg');
     expect(await mine('image:g2')).toBeUndefined();
     // The relay sees no image bytes.
     for (const b of [...fake.spaces.values()].flatMap((space) => space.blobs))
       expect(new TextDecoder().decode(fromBase64(b.payload))).not.toContain('jpeg');
   });
 
-  test('the other device gets the image as a Blob, and a delete there removes it here', async () => {
+  test('the other device gets the image bytes, and a delete there removes it here', async () => {
     const { data, ...info } = image('g3', 4, 'bytes');
     await fromOther(
       'image:g3',
@@ -493,7 +493,7 @@ describe('images in the text (Phase 16, decision G7)', () => {
     await syncOnce();
     const got = await db.images.get('g3');
     expect(got).toMatchObject(info);
-    expect(await got?.data.text()).toBe(await data.text());
+    expect(new TextDecoder().decode(got?.data as ArrayBuffer)).toBe(await data.text());
 
     await fromOther('rows:p1', rows([{ table: 'images', id: 'g3', at: 7000, seen: 5000 }]));
     now = 8000;

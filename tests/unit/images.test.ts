@@ -17,7 +17,7 @@ import { fitSize, hasTransparency, MAX_IMAGE_SIDE } from '@/features/images/resi
 import { createProject, deleteProject } from '@/features/library/projects';
 import { pack } from '@/features/snapshots/packing';
 import { clock } from '@/lib/clock';
-import { db, type ImageFile } from '@/lib/db';
+import { bytesBuffer, db, type FileBytes, type ImageFile } from '@/lib/db';
 import { readItemUpdate, writeItemUpdate } from '@/lib/ydocs';
 import { updateOf } from './export-fixtures';
 
@@ -77,8 +77,8 @@ async function novelWithImage() {
   return { project, scene };
 }
 
-async function bytesOf(blob: Blob): Promise<number[]> {
-  return [...new Uint8Array(await blob.arrayBuffer())];
+async function bytesOf(data: FileBytes): Promise<number[]> {
+  return [...new Uint8Array(await bytesBuffer(data))];
 }
 
 describe('The stored size (decision G2)', () => {
@@ -146,7 +146,7 @@ describe('Backups with images (Task G1)', () => {
     await importBackup(backup, 'same');
     const row = await db.images.get('img-1');
     expect(row).toMatchObject({ projectId: project.id, type: 'image/jpeg', width: 1200, height: 800 });
-    expect(await bytesOf(row?.data ?? new Blob())).toEqual([...BYTES]);
+    expect(await bytesOf(row?.data ?? new ArrayBuffer(0))).toEqual([...BYTES]);
     expect([...imageIdsIn(await readItemUpdate(scene.id))]).toEqual(['img-1']);
   });
 

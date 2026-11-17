@@ -1,5 +1,5 @@
 import { clock } from '@/lib/clock';
-import { db, readViewRows, viewTables, VloDb, type Item, type Project } from '@/lib/db';
+import { bytesBuffer, db, readViewRows, viewTables, VloDb, type Item, type Project } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { recountItems } from '@/lib/wordcount';
@@ -80,18 +80,18 @@ export async function collectBackup(
   const music = await Promise.all(
     rows.music.map(async ({ data, ...info }): Promise<BackupMusic> => ({
       info,
-      data: data instanceof Blob ? await data.arrayBuffer() : data,
+      data: await bytesBuffer(data),
     })),
   );
   const research = await Promise.all(
     rows.research.map(async ({ data, ...info }): Promise<BackupResearch> =>
-      data ? { info, data: await data.arrayBuffer() } : { info },
+      data ? { info, data: await bytesBuffer(data) } : { info },
     ),
   );
   const images = await Promise.all(
     rows.images.map(async ({ data, ...info }): Promise<BackupImage> => ({
       info,
-      data: await data.arrayBuffer(),
+      data: await bytesBuffer(data),
     })),
   );
   return {
@@ -325,13 +325,9 @@ async function storeBackup(backup: Backup, database: VloDb = db): Promise<void> 
         await database.codex.bulkAdd(backup.views.codex);
         await database.sources.bulkAdd(backup.views.sources);
         await database.research.bulkAdd(
-          backup.research.map(({ info, data }) =>
-            data ? { ...info, data: new Blob([data], { type: info.type }) } : info,
-          ),
+          backup.research.map(({ info, data }) => (data ? { ...info, data } : info)),
         );
-        await database.images.bulkAdd(
-          backup.images.map(({ info, data }) => ({ ...info, data: new Blob([data], { type: info.type }) })),
-        );
+        await database.images.bulkAdd(backup.images.map(({ info, data }) => ({ ...info, data })));
         // Music belongs to the device, not the project. A file that is already here stays as it is.
         const known = new Set(await database.audioFiles.toCollection().primaryKeys());
         await database.audioFiles.bulkAdd(

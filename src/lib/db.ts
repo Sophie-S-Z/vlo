@@ -464,6 +464,27 @@ export interface Series {
 }
 
 /**
+ * The bytes of a stored file. Vlo stores an ArrayBuffer, because Safari cannot store a Blob in IndexedDB
+ * in a private window. Rows from earlier versions hold a Blob.
+ */
+export type FileBytes = ArrayBuffer | Blob;
+
+// A test database can give a Blob of another realm, so the check reads the shape, not the class.
+function isBlob(data: FileBytes): data is Blob {
+  return 'arrayBuffer' in data;
+}
+
+/** Stored bytes as a Blob of the file's type, for a blob: address or a read. */
+export function bytesBlob(data: FileBytes, type: string): Blob {
+  return isBlob(data) ? data : new Blob([data], { type });
+}
+
+/** Stored bytes as an ArrayBuffer, for a backup, a sync or an export. */
+export function bytesBuffer(data: FileBytes): Promise<ArrayBuffer> {
+  return isBlob(data) ? data.arrayBuffer() : Promise.resolve(data);
+}
+
+/**
  * A research file of a project (F41): an image, a PDF, an audio file, or a clipping of text that the
  * writer pastes with its link. It stays on this device. Vlo never fetches a clipping's link.
  */
@@ -477,7 +498,7 @@ export interface ResearchFile {
   size: number;
   addedAt: number;
   /** The file itself. A clipping has no file. */
-  data?: Blob;
+  data?: FileBytes;
   clip?: { text: string; url?: string };
   /** The memory whose recording this is (F57). */
   itemId?: string;
@@ -499,7 +520,7 @@ export interface ImageFile {
   width: number;
   height: number;
   addedAt: number;
-  data: Blob;
+  data: FileBytes;
 }
 
 /** A plain-text copy of each item, for search and readable backups (ADR 0003). */
@@ -520,11 +541,7 @@ export interface AudioFile {
   /** Seconds, or 0 when the browser could not tell. */
   duration: number;
   addedAt: number;
-  /**
-   * The file's bytes. Vlo stores an ArrayBuffer, because Safari cannot store a Blob in IndexedDB in a
-   * private window. A Blob can come from an earlier build of this version.
-   */
-  data: ArrayBuffer | Blob;
+  data: FileBytes;
 }
 
 /** Why a request left the app (spec section 5). */

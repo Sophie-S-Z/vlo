@@ -71,18 +71,20 @@ async function totalSize(projectId: string): Promise<number> {
 export async function addResearchFiles(projectId: string, files: readonly File[]): Promise<AddResult> {
   const tooLarge = files.filter((f) => f.size > MAX_RESEARCH_FILE).map((f) => f.name);
   const now = clock.now();
-  const added = files
-    .filter((f) => f.size <= MAX_RESEARCH_FILE)
-    .map((f, i): ResearchFile => ({
-      id: newId(),
-      projectId,
-      name: f.name.trim().slice(0, MAX_RESEARCH_NAME) || 'Untitled file',
-      type: f.type || 'application/octet-stream',
-      size: f.size,
-      // Files added together keep their order.
-      addedAt: now + i,
-      data: f,
-    }));
+  const added = await Promise.all(
+    files
+      .filter((f) => f.size <= MAX_RESEARCH_FILE)
+      .map(async (f, i): Promise<ResearchFile> => ({
+        id: newId(),
+        projectId,
+        name: f.name.trim().slice(0, MAX_RESEARCH_NAME) || 'Untitled file',
+        type: f.type || 'application/octet-stream',
+        size: f.size,
+        // Files added together keep their order.
+        addedAt: now + i,
+        data: await f.arrayBuffer(),
+      })),
+  );
   await db.transaction('rw', db.research, db.projects, async () => {
     await db.research.bulkAdd(added);
     if (added.length > 0) await touch(projectId);
@@ -97,6 +99,7 @@ export async function addRecording(
   audio: Blob,
   name: string,
 ): Promise<ResearchFile> {
+  const data = await audio.arrayBuffer();
   const file: ResearchFile = {
     id: newId(),
     projectId,
@@ -105,7 +108,7 @@ export async function addRecording(
     type: audio.type || 'audio/webm',
     size: audio.size,
     addedAt: clock.now(),
-    data: audio,
+    data,
   };
   await db.transaction('rw', db.research, db.projects, async () => {
     await db.research.add(file);

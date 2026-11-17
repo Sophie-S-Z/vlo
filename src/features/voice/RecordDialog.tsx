@@ -4,7 +4,7 @@ import { Mic, Shuffle, Square } from 'lucide-react';
 import { useState } from 'react';
 import { useBlobSource } from '@/app/useBlobSource';
 import { addRecording } from '@/features/research/research';
-import { db, type ResearchFile } from '@/lib/db';
+import { bytesBlob, db, type ResearchFile } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { PROMPTS } from './prompts';
 import { clock, LevelMeter, SpeechStatus } from './SpeechParts';
@@ -29,7 +29,7 @@ function Clip({
   busy: boolean;
   onText: (clip: ResearchFile) => void;
 }) {
-  const source = useBlobSource(clip.data);
+  const source = useBlobSource(clip.data, clip.type);
   return (
     <li className="grid gap-2 rounded-md border border-rule p-3">
       <p className="text-sm [overflow-wrap:anywhere]">{clip.name}</p>
@@ -170,7 +170,7 @@ export function RecordDialog({
                 clip={clip}
                 busy={busy}
                 onText={(target) => {
-                  if (target.data) void speech.toText(target.data);
+                  if (target.data) void speech.toText(bytesBlob(target.data, target.type));
                 }}
               />
             ))}

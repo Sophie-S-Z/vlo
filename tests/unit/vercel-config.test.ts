@@ -79,7 +79,8 @@ describe('vercel.json', () => {
       // The research view shows a PDF from a blob: URL in a frame (F41).
       "frame-src 'self' blob:",
       "worker-src 'self' blob:",
-      "frame-ancestors 'none'",
+      // Safari gives the blob: PDF the page's CSP, so 'none' stops the research view's own frame.
+      "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'",
