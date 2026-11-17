@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 30,
+  version: 31,
   date: '2026-11-17',
   guide: [
     {
@@ -133,6 +133,39 @@ export const HELP = {
       ],
     },
     {
+      title: 'Check spelling and grammar',
+      steps: [
+        'In English prose, choose Review, then Spelling and grammar. The first time, Vlo downloads the check (about 8 MB) from its own files. Then it works offline.',
+        'After a pause in typing, a rose wavy line marks a spelling mistake and a sky dotted line marks a grammar slip. Put the cursor in a mark to see why, and choose a fix.',
+        'Add to dictionary keeps a word that is right. Ignore hides one mark in this item. Turn off this rule hides every mark of its kind. Settings, Spelling and grammar lists your words and the rules that you turned off.',
+        'Codex names and the names on the People screen are never spelling mistakes. The check runs on this device, so your text stays here.',
+      ],
+    },
+    {
+      title: 'Find another word or a rhyme',
+      steps: [
+        'Put the cursor in a word and press Shift+F7, or choose Review, then Thesaurus. The card lists the meanings of the word, the words for each meaning, and the opposites.',
+        'Choose a word to put it in place of yours. It keeps the capital and the formats of your word, such as bold. Type another word in the card and press Enter to look it up.',
+        'In a poem, the card has a Rhymes tab, with rhymes and near rhymes. Turn on the syllable switch, such as Only words of 1 syllable, to keep the line length. A poetry collection also has Rhymes in the Workshop.',
+        'The thesaurus comes from Open English WordNet and the rhymes from the CMU pronouncing dictionary. Both run on this device.',
+      ],
+    },
+    {
+      title: 'Type less with shortcuts and Codex names',
+      steps: [
+        'In English prose, Vlo fixes common typos as you type, such as “teh” to “the”. Press Backspace at once to keep what you typed. Settings, Writing turns the typo list off.',
+        'In Settings, Writing, add your own text shortcuts: type “mh” and a space to get “Marigold Harbour”. Each shortcut has its own switch.',
+        'After three letters of a Codex name, the rest of the name shows faintly. Press Tab to take it, or type on. Type @ for a list of the Codex entries and the items, and press Enter to put a name in the text.',
+      ],
+    },
+    {
+      title: 'See the parts of speech',
+      steps: [
+        'In an English item, choose Review, then Show parts of speech. Nouns, verbs, adjectives, adverbs and conjunctions each get a color and a line of their own.',
+        'The bar above the text names each color. Choose a name to turn that kind of word off or on. The tagger runs on this device and makes some mistakes, so use it as a guide.',
+      ],
+    },
+    {
       title: 'Hear your text read aloud',
       steps: [
         'Choose Read aloud in Review. Vlo reads from the cursor to the end, or only the selected words. There is no limit on the length.',
@@ -156,7 +189,7 @@ export const HELP = {
         'A poetry collection, an essay, an article, a research paper and a comedy project have a Workshop. Choose More next to the view tabs, then Workshop.',
         'Erasure: pick a poem or paste a text, then choose the words to keep. The kept words stay where they stood, and Make the poem saves the result as a new poem.',
         'Golden shovel: type a line that you borrow and its poet. Each word of the line ends one line of your poem, in order.',
-        'Echoes lists the words that come back from poem to poem. Line endings shows where each line of a poem ends: on a pause, running on, or on a small word.',
+        'Echoes lists the words that come back from poem to poem. Line endings shows where each line of a poem ends: on a pause, running on, or on a small word. Rhymes lists the rhymes and near rhymes of a word.',
         'Spine lists the first sentence of each paragraph of an essay, an article or a paper. Read in order, those sentences should make the argument.',
         'An article has Headlines, to compare headline ideas by their length. A research paper has Citation check, which counts the citations of each source and lists the sources that the text does not cite.',
       ],
@@ -301,6 +334,7 @@ export const HELP = {
         'Choose Focus, then Hide the text, or press Ctrl+Shift+. (Command+Shift+. on a Mac). While the text is hidden, an eye button next to the timer shows it again.',
         'In the Focus menu, pick Blur the words or Cover the words with bars. Pick it again to show the text.',
         'Turn on Keep my paragraph clear to read only the paragraph that you type in. When you leave the text, it hides too.',
+        'To write one sentence at a time, choose Focus, then Dim other sentences. Only the sentence with the cursor stays clear.',
         'Only the screen changes. Your words, the word count and each export stay the same, and a screen reader still reads the text.',
       ],
     },

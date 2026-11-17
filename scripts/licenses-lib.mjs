@@ -38,6 +38,8 @@ export function toMarkdown(rows) {
     '',
     'Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. Model files download only when the writer asks, and each keeps its own license: Qwen2.5 1.5B and SmolLM2 1.7B (Apache-2.0), Whisper small and Whisper base by OpenAI (MIT) in the ONNX form of onnx-community (Apache-2.0), and the natural voices of Supertonic 2 by Supertone (OpenRAIL-M) in the ONNX form of onnx-community.',
     '',
+    'The thesaurus file (src/features/thesaurus/thesaurus.json) comes from Open English WordNet 2024 (CC BY 4.0, https://en-word.net). scripts/build-thesaurus.mjs makes it, and the thesaurus card names the source.',
+    '',
     '| Package | Version | License | Used at |',
     '| --- | --- | --- | --- |',
     ...sorted.map(
