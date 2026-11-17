@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useDeferredValue, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { MARKETING_URL } from '@/app/links';
+import { safeStorage } from '@/app/preferences';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FolderAllow } from '@/features/backup/FolderAllow';
 import { ImportBackup, type ImportHandle } from '@/features/backup/ImportBackup';
@@ -33,8 +34,26 @@ import { useLibrary, type LibraryProject } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { WeeklyReport } from '@/features/usage/WeeklyReport';
 
-/** The shelf shows first on every visit. The stack is one press away. */
 type LibraryLayout = 'shelf' | 'stack';
+
+const LAYOUT_KEY = 'vlo:libraryLayout';
+
+/** The Library opens in the layout the writer last picked. A writer who never picked sees the shelf. */
+function loadLayout(): LibraryLayout {
+  try {
+    return safeStorage()?.getItem(LAYOUT_KEY) === 'stack' ? 'stack' : 'shelf';
+  } catch {
+    return 'shelf';
+  }
+}
+
+function saveLayout(layout: LibraryLayout) {
+  try {
+    safeStorage()?.setItem(LAYOUT_KEY, layout);
+  } catch {
+    // Blocked storage: the layout still changes for this visit.
+  }
+}
 
 const toggleClass =
   'relative z-10 inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-4 text-sm text-muted transition-colors hover:text-text data-[state=on]:text-text';
@@ -72,7 +91,7 @@ function kindsOf(projects: LibraryProject[]): string[] {
 export function LibraryPage() {
   useDocumentTitle('Library');
   const library = useLibrary();
-  const [layout, setLayout] = useState<LibraryLayout>('shelf');
+  const [layout, setLayout] = useState<LibraryLayout>(loadLayout);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('');
   const find = useDeferredValue(query.trim().toLowerCase());
@@ -236,7 +255,9 @@ export function LibraryPage() {
               value={layout}
               data-layout={layout}
               onValueChange={(value) => {
-                if (value === 'shelf' || value === 'stack') setLayout(value);
+                if (value !== 'shelf' && value !== 'stack') return;
+                saveLayout(value);
+                setLayout(value);
               }}
               className="vlo-toggle relative grid grid-cols-2 rounded-full p-0.5 ring-1 ring-rule"
             >
