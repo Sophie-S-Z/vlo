@@ -3,6 +3,8 @@
  * Dock or the Home Screen keeps its data, so Vlo shows Safari users the steps to install it.
  */
 
+import { installedApp } from '@/lib/installed';
+
 export type SafariDevice = 'mac' | 'ios';
 
 interface BrowserInfo {
@@ -27,13 +29,10 @@ export function safariDevice({ userAgent, maxTouchPoints, installed }: BrowserIn
 /** The Safari device of this browser, or null. */
 export function currentSafariDevice(): SafariDevice | null {
   if (typeof navigator === 'undefined') return null;
-  const installed =
-    (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) ||
-    (navigator as { standalone?: boolean }).standalone === true;
   return safariDevice({
     userAgent: navigator.userAgent,
     maxTouchPoints: navigator.maxTouchPoints,
-    installed,
+    installed: installedApp(),
   });
 }
 

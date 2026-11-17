@@ -155,8 +155,6 @@ export const FEATURE_NAMES: readonly string[] = [
   ...FUNCTION_WORDS.map((word) => `fw_${word}`),
 ];
 
-export const FEATURE_COUNT = FEATURE_NAMES.length;
-
 /** The fewest words that the model scores. Shorter texts give a guess that is too noisy to show. */
 export const MIN_WORDS = 40;
 

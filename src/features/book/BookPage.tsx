@@ -86,6 +86,7 @@ function BookScreen({ project, items }: { project: Project; items: Item[] }) {
 
   const save = (next: BookSettings) => {
     window.clearTimeout(typing.current);
+    typing.current = undefined;
     updateProjectSettings(project.id, { book: next }).then(
       () => {
         setError('');
@@ -246,7 +247,8 @@ function BookScreen({ project, items }: { project: Project; items: Item[] }) {
                   }, 1000);
                 }}
                 onBlur={() => {
-                  save(book);
+                  // Only a text that waits for its save saves now, so a blur alone changes nothing.
+                  if (typing.current !== undefined) save(book);
                 }}
               />
               {key === 'about' && bio !== '' && book.about.trim() === '' && (

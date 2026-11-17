@@ -188,7 +188,7 @@ export function LibraryPage() {
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           {/* Three quiet ways in, behind one menu (Phase 17 decision S4), then the main action. */}
           <ImportBackup ref={backupRef} trigger={false} />
-          <ImportWriting ref={writingRef} trigger={false} />
+          <ImportWriting ref={writingRef} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="rounded-full">

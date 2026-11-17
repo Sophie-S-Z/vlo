@@ -24,6 +24,7 @@ import {
   joinAccountSync,
   startAccountSync,
   stopAccountSyncHere,
+  turnOnAccountSync,
   type AccountSyncState,
 } from './accountSync';
 import {
@@ -80,9 +81,10 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
       try {
         const name = guessDeviceName();
         if (current.kind === 'move' || current.kind === 'paused') await joinAccountSync(current.vault, name);
+        else if (current.kind === 'stopped') await turnOnAccountSync(name);
         else await startAccountSync(name);
         setMessage(
-          current.kind === 'off' || current.kind === 'adopt'
+          current.kind === 'off' || current.kind === 'adopt' || current.kind === 'stopped'
             ? 'Sync is on. Sign in on your other devices with the same email.'
             : 'This device syncs now. Your projects come to the Library.',
         );
@@ -131,6 +133,23 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
             }}
           >
             Sync this device with my account
+          </Button>
+        </div>
+      </>
+    );
+  else if (state.kind === 'stopped')
+    body = (
+      <>
+        <p>Sync is off on all your devices. Each device keeps its projects.</p>
+        <div>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              void connect(state);
+            }}
+          >
+            Turn on sync again
           </Button>
         </div>
       </>

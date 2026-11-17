@@ -73,9 +73,13 @@ export function WritingStats({
 
   useEffect(() => {
     let current = true;
-    void wordsToday(projectId, totalWords).then((words) => {
-      if (current) setToday(words);
-    });
+    wordsToday(projectId, totalWords).then(
+      (words) => {
+        if (current) setToday(words);
+      },
+      // A full disk keeps the count of the last read.
+      () => undefined,
+    );
     return () => {
       current = false;
     };

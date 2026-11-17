@@ -195,6 +195,8 @@ function Syncing({ space, pairing, onPairing, say }: SyncingProps) {
               <Button
                 onClick={() => {
                   void act(async () => {
+                    // The account's sync goes with the space, so a signed-in device must not make a new one.
+                    await pauseAccountSyncHere();
                     await stopSyncEverywhere(space);
                     return 'Sync stopped on all devices. Your projects stay on each device.';
                   });

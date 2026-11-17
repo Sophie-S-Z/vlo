@@ -86,9 +86,9 @@ export class ExportJob {
       const response = await job.send({ type: 'prepare', request: { ...request, updates, images } }, [
         ...buffers,
       ]);
-      return response.type === 'prepared'
-        ? { job, ownFonts: response.ownFonts, names: response.names }
-        : { job, ownFonts: [], names: { unmarked: [], changed: [] } };
+      // No other answer may stand in for the name check of a share-safe file.
+      if (response.type !== 'prepared') throw new Error('The export worker prepared nothing.');
+      return { job, ownFonts: response.ownFonts, names: response.names };
     } catch (error) {
       job.close();
       throw error;
@@ -98,7 +98,8 @@ export class ExportJob {
   /** Checks the own fonts against their files, and lists each font that needs a stand-in. */
   async check(fonts: ReadonlyMap<string, Uint8Array | null>): Promise<FontSwap[]> {
     const response = await this.send({ type: 'check', fonts: [...fonts] });
-    return response.type === 'checked' ? response.swaps : [];
+    if (response.type !== 'checked') throw new Error('The export worker checked no fonts.');
+    return response.swaps;
   }
 
   /** Lays out the prepared text as a book, for the preview. The result is the page count and size. */

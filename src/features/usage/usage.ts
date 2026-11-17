@@ -1,6 +1,7 @@
 import { rpc, sharingReady } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
 import { db, type AiMode, type Template } from '@/lib/db';
+import { withLock } from '@/lib/lock';
 
 /*
  * Weekly usage counts (spec F30 and section 11, plan Task E5). They are always on, and Settings and the
@@ -211,25 +212,28 @@ async function handleWeek(week: string): Promise<void> {
 /** The app version for submit_usage. */
 export const APP_VERSION: string = (import.meta.env.VITE_APP_VERSION as string | undefined) ?? '0.0.0';
 
-/** The sends wait in one line, so two checks at once never send a week twice. */
-let sending: Promise<boolean> = Promise.resolve(false);
-
 /**
  * Sends the report of the last full week once. The first check on a device only marks the start, so Vlo
- * never sends a week from before the counts started. It never throws: a send that fails goes at the next
- * check.
+ * never sends a week from before the counts started. An empty week is marked too, so later checks read
+ * nothing. One check at a time among the tabs, so no week goes twice. It never throws: a send that fails
+ * goes at the next check.
  */
 export function sendWeeklyReport(): Promise<boolean> {
-  const next = sending.then(async () => {
+  return withLock('vlo-usage', async () => {
     try {
       if (!sharingReady()) return false;
       const now = clock.now();
-      if ((await usageState()).handledWeek === undefined) {
-        await handleWeek(lastWeek(now).week);
+      const { week } = lastWeek(now);
+      const handled = (await usageState()).handledWeek;
+      if (handled === undefined) {
+        await handleWeek(week);
         return false;
       }
       const pending = await weeklyReport(now);
-      if (!pending) return false;
+      if (!pending) {
+        if (handled < week) await handleWeek(week);
+        return false;
+      }
       await rpc(
         'submit_usage',
         { p_week: pending.week, p_app_version: APP_VERSION, p_report: pending.report },
@@ -241,6 +245,4 @@ export function sendWeeklyReport(): Promise<boolean> {
       return false;
     }
   });
-  sending = next;
-  return next;
 }

@@ -65,13 +65,19 @@ export function cleanAliases(typed: string, name: string): string[] {
   return out;
 }
 
-async function touch(projectId: string): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: clock.now() });
+/**
+ * Marks the owner of an entry as changed: its project, or its series for a shared entry, so the folder
+ * save of each book of the series finds the change.
+ */
+async function touch(ownerId: string): Promise<void> {
+  const now = clock.now();
+  if ((await db.projects.update(ownerId, { updatedAt: now })) === 0)
+    await db.series.update(ownerId, { updatedAt: now });
 }
 
 export async function addEntry(projectId: string, kind: CodexKind, name: string): Promise<CodexEntry> {
   const clean = cleanName(name);
-  return db.transaction('rw', db.codex, db.projects, async () => {
+  return db.transaction('rw', db.codex, db.projects, db.series, async () => {
     const orders = (await db.codex.where('projectId').equals(projectId).toArray()).map((e) => e.order);
     const entry: CodexEntry = {
       id: newId(),
@@ -91,7 +97,7 @@ export async function updateEntry(
   id: string,
   patch: { kind?: CodexKind; name?: string; aliases?: string; note?: string },
 ): Promise<void> {
-  await db.transaction('rw', db.codex, db.projects, async () => {
+  await db.transaction('rw', db.codex, db.projects, db.series, async () => {
     const entry = await db.codex.get(id);
     if (!entry) return;
     const name = patch.name === undefined ? entry.name : cleanName(patch.name);
@@ -114,7 +120,7 @@ export async function updateEntry(
 
 /** Deletes an entry and returns it, for Undo. */
 export async function deleteEntry(id: string): Promise<CodexEntry | undefined> {
-  return db.transaction('rw', db.codex, db.projects, async () => {
+  return db.transaction('rw', db.codex, db.projects, db.series, async () => {
     const entry = await db.codex.get(id);
     if (!entry) return undefined;
     await db.codex.delete(id);
@@ -124,7 +130,7 @@ export async function deleteEntry(id: string): Promise<CodexEntry | undefined> {
 }
 
 export async function restoreEntry(entry: CodexEntry): Promise<void> {
-  await db.transaction('rw', db.codex, db.projects, async () => {
+  await db.transaction('rw', db.codex, db.projects, db.series, async () => {
     await db.codex.put(entry);
     await touch(entry.projectId);
   });
@@ -147,7 +153,7 @@ export async function saveChange(
     text,
     ...(change.leaves ? { leaves: true } : {}),
   };
-  await db.transaction('rw', db.codex, db.projects, async () => {
+  await db.transaction('rw', db.codex, db.projects, db.series, async () => {
     const entry = await db.codex.get(entryId);
     if (!entry) throw new RangeError('This entry is not on this device now.');
     const changes = entry.changes ?? [];
@@ -165,7 +171,7 @@ export async function saveChange(
 
 /** Deletes a change and returns it, for Undo. */
 export async function deleteChange(entryId: string, changeId: string): Promise<CodexChange | undefined> {
-  return db.transaction('rw', db.codex, db.projects, async () => {
+  return db.transaction('rw', db.codex, db.projects, db.series, async () => {
     const entry = await db.codex.get(entryId);
     const gone = entry?.changes?.find((c) => c.id === changeId);
     if (!entry || !gone) return undefined;

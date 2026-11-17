@@ -33,7 +33,10 @@ function settle<T>(result: PromiseSettledResult<T | undefined>): Reading<T> {
 
 export function StorageHealth() {
   const [state, setState] = useState<StorageState>(CHECKING);
-  const supported = typeof navigator !== 'undefined' && 'storage' in navigator;
+  // Some browsers have only part of StorageManager, whatever the DOM types say.
+  const supported =
+    typeof navigator !== 'undefined' &&
+    typeof (navigator as { storage?: Partial<StorageManager> }).storage?.estimate === 'function';
   // The browser's last answer when Vlo asked for protection.
   const asked = useLiveQuery(async () => (await db.appMeta.get(PERSISTENCE_KEY))?.value ?? null);
   // Each request for protection reads the storage again, because some browsers then give a larger limit.
@@ -47,7 +50,8 @@ export function StorageHealth() {
     void Promise.allSettled([
       estimate.then((e) => e.usage),
       estimate.then((e) => e.quota),
-      navigator.storage.persisted(),
+      // An async call, so a browser with no persisted() gives a rejection, not a crash.
+      (async () => navigator.storage.persisted())(),
     ]).then(([usage, quota, persisted]) => {
       if (!cancelled) setState({ usage: settle(usage), quota: settle(quota), persisted: settle(persisted) });
     });

@@ -127,10 +127,10 @@ export async function deletePerson(id: string): Promise<Person | undefined> {
   });
 }
 
-/** Puts a deleted person back with the same id, so the marks in the text find the person again. */
 /**
- * Puts a deleted person back. A real name that another person took in the meantime stays with that
- * person, so two people never share a name. Returns the names that did not come back.
+ * Puts a deleted person back with the same id, so the marks in the text find the person again. A real
+ * name that another person took in the meantime stays with that person, so two people never share a
+ * name. Returns the names that did not come back.
  */
 export async function restorePerson(person: Person): Promise<string[]> {
   return db.transaction('rw', db.people, db.projects, async () => {

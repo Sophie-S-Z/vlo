@@ -119,6 +119,7 @@ export async function shareEntry(entryId: string, projectId: string, shared: boo
     const series = await seriesOf(projectId);
     if (!series) throw new RangeError('This book is in no series.');
     await db.codex.update(entryId, { projectId: shared ? series.id : projectId });
+    await db.series.update(series.id, { updatedAt: clock.now() });
   });
 }
 

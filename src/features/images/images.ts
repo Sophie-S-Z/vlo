@@ -18,8 +18,6 @@ import { snapshotState } from '@/features/snapshots/packing';
  * alignment. The bytes never go in the document.
  */
 
-export { IMAGE };
-
 /**
  * An image row with no node in any item, snapshot or version stays this long before the sweep removes
  * it, so Undo in an open editor can still bring the image back.

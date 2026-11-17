@@ -2,7 +2,7 @@ import { Dexie, type Table } from 'dexie';
 import type { PoemForm } from '@/features/craft/forms';
 import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
 import { LIBRARY } from './library';
-import { countUnit, recountItems } from './wordcount';
+import { recountItems } from './wordcount';
 
 /* Types from VLO_SPEC section 5. Later phases add their tables in new schema versions. */
 
@@ -670,20 +670,9 @@ export class VloDb extends Dexie {
       );
     // Version 7 (Phase 8, Tasks H5 and H6): the Codex and the research files. New tables only.
     this.version(7).stores({ codex: 'id, projectId', research: 'id, projectId' });
-    // Version 8 (Phase 8, Task H9): Chinese and Japanese count characters, so their items count again.
-    this.version(8)
-      .stores({})
-      .upgrade(async (tx) => {
-        for (const project of (await tx.table('projects').toArray()) as Project[]) {
-          const { language } = project.settings;
-          if (countUnit(language) === 'words') continue;
-          const [items, texts] = await Promise.all([
-            tx.table('items').where('projectId').equals(project.id).toArray() as Promise<Item[]>,
-            tx.table('itemTexts').where('projectId').equals(project.id).toArray() as Promise<ItemText[]>,
-          ]);
-          await tx.table('items').bulkPut(recountItems(items, texts, language));
-        }
-      });
+    // Version 8 (Phase 8, Task H9): Chinese and Japanese count characters. Version 14 counts every item
+    // again, so its upgrade also does the recount of this version.
+    this.version(8).stores({});
     // Version 9 (Phase 9, Task I6): the sync clock. A new table only; the middleware fills it.
     this.version(9).stores({ [CLOCK_TABLE]: 'key, projectId, at' });
     // Version 10 (Phase 11, Task K2): the named versions of an item. A new table only.
