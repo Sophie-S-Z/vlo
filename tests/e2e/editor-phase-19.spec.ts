@@ -204,20 +204,27 @@ for (const theme of THEMES) {
   });
 }
 
-test('a word target fills its ring, and the binder shows how far the item is', async ({ page }) => {
+/** Checks the item's line in the binder. A phone opens the binder drawer for the check, and closes it. */
+async function expectInBinder(page: Page, isMobile: boolean, text: string) {
+  if (isMobile) await page.getByRole('button', { name: 'Binder' }).click();
+  await expect(page.getByRole('navigation', { name: 'Binder' }).getByText(text)).toBeVisible();
+  if (isMobile) await page.keyboard.press('Escape');
+}
+
+test('a word target fills its ring, and the binder shows how far the item is', async ({ page, isMobile }) => {
   await newNovel(page, 'One two three four five six seven eight.');
   await page.getByRole('button', { name: 'Word target', exact: true }).click();
   const panel = page.getByRole('dialog', { name: 'Word target' });
   await panel.getByLabel('Word target for Scene 1').fill('16');
   await panel.getByRole('button', { name: 'Set' }).click();
   await expect(page.getByRole('button', { name: 'Word target: 8 of 16 words' })).toBeVisible();
-  await expect(page.getByText('50% of 16')).toBeVisible();
+  await expectInBinder(page, isMobile, '50% of 16');
 
   await scene(page).click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type(' Nine ten eleven twelve thirteen fourteen fifteen sixteen.');
   await expect(page.getByRole('button', { name: 'Word target met: 16 of 16 words' })).toBeVisible();
-  await expect(page.getByText('Target met')).toBeVisible();
+  await expectInBinder(page, isMobile, 'Target met');
 
   await page.getByRole('button', { name: /^Word target met/ }).click();
   await page

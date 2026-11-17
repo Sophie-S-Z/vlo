@@ -12,8 +12,9 @@ export function countUnit(language: string | undefined): CountUnit {
   return base === 'zh' || base === 'ja' ? 'characters' : 'words';
 }
 
-// Han, hiragana and katakana, with the marks that go with them, such as ー and 々.
-const CJK = /[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}]/gu;
+// The letters of Han, hiragana and katakana, with the marks that go with them, such as ー and 々. CJK
+// punctuation such as 。 shares their scripts, so the look-ahead keeps it out.
+const CJK = /(?=[\p{L}\p{M}\p{Nl}])[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}]/gu;
 
 // A web address or an email address is one word, as in Word, Scrivener and Google Docs. Chinese and
 // Japanese put no space around an address, so a Han or kana character, or CJK or full-width punctuation
@@ -47,13 +48,13 @@ export function countWords(text: string, language?: string): number {
   segmenter ??= new Intl.Segmenter(undefined, { granularity: 'word' });
   let count = 0;
   for (const { segment, isWordLike } of segmenter.segment(joined(text))) {
-    if (!isWordLike) continue;
     if (!characters) {
-      count += 1;
+      if (isWordLike) count += 1;
       continue;
     }
+    // Firefox marks some Japanese words, such as 行く, as not word-like, so each segment gives its CJK letters.
     const cjk = segment.match(CJK)?.length ?? 0;
-    count += cjk + (segment.replace(CJK, '') === '' ? 0 : 1);
+    count += cjk + (isWordLike && segment.replace(CJK, '') !== '' ? 1 : 0);
   }
   return count;
 }

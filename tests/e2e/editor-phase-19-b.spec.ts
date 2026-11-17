@@ -73,9 +73,10 @@ test('a paste from a web page comes in clean, and one press keeps its original l
       '<p><span style="color: rgb(200, 0, 0); font-family: Georgia">Red sails</span></p>',
     );
     data.setData('text/plain', 'Red sails');
-    element.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
-    );
+    // Firefox leaves out the clipboardData of a new ClipboardEvent, so the test sets it.
+    const paste = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, 'clipboardData', { value: data });
+    element.dispatchEvent(paste);
   });
   await expect(scene(page)).toContainText('Red sails');
   await expect(scene(page).locator('span[style*="color"]')).toHaveCount(0);

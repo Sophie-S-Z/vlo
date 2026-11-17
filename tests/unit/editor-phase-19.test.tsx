@@ -88,16 +88,29 @@ describe('the last place in an item (Task A2)', () => {
 
 describe('phone typing (Task A1)', () => {
   test('the keyboard inset is the gap under the visual viewport', () => {
-    expect(keyboardInset({ height: 400, offsetTop: 0 }, 800)).toBe(400);
-    expect(keyboardInset({ height: 380, offsetTop: 20 }, 800)).toBe(400);
-    expect(keyboardInset({ height: 900, offsetTop: 0 }, 800)).toBe(0);
+    const win = { innerWidth: 400, innerHeight: 800 };
+    expect(keyboardInset({ width: 400, height: 400, offsetTop: 0 }, win)).toBe(400);
+    expect(keyboardInset({ width: 400, height: 380, offsetTop: 20 }, win)).toBe(400);
+    expect(keyboardInset({ width: 400, height: 900, offsetTop: 0 }, win)).toBe(0);
+  });
+
+  test('a zoom or a layout wider than the screen is not a keyboard', () => {
+    // A pinch zoom of 2 halves the visual viewport in both directions.
+    expect(
+      keyboardInset({ width: 200, height: 400, offsetTop: 0 }, { innerWidth: 400, innerHeight: 800 }),
+    ).toBe(0);
+    // A wide line makes the layout 500 px wide, so the window is 1000 px high at the same shape.
+    expect(
+      keyboardInset({ width: 400, height: 800, offsetTop: 0 }, { innerWidth: 500, innerHeight: 1000 }),
+    ).toBe(0);
   });
 
   test('an open keyboard on a touch screen hides the rows above the text, and a closed one shows them', () => {
     const editor = editorOn(new Y.Doc(), '<p>Words.</p>');
-    const view = Object.assign(new EventTarget(), { height: 800, offsetTop: 0 });
+    const view = Object.assign(new EventTarget(), { width: 400, height: 800, offsetTop: 0 });
     const win = {
       visualViewport: view,
+      innerWidth: 400,
       innerHeight: 800,
       document,
       matchMedia: (query: string) => ({ matches: query === '(pointer: coarse)' }),
@@ -129,7 +142,8 @@ describe('phone typing (Task A1)', () => {
   test('a mouse and keyboard screen never starts phone typing', () => {
     const editor = editorOn(new Y.Doc(), '<p>Words.</p>');
     const win = {
-      visualViewport: Object.assign(new EventTarget(), { height: 300, offsetTop: 0 }),
+      visualViewport: Object.assign(new EventTarget(), { width: 400, height: 300, offsetTop: 0 }),
+      innerWidth: 400,
       innerHeight: 800,
       document,
       matchMedia: () => ({ matches: false }),

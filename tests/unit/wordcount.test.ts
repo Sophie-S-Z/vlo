@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { countLines, countUnit, countWords } from '@/lib/wordcount';
 
 describe('countWords', () => {
@@ -67,6 +67,26 @@ describe('count rule 2 (Ellipsus comparison, October 2026)', () => {
     // 連絡は (3) + the address (1) + までお願いします (8) = 12.
     expect(countWords('連絡はtaro@example.comまでお願いします。', 'ja')).toBe(12);
     expect(countWords('网址www.vlo.app。谢谢', 'zh')).toBe(5);
+  });
+
+  test('a Japanese word that the browser marks as not word-like still counts its characters', async () => {
+    // Firefox 155 gives 行く with isWordLike false.
+    const firefox = [
+      { segment: '東京', isWordLike: true },
+      { segment: 'へ', isWordLike: true },
+      { segment: '行く', isWordLike: false },
+      { segment: '。', isWordLike: false },
+    ];
+    vi.resetModules();
+    vi.spyOn(Intl, 'Segmenter').mockImplementation(function () {
+      return { segment: () => firefox } as unknown as Intl.Segmenter;
+    });
+    try {
+      const fresh = await import('@/lib/wordcount');
+      expect(fresh.countWords('東京へ行く。', 'ja')).toBe(5);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });
 

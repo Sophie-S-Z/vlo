@@ -210,6 +210,30 @@ const RANGES = [
   { value: '365', label: 'Year' },
 ];
 
+/** The box around a wide table. It takes focus, so a keyboard can scroll it on a narrow screen. */
+function TableBox({
+  name,
+  className = 'overflow-x-auto',
+  children,
+}: {
+  name: { labelledBy: string } | { label: string };
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+      role="region"
+      aria-labelledby={'labelledBy' in name ? name.labelledBy : undefined}
+      aria-label={'label' in name ? name.label : undefined}
+      className={`${className} rounded-md focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none`}
+    >
+      {children}
+    </div>
+  );
+}
+
 function OverTime({ days }: { days: OwnerDay[] }) {
   const [measure, setMeasure] = useState<DayKey>('words');
   const [range, setRange] = useState('30');
@@ -240,7 +264,7 @@ function OverTime({ days }: { days: OwnerDay[] }) {
         </div>
       </div>
       {table ? (
-        <div className="max-h-96 overflow-auto">
+        <TableBox name={{ labelledBy: 'owner-time' }} className="max-h-96 overflow-auto">
           <table aria-labelledby="owner-time" className="w-full min-w-[40rem] text-sm">
             <thead className="sticky top-0 bg-bg">
               <tr className="text-left text-muted">
@@ -267,7 +291,7 @@ function OverTime({ days }: { days: OwnerDay[] }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableBox>
       ) : (
         <TrendChart
           key={`${measure}-${range}`}
@@ -287,7 +311,7 @@ function Daily({ days }: { days: OwnerDay[] }) {
       <h2 id="owner-daily" className="text-lg font-semibold">
         Today against other days
       </h2>
-      <div className="overflow-x-auto">
+      <TableBox name={{ labelledBy: 'owner-daily' }}>
         <table aria-labelledby="owner-daily" className="w-full min-w-[40rem] text-sm">
           <thead>
             <tr className="text-left text-muted">
@@ -332,7 +356,7 @@ function Daily({ days }: { days: OwnerDay[] }) {
             })}
           </tbody>
         </table>
-      </div>
+      </TableBox>
     </section>
   );
 }
@@ -548,7 +572,7 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
         {n(shown.length)} of {n(accounts.length)} accounts. People who write with no account show only in the
         device and word counts.
       </p>
-      <div className="overflow-x-auto">
+      <TableBox name={{ label: 'Accounts' }}>
         <table aria-label="Accounts" className="w-full min-w-[56rem] text-sm">
           <thead>
             <tr className="text-left text-muted">
@@ -594,7 +618,7 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </TableBox>
     </div>
   );
 }
