@@ -164,7 +164,7 @@ export async function logRequest(
 
 export interface VloRequest {
   purpose: NetPurpose;
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   headers?: Record<string, string>;
   body?: BodyInit;
   signal?: AbortSignal;

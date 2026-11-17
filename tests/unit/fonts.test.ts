@@ -1,6 +1,8 @@
 import { Editor } from '@tiptap/core';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
+import fontkit from '@pdf-lib/fontkit';
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { poemExtensions } from '@/features/editor/extensions/poem';
@@ -26,7 +28,7 @@ import {
 } from '@/features/editor/format/ownFonts';
 import { poemDataFromDoc } from '@/features/editor/poemText';
 
-/* Task A7: the 20 Vlo fonts, the writer's own fonts and the font attribute. */
+/* Task A7: the 30 Vlo fonts, the writer's own fonts and the font attribute. */
 
 const require = createRequire(import.meta.url);
 
@@ -41,6 +43,27 @@ function declaredFamilies(): Set<string> {
     }
   }
   return families;
+}
+
+interface FontAxes {
+  variationAxes: Record<string, { min: number; max: number; default: number }>;
+}
+
+/** Each @font-face of the font CSS: its family, its weight value and its file on disk. */
+function importedFaces(): { family: string; weight: string; file: string }[] {
+  const faces: { family: string; weight: string; file: string }[] = [];
+  for (const sheet of ['src/styles/fonts.css', 'src/styles/index.css']) {
+    for (const [, path] of readFileSync(sheet, 'utf8').matchAll(/@import '(@fontsource[^']+)'/g)) {
+      const cssPath = require.resolve(path ?? '');
+      for (const [block] of readFileSync(cssPath, 'utf8').matchAll(/@font-face\s*\{[^}]*\}/g)) {
+        const family = /font-family:\s*'([^']+)'/.exec(block)?.[1] ?? '';
+        const weight = /font-weight:\s*([\d ]+);/.exec(block)?.[1] ?? '';
+        const url = /url\(\.\/(files\/[^)]+\.woff2)\)/.exec(block)?.[1] ?? '';
+        faces.push({ family, weight, file: join(dirname(cssPath), url) });
+      }
+    }
+  }
+  return faces;
 }
 
 const editors: Editor[] = [];
@@ -71,10 +94,10 @@ function mount(kind: 'prose' | 'poem', doc = new Y.Doc()): Editor {
 }
 
 describe('the Vlo font list', () => {
-  test('has 20 fonts with unique ids in the six groups, and the default is one of them', () => {
-    expect(VLO_FONTS).toHaveLength(20);
-    expect(new Set(VLO_FONTS.map((f) => f.id)).size).toBe(20);
-    expect(new Set(VLO_FONTS.map((f) => f.label)).size).toBe(20);
+  test('has 30 fonts with unique ids in the seven groups, and the default is one of them', () => {
+    expect(VLO_FONTS).toHaveLength(30);
+    expect(new Set(VLO_FONTS.map((f) => f.id)).size).toBe(30);
+    expect(new Set(VLO_FONTS.map((f) => f.label)).size).toBe(30);
     for (const group of FONT_GROUPS) {
       expect(VLO_FONTS.some((f) => f.group === group)).toBe(true);
     }
@@ -86,7 +109,7 @@ describe('the Vlo font list', () => {
     for (const font of VLO_FONTS) expect(families, font.label).toContain(font.family);
   });
 
-  test('the font CSS imports only files from the 20 fonts', () => {
+  test('the font CSS imports only files from the 30 fonts', () => {
     const css = readFileSync('src/styles/fonts.css', 'utf8');
     const packages = [...css.matchAll(/@import '(@fontsource(?:-variable)?\/[^/]+)\//g)].map((m) => m[1]);
     const allowed = new Set([
@@ -96,8 +119,33 @@ describe('the Vlo font list', () => {
       'fraunces',
       'newsreader',
       'atkinson-hyperlegible-next',
+      'fredericka-the-great',
     ]);
     for (const name of packages) expect(allowed).toContain(name?.split('/')[1]);
+  });
+
+  test('each variable weight range and design axis matches the font files that the CSS imports', () => {
+    const files = importedFaces();
+    for (const font of VLO_FONTS) {
+      const faces = files.filter((f) => f.family === font.family);
+      expect(faces.length, font.label).toBeGreaterThan(0);
+      const ranges = new Set(faces.map((f) => f.weight));
+      if (font.weights) expect([...ranges], font.label).toEqual([font.weights.join(' ')]);
+      else for (const range of ranges) expect(range, font.label).not.toContain(' ');
+      if (!font.axes) continue;
+      // The Latin file of the upright face holds the axes that the panel offers.
+      const latin = faces.find((f) => /-latin-[a-z]+-normal\.woff2$/.test(f.file));
+      expect(latin, font.label).toBeDefined();
+      const axes = (fontkit.create(readFileSync(latin?.file ?? '')) as unknown as FontAxes).variationAxes;
+      for (const axis of font.axes) {
+        expect(axes[axis.tag], `${font.label} ${axis.tag}`).toEqual({
+          name: expect.any(String) as unknown,
+          min: axis.min,
+          max: axis.max,
+          default: axis.start,
+        });
+      }
+    }
   });
 });
 

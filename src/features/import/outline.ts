@@ -15,6 +15,11 @@ export function titleOfFile(name: string): string {
   return titleOfName(name.replace(/\.[^.]+$/, ''));
 }
 
+/** A line that is only stars, hashes or dots, such as "* * *", is a scene break. */
+export const SCENE_BREAK = /^[*#~•·⁂\s\u00a0]{1,12}$/;
+
+export const SCENE_BREAK_HTML = '<div data-scene-break=""></div>';
+
 export function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

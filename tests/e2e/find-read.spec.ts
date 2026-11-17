@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { editorSelection } from './support/selection';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -93,8 +94,7 @@ async function fakeSpeech(page: Page, voices: 'some' | 'none' = 'some') {
 const spoken = (page: Page) => page.evaluate(() => window.__spoken);
 
 async function openReadAloud(page: Page) {
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitem', { name: /Read aloud/ }).click();
+  await useTool(page, 'Read aloud');
   const panel = page.getByRole('dialog', { name: 'Read aloud' });
   await expect(panel).toBeVisible();
   return panel;

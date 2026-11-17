@@ -12,7 +12,7 @@ import '@/styles/leaderboard.css';
 import { accountErrorText } from './AccountPage';
 import { accountsReady } from './auth';
 import { Avatar } from './Avatar';
-import { readDailyCount, sendDailyCount } from './dailyCount';
+import { sendDailyCount } from './dailyCount';
 import { leaderboard, showOnLeaderboard, type LeaderboardRow, type Period } from './leaderboard';
 import { readSession } from './session';
 
@@ -82,7 +82,6 @@ function Board() {
   const [at, setAt] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [shown, setShown] = useState<boolean | null>(null);
-  const countOff = readDailyCount().off;
 
   useEffect(() => {
     void showOnLeaderboard().then(setShown, () => undefined);
@@ -196,17 +195,8 @@ function Board() {
           </div>
         )}
         <p className="text-sm text-muted">
-          {countOff ? (
-            <>
-              Your words do not count now, because the daily count is off on this device. Turn on{' '}
-              <Link to="/settings" className="underline underline-offset-4">
-                Count this device and its words
-              </Link>{' '}
-              in Settings.
-            </>
-          ) : (
-            'The words that you add count while the daily count is on in Settings. Today, this week, this month and this year follow the calendar of each writer.'
-          )}
+          Every word that you add counts. Today, this week, this month and this year follow the calendar of
+          each writer.
         </p>
       </div>
     </div>

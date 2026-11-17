@@ -171,6 +171,9 @@ export interface ManuscriptSettings {
   typewriter: boolean;
 }
 
+/** The largest word target of one item (Phase 19, Task A4). */
+export const MAX_ITEM_TARGET = 10_000_000;
+
 export interface Item {
   id: string;
   projectId: string;
@@ -199,6 +202,8 @@ export interface Item {
   guide?: string;
   /** The word range that the structure suggests for the section. Either end can be absent. */
   words?: WordRange;
+  /** The writer's word target for this item (Phase 19, Task A4). No target when absent. */
+  target?: number;
   /**
    * A page with a job of its own. "references" shows the live reference list of the project's sources, and
    * an export puts the list there (decision M3).

@@ -30,6 +30,9 @@ const MAX_BYTES = 1024 * 1024 * 1024;
 
 const READ_FAILED = 'Vlo could not read these files. Pick them again.';
 
+/** The kinds of file that the readers take. */
+const ACCEPT = '.docx,.odt,.rtf,.pdf,.epub,.html,.htm,.xhtml,.md,.markdown,.txt,.fountain,.spmd,.fdx,.zip';
+
 function summary(nodes: readonly ImportNode[]) {
   let texts = 0;
   let words = 0;
@@ -147,7 +150,7 @@ export function ImportWriting({ ref, trigger = true }: { ref?: Ref<ImportHandle>
       }}
       type="file"
       multiple
-      {...(isFolder ? {} : { accept: '.docx,.md,.markdown,.txt,.fountain,.spmd,.zip' })}
+      {...(isFolder ? {} : { accept: ACCEPT })}
       className="sr-only"
       tabIndex={-1}
       aria-hidden="true"
@@ -179,9 +182,9 @@ export function ImportWriting({ ref, trigger = true }: { ref?: Ref<ImportHandle>
       <DialogContent className="max-w-2xl">
         <DialogTitle>Import writing</DialogTitle>
         <DialogDescription>
-          Vlo reads Word (.docx), Markdown, Fountain scripts, plain text and Scrivener projects. Pick files, a
-          zip, or a folder such as a .scriv folder. In a Word or Markdown file, each Heading 1 starts a folder
-          and each Heading 2 starts an item.
+          Vlo reads Word (.docx), PDF, OpenDocument (.odt), RTF, EPUB, web pages, Markdown, plain text,
+          Fountain and Final Draft scripts, and Scrivener projects. Pick files, a zip, or a folder such as a
+          .scriv folder. In most files, each Heading 1 starts a folder and each Heading 2 starts an item.
         </DialogDescription>
         {fileInput(files, false)}
         {fileInput(folder, true)}
@@ -246,7 +249,7 @@ export function ImportWriting({ ref, trigger = true }: { ref?: Ref<ImportHandle>
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" disabled={busy || pick.value.length === 0}>
                 Import
               </Button>
             </div>

@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -34,8 +35,7 @@ test('the continuity check is off at first, marks a near name with its reason, a
   await expect(page.getByText('5 words', { exact: true })).toBeVisible();
   const mark = scene(page).locator('.vlo-continuity');
   await expect(mark).toHaveCount(0);
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Continuity check' }).click();
+  await useTool(page, 'Continuity check');
   await expect(mark).toHaveText(['Mria']);
 
   await mark.click();

@@ -1,8 +1,8 @@
 -- The writing leaderboard (ADR 0012). Each signed-in writer sees the writers who added the most words today,
--- this week, this month and this year. The words come from the daily count (migrations 0008 and 0009), so
--- a writer counts when the count is on. A writer shows by the pen name, or else the name of the greeting,
--- with the photo, and can leave the board. As before, the tables stay closed, and only these functions
--- reach them, for a signed-in account.
+-- this week, this month and this year. The words come from the daily count (migrations 0008 and 0009), which
+-- is always on. A writer shows by the pen name, or else the name of the greeting, with the photo, and can
+-- leave the board. As before, the tables stay closed, and only these functions reach them, for a signed-in
+-- account.
 
 alter table public.profiles add column on_leaderboard boolean not null default true;
 

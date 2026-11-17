@@ -32,6 +32,8 @@ import { SourcesPanel } from '@/features/cite/SourcesPanel';
 
 // The gradient editor loads the first time a writer opens it.
 const GradientPanel = lazy(async () => ({ default: (await import('./panels/GradientPanel')).GradientPanel }));
+// And Type play.
+const TypePlayPanel = lazy(async () => ({ default: (await import('./panels/TypePlayPanel')).TypePlayPanel }));
 // So does the equation panel, which loads MathLive in turn.
 const MathPanel = lazy(async () => ({ default: (await import('./panels/MathPanel')).MathPanel }));
 // And "Record a memory" (F57) and "Speak to write" (F62), with the recorder and the speech model's code.
@@ -117,6 +119,12 @@ function PanelBody({
           <GradientPanel editor={editor} />
         </Suspense>
       );
+    case 'type-play':
+      return (
+        <Suspense fallback={<p className="text-sm text-muted">Loading Type play.</p>}>
+          <TypePlayPanel editor={editor} />
+        </Suspense>
+      );
     case 'math':
       return (
         <Suspense fallback={<p className="text-sm text-muted">Loading the equation editor.</p>}>
@@ -137,6 +145,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   characters: 'Special characters',
   footnote: 'Footnote',
   gradient: 'Gradient and shimmer',
+  'type-play': 'Type play',
   math: 'Equation',
   'read-aloud': 'Read aloud',
   speak: 'Speak to write',
@@ -239,6 +248,7 @@ export function PanelHost({
               popover.panel === 'characters' ||
               popover.panel === 'font' ||
               popover.panel === 'gradient' ||
+              popover.panel === 'type-play' ||
               popover.panel === 'math' ||
               popover.panel === 'read-aloud' ||
               popover.panel === 'speak' ||

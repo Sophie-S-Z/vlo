@@ -188,8 +188,9 @@ describe('Backup round trip', () => {
         continuity: { words: ['Marla'], scenes: ['entry:item'] },
       },
     });
-    // A poem form (F56) and a story date (F67) are item fields, so they go with the item.
-    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet', storyDate: '1994-07' });
+    // A poem form (F56), a story date (F67) and a word target (Phase 19) are item fields, so they go with
+    // the item.
+    await db.items.update(scenes[0]?.id ?? '', { form: 'sonnet', storyDate: '1994-07', target: 2000 });
     const before = await rowsOf(project.id);
     const texts = await Promise.all(scenes.map((s) => textOf(s.id)));
     const { bytes } = await backUpProject(project.id, { music: false });
@@ -532,6 +533,8 @@ describe('Reading a backup', () => {
       ['a version name of no text', (m) => (row(m, 'items').versionName = 42), /has no versionName/],
       ['an empty version name', (m) => (row(m, 'items').versionName = ' '), /has a wrong version name/],
       ['a wrong story date', (m) => (row(m, 'items').storyDate = '1994-13'), /has a wrong story date/],
+      ['a word target of 0', (m) => (row(m, 'items').target = 0), /has a wrong word target/],
+      ['a word target in text', (m) => (row(m, 'items').target = '2000'), /has a wrong word target/],
       [
         'memory themes as one text',
         (m) => (row(m, 'items').memory = { themes: 'sea' }),

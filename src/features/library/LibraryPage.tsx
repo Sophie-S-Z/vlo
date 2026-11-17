@@ -33,7 +33,6 @@ import { TemplatesDialog } from './TemplatesDialog';
 import { projectDef } from './templates';
 import { useLibrary, type LibraryProject } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
-import { WeeklyReport } from '@/features/usage/WeeklyReport';
 
 type LibraryLayout = 'shelf' | 'stack';
 
@@ -215,7 +214,9 @@ export function LibraryPage() {
                 }}
               >
                 <span className="font-medium">Import writing</span>
-                <span className="text-xs text-muted">Word, Markdown, Fountain, text or Scrivener</span>
+                <span className="text-xs text-muted">
+                  Word, PDF, EPUB, RTF, Markdown, text, scripts or Scrivener
+                </span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -309,8 +310,6 @@ export function LibraryPage() {
           <BookStack projects={shown} now={now} seriesOf={seriesOf} actionsFor={actionsFor} />
         </div>
       )}
-
-      <WeeklyReport />
 
       {due.length > 0 && (
         <section aria-labelledby="backup-reminder" className="vlo-notice mt-12 overflow-hidden rounded-2xl">

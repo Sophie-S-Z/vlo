@@ -1,4 +1,4 @@
-import { ChevronDown, RefreshCw, UserRound } from 'lucide-react';
+import { ChevronDown, MessageSquareHeart, RefreshCw, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import {
   DropdownMenu,
@@ -53,6 +53,13 @@ export function AccountMenu({ email, profile }: { email: string; profile: Profil
           <Link to="/account" className="text-text no-underline">
             <RefreshCw aria-hidden="true" strokeWidth={1.5} className="size-4 text-muted" />
             Account and sync
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/send-feedback?kind=note" className="text-text no-underline">
+            <MessageSquareHeart aria-hidden="true" strokeWidth={1.5} className="size-4 text-muted" />
+            Feedback or a note to Sophie
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

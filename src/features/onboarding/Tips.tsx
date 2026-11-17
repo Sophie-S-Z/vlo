@@ -86,6 +86,7 @@ export function Tips() {
   return (
     <aside
       aria-label="Tip"
+      data-typing-hide
       className="flex items-center gap-2 rounded-md border border-rule bg-surface py-1 pr-1 pl-3 text-sm text-muted"
     >
       <Lightbulb aria-hidden="true" className="size-4 shrink-0 text-accent-text" />

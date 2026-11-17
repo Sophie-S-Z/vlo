@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+import { openToolMenu, useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -44,8 +45,7 @@ async function pasteLines(page: Page, lines: readonly string[]) {
 }
 
 async function switchCraft(page: Page) {
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Craft labels' }).click();
+  await useTool(page, 'Craft labels');
 }
 
 /** Puts the caret at the end of the last line, as a tap at the line end does on a phone. */
@@ -209,7 +209,7 @@ test('F56: a form check names what breaks the form, and the form stays with the 
   expect(await seriousIssues(page)).toEqual([]);
 });
 
-test('in a split view the More tools menu of each pane turns on the labels of its own poem', async ({
+test('in a split view the menu of each pane turns on the labels of its own poem', async ({
   page,
   isMobile,
 }) => {
@@ -226,15 +226,12 @@ test('in a split view the More tools menu of each pane turns on the labels of it
   await expect(pane.getByRole('textbox', { name: 'Poem 1' })).toBeVisible();
 
   // The left poem keeps the focus, and the menu of the right pane acts on the right poem.
-  await pane.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Craft labels' }).click();
+  await useTool(page, 'Craft labels', pane);
   await expect(pane.getByTestId('craft-labels')).toBeVisible();
   await expect(layer(page)).toHaveCount(1);
-  await pane.getByRole('button', { name: 'More tools' }).click();
-  await expect(page.getByRole('menuitemcheckbox', { name: 'Craft labels' })).toBeChecked();
+  await expect(await openToolMenu(page, 'Craft labels', pane)).toBeChecked();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
   const leftEditor = page.locator('[data-vlo-editor]').filter({ has: left });
-  await leftEditor.getByRole('button', { name: 'More tools' }).click();
-  await expect(page.getByRole('menuitemcheckbox', { name: 'Craft labels' })).not.toBeChecked();
+  await expect(await openToolMenu(page, 'Craft labels', leftEditor)).not.toBeChecked();
 });

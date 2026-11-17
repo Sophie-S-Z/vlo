@@ -35,6 +35,7 @@ import {
   List,
   ListOrdered,
   Pilcrow,
+  Printer,
   Quote,
   Replace,
   Redo2,
@@ -57,6 +58,7 @@ import {
   UserRound,
   VenetianMask,
   type LucideIcon,
+  WandSparkles,
 } from 'lucide-react';
 import type { Template } from '@/lib/db';
 import { craftOf, setCraftLabels } from '@/features/craft/craftStore';
@@ -89,6 +91,7 @@ export type PanelId =
   | 'color'
   | 'highlight'
   | 'gradient'
+  | 'type-play'
   | 'size'
   | 'spacing'
   | 'characters'
@@ -344,6 +347,34 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     isActive: (e) => Boolean(e.getAttributes('textStyle').font),
+  },
+  {
+    kind: 'panel',
+    id: 'type-play',
+    label: 'Type play',
+    icon: WandSparkles,
+    group: 'color',
+    forms: BOTH,
+    keywords: [
+      'weight',
+      'letter spacing',
+      'tracking',
+      'variable font',
+      'softness',
+      'casual',
+      'outline',
+      'engraved',
+      'shadow',
+      'echo',
+      'breathe',
+      'flicker',
+      'animate',
+      'effect',
+    ],
+    panel: 'type-play',
+    slash: true,
+    selection: true,
+    isActive: (e) => e.isActive('typePlay'),
   },
   {
     kind: 'panel',
@@ -988,6 +1019,20 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     run: (e) => e.commands.clearFormatting(),
+  },
+  {
+    kind: 'run',
+    id: 'print',
+    label: 'Print',
+    icon: Printer,
+    group: 'help',
+    forms: ALL,
+    keywords: ['paper', 'printer', 'pdf'],
+    // The print sheet in editor.css prints the open text only. The browser keeps Mod-P for itself.
+    run: () => {
+      window.print();
+      return true;
+    },
   },
   {
     kind: 'panel',

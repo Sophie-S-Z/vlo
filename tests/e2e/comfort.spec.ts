@@ -55,8 +55,8 @@ test('the Spacing panel of a poem changes the space between letters', async ({ p
   await dialog.getByRole('button', { name: 'Create project' }).click();
   const editor = page.getByRole('textbox', { name: 'Poem 1' });
   await expect(editor).toBeFocused();
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitem', { name: 'Spacing' }).click();
+  await page.getByRole('button', { name: 'Format', exact: true }).click();
+  await page.getByRole('menu').getByRole('group', { name: 'Spacing' }).getByRole('menuitem').click();
   await page.getByRole('spinbutton', { name: 'Space between letters' }).fill('0.25');
   const letter = await editor.evaluate((element) => {
     const s = getComputedStyle(element);

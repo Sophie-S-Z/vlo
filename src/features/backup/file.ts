@@ -29,6 +29,7 @@ import {
   CHAPTER_STYLES,
   CITE_STYLES,
   MAX_BOOK_TEXT,
+  MAX_ITEM_TARGET,
   MAX_LABELS,
   MAX_PACKET_TEXT,
   MAX_VERSION_NAME,
@@ -78,8 +79,9 @@ import type {
  * text and the citation style (F64). Version 10 adds the changes of Codex entries at scenes (`changes`,
  * F65). Version 11 adds the continuity marks that the writer kept (`settings.continuity`, F66). Version 12 adds the story date of a scene (`storyDate`, F67). Version 13 adds the
  * images in the text (`images`, Phase 16). Version 14 adds the Essay, Article and Research paper templates
- * and the guide, the word range, the role and the working title switch of a section (Phase 17). Version 15 adds
- * the Comedy template. Vlo still reads versions 1 to 14.
+ * and the guide, the word range, the role and the working title switch of a section (Phase 17). A version 14
+ * file can also hold the word target of an item (`target`, Phase 19); an older build keeps the row and skips
+ * the target. Version 15 adds the Comedy template. Vlo still reads versions 1 to 14.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
@@ -428,6 +430,11 @@ function checkItems(rows: Json[], projectId: string): Item[] {
     optionalText(row, 'guide', what);
     if (row.words !== undefined && !isWordRange(row.words))
       fail(`${DAMAGED} ${what} has a wrong word range.`);
+    if (
+      row.target !== undefined &&
+      !(Number.isInteger(row.target) && Number(row.target) >= 1 && Number(row.target) <= MAX_ITEM_TARGET)
+    )
+      fail(`${DAMAGED} ${what} has a wrong word target.`);
     if (row.role !== undefined && !ITEM_ROLES.includes(row.role as ItemRole))
       fail(`${DAMAGED} ${what} has a wrong role.`);
     if (row.workingTitle !== undefined && row.workingTitle !== true)

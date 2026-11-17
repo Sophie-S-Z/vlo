@@ -7,7 +7,7 @@ import { appPlace } from '@/lib/net';
 import { currentSession } from './auth';
 import { deviceKind, installId as installIdOf, readDailyCount, writeDailyCount } from './dailyCountState';
 
-export { installId, readDailyCount, setDailyCountOn } from './dailyCountState';
+export { installId, readDailyCount } from './dailyCountState';
 
 /*
  * The daily count (Phase 18, decision A3). Each local day, a device sends a random install id, the app
@@ -15,8 +15,7 @@ export { installId, readDailyCount, setDailyCountOn } from './dailyCountState';
  * A signed-in device adds its account. The count also holds three numbers for the live owner page: the
  * words added today, the words on the device and its count of projects. The first count of a day adds the
  * rough place that the app's own server reads from the IP address: a country, a region and a city. No
- * text, title, name, IP address or cookie.
- * Settings has a switch, and the choice stays in this browser.
+ * text, title, name, IP address or cookie. The count is always on, and Settings and the privacy page say so.
  */
 
 function installedApp(): boolean {
@@ -54,11 +53,16 @@ export async function writingNumbers(today: string) {
   };
 }
 
+/** The end-to-end tests set this, so that each network test sees only the requests that it tests. */
+function skippedByTest(): boolean {
+  return (globalThis as { vloNoDailyCount?: boolean }).vloNoDailyCount === true;
+}
+
 /** The counts wait in one line, so two checks at once never send twice. */
 let queue: Promise<unknown> = Promise.resolve();
 
 /**
- * Sends a count when the switch is on and the day is new, or the projects changed since the last count.
+ * Sends a count when the day is new, or the projects changed since the last count.
  * `leaving` sends a change at once, as Vlo leaves the screen. It never throws: a count that fails goes
  * at the next try.
  */
@@ -70,9 +74,8 @@ export function sendDailyCount(leaving = false): Promise<boolean> {
 
 async function send(leaving: boolean): Promise<boolean> {
   try {
-    if (!sharingReady()) return false;
+    if (!sharingReady() || skippedByTest()) return false;
     const state = readDailyCount();
-    if (state.off) return false;
     const now = clock.now();
     const today = dayKey(now);
     const seen = await projectsSeen();
@@ -100,9 +103,7 @@ async function send(leaving: boolean): Promise<boolean> {
       'ping',
       session?.accessToken,
     );
-    // A writer who turned the count off while it went keeps it off, with no install id.
-    const after = readDailyCount();
-    if (!after.off) writeDailyCount({ ...after, install, day: today, seen, at: now });
+    writeDailyCount({ ...readDailyCount(), install, day: today, seen, at: now });
     return true;
   } catch {
     return false;

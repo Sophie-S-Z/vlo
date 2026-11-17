@@ -48,8 +48,8 @@ test('a font loads only when the writer picks it, and the pick survives a reload
   await useTool(page, 'Font');
   await expect(panel(page)).toBeVisible();
   await expect(panel(page).getByRole('radio', { name: 'Selected text' })).toBeChecked();
-  // The menu lists 20 fonts by name, and none of their files loads until one is chosen.
-  await expect(panel(page).getByRole('radiogroup', { name: 'Fonts' }).getByRole('radio')).toHaveCount(21);
+  // The menu lists 30 fonts by name, and none of their files loads until one is chosen.
+  await expect(panel(page).getByRole('radiogroup', { name: 'Fonts' }).getByRole('radio')).toHaveCount(31);
   expect(fonts.filter((f) => f.startsWith('lora-'))).toEqual([]);
 
   await panel(page).getByRole('radio', { name: 'Lora' }).click();

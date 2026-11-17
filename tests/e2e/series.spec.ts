@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -80,8 +81,7 @@ test('a series orders its books, shares a Codex entry and marks the forms its st
   const matrix = page.getByRole('region', { name: 'Mentions' });
   await expect(matrix.getByRole('row', { name: /Mira/ }).getByRole('cell')).toHaveText(['1', '1']);
   await books.getByRole('button', { name: 'Tide', exact: true }).click();
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Style check' }).click();
+  await useTool(page, 'Style check');
   const mark = scene(page).locator('.vlo-style-sheet');
   await expect(mark).toHaveText(['gray']);
   await mark.click();

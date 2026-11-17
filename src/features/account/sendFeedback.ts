@@ -4,9 +4,10 @@ import { currentSession } from './auth';
 import { deviceKind, installId } from './dailyCountState';
 
 /*
- * Feedback to the owner of Vlo (Phase 18, decision A5). The message goes only when the writer presses
- * Send, with the kind of device and the app version. A signed-in writer's account goes with it, so the
- * owner can see who wrote. A reply address goes only when the writer types one.
+ * Feedback to Sophie, who makes Vlo (Phase 18, decision A5, and migration 0012). The message goes only when
+ * the writer presses Send, with the kind of device and the app version. A signed-in writer's account goes
+ * with it, so Sophie can see who wrote. A reply address goes only when the writer types one. The server
+ * refuses spam.
  */
 
 export const FEEDBACK_KINDS = [
@@ -14,8 +15,14 @@ export const FEEDBACK_KINDS = [
   { value: 'problem', label: 'A problem' },
   { value: 'praise', label: 'Something that I like' },
   { value: 'question', label: 'A question' },
+  { value: 'note', label: 'A personal note to Sophie' },
 ] as const;
 export type FeedbackKind = (typeof FEEDBACK_KINDS)[number]['value'];
+
+/** The kind in the address, such as `?kind=note`, or 'idea'. */
+export function kindOf(text: string | null): FeedbackKind {
+  return FEEDBACK_KINDS.find((k) => k.value === text)?.value ?? 'idea';
+}
 
 export const MAX_FEEDBACK = 4000;
 

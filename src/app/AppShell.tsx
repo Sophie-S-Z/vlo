@@ -73,7 +73,7 @@ export function AppShell() {
         Skip to content
       </a>
       {loading && <div aria-hidden="true" className="vlo-route-loading" />}
-      <header data-chrome className="border-b border-rule">
+      <header data-chrome data-typing-hide className="border-b border-rule">
         <div className={cn('mx-auto flex items-center justify-between gap-4 px-4 py-2', width)}>
           <NavLink
             to="/"
@@ -153,6 +153,11 @@ export function AppShell() {
               <li>
                 <Link to="/send-feedback" state={{ from: pathname }} className={FOOTER_LINK}>
                   Send feedback
+                </Link>
+              </li>
+              <li>
+                <Link to="/send-feedback?kind=note" state={{ from: pathname }} className={FOOTER_LINK}>
+                  Write to Sophie
                 </Link>
               </li>
               <li>

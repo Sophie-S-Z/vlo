@@ -1,0 +1,572 @@
+/*
+ * Atmospheres (src/app/themes.ts): a scene painted behind the whole app, in CSS gradients only, so it costs
+ * no download. Three fixed layers sit under the content:
+ *   body::before  the scene itself, which never moves;
+ *   body::after   the near lights (--glints), which twinkle or drift;
+ *   html::after   the far lights (--glints-2), slower, for depth.
+ * The art stays at the edges and the middle stays near --bg, so text on the page keeps its contrast.
+ * Lights that stay in place are masked out of the middle of the screen. Lights that travel stay in two
+ * columns at the sides. Only opacity and transform move, so the browser composites the motion and never
+ * lays out or paints again. The lights rest while the writer types (data-typing), and stop in Calm mode and
+ * under reduced motion. A travelling layer is taller than the screen by one tile (--travel) at the top and
+ * the bottom, and moves by one tile, so the loop has no seam.
+ */
+
+html[data-atmosphere] body {
+  background: transparent;
+}
+
+html[data-atmosphere] body::before,
+html[data-atmosphere] body::after,
+html[data-atmosphere]::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+}
+
+html[data-atmosphere] body::before {
+  inset: 0;
+  background: var(--atmosphere, none);
+}
+
+html[data-atmosphere] body::after {
+  --travel: var(--glints-tile, 0px);
+  inset: calc(-1 * var(--travel)) 0;
+  background: var(--glints, none);
+  -webkit-mask-image: var(--glints-mask, none);
+  mask-image: var(--glints-mask, none);
+  animation: var(--glints-motion, none) var(--glints-speed, 8s) var(--glints-ease, linear) infinite;
+  will-change: transform, opacity;
+}
+
+html[data-atmosphere]::after {
+  --travel: var(--glints-2-tile, 0px);
+  inset: calc(-1 * var(--travel)) 0;
+  background: var(--glints-2, none);
+  -webkit-mask-image: var(--glints-mask, none);
+  mask-image: var(--glints-mask, none);
+  animation: var(--glints-2-motion, none) var(--glints-2-speed, 11s) var(--glints-ease, linear) infinite;
+  animation-delay: -3s;
+  will-change: transform, opacity;
+}
+
+html[data-typing='true'] body::after,
+html[data-typing='true']::after {
+  animation-play-state: paused;
+}
+
+/* tokens.css stops motion on every element inside html. The html element's own layer needs its own rule. */
+html[data-calm='true']::after {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html::after {
+    animation: none !important;
+  }
+}
+
+/* A small picture of a theme, in Settings: the scene and its lights, standing still. */
+.vlo-atmosphere-preview {
+  background: var(--glints, none), var(--glints-2, none), var(--atmosphere, none);
+  background-color: var(--bg);
+}
+
+@keyframes vlo-twinkle {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes vlo-flicker {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  12% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  34% {
+    opacity: 0.95;
+  }
+  48% {
+    opacity: 0.78;
+  }
+  63% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.74;
+  }
+}
+
+@keyframes vlo-rise {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, calc(-1 * var(--travel)), 0);
+  }
+}
+
+@keyframes vlo-fall {
+  from {
+    transform: translate3d(0, calc(-1 * var(--travel)), 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Petals fall and sway once to the side on the way down. */
+@keyframes vlo-sway {
+  from {
+    transform: translate3d(0, calc(-1 * var(--travel)), 0);
+  }
+  50% {
+    transform: translate3d(28px, calc(-0.5 * var(--travel)), 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* The middle of the screen keeps only a few lights, where the text is. */
+[data-theme='forest'],
+[data-theme='galaxy'],
+[data-theme='wonderland'] {
+  --glints-mask: radial-gradient(46% 50% at 50% 44%, rgb(0 0 0 / 0.08) 30%, #000 100%);
+  --glints-ease: ease-in-out;
+}
+
+/* Deep forest: pines at the edges, light through the canopy, mist, and fireflies. */
+[data-theme='forest'] {
+  --atmosphere:
+    /* pines at the left and right edges, darker than the page */
+    conic-gradient(from 166deg at 3% 58%, #060c09 0deg 28deg, transparent 28deg),
+    conic-gradient(from 168deg at 10% 72%, #08100c 0deg 24deg, transparent 24deg),
+    conic-gradient(from 167deg at 17% 82%, #0a130e 0deg 26deg, transparent 26deg),
+    conic-gradient(from 166deg at 97% 54%, #060c09 0deg 28deg, transparent 28deg),
+    conic-gradient(from 168deg at 90% 70%, #08100c 0deg 24deg, transparent 24deg),
+    /* light through the canopy, from the upper left */
+    linear-gradient(
+        118deg,
+        transparent 6%,
+        rgb(206 228 168 / 0.06) 11%,
+        transparent 17%,
+        transparent 22%,
+        rgb(206 228 168 / 0.04) 25%,
+        transparent 29%
+      ),
+    /* mist on the forest floor */
+    radial-gradient(130% 34% at 50% 112%, rgb(150 185 160 / 0.1), transparent 70%),
+    /* moss in the corners */ radial-gradient(40% 34% at 0% 100%, rgb(90 130 80 / 0.16), transparent 70%),
+    radial-gradient(36% 30% at 100% 100%, rgb(70 120 90 / 0.14), transparent 70%),
+    /* the canopy shades the top */ radial-gradient(120% 50% at 50% -14%, rgb(0 0 0 / 0.5), transparent 70%);
+  --glints:
+    radial-gradient(
+        circle at 9% 61%,
+        rgb(240 226 150 / 0.9) 0 1.2px,
+        rgb(240 226 150 / 0.25) 2.6px,
+        transparent 5.7px
+      )
+      0 0 / 560px 560px,
+    radial-gradient(
+        circle at 37% 88%,
+        rgb(232 236 150 / 0.85) 0 1px,
+        rgb(232 236 150 / 0.24) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 560px 560px,
+    radial-gradient(
+        circle at 71% 72%,
+        rgb(246 214 140 / 0.9) 0 1.4px,
+        rgb(246 214 140 / 0.25) 3px,
+        transparent 6.6px
+      )
+      0 0 / 560px 560px,
+    radial-gradient(
+        circle at 88% 23%,
+        rgb(240 226 150 / 0.8) 0 1px,
+        rgb(240 226 150 / 0.22) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 560px 560px,
+    radial-gradient(
+        circle at 52% 40%,
+        rgb(232 236 150 / 0.7) 0 0.9px,
+        rgb(232 236 150 / 0.2) 2.2px,
+        transparent 4.8px
+      )
+      0 0 / 560px 560px;
+  --glints-2:
+    radial-gradient(
+        circle at 18% 84%,
+        rgb(240 226 150 / 0.8) 0 1px,
+        rgb(240 226 150 / 0.22) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 740px 740px,
+    radial-gradient(
+        circle at 63% 93%,
+        rgb(246 214 140 / 0.75) 0 1.2px,
+        rgb(246 214 140 / 0.21) 2.8px,
+        transparent 6.2px
+      )
+      0 0 / 740px 740px,
+    radial-gradient(
+        circle at 81% 52%,
+        rgb(232 236 150 / 0.7) 0 1px,
+        rgb(232 236 150 / 0.2) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 740px 740px,
+    radial-gradient(
+        circle at 30% 22%,
+        rgb(240 226 150 / 0.6) 0 0.9px,
+        rgb(240 226 150 / 0.17) 2.2px,
+        transparent 4.8px
+      )
+      0 0 / 740px 740px;
+  --glints-motion: vlo-twinkle;
+  --glints-speed: 5.5s;
+  --glints-2-motion: vlo-twinkle;
+  --glints-2-speed: 8.5s;
+}
+
+/* Mystic galaxy: nebulae at the corners, a faint band of stars, and stars that twinkle. */
+[data-theme='galaxy'] {
+  --atmosphere:
+    /* small fixed stars, on tiles of odd sizes so no grid shows */
+    radial-gradient(circle at 23% 31%, rgb(255 255 255 / 0.32) 0 0.6px, transparent 1.2px) 0 0 / 173px 191px,
+    radial-gradient(circle at 71% 64%, rgb(220 214 255 / 0.28) 0 0.6px, transparent 1.2px) 0 0 / 263px 241px,
+    radial-gradient(circle at 42% 88%, rgb(255 236 246 / 0.3) 0 0.7px, transparent 1.4px) 0 0 / 331px 307px,
+    /* the nebulae */ radial-gradient(50% 42% at 92% 6%, rgb(186 92 196 / 0.2), transparent 70%),
+    radial-gradient(36% 32% at 86% 18%, rgb(96 76 206 / 0.13), transparent 70%),
+    radial-gradient(38% 34% at 0% 100%, rgb(40 140 170 / 0.17), transparent 70%),
+    radial-gradient(28% 26% at 12% 82%, rgb(200 110 170 / 0.11), transparent 70%),
+    /* a faint band across the sky */
+    linear-gradient(152deg, transparent 32%, rgb(150 130 230 / 0.03) 46%, transparent 60%);
+  --glints:
+    radial-gradient(
+        circle at 14% 30%,
+        rgb(255 255 255 / 1) 0 1px,
+        rgb(255 255 255 / 0.28) 2.2px,
+        transparent 4.8px
+      )
+      0 0 / 380px 380px,
+    radial-gradient(
+        circle at 58% 71%,
+        rgb(255 236 246 / 0.95) 0 0.9px,
+        rgb(255 236 246 / 0.27) 2px,
+        transparent 4.4px
+      )
+      0 0 / 380px 380px,
+    radial-gradient(
+        circle at 86% 18%,
+        rgb(226 214 255 / 1) 0 1.1px,
+        rgb(226 214 255 / 0.28) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 380px 380px;
+  --glints-2:
+    radial-gradient(
+        circle at 33% 12%,
+        rgb(255 255 255 / 1) 0 1.3px,
+        rgb(255 255 255 / 0.28) 2.8px,
+        transparent 6.2px
+      )
+      0 0 / 610px 610px,
+    radial-gradient(
+        circle at 74% 46%,
+        rgb(214 236 255 / 0.9) 0 1px,
+        rgb(214 236 255 / 0.25) 2.2px,
+        transparent 4.8px
+      )
+      0 0 / 610px 610px,
+    radial-gradient(
+        circle at 46% 89%,
+        rgb(255 220 240 / 0.9) 0 1.1px,
+        rgb(255 220 240 / 0.25) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 610px 610px;
+  --glints-motion: vlo-twinkle;
+  --glints-speed: 4.5s;
+  --glints-2-motion: vlo-twinkle;
+  --glints-2-speed: 7s;
+}
+
+/* Deep sea: light and rays from the surface, dark water below, and small glowing things that rise. */
+[data-theme='deep-sea'] {
+  --atmosphere:
+    /* rays from the surface */
+    conic-gradient(
+      from 150deg at 50% -30%,
+      transparent 0deg,
+      rgb(140 220 225 / 0.05) 6deg,
+      transparent 12deg,
+      transparent 22deg,
+      rgb(140 220 225 / 0.035) 27deg,
+      transparent 33deg,
+      transparent 41deg,
+      rgb(140 220 225 / 0.05) 47deg,
+      transparent 53deg
+    ),
+    /* light from the surface */ radial-gradient(90% 46% at 50% -16%, rgb(70 170 185 / 0.1), transparent 70%),
+    /* the deep water darkens toward the bottom */ linear-gradient(180deg, transparent 55%, rgb(0 4 8 / 0.5));
+  --glints-tile: 520px;
+  --glints:
+    radial-gradient(
+        circle at 30% 12%,
+        rgb(200 236 240 / 0.6) 0 0.8px,
+        rgb(200 236 240 / 0.17) 1.6px,
+        transparent 3.5px
+      )
+      left 0 top 0 / 22vw 520px repeat-y,
+    radial-gradient(
+        circle at 72% 47%,
+        rgb(200 236 240 / 0.5) 0 0.7px,
+        rgb(200 236 240 / 0.14) 1.5px,
+        transparent 3.3px
+      )
+      left 0 top 0 / 22vw 520px repeat-y,
+    radial-gradient(
+        circle at 18% 81%,
+        rgb(200 236 240 / 0.45) 0 0.6px,
+        rgb(200 236 240 / 0.13) 1.4px,
+        transparent 3.1px
+      )
+      left 0 top 0 / 22vw 520px repeat-y,
+    radial-gradient(
+        circle at 64% 20%,
+        rgb(200 236 240 / 0.55) 0 0.8px,
+        rgb(200 236 240 / 0.15) 1.6px,
+        transparent 3.5px
+      )
+      right 0 top 0 / 22vw 520px repeat-y,
+    radial-gradient(
+        circle at 28% 58%,
+        rgb(200 236 240 / 0.5) 0 0.7px,
+        rgb(200 236 240 / 0.14) 1.5px,
+        transparent 3.3px
+      )
+      right 0 top 0 / 22vw 520px repeat-y,
+    radial-gradient(
+        circle at 80% 90%,
+        rgb(200 236 240 / 0.45) 0 0.6px,
+        rgb(200 236 240 / 0.13) 1.4px,
+        transparent 3.1px
+      )
+      right 0 top 0 / 22vw 520px repeat-y;
+  --glints-2:
+    radial-gradient(
+        circle at 46% 33%,
+        rgb(116 230 220 / 0.85) 0 1.2px,
+        rgb(116 230 220 / 0.24) 2.8px,
+        transparent 6.2px
+      )
+      left 0 top 0 / 22vw 680px repeat-y,
+    radial-gradient(
+        circle at 76% 78%,
+        rgb(150 200 255 / 0.7) 0 1px,
+        rgb(150 200 255 / 0.2) 2.4px,
+        transparent 5.3px
+      )
+      left 0 top 0 / 22vw 680px repeat-y,
+    radial-gradient(
+        circle at 36% 64%,
+        rgb(116 230 220 / 0.8) 0 1.2px,
+        rgb(116 230 220 / 0.22) 2.8px,
+        transparent 6.2px
+      )
+      right 0 top 0 / 22vw 680px repeat-y,
+    radial-gradient(
+        circle at 70% 14%,
+        rgb(150 200 255 / 0.7) 0 1px,
+        rgb(150 200 255 / 0.2) 2.4px,
+        transparent 5.3px
+      )
+      right 0 top 0 / 22vw 680px repeat-y;
+  --glints-motion: vlo-rise;
+  --glints-speed: 60s;
+  --glints-2-motion: vlo-rise;
+  --glints-2-speed: 95s;
+  --glints-2-tile: 680px;
+}
+
+/* Candlelight: one flame off the lower left corner, a warm pool of light, and dark corners. */
+[data-theme='candlelight'] {
+  --atmosphere:
+    radial-gradient(28% 26% at 2% 99%, rgb(255 190 110 / 0.1), transparent 70%),
+    radial-gradient(58% 52% at 4% 100%, rgb(255 150 70 / 0.12), transparent 70%),
+    radial-gradient(46% 58% at 100% 26%, rgb(150 86 44 / 0.07), transparent 70%),
+    radial-gradient(130% 100% at 28% 82%, transparent 52%, rgb(0 0 0 / 0.45));
+  --glints: radial-gradient(44% 40% at 3% 100%, rgb(255 176 92 / 0.17), transparent 70%);
+  --glints-motion: vlo-flicker;
+  --glints-speed: 3.4s;
+}
+
+/* Wonderland: pastel blooms, and a checkered floor in the lower right corner. Sparkles twinkle. */
+[data-theme='wonderland'] {
+  --atmosphere:
+    radial-gradient(38% 34% at 93% 6%, rgb(255 182 212 / 0.5), transparent 70%),
+    radial-gradient(34% 30% at 3% 30%, rgb(176 234 212 / 0.42), transparent 70%),
+    radial-gradient(44% 34% at 8% 102%, rgb(212 194 255 / 0.55), transparent 70%),
+    radial-gradient(26% 24% at 62% 104%, rgb(255 226 160 / 0.4), transparent 70%),
+    /* the page color hides the checks everywhere but the corner */
+    radial-gradient(circle at 100% 100%, transparent 0 12%, var(--bg) 32%),
+    conic-gradient(rgb(35 26 53 / 0.07) 0 25%, transparent 0 50%, rgb(35 26 53 / 0.07) 0 75%, transparent 0) 0
+      0 / 56px 56px;
+  --glints:
+    radial-gradient(
+        circle at 16% 22%,
+        rgb(232 120 170 / 0.75) 0 1.1px,
+        rgb(232 120 170 / 0.21) 2.6px,
+        transparent 5.7px
+      )
+      0 0 / 470px 470px,
+    radial-gradient(
+        circle at 72% 64%,
+        rgb(200 150 40 / 0.7) 0 1px,
+        rgb(200 150 40 / 0.2) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 470px 470px,
+    radial-gradient(
+        circle at 44% 90%,
+        rgb(232 120 170 / 0.6) 0 0.9px,
+        rgb(232 120 170 / 0.17) 2.2px,
+        transparent 4.8px
+      )
+      0 0 / 470px 470px;
+  --glints-2:
+    radial-gradient(
+        circle at 48% 84%,
+        rgb(130 100 220 / 0.7) 0 1.2px,
+        rgb(130 100 220 / 0.2) 2.8px,
+        transparent 6.2px
+      )
+      0 0 / 610px 610px,
+    radial-gradient(
+        circle at 86% 30%,
+        rgb(232 120 170 / 0.6) 0 1px,
+        rgb(232 120 170 / 0.17) 2.4px,
+        transparent 5.3px
+      )
+      0 0 / 610px 610px;
+  --glints-motion: vlo-twinkle;
+  --glints-speed: 5s;
+  --glints-2-motion: vlo-twinkle;
+  --glints-2-speed: 7.5s;
+}
+
+/* Blossom: pink washes at the corners, and petals that drift down and across. */
+[data-theme='blossom'] {
+  --atmosphere:
+    radial-gradient(48% 40% at 100% 0%, rgb(244 172 194 / 0.45), transparent 70%),
+    radial-gradient(40% 34% at 0% 8%, rgb(250 204 216 / 0.5), transparent 70%),
+    radial-gradient(60% 36% at 50% 116%, rgb(236 180 198 / 0.35), transparent 70%);
+  --glints-tile: 460px;
+  --glints:
+    radial-gradient(ellipse 7px 4px at 26% 18%, rgb(232 150 176 / 0.45) 0 60%, transparent) left 0 top 0 /
+      22vw 460px repeat-y,
+    radial-gradient(ellipse 5px 3px at 68% 63%, rgb(240 170 192 / 0.4) 0 60%, transparent) left 0 top 0 / 22vw
+      460px repeat-y,
+    radial-gradient(ellipse 6px 3.5px at 40% 26%, rgb(232 150 176 / 0.42) 0 60%, transparent) right 0 top 0 /
+      22vw 460px repeat-y,
+    radial-gradient(ellipse 5px 3px at 74% 74%, rgb(240 170 192 / 0.4) 0 60%, transparent) right 0 top 0 /
+      22vw 460px repeat-y;
+  --glints-2:
+    radial-gradient(ellipse 9px 5px at 52% 46%, rgb(226 140 170 / 0.35) 0 60%, transparent) left 0 top 0 /
+      22vw 620px repeat-y,
+    radial-gradient(ellipse 9px 5px at 30% 82%, rgb(226 140 170 / 0.32) 0 60%, transparent) right 0 top 0 /
+      22vw 620px repeat-y;
+  --glints-motion: vlo-sway;
+  --glints-speed: 48s;
+  --glints-2-motion: vlo-sway;
+  --glints-2-speed: 80s;
+  --glints-2-tile: 620px;
+}
+
+/* Frost: a cold, bright sky above, frosted corners, and snow that falls slowly. */
+[data-theme='frost'] {
+  --atmosphere:
+    radial-gradient(80% 42% at 50% -12%, rgb(255 255 255 / 0.85), transparent 70%),
+    radial-gradient(34% 38% at 0% 0%, rgb(186 212 236 / 0.5), transparent 70%),
+    radial-gradient(34% 38% at 100% 100%, rgb(186 212 236 / 0.5), transparent 70%),
+    radial-gradient(28% 32% at 100% 0%, rgb(204 222 240 / 0.45), transparent 70%),
+    radial-gradient(28% 32% at 0% 100%, rgb(204 222 240 / 0.45), transparent 70%);
+  --glints-tile: 420px;
+  --glints:
+    radial-gradient(
+        circle at 22% 10%,
+        rgb(150 182 210 / 0.6) 0 1.4px,
+        rgb(150 182 210 / 0.17) 2px,
+        transparent 4.4px
+      )
+      left 0 top 0 / 22vw 420px repeat-y,
+    radial-gradient(
+        circle at 70% 44%,
+        rgb(150 182 210 / 0.5) 0 1.1px,
+        rgb(150 182 210 / 0.14) 1.8px,
+        transparent 4px
+      )
+      left 0 top 0 / 22vw 420px repeat-y,
+    radial-gradient(
+        circle at 40% 79%,
+        rgb(150 182 210 / 0.45) 0 0.9px,
+        rgb(150 182 210 / 0.13) 1.6px,
+        transparent 3.5px
+      )
+      left 0 top 0 / 22vw 420px repeat-y,
+    radial-gradient(
+        circle at 32% 26%,
+        rgb(150 182 210 / 0.55) 0 1.3px,
+        rgb(150 182 210 / 0.15) 2px,
+        transparent 4.4px
+      )
+      right 0 top 0 / 22vw 420px repeat-y,
+    radial-gradient(
+        circle at 78% 58%,
+        rgb(150 182 210 / 0.5) 0 1px,
+        rgb(150 182 210 / 0.14) 1.7px,
+        transparent 3.7px
+      )
+      right 0 top 0 / 22vw 420px repeat-y,
+    radial-gradient(
+        circle at 20% 90%,
+        rgb(150 182 210 / 0.45) 0 0.9px,
+        rgb(150 182 210 / 0.13) 1.6px,
+        transparent 3.5px
+      )
+      right 0 top 0 / 22vw 420px repeat-y;
+  --glints-2:
+    radial-gradient(
+        circle at 54% 36%,
+        rgb(160 190 216 / 0.45) 0 2px,
+        rgb(160 190 216 / 0.13) 2.6px,
+        transparent 5.7px
+      )
+      left 0 top 0 / 22vw 560px repeat-y,
+    radial-gradient(
+        circle at 46% 70%,
+        rgb(160 190 216 / 0.42) 0 2px,
+        rgb(160 190 216 / 0.12) 2.6px,
+        transparent 5.7px
+      )
+      right 0 top 0 / 22vw 560px repeat-y;
+  --glints-motion: vlo-fall;
+  --glints-speed: 42s;
+  --glints-2-motion: vlo-fall;
+  --glints-2-speed: 70s;
+  --glints-2-tile: 560px;
+}

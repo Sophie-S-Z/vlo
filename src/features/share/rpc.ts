@@ -44,6 +44,8 @@ export type RpcName =
   | 'owner_visitors'
   | 'owner_feedback'
   | 'owner_set_feedback'
+  // Feedback guards (migration 0012).
+  | 'owner_block_sender'
   // The writer's profile (migration 0011).
   | 'profile_get'
   | 'profile_put'
@@ -52,7 +54,16 @@ export type RpcName =
   | 'leaderboard_show';
 
 export type ShareErrorKind =
-  'not-set-up' | 'offline' | 'unavailable' | 'too-large' | 'limit' | 'busy' | 'server';
+  | 'not-set-up'
+  | 'offline'
+  | 'unavailable'
+  | 'too-large'
+  | 'limit'
+  | 'busy'
+  | 'too-fast'
+  | 'duplicate'
+  | 'blocked'
+  | 'server';
 
 const MESSAGES: Record<ShareErrorKind, string> = {
   'not-set-up': 'Sharing is not set up in this build.',
@@ -61,6 +72,9 @@ const MESSAGES: Record<ShareErrorKind, string> = {
   'too-large': 'This is too large to share. Pick fewer items, or a shorter comment.',
   limit: 'This link has the most comments that it can take.',
   busy: 'The share server is at its limit for now. Try again in an hour.',
+  'too-fast': 'Wait 30 seconds, then try again.',
+  duplicate: 'The server has this message already.',
+  blocked: 'The server does not take messages from this sender.',
   server: 'The share server refused the request. Try again later.',
 };
 
@@ -100,6 +114,10 @@ function kindOf(message: string): ShareErrorKind {
   if (message.includes('not signed in') || message.includes('not owner')) return 'unavailable';
   if (message.includes('feedback limit')) return 'limit';
   if (message.includes('message too large')) return 'too-large';
+  // Feedback guards (migration 0012).
+  if (message.includes('feedback too fast')) return 'too-fast';
+  if (message.includes('feedback duplicate')) return 'duplicate';
+  if (message.includes('feedback blocked')) return 'blocked';
   return 'server';
 }
 

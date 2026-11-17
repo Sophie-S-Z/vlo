@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { safeStorage } from '@/app/preferences';
+import { cleanFontValue, type FontValue } from './format/fonts';
 import { cleanZoom } from './format/page';
 
 /*
@@ -29,9 +30,44 @@ export interface WritingPrefs {
   styleCheck: boolean;
   /** The continuity check (F66) marks a name near a Codex name and a mention after "Leaves the story". */
   continuityCheck: boolean;
+  /** Page look (Phase 19, Task A3), on the screen only: the text column in characters. */
+  pageWidth: number;
+  /** How paragraphs part on the screen: a gap, a book indent, or a wide gap. */
+  paragraphs: ParagraphLook;
+  /** A font for the screen only. Null shows the project font. Exports always keep the project font. */
+  screenFont: FontValue | null;
+  /** The writer's own page looks, at most `MAX_LOOKS`. */
+  looks: SavedLook[];
 }
 
+export type ParagraphLook = 'spaced' | 'indented' | 'airy';
+export const PARAGRAPH_LOOKS: readonly ParagraphLook[] = ['spaced', 'indented', 'airy'];
+
+/** The parts of the writing prefs that a page look sets. */
+export interface PageLook {
+  pageWidth: number;
+  paragraphs: ParagraphLook;
+  screenFont: FontValue | null;
+  lineHeight: number;
+}
+
+export interface SavedLook extends PageLook {
+  name: string;
+}
+
+export const MAX_LOOKS = 6;
+export const MAX_LOOK_NAME = 40;
+export const PAGE_WIDTH_MIN = 56;
+export const PAGE_WIDTH_MAX = 90;
+export const PAGE_WIDTH_STEP = 2;
+const PAGE_WIDTH_DEFAULT = 68;
+/** The page width from before Phase 19, when the details panel kept it under its own key. */
+const OLD_WIDTH_KEY = 'vlo:pageWidth';
+
 export type ToolLevel = 'simple' | 'full';
+
+/** The line spacings that Page look names. The Spacing tool sets any line spacing in `SPACING`. */
+export const LINE_HEIGHTS = [1.7, 2, 2.3] as const;
 
 export type SpacingKey = 'letterSpacing' | 'wordSpacing' | 'lineHeight';
 
@@ -69,7 +105,65 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   lineHeight: 1.7,
   styleCheck: false,
   continuityCheck: false,
+  pageWidth: PAGE_WIDTH_DEFAULT,
+  paragraphs: 'spaced',
+  screenFont: null,
+  looks: [],
 };
+
+/** A page width in the range, on a step; anything else gives null. */
+export function cleanPageWidth(value: unknown): number | null {
+  return typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= PAGE_WIDTH_MIN &&
+    value <= PAGE_WIDTH_MAX
+    ? value
+    : null;
+}
+
+function cleanParagraphs(value: unknown): ParagraphLook {
+  return PARAGRAPH_LOOKS.find((look) => look === value) ?? 'spaced';
+}
+
+/** The parts of a page look, each cleaned. Null when a part is damaged. */
+export function cleanPageLook(value: unknown): PageLook | null {
+  if (!value || typeof value !== 'object') return null;
+  const look = value as Record<string, unknown>;
+  const pageWidth = cleanPageWidth(look.pageWidth);
+  const lineHeight = cleanSpacing('lineHeight', look.lineHeight);
+  if (pageWidth === null || lineHeight !== look.lineHeight) return null;
+  if (!PARAGRAPH_LOOKS.some((p) => p === look.paragraphs)) return null;
+  const screenFont = look.screenFont === null ? null : cleanFontValue(look.screenFont);
+  if (screenFont === null && look.screenFont !== null) return null;
+  return {
+    pageWidth,
+    paragraphs: cleanParagraphs(look.paragraphs),
+    screenFont,
+    lineHeight,
+  };
+}
+
+function cleanLooks(value: unknown): SavedLook[] {
+  if (!Array.isArray(value)) return [];
+  const looks: SavedLook[] = [];
+  for (const entry of value as unknown[]) {
+    const look = cleanPageLook(entry);
+    const name = (entry as { name?: unknown } | null)?.name;
+    if (!look || typeof name !== 'string') continue;
+    const clean = name.trim().slice(0, MAX_LOOK_NAME);
+    if (clean !== '' && !looks.some((l) => l.name === clean)) looks.push({ name: clean, ...look });
+  }
+  return looks.slice(0, MAX_LOOKS);
+}
+
+/** The page width that the details panel kept before Phase 19, so a writer keeps their width. */
+function oldWidth(): number | null {
+  try {
+    return cleanPageWidth(Number(safeStorage()?.getItem(OLD_WIDTH_KEY)));
+  } catch {
+    return null;
+  }
+}
 const listeners = new Set<() => void>();
 
 /** The stored switches. A damaged value gives none. */
@@ -98,6 +192,10 @@ function load(): WritingPrefs {
     lineHeight: cleanSpacing('lineHeight', value.lineHeight),
     styleCheck: value.styleCheck === true,
     continuityCheck: value.continuityCheck === true,
+    pageWidth: cleanPageWidth(value.pageWidth) ?? oldWidth() ?? PAGE_WIDTH_DEFAULT,
+    paragraphs: cleanParagraphs(value.paragraphs),
+    screenFont: value.screenFont === undefined ? null : cleanFontValue(value.screenFont),
+    looks: cleanLooks(value.looks),
   };
 }
 
