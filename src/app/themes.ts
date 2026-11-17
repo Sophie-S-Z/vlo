@@ -1,9 +1,9 @@
 import type { ResolvedTheme, ThemeChoice } from './preferences';
 
 /*
- * What each theme is. A plain theme colors the page. An atmosphere also paints a scene behind the whole app
- * (src/styles/atmospheres.css): the art stays at the edges, so the middle of the screen stays quiet for text.
- * Its small lights move only while the writer rests, and Calm mode and reduced motion keep them still.
+ * What each theme is. A plain theme colors the page. An atmosphere also puts a photograph behind the whole
+ * app (src/styles/atmospheres.css), under a veil of the theme color that keeps the text easy to read. The
+ * photograph drifts only while the writer rests, and Calm mode and reduced motion keep it still.
  */
 
 /** The four base palettes. Each theme borrows the text colors and highlights of one (format/palette.ts). */
@@ -43,49 +43,49 @@ export const THEMES: Readonly<Record<ResolvedTheme, ThemeInfo>> = {
   },
   forest: {
     label: 'Deep forest',
-    hint: 'Moss and pine at dusk, with light through the trees and fireflies.',
+    hint: 'Pines in fog after sundown.',
     tone: 'dark',
     palette: 'ink',
     atmosphere: true,
   },
   galaxy: {
     label: 'Mystic galaxy',
-    hint: 'Violet nebulae and slow stars.',
+    hint: 'The Milky Way over a dark ridge.',
     tone: 'dark',
     palette: 'ink',
     atmosphere: true,
   },
   'deep-sea': {
     label: 'Deep sea',
-    hint: 'Light from far above, and small glowing things that drift up.',
+    hint: 'Sunlight on the sea floor, far below the waves.',
     tone: 'dark',
     palette: 'ink',
     atmosphere: true,
   },
   candlelight: {
     label: 'Candlelight',
-    hint: 'A warm room after dark, lit by one flame.',
+    hint: 'Tall candles in a dark room, with a soft flicker.',
     tone: 'dark',
     palette: 'ink',
     atmosphere: true,
   },
   wonderland: {
     label: 'Wonderland',
-    hint: 'Lavender, pastel blooms and a checkered corner.',
+    hint: 'A curtain of wisteria in soft light.',
     tone: 'light',
     palette: 'paper',
     atmosphere: true,
   },
   blossom: {
     label: 'Blossom',
-    hint: 'A spring garden, with petals that drift past.',
+    hint: 'A cherry branch against a pale spring sky.',
     tone: 'light',
     palette: 'paper',
     atmosphere: true,
   },
   frost: {
     label: 'Frost',
-    hint: 'A cold, clear morning, with slow snow.',
+    hint: 'Ice ferns on a window pane.',
     tone: 'light',
     palette: 'paper',
     atmosphere: true,

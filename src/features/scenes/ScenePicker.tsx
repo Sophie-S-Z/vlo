@@ -4,7 +4,6 @@ import { useId } from 'react';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { Button } from '@/ui/button';
 import { ICON_BUTTON } from '@/ui/tip';
-import { cn } from '@/ui/cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { NO_SCENE, SCENES, type SceneChoice } from './scenes';
 import { retrySceneMotion, useSceneSlow } from './slowScene';
@@ -55,17 +54,14 @@ export function ScenePicker({
           className="grid grid-cols-2 gap-2 sm:grid-cols-3"
         >
           {[
-            { id: NO_SCENE, label: 'No scene', hint: 'The page on its theme color.', still: '' },
+            { id: NO_SCENE, label: 'No scene', hint: 'The page on its theme color.', thumb: '' },
             ...SCENES,
           ].map((option) => (
             <RadioGroupPrimitive.Item key={option.id} value={option.id} className={tileClass}>
               <span
                 aria-hidden="true"
-                className={cn(
-                  'relative flex aspect-[16/10] items-center justify-center rounded-sm border border-rule group-data-[state=checked]:border-accent group-data-[state=checked]:ring-2 group-data-[state=checked]:ring-accent',
-                  option.id === NO_SCENE && 'bg-bg',
-                )}
-                style={option.still ? { background: option.still } : undefined}
+                className="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-sm border border-rule bg-bg bg-cover bg-center group-data-[state=checked]:border-accent group-data-[state=checked]:ring-2 group-data-[state=checked]:ring-accent"
+                style={option.thumb ? { backgroundImage: `url('${option.thumb}')` } : undefined}
               >
                 {option.id === scene && (
                   <span className="absolute top-1 right-1 rounded-full bg-accent p-0.5 text-on-accent">

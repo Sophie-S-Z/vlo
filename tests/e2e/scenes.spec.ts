@@ -206,8 +206,10 @@ test('in Calm mode the scene is a still picture', async ({ page }) => {
   // Wait past the typing pause, so only Calm mode can hold the scene still.
   await page.waitForTimeout(2_000);
   await expect(backdrop(page)).toHaveAttribute('data-moving', 'false');
-  // The still picture shows at once, before and under the canvas.
-  expect(await backdrop(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/gradient/);
+  // The photograph is the still picture, under the canvas.
+  expect(await backdrop(page).evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(
+    /scene-\w+[\w-]*\.webp/,
+  );
 });
 
 test('the scene picker has no serious axe issues, and a scene adds no horizontal scroll at 360 px', async ({

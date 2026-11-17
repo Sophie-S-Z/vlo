@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { SCENE_FPS, SceneRunner, type Schedule } from './runner';
 import type { SceneMessage } from './scene.worker';
@@ -6,7 +6,8 @@ import { sceneInfo, type SceneId } from './scenes';
 import { markSceneSlow, useSceneSlow, watchSceneFrames } from './slowScene';
 
 /*
- * The scene behind the manuscript column (plan Task A8). It stays in view while the text scrolls. Motion
+ * The scene behind the manuscript column (plan Task A8): a photograph, with motion drawn over it on a clear
+ * canvas (art.ts). It stays in view while the text scrolls. Motion
  * runs only while the writer is not typing, the tab shows, the scene is on screen, and Calm mode and
  * reduced motion are off, and the device draws it fast enough. Otherwise the scene is a still picture.
  */
@@ -137,6 +138,12 @@ function mainDriver(canvas: HTMLCanvasElement, scene: SceneId): Driver {
   };
 }
 
+/** The photograph and its average color, for the CSS of `.vlo-scene` (styles/editor.css). */
+function sceneStyle(scene: SceneId): CSSProperties {
+  const info = sceneInfo(scene);
+  return { '--scene-photo': `url('${info.photo}')`, '--scene-tone': info.tone } as CSSProperties;
+}
+
 export function SceneBackdrop({ scene }: { scene: SceneId }) {
   const frame = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -220,7 +227,7 @@ export function SceneBackdrop({ scene }: { scene: SceneId }) {
       data-scene={scene}
       data-moving={moving ? 'true' : 'false'}
       data-still={slow ? 'slow' : undefined}
-      style={{ background: sceneInfo(scene).still }}
+      style={sceneStyle(scene)}
     >
       <canvas key={mode} ref={canvas} className="vlo-scene-canvas" />
     </div>
