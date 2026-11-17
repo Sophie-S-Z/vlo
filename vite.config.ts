@@ -95,7 +95,8 @@ export default defineConfig({
         // the first time a writer reads with one, and it runs the same ONNX Runtime file. The PDF reader's
         // worker (about 400 KB gzip) is cached the first time a writer imports a PDF. The spelling and grammar
         // check (Harper, about 8.5 MB gzip with its dictionary) is cached the first time a writer turns it on.
-        // The thesaurus (WordNet, about 1.8 MB gzip) is cached the first time a writer opens it.
+        // The thesaurus (WordNet, about 1.8 MB gzip) is cached the first time a writer opens it, and the
+        // parts-of-speech tagger the first time a writer shows the parts of speech.
         globIgnores: [
           'assets/fonts/**',
           'assets/craft/**',
@@ -106,6 +107,7 @@ export default defineConfig({
           'assets/grammar.worker-*',
           'assets/grammar/**',
           'assets/thesaurus/**',
+          'assets/pos/**',
         ],
         runtimeCaching: [
           {
@@ -156,12 +158,12 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\/assets\/thesaurus\/[^/]+\.js$/,
+            urlPattern: /\/assets\/(?:thesaurus|pos)\/[^/]+\.js$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'vlo-thesaurus',
-              // The file name carries a content hash, so a cached file never goes stale.
-              expiration: { maxEntries: 4 },
+              cacheName: 'vlo-word-data',
+              // The file names carry a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 12 },
               cacheableResponse: { statuses: [200] },
             },
           },
@@ -221,13 +223,14 @@ export default defineConfig({
     format: 'es',
     rolldownOptions: {
       output: {
-        // The pronouncing dictionary goes under assets/craft/, Harper under assets/grammar/ and WordNet under
-        // assets/thesaurus/, so the install leaves them out.
+        // The pronouncing dictionary goes under assets/craft/, Harper under assets/grammar/, WordNet under
+        // assets/thesaurus/ and the tagger under assets/pos/, so the install leaves them out.
         chunkFileNames: (chunk) => {
           const has = (name: string) => chunk.moduleIds.some((id) => id.includes(name));
           if (has('cmu-pronouncing-dictionary')) return 'assets/craft/[name]-[hash].js';
           if (has('harper.js')) return 'assets/grammar/[name]-[hash].js';
           if (has('thesaurus.json')) return 'assets/thesaurus/[name]-[hash].js';
+          if (has('/wink-')) return 'assets/pos/[name]-[hash].js';
           return 'assets/[name]-[hash].js';
         },
       },

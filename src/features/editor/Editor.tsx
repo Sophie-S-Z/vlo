@@ -40,6 +40,8 @@ import { StyleCheck } from './extensions/styleCheck';
 import { CodexNames } from './extensions/codexNames';
 import { ContinuityCheck } from './extensions/continuityCheck';
 import { GrammarCheck } from './extensions/grammar';
+import { PartsOfSpeech } from './extensions/partsOfSpeech';
+import { PosLegend } from '@/features/pos/PosLegend';
 import { TextShortcuts } from './extensions/textShortcuts';
 import { useGrammarPrefs } from '@/features/grammar/grammarPrefs';
 import { TypingState } from './extensions/textFill';
@@ -211,6 +213,8 @@ export function Editor({
         CodexNames,
         ContinuityCheck.configure({ itemId, english }),
         ...(grammarForm ? [GrammarCheck.configure({ itemId, language })] : []),
+        // The tagger reads English only.
+        ...(english ? [PartsOfSpeech] : []),
         AuthorshipCount.configure({ projectId: projectId ?? null }),
         ...(kind === 'script' ? [] : [ImageInput.configure({ projectId: projectId ?? null })]),
         CodexCompletion.configure({ listId: mentionListId }),
@@ -424,6 +428,7 @@ export function Editor({
         <Toolbar editor={editor} kind={kind} templates={templates} />
         {find?.editor === editor && <FindBar editor={editor} request={find} itemId={itemId} />}
         <ReadAloudBar editor={editor} />
+        {english && <PosLegend />}
         <CursorNote editor={editor} itemId={itemId} />
         {kind === 'prose' && <PasteNotice editor={editor} />}
       </div>

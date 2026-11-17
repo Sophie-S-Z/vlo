@@ -81,7 +81,7 @@ const COMMENTS: Section = {
   label: 'Comments and changes',
   tools: ['all-comments', 'accept-all-changes', 'reject-all-changes'],
 };
-const SHOW: Section = { label: 'Show', tools: ['show-ai-text', 'show-codex-names'] };
+const SHOW: Section = { label: 'Show', tools: ['show-ai-text', 'show-codex-names', 'parts-of-speech'] };
 const HELP: Section = { label: 'Help', tools: ['print', 'shortcuts'] };
 const REVIEW: readonly Section[] = [FIND, WORDS, LISTEN, CHECKS, COMMENTS, SHOW, HELP];
 /** Prose keeps Spacing with its paragraph tools. A poem and a script have no paragraph tools. */

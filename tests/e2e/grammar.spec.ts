@@ -26,6 +26,10 @@ test('the check marks a typo and a grammar slip, fixes them, learns a word and k
     if (!request.url().startsWith(origin) && !request.url().startsWith('data:')) away.push(request.url());
   });
 
+  // The typo list would fix "teh" as it is typed (Task D3), so the check would never see it.
+  await page.addInitScript(() => {
+    localStorage.setItem('vlo:writing', JSON.stringify({ typoFixes: false }));
+  });
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
   await page

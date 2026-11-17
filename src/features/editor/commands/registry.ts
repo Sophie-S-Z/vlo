@@ -38,6 +38,7 @@ import {
   MessageSquareText,
   MessagesSquare,
   Mic,
+  Palette,
   MoveDown,
   MoveUp,
   Music,
@@ -89,6 +90,8 @@ import { isReading } from '../readAloud/reader';
 import { canStyleCheck } from '../extensions/styleCheck';
 import { canCheckGrammar } from '../extensions/grammar';
 import { getGrammarPrefs, setGrammarOn } from '@/features/grammar/grammarPrefs';
+import { canShowPartsOfSpeech } from '../extensions/partsOfSpeech';
+import { getPosPrefs, setPosOn } from '@/features/pos/posPrefs';
 import { rimshot } from '../rimshot';
 import { changesOf } from '../extensions/suggestion';
 import { getTracking, saveTracking } from '../trackingStore';
@@ -1051,6 +1054,22 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: () => getCodex().show,
+  },
+  {
+    kind: 'run',
+    id: 'parts-of-speech',
+    label: 'Show parts of speech',
+    icon: Palette,
+    group: 'review',
+    forms: ALL,
+    keywords: ['nouns', 'verbs', 'adjectives', 'adverbs', 'conjunctions', 'grammar colors', 'syntax'],
+    run: () => {
+      setPosOn(!getPosPrefs().on);
+      return true;
+    },
+    isActive: () => getPosPrefs().on,
+    // The tagger reads English, so a project in another language has no colors.
+    isEnabled: (e) => canShowPartsOfSpeech(e.state),
   },
   {
     kind: 'panel',

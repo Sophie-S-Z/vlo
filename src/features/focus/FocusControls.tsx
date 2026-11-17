@@ -9,9 +9,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
-import { HIDE_STYLES, setFocusPrefs, useFocusPrefs, type HideStyle } from './focusPrefs';
+import {
+  DIM_SCOPES,
+  HIDE_STYLES,
+  setFocusPrefs,
+  useFocusPrefs,
+  type DimScope,
+  type HideStyle,
+} from './focusPrefs';
 
 const HIDE_LABEL: Record<HideStyle, string> = { blur: 'Blur the words', bars: 'Cover the words with bars' };
+const DIM_LABEL: Record<DimScope, string> = { line: 'Dim other lines', sentence: 'Dim other sentences' };
 
 /** Focus mode, typewriter scrolling, focus-line dimming and the choices of Hide the text. */
 export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
@@ -36,14 +44,18 @@ export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
         >
           Typewriter scrolling
         </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem
-          checked={prefs.dim}
-          onCheckedChange={(checked) => {
-            setFocusPrefs({ dim: checked });
-          }}
-        >
-          Dim other lines
-        </DropdownMenuCheckboxItem>
+        {DIM_SCOPES.map((scope) => (
+          // Each scope is a switch of its own: a second choice of the scope that is on stops the dimming.
+          <DropdownMenuCheckboxItem
+            key={scope}
+            checked={prefs.dim && prefs.dimScope === scope}
+            onCheckedChange={(checked) => {
+              setFocusPrefs(checked ? { dimScope: scope, dim: true } : { dim: false });
+            }}
+          >
+            {DIM_LABEL[scope]}
+          </DropdownMenuCheckboxItem>
+        ))}
         <DropdownMenuSeparator />
         <DropdownMenuCheckboxItem
           checked={prefs.hide}

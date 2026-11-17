@@ -348,13 +348,16 @@ test('typing stays under 50 ms at p95 in the 10,000-word scene with 200 comments
   expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
 });
 
-test('typing stays under 50 ms at p95 in the 10,000-word scene with spelling and grammar on', async ({
+test('typing stays under 50 ms at p95 in the 10,000-word scene with grammar and parts of speech on', async ({
   page,
   browserName,
 }) => {
   test.slow();
   await page.addInitScript(() => {
     localStorage.setItem('vlo:grammar', JSON.stringify({ on: true }));
+    localStorage.setItem('vlo:parts-of-speech', JSON.stringify({ on: true }));
+    // The typo list would fix "teh" as it is typed (Task D3), so the check would never see it.
+    localStorage.setItem('vlo:writing', JSON.stringify({ typoFixes: false }));
   });
   await skipOnboarding(page);
   const seeded = await seedLarge(page);
@@ -369,6 +372,8 @@ test('typing stays under 50 ms at p95 in the 10,000-word scene with spelling and
   await expect(editor.locator('.vlo-spelling').filter({ hasText: 'teh' })).toHaveCount(1, {
     timeout: 60_000,
   });
+  // Phase 19, Task D5: the tagger colored the same words.
+  await expect(editor.locator('.vlo-pos-noun').filter({ hasText: /^boat$/ })).toHaveCount(1);
   await page.evaluate(() => {
     window.__keyDelays = [];
   });
@@ -380,7 +385,9 @@ test('typing stays under 50 ms at p95 in the 10,000-word scene with spelling and
   await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
   const sorted = (await page.evaluate(() => window.__keyDelays)).sort((a, b) => a - b);
   const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
-  console.log(`[${browserName}] keystroke to paint with spelling and grammar on, p95: ${p95.toFixed(1)} ms`);
+  console.log(
+    `[${browserName}] keystroke to paint with grammar and parts of speech on, p95: ${p95.toFixed(1)} ms`,
+  );
   // The same budget and WebKit ceiling as Gate 1.
   expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
 });
