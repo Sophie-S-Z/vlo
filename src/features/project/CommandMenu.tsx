@@ -14,8 +14,11 @@ export interface CommandAction {
   keywords?: readonly string[];
   /** The shortcut, shown at the end of the row. */
   hint?: string;
-  /** Format actions act on the open text and list after the other actions. */
-  group?: 'actions' | 'format';
+  /**
+   * Format actions act on the open text and list after the other actions. Outline actions go to a heading
+   * or a scene of the open item, under "In this item".
+   */
+  group?: 'actions' | 'format' | 'outline';
 }
 
 /** True when every query word is in the action's label or keywords. */
@@ -99,8 +102,11 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
     .filter((r) => matchedIn(r, 'text'))
     .map((r) => ({ item: openable(r.id), terms: [...queryWords, ...Object.keys(r.match)] }))
     .filter((r): r is { item: Item; terms: string[] } => r.item !== undefined);
-  const shownActions = actions.filter((a) => a.group !== 'format' && actionMatches(a, trimmed));
-  const shownFormats = actions.filter((a) => a.group === 'format' && actionMatches(a, trimmed));
+  const shown = (group: CommandAction['group']) =>
+    actions.filter((a) => (a.group ?? 'actions') === group && actionMatches(a, trimmed));
+  const shownOutline = shown('outline');
+  const shownActions = shown('actions');
+  const shownFormats = shown('format');
 
   const choose = (run: () => void) => {
     run();
@@ -132,6 +138,23 @@ export function CommandMenu({ project, items, canOpen, actions, onOpenItem, onDo
                 className={itemClass}
               >
                 <span>{item.title}</span>
+              </Command.Item>
+            ))}
+          </Command.Group>
+        )}
+        {shownOutline.length > 0 && (
+          <Command.Group heading="In this item" className={groupClass}>
+            {shownOutline.map((action) => (
+              <Command.Item
+                key={action.id}
+                value={`outline-${action.id}`}
+                onSelect={() => {
+                  choose(action.run);
+                }}
+                className={cn(itemClass, 'flex-row items-center justify-between')}
+              >
+                <span>{action.label}</span>
+                {action.hint && <span className="tabular-nums text-xs text-muted">{action.hint}</span>}
               </Command.Item>
             ))}
           </Command.Group>

@@ -53,6 +53,7 @@ import { SlashMenuList } from './toolbar/SlashMenuList';
 import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
 import { restorePlace, savePlace, scrollToCaret } from './lastPlace';
+import { PasteNotice } from './PasteNotice';
 import { watchPhoneTyping } from './phoneTyping';
 import { useTracking } from './trackingStore';
 import { useWritingPrefs } from './writingPrefs';
@@ -401,6 +402,7 @@ export function Editor({
         {find?.editor === editor && <FindBar editor={editor} request={find} />}
         <ReadAloudBar editor={editor} />
         <CursorNote editor={editor} itemId={itemId} />
+        {kind === 'prose' && <PasteNotice editor={editor} />}
       </div>
       <div ref={printRoot} className="contents">
         <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>

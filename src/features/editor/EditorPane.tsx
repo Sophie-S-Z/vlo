@@ -33,6 +33,7 @@ import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
 import { cleanPageFormat, PAGE_SIZES } from './format/page';
 import { docParts, docText, refreshItemText, writeItemText } from './itemText';
+import { OutlineControl, OutlineRail, useRailRoom } from './ItemOutline';
 import { ManuscriptContext, type ManuscriptSettings } from './manuscript';
 import { PageControl } from './PageControl';
 import { PageLookControl } from './PageLook';
@@ -217,8 +218,13 @@ export function EditorPane({
   const page = cleanPageFormat(storedPage);
   // Only the main pane shows the scene.
   const scene = beside ? NO_SCENE : cleanScene(storedScene);
-  const { zoom } = useWritingPrefs();
+  const { zoom, outline } = useWritingPrefs();
   const [pages, setPages] = useState<number | null>(null);
+  // The main pane of prose and scripts has an outline. A poem has no headings.
+  const hasOutline = !beside && kind !== 'poem' && item.role !== 'references';
+  const stage = useRef<HTMLDivElement>(null);
+  const sheet = useRef<HTMLElement>(null);
+  const railRoom = useRailRoom(stage, sheet, hasOutline);
   const manuscript = useMemo<ManuscriptSettings>(
     () => ({
       projectId: item.projectId,
@@ -240,15 +246,20 @@ export function EditorPane({
   return (
     <ManuscriptContext value={manuscript}>
       <div
+        ref={stage}
         className={cn(scene !== NO_SCENE && 'vlo-scene-stage')}
         data-scene={scene === NO_SCENE ? undefined : scene}
       >
         {scene !== NO_SCENE && <SceneBackdrop scene={scene} />}
         <article
-          className={cn('mx-auto w-full', scene !== NO_SCENE && 'vlo-scene-page')}
+          ref={sheet}
+          className={cn('relative mx-auto w-full', scene !== NO_SCENE && 'vlo-scene-page')}
           style={{ maxWidth }}
           data-script-style={kind === 'script' ? scriptStyle : undefined}
         >
+          {railRoom && outline && state.status === 'ready' && (
+            <OutlineRail editor={editor} language={language} />
+          )}
           {/* One row (Phase 17 decision S2): the title, then its counts and the item's quiet icon tools. */}
           <header
             data-typing-hide
@@ -284,6 +295,7 @@ export function EditorPane({
                     }
                   />
                   {kind === 'prose' && <PageLookControl projectFont={font} />}
+                  {hasOutline && <OutlineControl editor={editor} language={language} room={railRoom} />}
                   {!beside && (
                     <>
                       <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />

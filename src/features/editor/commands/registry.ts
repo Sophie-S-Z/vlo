@@ -14,7 +14,11 @@ import {
   FilePenLine,
   Baseline,
   Bold,
+  CaseLower,
+  CaseSensitive,
+  CaseUpper,
   Clapperboard,
+  ClipboardType,
   Drum,
   Heading2,
   Heading3,
@@ -33,6 +37,7 @@ import {
   Mic,
   Music,
   Omega,
+  Paintbrush,
   Parentheses,
   List,
   ListOrdered,
@@ -78,6 +83,8 @@ import { canStyleCheck } from '../extensions/styleCheck';
 import { rimshot } from '../rimshot';
 import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
+import { TEXT_CASES, type TextCase } from '../format/textCase';
+import { paintKey } from '../extensions/paintFormat';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
@@ -177,6 +184,19 @@ export interface PanelCommand extends BaseCommand {
 }
 
 export type EditorCommand = RunCommand | PanelCommand;
+
+const CASE_LABELS: Readonly<Record<TextCase, string>> = {
+  upper: 'UPPERCASE',
+  lower: 'lowercase',
+  title: 'Title Case',
+  sentence: 'Sentence case',
+};
+const CASE_ICONS: Readonly<Record<TextCase, LucideIcon>> = {
+  upper: CaseUpper,
+  lower: CaseLower,
+  title: CaseSensitive,
+  sentence: LetterText,
+};
 
 const BOTH: readonly EditorForm[] = ['prose', 'poem'];
 const ALL: readonly EditorForm[] = ['prose', 'poem', 'script'];
@@ -1060,6 +1080,65 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     run: (e) => e.commands.clearFormatting(),
+  },
+  {
+    kind: 'run',
+    id: 'paint-format',
+    label: 'Paint format',
+    icon: Paintbrush,
+    group: 'clear',
+    forms: BOTH,
+    keywords: ['copy formatting', 'format painter', 'brush', 'same style'],
+    slash: true,
+    selection: true,
+    run: (e) => e.commands.paintFormat(),
+    isActive: (e) => Boolean(paintKey.getState(e.state)),
+  },
+  {
+    kind: 'run',
+    id: 'paste-plain',
+    label: 'Paste as plain text',
+    icon: ClipboardType,
+    group: 'clear',
+    forms: ALL,
+    keys: 'Mod-Shift-v',
+    keywords: ['paste without formatting', 'unformatted', 'text only'],
+    slash: true,
+    run: (e) => {
+      // Insecure pages and some browsers have no clipboard to read. The key works there all the same.
+      const clipboard = navigator.clipboard as Clipboard | undefined;
+      if (!clipboard) return false;
+      // The browser asks the writer first. A refusal leaves the text as it was.
+      void clipboard.readText().then(
+        (text) => {
+          if (!e.isDestroyed) e.view.pasteText(text);
+        },
+        () => undefined,
+      );
+      return true;
+    },
+  },
+  ...TEXT_CASES.map((rule): RunCommand => ({
+    kind: 'run',
+    id: `case-${rule}`,
+    label: CASE_LABELS[rule],
+    icon: CASE_ICONS[rule],
+    group: 'style',
+    forms: ALL,
+    keywords: ['change case', 'capitals', 'caps'],
+    slash: true,
+    run: (e) => e.commands.setTextCase(rule),
+  })),
+  {
+    kind: 'run',
+    id: 'next-case',
+    label: 'Change case',
+    icon: CaseSensitive,
+    group: 'style',
+    forms: ALL,
+    keys: 'Shift-F3',
+    keywords: ['uppercase', 'lowercase', 'title case', 'sentence case', 'capitals'],
+    run: (e) => e.commands.nextTextCase(),
   },
   {
     kind: 'run',

@@ -156,6 +156,11 @@
   outline-offset: 2px;
 }
 
+/* Paint format (Task B2): while the brush is on, the pointer shows that the next selection takes it. */
+[data-painting] {
+  cursor: copy;
+}
+
 /* Poems keep every space. Wrapped parts of a line sit under the hanging indent set on the line. */
 /*
  * A script (F63) in Courier Prime, with each element at its place on a 6-inch line of a US Letter page.

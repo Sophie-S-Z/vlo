@@ -38,6 +38,8 @@ export interface WritingPrefs {
   screenFont: FontValue | null;
   /** The writer's own page looks, at most `MAX_LOOKS`. */
   looks: SavedLook[];
+  /** The item outline (Phase 19, Task B1) stays open in the margin, where the window has room for it. */
+  outline: boolean;
 }
 
 export type ParagraphLook = 'spaced' | 'indented' | 'airy';
@@ -109,6 +111,7 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   paragraphs: 'spaced',
   screenFont: null,
   looks: [],
+  outline: false,
 };
 
 /** A page width in the range, on a step; anything else gives null. */
@@ -196,6 +199,7 @@ function load(): WritingPrefs {
     paragraphs: cleanParagraphs(value.paragraphs),
     screenFont: value.screenFont === undefined ? null : cleanFontValue(value.screenFont),
     looks: cleanLooks(value.looks),
+    outline: value.outline === true,
   };
 }
 

@@ -78,6 +78,8 @@ const HELP: Section = { label: 'Help', tools: ['print', 'shortcuts'] };
 const REVIEW: readonly Section[] = [FIND, LISTEN, CHECKS, SHOW, HELP];
 /** Prose keeps Spacing with its paragraph tools. A poem and a script have no paragraph tools. */
 const SPACE: Section = { label: 'Spacing', tools: ['spacing'] };
+/** Change case, in every form. Shift-F3 steps through the same cases. */
+const CASE: Section = { label: 'Case', tools: ['case-upper', 'case-lower', 'case-title', 'case-sentence'] };
 
 const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
   prose: {
@@ -116,8 +118,10 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
             'gradient',
             'superscript',
             'subscript',
+            'paint-format',
           ],
         },
+        CASE,
         {
           label: 'Paragraph',
           tools: [
@@ -162,8 +166,10 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
             'gradient',
             'superscript',
             'subscript',
+            'paint-format',
           ],
         },
+        CASE,
         SPACE,
         { label: 'Clear', tools: ['clear'] },
       ],
@@ -179,7 +185,7 @@ const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     ],
     menus: {
       insert: [{ label: 'Characters', tools: ['characters'] }],
-      format: [{ label: 'Text', tools: ['underline'] }, SPACE, { label: 'Clear', tools: ['clear'] }],
+      format: [{ label: 'Text', tools: ['underline'] }, CASE, SPACE, { label: 'Clear', tools: ['clear'] }],
       review: REVIEW,
     },
   },

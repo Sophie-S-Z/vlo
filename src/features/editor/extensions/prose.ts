@@ -12,7 +12,10 @@ import { PrivateName } from '@/features/people/personMark';
 import { AiOriginMark } from './aiOrigin';
 import { CommentMark } from './comment';
 import { SuggestionMark } from './suggestion';
+import { CleanPaste } from './cleanPaste';
 import { PageBreak } from './pageBreak';
+import { PaintFormat } from './paintFormat';
+import { TextCaseCommands } from './textCase';
 import { SceneBreak } from './sceneBreak';
 import { Cite } from './cite';
 import { ImageNode } from './image';
@@ -31,6 +34,9 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     ...inlineFormatting(),
     ...blockFormatting(),
     ClearFormatting,
+    PaintFormat,
+    TextCaseCommands,
+    CleanPaste,
     SceneBreak,
     PageBreak,
     TaskList,

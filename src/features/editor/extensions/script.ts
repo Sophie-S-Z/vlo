@@ -11,6 +11,7 @@ import { AiOriginMark } from './aiOrigin';
 import { CommentMark } from './comment';
 import { EscapeTab } from './escapeTab';
 import { ClearFormatting } from './formatting';
+import { TextCaseCommands } from './textCase';
 import { SuggestionMark } from './suggestion';
 import { nextRole, SCRIPT_LINE, scriptRole, type ScriptRole } from '../scriptRoles';
 
@@ -184,6 +185,7 @@ export function scriptExtensions(ydoc: Y.Doc): AnyExtension[] {
     ScriptDocument,
     ScriptLine,
     ClearFormatting.configure({ blocks: false }),
+    TextCaseCommands,
     PrivateName,
     AiOriginMark,
     CommentMark,

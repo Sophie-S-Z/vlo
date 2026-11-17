@@ -16,6 +16,8 @@ import { Footnote } from './footnote';
 import { MathInline } from './math';
 import { ImageNode } from './image';
 import { ClearFormatting, inlineFormatting } from './formatting';
+import { PaintFormat } from './paintFormat';
+import { TextCaseCommands } from './textCase';
 
 /* The poem schema: doc > stanza+ > poemLine+ > inline. Every space is content, and lines keep layout. */
 
@@ -321,6 +323,8 @@ export function poemExtensions(ydoc: Y.Doc, opts: PoemOptions): AnyExtension[] {
     PoemLine.configure(opts),
     ...inlineFormatting(),
     ClearFormatting.configure({ blocks: false }),
+    PaintFormat,
+    TextCaseCommands,
     PrivateName,
     AiOriginMark,
     CommentMark,

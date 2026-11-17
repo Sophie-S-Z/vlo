@@ -133,10 +133,10 @@ export function restorePlace(itemId: string, editor: Editor): boolean {
 /** The caret line sits this far down the visible area after an open, so the writer sees the words before it. */
 const CARET_RATIO = 0.4;
 
-/** Scrolls the window so the caret line is at 40 percent of the visible height. */
-export function scrollToCaret(view: EditorView): void {
+/** Scrolls the window so the caret line is at `ratio` of the visible height, 40 percent by default. */
+export function scrollToCaret(view: EditorView, ratio = CARET_RATIO): void {
   const caret = view.coordsAtPos(view.state.selection.head);
   const visible = window.visualViewport?.height ?? window.innerHeight;
-  const top = Math.max(0, window.scrollY + caret.top - visible * CARET_RATIO);
+  const top = Math.max(0, window.scrollY + caret.top - visible * ratio);
   if (Math.abs(top - window.scrollY) > 1) window.scrollTo({ top, behavior: 'instant' });
 }
