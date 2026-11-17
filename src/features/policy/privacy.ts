@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 15,
+  version: 16,
   date: '2026-11-17',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -41,9 +41,9 @@ export const PRIVACY = {
     },
     usage: {
       title: 'Weekly usage counts',
-      when: 'Only after you turn them on in Settings, and only when you press Send on a weekly report.',
+      when: 'Once a week, by itself, the first time Vlo is open after the week ends. It is always on.',
       sends:
-        'Counts in bands, the templates and features that you used, AI mode counts and error codes. Never text, titles or names. You see each report before it goes.',
+        'The counts of the week before: the templates and features that you used, your words and poems as bands such as 1000-4999, AI requests by mode, and error codes. Never text, titles or names. Settings shows a sample report.',
     },
     originality: {
       title: 'The web originality check',
@@ -83,9 +83,9 @@ export const PRIVACY = {
     },
     ping: {
       title: 'The daily count',
-      when: 'Once a day while the switch in Settings is on, signed in or not, and again after your projects change, at most once in 5 minutes. It is on until you turn it off.',
+      when: 'Once a day, signed in or not, and again after your projects change, at most once in 5 minutes. It is always on.',
       sends:
-        "A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. Once a day, the app's own server on Vercel reads a rough place from the internet address of this device: the country, the region and the city. The count keeps only those three, never the address or an exact location, and the makers of Vlo see places only as counts of devices. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. With no account, they see only that a signed-out device used Vlo. Never text, a title or a name, and no cookie. Turning it off forgets the random id and sends no place.",
+        "A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. Once a day, the app's own server on Vercel reads a rough place from the internet address of this device: the country, the region and the city. The count keeps only those three, never the address or an exact location, and the makers of Vlo see places only as counts of devices. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. With no account, they see only that a signed-out device used Vlo. Never text, a title or a name, and no cookie.",
     },
     feedback: {
       title: 'Feedback to the makers of Vlo',

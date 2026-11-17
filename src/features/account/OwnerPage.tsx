@@ -473,7 +473,7 @@ function Overview({
           title="Writing modes in weekly reports"
           counts={summary.templates}
           labels={LABELS}
-          note={`From ${n(summary.reports)} reports in the last 8 weeks. Only writers who turn on usage counts send one.`}
+          note={`From ${n(summary.reports)} reports in the last 8 weeks. Each device sends one a week.`}
         />
         <Breakdown title="Features in weekly reports" counts={summary.features} labels={LABELS} />
       </div>

@@ -33,7 +33,6 @@ import { TemplatesDialog } from './TemplatesDialog';
 import { projectDef } from './templates';
 import { useLibrary, type LibraryProject } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
-import { WeeklyReport } from '@/features/usage/WeeklyReport';
 
 type LibraryLayout = 'shelf' | 'stack';
 
@@ -309,8 +308,6 @@ export function LibraryPage() {
           <BookStack projects={shown} now={now} seriesOf={seriesOf} actionsFor={actionsFor} />
         </div>
       )}
-
-      <WeeklyReport />
 
       {due.length > 0 && (
         <section aria-labelledby="backup-reminder" className="vlo-notice mt-12 overflow-hidden rounded-2xl">

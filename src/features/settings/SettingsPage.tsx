@@ -14,7 +14,6 @@ import { SafariSteps } from '@/features/backup/SafariSteps';
 import { setWritingPrefs, useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { UsageSettings } from '@/features/usage/UsageSettings';
-import { DailyCountSetting } from '@/features/account/DailyCountSetting';
 import { sharingReady } from '@/features/share/rpc';
 import { Link } from 'react-router';
 import { SpeechSettings } from '@/features/voice/SpeechSettings';
@@ -285,10 +284,7 @@ export function SettingsPage() {
         </Section>
 
         <Section title="Usage counts">
-          <div className="grid gap-6">
-            <DailyCountSetting />
-            <UsageSettings />
-          </div>
+          <UsageSettings />
         </Section>
       </div>
     </div>

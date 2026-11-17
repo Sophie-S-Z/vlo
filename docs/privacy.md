@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 15, 17 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 16, 17 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -36,9 +36,9 @@ The chosen items with your questions for readers, each image in them at most 1,6
 
 ### Weekly usage counts
 
-Only after you turn them on in Settings, and only when you press Send on a weekly report.
+Once a week, by itself, the first time Vlo is open after the week ends. It is always on.
 
-Counts in bands, the templates and features that you used, AI mode counts and error codes. Never text, titles or names. You see each report before it goes.
+The counts of the week before: the templates and features that you used, your words and poems as bands such as 1000-4999, AI requests by mode, and error codes. Never text, titles or names. Settings shows a sample report.
 
 ### The web originality check
 
@@ -78,9 +78,9 @@ Your email address and the 6-digit code, or the sign-in that Google gives. Your 
 
 ### The daily count
 
-Once a day while the switch in Settings is on, signed in or not, and again after your projects change, at most once in 5 minutes. It is on until you turn it off.
+Once a day, signed in or not, and again after your projects change, at most once in 5 minutes. It is always on.
 
-A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. Once a day, the app's own server on Vercel reads a rough place from the internet address of this device: the country, the region and the city. The count keeps only those three, never the address or an exact location, and the makers of Vlo see places only as counts of devices. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. With no account, they see only that a signed-out device used Vlo. Never text, a title or a name, and no cookie. Turning it off forgets the random id and sends no place.
+A random id for this browser, the day, the Vlo version, the kind of device (phone, tablet or computer), whether Vlo is installed, and three numbers: the words that you added today, the words in all your projects, and how many projects you have. Once a day, the app's own server on Vercel reads a rough place from the internet address of this device: the country, the region and the city. The count keeps only those three, never the address or an exact location, and the makers of Vlo see places only as counts of devices. When you are signed in, the count goes with your account, so the makers of Vlo see when an account was last active. With no account, they see only that a signed-out device used Vlo. Never text, a title or a name, and no cookie.
 
 ### Feedback to the makers of Vlo
 
