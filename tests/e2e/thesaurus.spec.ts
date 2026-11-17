@@ -34,8 +34,26 @@ test('Shift-F7 opens the thesaurus at the word, and a click replaces it', async 
   await expect(scene).toBeFocused();
   await page.keyboard.type('A bright morning.');
   await expect(scene).toHaveText('A bright morning.');
-  // The caret goes back into "bright".
-  for (let i = 0; i < 12; i += 1) await page.keyboard.press('ArrowLeft');
+  // A click puts the caret in "bright".
+  const box = await scene.evaluate((root) => {
+    const text = root.querySelector('p')?.firstChild;
+    const range = document.createRange();
+    if (text) range.setStart(text, 4);
+    if (text) range.setEnd(text, 5);
+    const rect = range.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  });
+  await page.mouse.click(box.x, box.y);
+  // The editor reads the new caret a moment after the click, as it does for a writer.
+  await expect
+    .poll(() =>
+      scene.evaluate(
+        (root) =>
+          (root as HTMLElement & { editor: { state: { selection: { from: number } } } }).editor.state
+            .selection.from,
+      ),
+    )
+    .toBe(6);
 
   const all = requests(page);
   await page.keyboard.press('Shift+F7');
