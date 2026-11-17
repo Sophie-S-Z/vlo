@@ -283,15 +283,10 @@ test('a visitor writes without an account, and the choice holds in that tab', as
   await expect(page).toHaveURL(/\/welcome$/);
 });
 
-test('the daily count goes once a day with numbers and no text, and Settings turns it off', async ({
+test('the daily count goes once a day with numbers and no text, and Settings has no switch for it', async ({
   page,
   context,
 }) => {
-  // A real writer starts with the count on. skipOnboarding keeps it off unless a value is there.
-  await page.addInitScript(() => {
-    if (localStorage.getItem('vlo:daily-count') === null)
-      localStorage.setItem('vlo:daily-count', JSON.stringify({ off: false }));
-  });
   const fake = await fakeSupabase(context);
   // Vercel's place headers, as api/geo.ts sends them back. The preview server has no such function.
   let places = 0;
@@ -299,7 +294,7 @@ test('the daily count goes once a day with numbers and no text, and Settings tur
     places++;
     return route.fulfill({ json: { country: 'NZ', region: 'AUK', city: 'Auckland' } });
   });
-  await skipOnboarding(page);
+  await skipOnboarding(page, { dailyCount: true });
   await expect
     .poll(() => fake.calls.filter((c) => c.name === 'daily_count').length, { timeout: 15_000 })
     .toBe(1);
@@ -337,11 +332,12 @@ test('the daily count goes once a day with numbers and no text, and Settings tur
   await expect(page.getByRole('table')).toContainText('Daily count');
 
   await page.goto('/settings');
-  const toggle = page.getByRole('switch', { name: 'Count this device and its words' });
-  await expect(toggle).toBeChecked();
-  await toggle.click();
-  await expect(toggle).not.toBeChecked();
-  expect(await page.evaluate(() => localStorage.getItem('vlo:daily-count'))).toBe('{"off":true}');
+  const usage = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { level: 2, name: 'Usage counts' }) });
+  await expect(usage.getByRole('heading', { name: 'The daily count' })).toBeVisible();
+  await expect(usage).toContainText('never hold your text, a title, a name or your internet address');
+  await expect(usage.getByRole('switch')).toHaveCount(0);
 });
 
 test('a writer sends feedback, and the owner reads it, marks it and sees the counts', async ({ browser }) => {

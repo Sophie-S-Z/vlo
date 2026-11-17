@@ -58,7 +58,7 @@ Last update: 2026-11-17
     relay keeps cipher text. Sign out (this device stops sync and keeps its projects) and Delete my account.
     The pairing link stays.
   - The daily count (purpose `ping`): once a UTC day, a random install id, the version, the kind of device and
-    whether Vlo is installed. On by default, with a switch in Settings under Usage counts.
+    whether Vlo is installed. Always on, and Settings under Usage counts says what it sends.
   - Send feedback (`/send-feedback`, purpose `feedback`): from the footer, Settings, Help and the command menu.
   - The owner page (`/owner`): tiles, a 30-day chart with a table view, breakdowns, every account, and a
     feedback inbox with a status, a note and a CSV download. Only accounts in `app_owners`.

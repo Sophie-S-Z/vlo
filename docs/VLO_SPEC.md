@@ -36,7 +36,7 @@ A separate marketing site with a waitlist already exists (built in Lovable). Thi
 ### Product principles
 
 1. The editor is quiet. Motion lives around the writing, never inside it. Nothing animates while the writer types.
-2. Manuscripts stay on the device. Only three things can leave it: AI requests that the writer sends on purpose, encrypted share copies, and opt-in usage counts that contain no text.
+2. Manuscripts stay on the device. Only three things can leave it: AI requests that the writer sends on purpose, encrypted share copies, and usage counts that contain no text.
 3. Pen mode is the default. The writer turns AI on for each project.
 4. Every effect has a static fallback and obeys the reduced-motion setting and Vlo's "Calm mode".
 5. The app costs $0 to build and to run at launch scale.
@@ -110,7 +110,7 @@ Priorities use MoSCoW. "Must" ships in its phase. "Should" ships if time allows.
 | F27 | Encrypted read-and-comment links | Must | 5 | Only ciphertext leaves the device. The writer sets an expiry date and can revoke a link. |
 | F28 | Reader view with comments | Must | 5 | The link opens in a phone browser with no install or account. |
 | F29 | Save to a local folder | Could | 5 | The writer picks a folder that their own cloud drive syncs. Chromium browsers only. |
-| F30 | Opt-in usage counts | Must | 5 | Off by default. With consent, the app sends weekly totals and error codes. It never sends text, titles or names. The writer can view each report before it goes. |
+| F30 | Usage counts | Must | 5 | Always on. The app sends weekly totals and error codes by itself. It never sends text, titles or names. Settings and the privacy page say what goes. |
 
 (F12, the 3D landing page, belongs to the separate marketing site. Do not build it here.)
 

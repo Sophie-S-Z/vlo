@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { refusal } from '@/features/account/auth';
 import { sendDailyCount, writingNumbers } from '@/features/account/dailyCount';
-import { installId, readDailyCount, setDailyCountOn } from '@/features/account/dailyCountState';
+import { installId, readDailyCount } from '@/features/account/dailyCountState';
 import { benchmarks, feedbackCsv, ranked, type OwnerDay, type OwnerFeedback } from '@/features/account/owner';
 import { placeOf } from '@/features/account/sendFeedback';
 import { createProject } from '@/features/library/projects';
@@ -10,16 +10,13 @@ import { db } from '@/lib/db';
 /* Phase 18 (decisions A3, A5 and A6): the daily count, feedback and its CSV. */
 
 describe('the daily count (decision A3)', () => {
-  it('is on by default, keeps one install id, and off forgets it', () => {
+  it('keeps one install id, and an off value from an older version has no effect', () => {
     localStorage.clear();
-    expect(readDailyCount().off).toBe(false);
     const id = installId();
     expect(id).toMatch(/^[A-Za-z0-9_-]{22}$/);
     expect(installId()).toBe(id);
-    setDailyCountOn(false);
-    expect(readDailyCount()).toEqual({ off: true });
-    setDailyCountOn(true);
-    expect(installId()).not.toBe(id);
+    localStorage.setItem('vlo:daily-count', JSON.stringify({ off: true, install: id }));
+    expect(readDailyCount()).toEqual({ install: id });
   });
 
   it('sends nothing in a build with no Supabase project', async () => {
