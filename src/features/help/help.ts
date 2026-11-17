@@ -137,9 +137,10 @@ export const HELP = {
       steps: [
         'Choose Sign in at the top of the screen, type your email, then type the 6-digit code from the email. Sync turns on.',
         'On your phone or another computer, open Vlo and sign in with the same email.',
-        'Every project comes to the new device, finished or in progress. A change on one device goes to the others.',
+        'Every project of the account comes to the new device, finished or in progress. A change on one device goes to the others.',
         'Words that two devices write offline both stay.',
-        'Sign out on a device that is not yours. It keeps its projects and stops sync. Delete my account is on the Account page.',
+        'Each account has its own projects. To have the projects of another account, or the ones you wrote with no account, choose Bring its projects here on the Account page.',
+        'Sign out on a device that is not yours. It stops sync, and the projects of the account stay hidden until you sign in again. Delete my account is on the Account page.',
       ],
     },
     {

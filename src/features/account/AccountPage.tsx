@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { guessDeviceName } from '@/features/sync/deviceName';
@@ -15,30 +15,26 @@ import {
   AlertDialogTitle,
 } from '@/ui/alert-dialog';
 import { Button } from '@/ui/button';
-import { Input } from '@/ui/input';
-import { Label } from '@/ui/label';
+import { openLibrary } from '@/lib/library';
 import {
   accountSyncState,
-  clearAccountSyncPause,
+  AUTOMATIC,
   joinAccountSync,
+  startAccountSync,
   stopAccountSyncHere,
-  turnOnAccountSync,
   type AccountSyncState,
 } from './accountSync';
+import { accountsReady, AuthError, deleteAccount, finishGoogle, signOut } from './auth';
 import {
-  accountsReady,
-  AuthError,
-  deleteAccount,
-  finishGoogle,
-  googleReady,
-  googleSignInUrl,
-  looksLikeEmail,
-  sendCode,
-  signOut,
-  verifyCode,
-} from './auth';
+  bringWorks,
+  enterAccount,
+  leaveDeletedAccount,
+  otherLibraries,
+  type OtherLibrary,
+} from './libraries';
 import { isOwner } from './owner';
 import { readSession, type AccountSession } from './session';
+import { SignInForm, takeNext } from './SignInForm';
 
 /*
  * The account page (Phase 18, Tasks A2 and A3). Sign in with an email code or Google, and sync turns on:
@@ -60,136 +56,6 @@ function Status({ text }: { text: string }) {
   );
 }
 
-function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
-  const id = useId();
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-
-  async function run(task: () => Promise<void>) {
-    setBusy(true);
-    setMessage('');
-    try {
-      await task();
-    } catch (error) {
-      setMessage(accountErrorText(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="grid max-w-md gap-4">
-      <p>
-        Sign in to keep your projects the same on your phone, your laptop and any other device. Every project
-        comes with you, finished or in progress. Vlo sends a 6-digit code to your email. You need no password.
-      </p>
-      {!sent ? (
-        <form
-          className="grid gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!looksLikeEmail(email)) {
-              setMessage('Type your whole email address, such as name@example.com.');
-              return;
-            }
-            void run(async () => {
-              await sendCode(email);
-              setSent(true);
-              setMessage(`Vlo sent a code to ${email.trim()}. It works for one hour.`);
-            });
-          }}
-        >
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${id}-email`}>Email</Label>
-            <Input
-              id={`${id}-email`}
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-              }}
-            />
-          </div>
-          <div>
-            <Button type="submit" disabled={busy}>
-              Send me a code
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <form
-          className="grid gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void run(async () => {
-              await verifyCode(email, code);
-              await clearAccountSyncPause();
-              onSignedIn();
-            });
-          }}
-        >
-          <div className="grid gap-1.5">
-            <Label htmlFor={`${id}-code`}>Code from the email</Label>
-            <Input
-              id={`${id}-code`}
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              maxLength={10}
-              className="max-w-40 font-mono tracking-widest"
-              value={code}
-              onChange={(event) => {
-                setCode(event.target.value);
-              }}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={busy || code.replace(/\s/g, '').length < 6}>
-              Sign in
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => {
-                setSent(false);
-                setCode('');
-                setMessage('');
-              }}
-            >
-              Use another email
-            </Button>
-          </div>
-        </form>
-      )}
-      {googleReady() && (
-        <div className="grid gap-2 border-t border-rule pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => {
-              void run(async () => {
-                window.location.assign(await googleSignInUrl());
-              });
-            }}
-          >
-            Continue with Google
-          </Button>
-        </div>
-      )}
-      <Status text={message} />
-    </div>
-  );
-}
-
-/** The states that turn on by themselves after a sign-in: nothing else syncs on this device. */
-const AUTOMATIC: readonly AccountSyncState['kind'][] = ['off', 'adopt', 'join'];
-
 function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () => void }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -201,9 +67,8 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
       setMessage('');
       try {
         const name = guessDeviceName();
-        if (current.kind === 'join' || current.kind === 'move' || current.kind === 'paused')
-          await joinAccountSync(current.vault, name);
-        else await turnOnAccountSync(name);
+        if (current.kind === 'move' || current.kind === 'paused') await joinAccountSync(current.vault, name);
+        else await startAccountSync(name);
         setMessage(
           current.kind === 'off' || current.kind === 'adopt'
             ? 'Sync is on. Sign in on your other devices with the same email.'
@@ -312,7 +177,149 @@ function SyncPanel({ state, onChange }: { state: AccountSyncState; onChange: () 
   );
 }
 
-function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedOut: () => void }) {
+const worksText = (n: number) => (n === 1 ? '1 project' : `${String(n)} projects`);
+
+/**
+ * The other libraries on this device: switch to an account that is signed in here, sign in to another,
+ * or bring another library's projects into this account. Bringing them in copies them, so that library
+ * keeps its own.
+ */
+function LibrariesPanel() {
+  const [others, setOthers] = useState<OtherLibrary[]>([]);
+  const [asking, setAsking] = useState<OtherLibrary | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const load = useCallback(() => {
+    otherLibraries().then(setOthers, () => {
+      setOthers([]);
+    });
+  }, []);
+  useEffect(load, [load]);
+
+  async function bring(from: OtherLibrary) {
+    setBusy(true);
+    setMessage('');
+    try {
+      const copied = await bringWorks(from);
+      setMessage(
+        copied === 0
+          ? 'This account has each of those projects already.'
+          : `${worksText(copied)} came in. They sync to your other devices too.`,
+      );
+    } catch (error) {
+      setMessage(accountErrorText(error));
+    } finally {
+      setBusy(false);
+      load();
+    }
+  }
+
+  const name = (library: OtherLibrary) =>
+    library.account === null ? 'This device, with no account' : library.email || 'Another account';
+
+  return (
+    <section aria-labelledby="libraries-heading" className="grid gap-3 border-t border-rule pt-6">
+      <h2 id="libraries-heading" className="font-display text-2xl font-semibold">
+        Your accounts on this device
+      </h2>
+      <p>
+        Each account has its own projects. To see the projects of another account here too, bring them in. The
+        other account keeps its own.
+      </p>
+      {others.length > 0 && (
+        <ul aria-label="Other libraries on this device" className="grid gap-3">
+          {others.map((library) => (
+            <li
+              key={library.account ?? 'device'}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-4"
+            >
+              <span>
+                <span className="block font-semibold">{name(library)}</span>
+                <span className="text-sm text-muted">{worksText(library.works)}</span>
+              </span>
+              <span className="flex flex-wrap gap-2">
+                {library.works > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setAsking(library);
+                    }}
+                  >
+                    Bring its projects here
+                  </Button>
+                )}
+                {library.signedIn && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      openLibrary(library.account);
+                    }}
+                  >
+                    Switch to this account
+                  </Button>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {adding ? (
+        <div className="max-w-md">
+          <SignInForm next="/account" onSession={(session) => enterAccount(session, '/account')} />
+        </div>
+      ) : (
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setAdding(true);
+            }}
+          >
+            Sign in to another account
+          </Button>
+        </div>
+      )}
+      <Status text={message} />
+      <AlertDialog
+        open={asking !== null}
+        onOpenChange={(open) => {
+          if (!open) setAsking(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>Bring these projects into this account?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {asking && `${worksText(asking.works)} of ${name(asking)} come here and sync with this account. `}
+            The other library keeps its own. A project that this account has in another version comes in as a
+            copy, so no words are lost.
+          </AlertDialogDescription>
+          <div className="flex flex-wrap justify-end gap-2">
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                onClick={() => {
+                  if (asking) void bring(asking);
+                }}
+              >
+                Bring them in
+              </Button>
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
+}
+
+function SignedIn({ session }: { session: AccountSession }) {
   const [state, setState] = useState<AccountSyncState | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -343,8 +350,8 @@ function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedO
     setBusy(true);
     setMessage('');
     try {
+      // Each task ends by opening another library, so the page loads again.
       await task();
-      onSignedOut();
     } catch (error) {
       setMessage(accountErrorText(error));
       setBusy(false);
@@ -365,12 +372,14 @@ function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedO
         </div>
       )}
       {state ? <SyncPanel state={state} onChange={load} /> : <Status text={message} />}
+      <LibrariesPanel />
       <section aria-labelledby="account-heading" className="grid gap-3 border-t border-rule pt-6">
         <h2 id="account-heading" className="font-display text-2xl font-semibold">
           Your account
         </h2>
         <p className="text-sm text-muted">
-          Sign out on a device that is not yours. This device stops sync and keeps its projects.
+          Sign out on a device that is not yours. This device stops sync, and your projects stay hidden here
+          until you sign in again.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -379,8 +388,11 @@ function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedO
             disabled={busy}
             onClick={() => {
               void act(async () => {
-                if (state?.kind === 'on') await stopAccountSyncHere();
+                // The session goes first, so no check between the steps finds a signed-in device with no
+                // sync and joins again. The account's works stay hidden here until the next sign-in.
                 await signOut();
+                if (state?.kind === 'on') await stopAccountSyncHere();
+                openLibrary(null);
               });
             }}
           >
@@ -404,7 +416,7 @@ function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedO
           <AlertDialogTitle>Delete your account?</AlertDialogTitle>
           <AlertDialogDescription>
             The server deletes your account, your sync and every sealed copy on it. Each device keeps the
-            projects that it has now, and no device syncs. You cannot undo this.
+            projects that it has now, with no account, and no device syncs. You cannot undo this.
           </AlertDialogDescription>
           <div className="flex flex-wrap justify-end gap-2">
             <AlertDialogCancel asChild>
@@ -417,6 +429,7 @@ function SignedIn({ session, onSignedOut }: { session: AccountSession; onSignedO
                     const synced = state?.kind === 'on';
                     await deleteAccount();
                     if (synced) await stopAccountSyncHere();
+                    await leaveDeletedAccount(session.userId);
                   });
                 }}
               >
@@ -447,12 +460,11 @@ export function AccountPage() {
   const [message, setMessage] = useState(
     returned.error ? 'Google did not sign you in. Try again, or use an email code.' : '',
   );
-  const [, setTick] = useState(0);
 
   useEffect(() => {
     if (!returned.code) return;
     finishGoogle(returned.code)
-      .then(clearAccountSyncPause)
+      .then((signedIn) => enterAccount(signedIn, takeNext() ?? '/account'))
       .catch((error: unknown) => {
         setMessage(accountErrorText(error));
       });
@@ -461,23 +473,16 @@ export function AccountPage() {
   let body: React.ReactNode;
   if (!accountsReady()) body = <p>Accounts are not set up in this build, so Vlo sends nothing.</p>;
   else if (session === undefined) body = null;
-  else if (session)
-    body = (
-      <SignedIn
-        key={session.userId}
-        session={session}
-        onSignedOut={() => {
-          setTick((n) => n + 1);
-        }}
-      />
-    );
+  else if (session) body = <SignedIn key={session.userId} session={session} />;
   else
     body = (
-      <SignIn
-        onSignedIn={() => {
-          setTick((n) => n + 1);
-        }}
-      />
+      <div className="grid max-w-md gap-4">
+        <p>
+          Sign in to keep your projects the same on your phone, your laptop and any other device. Vlo sends a
+          6-digit code to your email. You need no password. Each account has its own projects.
+        </p>
+        <SignInForm next="/account" onSession={(signedIn) => enterAccount(signedIn, '/account')} />
+      </div>
     );
 
   return (
@@ -486,7 +491,7 @@ export function AccountPage() {
       {body}
       <Status text={message} />
       <p className="text-sm text-muted">
-        You do not need an account to write. Without one, every project stays on this device.{' '}
+        You do not need an account to write. Without one, your projects stay on this device.{' '}
         <Link to="/privacy" className="underline">
           What an account sends
         </Link>

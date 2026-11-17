@@ -1,7 +1,18 @@
 import { expect, type Page } from '@playwright/test';
 
+/**
+ * A signed-out visit opens on the sign-in screen in a build with accounts. Tests that do not test it choose
+ * "Write without an account" ahead, as the screen keeps that choice for the tab.
+ */
+export async function writeWithoutAccount(page: Page) {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('vlo:guest', '1');
+  });
+}
+
 /** Each test starts in a fresh profile, so `/` sends it to the welcome screen. This skips it once. */
 export async function skipOnboarding(page: Page) {
+  await writeWithoutAccount(page);
   // The welcome starts a new writer at the Simple tool level. These tests use every tool, so they start
   // at Full; tool-level.spec.ts tests the Simple start.
   await page.addInitScript(() => {

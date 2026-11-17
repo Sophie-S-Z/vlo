@@ -2,8 +2,13 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task J3 (roadmap F53): a submission packet is one zip, and Vlo logs it as sent. */
 

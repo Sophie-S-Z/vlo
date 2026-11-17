@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task H7 (roadmap F39): the split view. performance.spec.ts holds the keystroke budget with two panes. */
 

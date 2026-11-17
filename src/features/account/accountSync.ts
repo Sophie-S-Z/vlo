@@ -1,7 +1,7 @@
 import { ShareError } from '@/features/share/rpc';
 import { forgetSpace, joinSpace, leaveSync, listDevices, startSpace } from '@/features/sync/pairing';
 import { readSpace, type SyncSpace } from '@/features/sync/space';
-import { db } from '@/lib/db';
+import { db, type VloDb } from '@/lib/db';
 import { accountRpc } from './auth';
 
 /*
@@ -97,9 +97,9 @@ export async function accountSyncPaused(): Promise<boolean> {
   return (await db.appMeta.get(PAUSED))?.value === true;
 }
 
-/** A new sign-in turns sync on again (decision A1). */
-export async function clearAccountSyncPause(): Promise<void> {
-  await db.appMeta.delete(PAUSED);
+/** A new sign-in turns sync on again (decision A1), in the library of the account. */
+export async function clearAccountSyncPause(database: VloDb = db): Promise<void> {
+  await database.appMeta.delete(PAUSED);
 }
 
 /**
@@ -126,4 +126,26 @@ export async function stopAccountSyncHere(): Promise<void> {
   const space = await readSpace();
   if (space) await rememberDevice(space);
   await forgetSpace();
+}
+
+/** The states that turn on by themselves after a sign-in: nothing else syncs on this device. */
+export const AUTOMATIC: readonly AccountSyncState['kind'][] = ['off', 'adopt', 'join'];
+
+let starting: Promise<AccountSyncState> | null = null;
+
+/**
+ * Turns sync on when the state allows it with no question: after a sign-in, and at each start of a
+ * signed-in device with no sync. One run at a time in this tab, so two callers never make two spaces.
+ * Resolves with the state before the run.
+ */
+export function startAccountSync(deviceName: string): Promise<AccountSyncState> {
+  starting ??= (async () => {
+    const state = await accountSyncState();
+    if (state.kind === 'join') await joinAccountSync(state.vault, deviceName);
+    else if (AUTOMATIC.includes(state.kind)) await turnOnAccountSync(deviceName);
+    return state;
+  })().finally(() => {
+    starting = null;
+  });
+  return starting;
 }

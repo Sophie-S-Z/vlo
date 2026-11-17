@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 for (const path of ['/', '/settings', '/nope']) {
   test(`${path} loads under the production CSP with 0 violations`, async ({ page }) => {

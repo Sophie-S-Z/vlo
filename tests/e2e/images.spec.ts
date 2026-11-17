@@ -3,7 +3,12 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
 import { fakeSupabase } from './support/share';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /*
  * Images in the text (Phase 16, Tasks G1 and G2). A file dropped on the text goes in at the pointer, a

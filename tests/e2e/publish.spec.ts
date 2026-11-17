@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Phase 17 Q-C: the Publish dialog gives each platform its own copy, steps and file. */
 

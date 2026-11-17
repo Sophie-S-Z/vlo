@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task D7: /ai-policy states the four rules with a version and a date, and the footer links to it. */
 

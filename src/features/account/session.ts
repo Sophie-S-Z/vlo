@@ -1,8 +1,9 @@
-import { db } from '@/lib/db';
+import { db, VloDb } from '@/lib/db';
+import { ACTIVE_ACCOUNT, claimLegacy, libraryName } from '@/lib/library';
 
 /*
- * This device's account session (Phase 18, decision A2). It stays on this device in `appMeta`, and no
- * backup or export holds it. The app shell reads it, so this module holds no network code.
+ * This device's account session (Phase 18, decision A2). It stays in `appMeta` of the account's own
+ * library, and no backup or export holds it. The app shell reads it, so this module holds no network code.
  */
 
 export const ACCOUNT_META = 'account';
@@ -30,13 +31,27 @@ function isSession(value: unknown): value is AccountSession {
   );
 }
 
-export async function readSession(): Promise<AccountSession | null> {
-  const value = (await db.appMeta.get(ACCOUNT_META))?.value;
-  return isSession(value) ? value : null;
+/** The session of the open library. A session from before Vlo kept a library for each account claims it. */
+export async function readSession(database: VloDb = db): Promise<AccountSession | null> {
+  const value = (await database.appMeta.get(ACCOUNT_META))?.value;
+  if (!isSession(value)) return null;
+  if (database !== db) return value;
+  return value.userId === ACTIVE_ACCOUNT || claimLegacy(value.userId, value.email) ? value : null;
 }
 
+/** Keeps the session in its account's library, which may be another library than the open one. */
 export async function saveSession(session: AccountSession): Promise<void> {
-  await db.appMeta.put({ key: ACCOUNT_META, value: session });
+  const name = libraryName(session.userId);
+  if (name === db.name) {
+    await db.appMeta.put({ key: ACCOUNT_META, value: session });
+    return;
+  }
+  const library = new VloDb(name);
+  try {
+    await library.appMeta.put({ key: ACCOUNT_META, value: session });
+  } finally {
+    library.close();
+  }
 }
 
 export async function forgetSession(): Promise<void> {

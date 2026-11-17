@@ -1,8 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /*
  * Plan Tasks D5 and D6 (spec section 10, F23 to F26, US10, US11). The Assistant panel against fake

@@ -1,5 +1,5 @@
 import { clock } from '@/lib/clock';
-import { db, readViewRows, viewTables, type Item, type Project } from '@/lib/db';
+import { db, readViewRows, viewTables, VloDb, type Item, type Project } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { recountItems } from '@/lib/wordcount';
@@ -28,48 +28,55 @@ import {
  */
 
 /** Reads a project, its rows, its text, its research files and, if asked, the writer's music. */
-export async function collectBackup(projectId: string, options: { music: boolean }): Promise<Backup> {
+export async function collectBackup(
+  projectId: string,
+  options: { music: boolean },
+  database: VloDb = db,
+): Promise<Backup> {
   // The time before the reads: an edit while Vlo reads counts as after the backup, so the next save has it.
   const createdAt = clock.now();
-  const rows = await db.transaction(
+  const rows = await database.transaction(
     'r',
     [
-      db.projects,
-      db.items,
-      db.snapshots,
-      db.itemVersions,
-      db.sessions,
-      db.authorship,
-      db.itemTexts,
-      db.audioFiles,
-      db.research,
-      db.images,
-      db.series,
-      ...viewTables(),
+      database.projects,
+      database.items,
+      database.snapshots,
+      database.itemVersions,
+      database.sessions,
+      database.authorship,
+      database.itemTexts,
+      database.audioFiles,
+      database.research,
+      database.images,
+      database.series,
+      ...viewTables(database),
     ],
     async () => ({
-      project: await db.projects.get(projectId),
-      series: await db.series.where('projectIds').equals(projectId).first(),
-      items: await db.items.where('projectId').equals(projectId).toArray(),
-      snapshots: await db.snapshots.where('projectId').equals(projectId).toArray(),
-      versions: await db.itemVersions.where('projectId').equals(projectId).toArray(),
-      sessions: await db.sessions.where('projectId').equals(projectId).toArray(),
-      authorship: await db.authorship.where('projectId').equals(projectId).toArray(),
-      itemTexts: await db.itemTexts.where('projectId').equals(projectId).toArray(),
-      music: options.music ? await db.audioFiles.orderBy('addedAt').toArray() : [],
-      research: await db.research.where('projectId').equals(projectId).sortBy('addedAt'),
-      images: await db.images.where('projectId').equals(projectId).sortBy('addedAt'),
-      views: await readViewRows(projectId),
+      project: await database.projects.get(projectId),
+      series: await database.series.where('projectIds').equals(projectId).first(),
+      items: await database.items.where('projectId').equals(projectId).toArray(),
+      snapshots: await database.snapshots.where('projectId').equals(projectId).toArray(),
+      versions: await database.itemVersions.where('projectId').equals(projectId).toArray(),
+      sessions: await database.sessions.where('projectId').equals(projectId).toArray(),
+      authorship: await database.authorship.where('projectId').equals(projectId).toArray(),
+      itemTexts: await database.itemTexts.where('projectId').equals(projectId).toArray(),
+      music: options.music ? await database.audioFiles.orderBy('addedAt').toArray() : [],
+      research: await database.research.where('projectId').equals(projectId).sortBy('addedAt'),
+      images: await database.images.where('projectId').equals(projectId).sortBy('addedAt'),
+      views: await readViewRows(projectId, database),
     }),
   );
   const series = rows.series && {
     row: rows.series,
-    codex: await db.codex.where('projectId').equals(rows.series.id).toArray(),
+    codex: await database.codex.where('projectId').equals(rows.series.id).toArray(),
   };
   if (!rows.project) throw new Error('The project is not on this device.');
   const project = rows.project;
   const textItems = rows.items.filter((item) => holdsText(project.templates, item.kind));
-  const updates = await readItemUpdates(textItems.map((item) => item.id));
+  const updates = await readItemUpdates(
+    textItems.map((item) => item.id),
+    database.name,
+  );
   const music = await Promise.all(
     rows.music.map(async ({ data, ...info }): Promise<BackupMusic> => ({
       info,
@@ -220,17 +227,21 @@ function asCopy(source: Backup): Backup {
  * Puts the book back in its series (F59). A series that is not here comes back with this book only. A
  * shared entry that is here stays as it is. The books keep the order of the backup.
  */
-async function joinSeries(series: NonNullable<Backup['series']>, projectId: string): Promise<void> {
-  const here = await db.series.get(series.row.id);
-  const stored = await db.codex.bulkGet(series.codex.map((entry) => entry.id));
-  await db.codex.bulkAdd(series.codex.filter((_, i) => stored[i] === undefined));
+async function joinSeries(
+  series: NonNullable<Backup['series']>,
+  projectId: string,
+  database: VloDb,
+): Promise<void> {
+  const here = await database.series.get(series.row.id);
+  const stored = await database.codex.bulkGet(series.codex.map((entry) => entry.id));
+  await database.codex.bulkAdd(series.codex.filter((_, i) => stored[i] === undefined));
   const order = series.row.projectIds;
   const books = new Set([...(here?.projectIds ?? []), projectId]);
   const projectIds = [
     ...order.filter((id) => books.has(id)),
     ...[...books].filter((id) => !order.includes(id)),
   ];
-  await db.series.put({ ...(here ?? series.row), projectIds });
+  await database.series.put({ ...(here ?? series.row), projectIds });
 }
 
 /**
@@ -261,75 +272,96 @@ export async function importBackup(source: Backup, mode: ImportMode): Promise<st
  * Stores the text, then the rows in one transaction. A failed write removes the text it stored, so it
  * leaves no half project in the Library.
  */
-async function storeBackup(backup: Backup): Promise<void> {
+async function storeBackup(backup: Backup, database: VloDb = db): Promise<void> {
   const now = clock.now();
   const written: string[] = [];
   // An item of the backup that is here already must keep its text, so nothing is written.
-  const here = await db.items.bulkGet(backup.items.map((item) => item.id));
+  const here = await database.items.bulkGet(backup.items.map((item) => item.id));
   if (here.some((item) => item !== undefined))
     throw new Error('This device has items of this backup already. Import it as a copy.');
   try {
     await inBatches([...backup.updates], async ([itemId, update]) => {
       // A database left from an earlier delete must not merge into the backup's text.
-      await deleteItemDoc(itemId);
+      await deleteItemDoc(itemId, database.name);
       written.push(itemId);
-      await writeItemUpdate(itemId, update, now);
+      await writeItemUpdate(itemId, update, now, database.name);
     });
-    await db.transaction(
+    await database.transaction(
       'rw',
       [
-        db.projects,
-        db.items,
-        db.snapshots,
-        db.itemVersions,
-        db.sessions,
-        db.authorship,
-        db.itemTexts,
-        db.audioFiles,
-        db.research,
-        db.images,
-        db.series,
-        ...viewTables(),
+        database.projects,
+        database.items,
+        database.snapshots,
+        database.itemVersions,
+        database.sessions,
+        database.authorship,
+        database.itemTexts,
+        database.audioFiles,
+        database.research,
+        database.images,
+        database.series,
+        ...viewTables(database),
       ],
       async () => {
-        if (backup.series) await joinSeries(backup.series, backup.project.id);
-        await db.projects.add(backup.project);
+        if (backup.series) await joinSeries(backup.series, backup.project.id, database);
+        await database.projects.add(backup.project);
         // A backup made before Chinese and Japanese counted characters (F38), or before count rule 2,
         // holds counts of an older rule, so each item counts again from its text copy.
-        await db.items.bulkAdd(
+        await database.items.bulkAdd(
           recountItems(backup.items, backup.itemTexts, backup.project.settings.language),
         );
-        await db.snapshots.bulkAdd(backup.snapshots);
-        await db.itemVersions.bulkAdd(backup.versions);
-        await db.sessions.bulkAdd(backup.sessions);
-        await db.authorship.bulkAdd(backup.authorship);
-        await db.itemTexts.bulkPut(backup.itemTexts);
-        await db.cards.bulkAdd(backup.views.cards);
-        await db.threads.bulkAdd(backup.views.threads);
-        await db.cardLinks.bulkAdd(backup.views.cardLinks);
-        await db.lifeStages.bulkAdd(backup.views.lifeStages);
-        await db.sequences.bulkAdd(backup.views.sequences);
-        await db.people.bulkAdd(backup.views.people);
-        await db.submissions.bulkAdd(backup.views.submissions);
-        await db.codex.bulkAdd(backup.views.codex);
-        await db.sources.bulkAdd(backup.views.sources);
-        await db.research.bulkAdd(
+        await database.snapshots.bulkAdd(backup.snapshots);
+        await database.itemVersions.bulkAdd(backup.versions);
+        await database.sessions.bulkAdd(backup.sessions);
+        await database.authorship.bulkAdd(backup.authorship);
+        await database.itemTexts.bulkPut(backup.itemTexts);
+        await database.cards.bulkAdd(backup.views.cards);
+        await database.threads.bulkAdd(backup.views.threads);
+        await database.cardLinks.bulkAdd(backup.views.cardLinks);
+        await database.lifeStages.bulkAdd(backup.views.lifeStages);
+        await database.sequences.bulkAdd(backup.views.sequences);
+        await database.people.bulkAdd(backup.views.people);
+        await database.submissions.bulkAdd(backup.views.submissions);
+        await database.codex.bulkAdd(backup.views.codex);
+        await database.sources.bulkAdd(backup.views.sources);
+        await database.research.bulkAdd(
           backup.research.map(({ info, data }) =>
             data ? { ...info, data: new Blob([data], { type: info.type }) } : info,
           ),
         );
-        await db.images.bulkAdd(
+        await database.images.bulkAdd(
           backup.images.map(({ info, data }) => ({ ...info, data: new Blob([data], { type: info.type }) })),
         );
         // Music belongs to the device, not the project. A file that is already here stays as it is.
-        const known = new Set(await db.audioFiles.toCollection().primaryKeys());
-        await db.audioFiles.bulkAdd(
+        const known = new Set(await database.audioFiles.toCollection().primaryKeys());
+        await database.audioFiles.bulkAdd(
           backup.music.filter((m) => !known.has(m.info.id)).map((m) => ({ ...m.info, data: m.data })),
         );
       },
     );
   } catch (error) {
-    await Promise.all(written.map((itemId) => deleteItemDoc(itemId).catch(() => undefined)));
+    await Promise.all(written.map((itemId) => deleteItemDoc(itemId, database.name).catch(() => undefined)));
     throw error;
   }
+}
+
+/**
+ * Copies a project from another library on this device into `into`, for a merge of two accounts. The
+ * other library keeps its project. A project that `into` has already, with the same last change, stays as
+ * it is. One that differs goes in as a copy next to it, so no word is lost. A merge again of the same
+ * version changes nothing. Returns true when it copied.
+ */
+export async function copyProject(projectId: string, from: VloDb, into: VloDb = db): Promise<boolean> {
+  const source = await from.projects.get(projectId);
+  if (!source) return false;
+  const seen = `merged:${from.name}:${projectId}`;
+  const here = await into.projects.get(projectId);
+  if (here?.updatedAt === source.updatedAt || (await into.appMeta.get(seen))?.value === source.updatedAt)
+    return false;
+  const backup = await collectBackup(projectId, { music: false }, from);
+  const items = await into.items.bulkGet(backup.items.map((item) => item.id));
+  const clash = here !== undefined || items.some((item) => item !== undefined);
+  await storeBackup(clash ? asCopy(backup) : backup, into);
+  await into.appMeta.put({ key: seen, value: source.updatedAt });
+  return true;
 }

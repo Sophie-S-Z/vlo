@@ -1,6 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router';
+import { readSession } from '@/features/account/session';
+import { guessDeviceName } from '@/features/sync/deviceName';
 import { readSpace } from '@/features/sync/space';
 import { recordPersistence, renewPersistence } from '@/lib/storage';
 import { PreferencesProvider } from './PreferencesProvider';
@@ -24,6 +26,15 @@ export function App() {
       stop?.();
     };
   }, [syncing]);
+  // A signed-in device with no sync turns on the account's sync (decision A1), as after a sign-in. The
+  // check stops at once when the writer paused sync here or syncs with a pairing link.
+  const signedIn = useLiveQuery(async () => (await readSession().catch(() => null)) !== null);
+  useEffect(() => {
+    if (!signedIn || syncing !== null) return;
+    void import('@/features/account/accountSync')
+      .then(({ startAccountSync }) => startAccountSync(guessDeviceName()))
+      .catch(() => undefined);
+  }, [signedIn, syncing]);
   // Persistent storage: Vlo asks again at start, and at once after an install, because Chrome and Safari
   // often grant it to an installed app.
   useEffect(() => {

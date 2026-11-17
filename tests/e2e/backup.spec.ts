@@ -2,8 +2,13 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { ageProjects } from './support/seed';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task B8 and US04: back up a project, import it in a fresh profile, the reminder and the Safari steps. */
 

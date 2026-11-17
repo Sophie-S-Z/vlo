@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
+import { writeWithoutAccount } from './support/onboarding';
 import { BUNDLE, fakeSupabase, shareOf } from './support/share';
 import { openView } from './support/views';
 
@@ -10,11 +11,26 @@ import { openView } from './support/views';
 
 // Playwright routes the fake Supabase requests only in Chromium once the service worker controls the
 // page, so these tests run with no service worker. The PWA tests cover the worker.
+
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
+
 test.use({ serviceWorkers: 'block' });
 
 const THEMES = ['ink', 'paper', 'sepia', 'contrast'] as const;
 const VIEWS = ['Board', 'Plot Grid', 'Timeline', 'People', 'Sequences', 'Submissions', 'Progress'];
-const PAGES = ['/', '/settings', '/network', '/ai-policy', '/privacy', '/help', '/verify', '/nope'];
+const PAGES = [
+  '/',
+  '/sign-in',
+  '/settings',
+  '/network',
+  '/ai-policy',
+  '/privacy',
+  '/help',
+  '/verify',
+  '/nope',
+];
 
 async function setTheme(page: Page, theme: (typeof THEMES)[number]) {
   await page.addInitScript((t) => {

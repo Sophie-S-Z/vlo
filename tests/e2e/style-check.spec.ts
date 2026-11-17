@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task H4 (roadmap F47): the style check. Gate 1 in performance.spec.ts types with it on. */
 

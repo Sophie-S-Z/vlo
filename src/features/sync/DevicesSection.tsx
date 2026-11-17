@@ -159,9 +159,10 @@ function Syncing({ space, pairing, onPairing, say }: SyncingProps) {
           disabled={busy}
           onClick={() => {
             void act(async () => {
-              await leaveSync(space);
-              // The account keeps its sync, so the Account page must not turn it on here again by itself.
+              // The account keeps its sync, so Vlo must not turn it on here again by itself. The pause goes
+              // first, so no check between the two steps finds this device with no sync and joins again.
               await pauseAccountSyncHere();
+              await leaveSync(space);
               return 'Sync stopped on this device. Your projects stay here.';
             });
           }}

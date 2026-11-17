@@ -1,6 +1,11 @@
 import { chromium, expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /*
  * Plan Task B9 (spec F29): folder save. The test replaces the folder picker with a folder in the

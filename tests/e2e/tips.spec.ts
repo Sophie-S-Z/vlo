@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { seriousIssues } from './support/axe';
+import { writeWithoutAccount } from './support/onboarding';
 
 /* Phase 17 decision S5: a new writer sees one tip line that names the ways to the hidden tools. */
+
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 test('a new writer sees one tip at a time, Close hides the tips, and Settings shows them again', async ({
   page,

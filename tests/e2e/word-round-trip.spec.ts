@@ -3,7 +3,12 @@ import { expect, test } from '@playwright/test';
 import JSZip from 'jszip';
 import { REVIEW_TEXT, reviewedDocx } from '../fixtures/review';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task I3 (roadmap F45, decision R3): a Word file goes to an editor and comes back with changes. */
 

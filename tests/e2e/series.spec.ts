@@ -1,7 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task K8 (roadmap F59): a series of books. series.test.ts holds the backup and the leave rules. */
 

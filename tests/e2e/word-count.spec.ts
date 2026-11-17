@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /*
  * Count rule 2 (Ellipsus comparison, October 2026). A hyphenated word, a slash pair, a web address and a

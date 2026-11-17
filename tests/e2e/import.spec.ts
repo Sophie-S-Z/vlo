@@ -1,7 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { docxBytes, SCRIVENER_FILES, zipOf } from '../fixtures/import';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /* Plan Task G4 (roadmap F34): import from Word, Scrivener and a Markdown folder, and a damaged file. */
 

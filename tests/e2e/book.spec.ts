@@ -2,7 +2,12 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { PDFDocument } from 'pdf-lib';
 import { seriousIssues } from './support/axe';
-import { skipOnboarding } from './support/onboarding';
+import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+
+// A signed-out visit opens on the sign-in screen; these tests write with no account.
+test.beforeEach(async ({ page }) => {
+  await writeWithoutAccount(page);
+});
 
 /*
  * Plan Task J5 (roadmap F51): the Book screen lays out the project as a printed book, and the preview has
