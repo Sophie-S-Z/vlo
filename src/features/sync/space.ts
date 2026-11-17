@@ -9,6 +9,13 @@ import { db } from '@/lib/db';
 
 export const SYNC_META = 'sync';
 
+/**
+ * Set when the writer stops sync on this device, or on all devices. The account keeps its sync, or none,
+ * and a signed-in device must not turn it on again by itself. A new sign-in or the writer's own press
+ * clears it.
+ */
+export const ACCOUNT_SYNC_PAUSED = 'account-sync-paused';
+
 /** What a device says when another device has a newer Vlo, so it applies nothing (ADR 0008). */
 export const BLOCKED_TEXT = 'Update Vlo on this device to sync.';
 

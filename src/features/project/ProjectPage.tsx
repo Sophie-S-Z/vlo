@@ -293,7 +293,7 @@ export function ProjectPage() {
   // the project opens and not when the writer first shows the details.
   const readyTotal = state.status === 'ready' ? state.items.reduce((sum, i) => sum + i.wordCount, 0) : null;
   useEffect(() => {
-    if (readyTotal !== null) void wordsToday(projectId, readyTotal);
+    if (readyTotal !== null) void wordsToday(projectId, readyTotal).catch(() => undefined);
   }, [projectId, readyTotal]);
 
   // Sound belongs to the writing space: leaving the project stops it.

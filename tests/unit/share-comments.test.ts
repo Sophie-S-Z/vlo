@@ -189,5 +189,12 @@ describe('sending and reading', () => {
     ]);
     expect(stored?.commentsReadAt).toBeGreaterThan(0);
     expect(calls.map((c) => c.body)).toEqual([{ p_share_id: SHARE_ID }]);
+
+    // The server deletes an old link with its comments, and the comments stay on this device.
+    rows = [];
+    const again = await m.db.shares.get(SHARE_ID);
+    if (!again) throw new Error('No record.');
+    await m.refreshComments(again);
+    expect((await m.db.shares.get(SHARE_ID))?.comments.map((c) => c.id)).toEqual(['a', 'b', 'c']);
   });
 });

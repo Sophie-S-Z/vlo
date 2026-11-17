@@ -3,11 +3,10 @@ import { rpc, sharingReady } from '@/features/share/rpc';
 import { APP_VERSION } from '@/features/usage/usage';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
+import { installedApp } from '@/lib/installed';
 import { appPlace } from '@/lib/net';
 import { currentSession } from './auth';
 import { deviceKind, installId as installIdOf, readDailyCount, writeDailyCount } from './dailyCountState';
-
-export { installId, readDailyCount } from './dailyCountState';
 
 /*
  * The daily count (Phase 18, decision A3). Each local day, a device sends a random install id, the app
@@ -17,17 +16,6 @@ export { installId, readDailyCount } from './dailyCountState';
  * rough place that the app's own server reads from the IP address: a country, a region and a city. No
  * text, title, name, IP address or cookie. The count is always on, and Settings and the privacy page say so.
  */
-
-function installedApp(): boolean {
-  try {
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true
-    );
-  } catch {
-    return false;
-  }
-}
 
 /** New words go at most this often. A new day, and a change as Vlo leaves the screen, go at once. */
 const COUNT_GAP_MS = 5 * 60_000;

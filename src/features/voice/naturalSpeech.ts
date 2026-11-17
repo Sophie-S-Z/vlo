@@ -18,6 +18,15 @@ const waiting = new Map<
   { resolve: (audio: NaturalAudio) => void; reject: (problem: Error) => void }
 >();
 
+/** Ends the worker and rejects each sentence that it has not made. The next sentence gets a new worker. */
+function endWorker(made: Worker, problem: Error): void {
+  made.terminate();
+  if (worker !== made) return;
+  worker = null;
+  for (const job of waiting.values()) job.reject(problem);
+  waiting.clear();
+}
+
 function voiceWorker(): Worker {
   if (worker) return worker;
   const made = new Worker(new URL('./speak.worker.ts', import.meta.url), { type: 'module' });
@@ -25,8 +34,16 @@ function voiceWorker(): Worker {
     const reply = event.data;
     const job = waiting.get(reply.id);
     waiting.delete(reply.id);
-    if ('samples' in reply) job?.resolve({ samples: reply.samples, rate: reply.rate });
-    else job?.reject(new Error(reply.error));
+    if ('samples' in reply) {
+      job?.resolve({ samples: reply.samples, rate: reply.rate });
+      return;
+    }
+    job?.reject(new Error(reply.error));
+    // After a failed load, Transformers.js fails each later load in the same worker. A skip is no failure.
+    if (reply.error !== 'Skipped.') endWorker(made, new Error(reply.error));
+  };
+  made.onerror = () => {
+    endWorker(made, new Error('The voice worker stopped.'));
   };
   worker = made;
   return made;

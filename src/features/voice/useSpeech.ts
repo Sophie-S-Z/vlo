@@ -41,21 +41,29 @@ export function useRecorder() {
 
   // A surface that closes during a recording drops it.
   const live = useRef(recording);
+  const mounted = useRef(true);
   useEffect(() => {
     live.current = recording;
   });
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       live.current?.cancel();
-    },
-    [],
-  );
+    };
+  }, []);
 
   const record = async () => {
     setProblem('');
     setSeconds(0);
     try {
-      setRecording(await startRecording());
+      const started = await startRecording();
+      // A surface that closed while the browser asked for the microphone does not record.
+      if (!mounted.current) {
+        started.cancel();
+        return;
+      }
+      setRecording(started);
     } catch (error) {
       setProblem(recordProblem(error));
     }
@@ -151,8 +159,6 @@ function useModel() {
     },
   };
 }
-
-export type ModelState = ReturnType<typeof useModel>;
 
 /**
  * Turns a recording into text at the cursor ("Record a memory"). The first use asks before the model
