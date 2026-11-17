@@ -6,7 +6,7 @@ import { readItemUpdates } from '@/lib/ydocs';
 import { readImages } from '@/features/images/images';
 import { scopeItems } from './build';
 import { localFontName } from '@/features/editor/format/fonts';
-import type { ExportMessage, ExportResponse } from './export.worker';
+import type { ExportMessage, ExportResponse } from './exportWork';
 import type { FontSwap } from './fontCheck';
 import type { ExportFile, ExportRequest } from './run';
 import type { PostBody } from '@/features/publish/copy';
