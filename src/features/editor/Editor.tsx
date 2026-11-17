@@ -52,6 +52,8 @@ import { PanelHost } from './toolbar/PanelHost';
 import { ReadAloudBar } from './toolbar/ReadAloudBar';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
+import { MentionMenuList } from './toolbar/MentionMenuList';
+import { CodexCompletion } from './extensions/codexCompletion';
 import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
 import { restorePlace, savePlace, scrollToCaret } from './lastPlace';
@@ -181,6 +183,7 @@ export function Editor({
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
+  const mentionListId = `${useId()}-names`;
   const writing = useWritingPrefs();
   const smart = kind === 'poem' ? writing.smartPoems : writing.smartProse;
   // The style check's word lists are English. A project with no language is English.
@@ -210,6 +213,7 @@ export function Editor({
         ...(grammarForm ? [GrammarCheck.configure({ itemId, language })] : []),
         AuthorshipCount.configure({ projectId: projectId ?? null }),
         ...(kind === 'script' ? [] : [ImageInput.configure({ projectId: projectId ?? null })]),
+        CodexCompletion.configure({ listId: mentionListId }),
         SlashMenu.configure({
           items: slashItems(kind, templates),
           listId,
@@ -442,6 +446,7 @@ export function Editor({
       {kind === 'prose' && <BlockHandle editor={editor} />}
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />
+      <MentionMenuList editor={editor} listId={mentionListId} />
       <PanelHost
         editor={editor}
         form={kind}

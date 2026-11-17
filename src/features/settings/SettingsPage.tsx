@@ -256,6 +256,15 @@ export function SettingsPage() {
                 setAnnouncement(on ? 'All tools in the toolbar.' : 'Main tools in the toolbar.');
               }}
             />
+            <SettingSwitch
+              label="Complete Codex names"
+              hint="After three letters of a Codex name, the rest shows faintly, and Tab takes it. @ lists your Codex and items."
+              checked={writing.codexCompletion}
+              onChange={(on) => {
+                setWritingPrefs({ codexCompletion: on });
+                setAnnouncement(on ? 'Codex name completion on.' : 'Codex name completion off.');
+              }}
+            />
             <TextShortcutSettings onAnnounce={setAnnouncement} />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="grid gap-0.5">

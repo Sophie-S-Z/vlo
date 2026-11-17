@@ -44,6 +44,8 @@ export interface WritingPrefs {
   shortcuts: TextShortcut[];
   /** The starter list of common typos, such as "teh", in English prose. */
   typoFixes: boolean;
+  /** Codex names complete after three letters, and "@" lists them (Phase 19, Task D4). */
+  codexCompletion: boolean;
 }
 
 export interface TextShortcut {
@@ -151,6 +153,7 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   outline: false,
   shortcuts: [],
   typoFixes: true,
+  codexCompletion: true,
 };
 
 /** A page width in the range, on a step; anything else gives null. */
@@ -241,6 +244,7 @@ function load(): WritingPrefs {
     outline: value.outline === true,
     shortcuts: cleanShortcuts(value.shortcuts),
     typoFixes: value.typoFixes !== false,
+    codexCompletion: value.codexCompletion !== false,
   };
 }
 

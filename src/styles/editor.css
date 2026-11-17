@@ -967,6 +967,12 @@ html[data-calm='true'] .vlo-fill-shimmer {
   box-decoration-break: clone;
 }
 
+/* A Codex name's completion (Phase 19, Task D4): the rest of the name, faint after the caret. */
+.vlo-manuscript .vlo-completion {
+  color: var(--muted);
+  pointer-events: none;
+}
+
 /*
  * Spelling and grammar (Phase 19, Task D1): a rose wavy line under a spelling mark and a sky dotted line
  * under a grammar mark, so the two differ by shape as well as by color.
