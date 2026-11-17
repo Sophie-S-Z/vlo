@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { DATE_HINT, isDate } from '@/features/timeline/dates';
-import type { Item } from '@/lib/db';
+import { MAX_ITEM_TARGET, type Item } from '@/lib/db';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -13,9 +13,9 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { Textarea } from '@/ui/textarea';
-import { deleteItem, setStoryDate, updateItem } from './items';
+import { deleteItem, parseTarget, setItemTarget, setStoryDate, updateItem } from './items';
 
-export type FormAction = 'rename' | 'synopsis' | 'story-date';
+export type FormAction = 'rename' | 'synopsis' | 'story-date' | 'target';
 export type ItemAction = { type: FormAction | 'delete'; item: Item; hasChildren: boolean } | null;
 
 const FORM: Record<FormAction, { title: string; description: string; label: string }> = {
@@ -26,10 +26,19 @@ const FORM: Record<FormAction, { title: string; description: string; label: stri
     description: `When it happens in the story. ${DATE_HINT} Leave it empty for no date.`,
     label: 'Story date',
   },
+  target: {
+    title: 'Word target for',
+    description:
+      'The words to aim for in this item. A ring next to its word count fills as you write. Leave it empty for no target.',
+    label: 'Word target',
+  },
 };
 
-const initial = (action: FormAction, item: Item) =>
-  action === 'rename' ? item.title : ((action === 'synopsis' ? item.synopsis : item.storyDate) ?? '');
+function initial(action: FormAction, item: Item): string {
+  if (action === 'rename') return item.title;
+  if (action === 'target') return item.target === undefined ? '' : String(item.target);
+  return (action === 'synopsis' ? item.synopsis : item.storyDate) ?? '';
+}
 
 interface ItemDialogsProps {
   action: ItemAction;
@@ -86,8 +95,14 @@ function ItemForm({ action, item, onDone }: { action: FormAction; item: Item; on
       setError(`Vlo cannot read that date. ${DATE_HINT}`);
       return;
     }
+    const target = action === 'target' ? parseTarget(trimmed) : null;
+    if (Number.isNaN(target)) {
+      setError(`Type a whole number from 1 to ${MAX_ITEM_TARGET.toLocaleString()}.`);
+      return;
+    }
     try {
-      if (action === 'story-date') await setStoryDate(item.id, trimmed === '' ? null : trimmed);
+      if (action === 'target') await setItemTarget(item.id, target);
+      else if (action === 'story-date') await setStoryDate(item.id, trimmed === '' ? null : trimmed);
       else await updateItem(item.id, action === 'rename' ? { title: value } : { synopsis: trimmed });
       onDone();
     } catch {
@@ -122,8 +137,8 @@ function ItemForm({ action, item, onDone }: { action: FormAction; item: Item; on
           <Input
             {...field}
             autoComplete="off"
-            inputMode={action === 'story-date' ? 'numeric' : undefined}
-            placeholder={action === 'story-date' ? '1994-07' : undefined}
+            inputMode={action === 'story-date' || action === 'target' ? 'numeric' : undefined}
+            placeholder={action === 'story-date' ? '1994-07' : action === 'target' ? '2,000' : undefined}
             onChange={(event) => {
               setValue(event.target.value);
               setError(null);

@@ -4,6 +4,25 @@ Last update: 2026-11-17
 
 ## Done
 
+- Phase 19, Part A: the editor menus, page look and word targets (2026-11-17, `docs/plans/phase-19.md`):
+  - The toolbar has three named menus, Insert, Format and Review, in place of one long More tools list.
+    Each menu puts its tools in labeled groups. A Mode menu changes between Editing, Suggesting and
+    Viewing. Viewing makes the text read-only. Phones show the same groups in More tools.
+  - An item opens with the cursor where the writer left it, also after an edit on another device. Vlo
+    keeps the newest 300 places on the device.
+  - Page look sets the text width, the paragraphs (spaced, indented or airy), the line spacing and a
+    screen font for this screen only. Five looks come with Vlo, and a writer can save six of their own.
+    The Page width slider moved from the details panel into Page look.
+  - Each item can have a word target. A ring next to the word count fills as the writer writes, and the
+    binder shows how far the item is. A backup keeps the target.
+  - Print (Review, then Print) shows only the open text, black on white.
+  - On a phone with its keyboard open, the rows above the text go away and the toolbar sits on the
+    keyboard, with a Hide keyboard button.
+  - Not built yet: a command menu entry for the word target, and a bar in the binder (the binder shows a
+    text label).
+  - Fixed: "Blur the words" and "Cover the words with bars" in the Focus menu did not turn Hide the
+    text off on a second click.
+
 - More file types (2026-11-17), from the product owner's ask:
   - Import writing reads PDF, OpenDocument (.odt), RTF, EPUB, web pages (.html), and Final Draft (.fdx)
     files, beside Word, Markdown, text, Fountain and Scrivener. An RTF heading keeps its outline level.

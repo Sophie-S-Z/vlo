@@ -25,7 +25,7 @@ test('a new writer starts at Simple, and the More menu and Settings switch the l
 
   const toolbar = page.getByRole('toolbar', { name: 'Formatting', exact: true });
   await expect(toolbar.getByRole('button', { name: 'Bold' })).toBeVisible();
-  await expect(toolbar.getByRole('button', { name: 'Underline' })).toBeHidden();
+  await expect(toolbar.getByRole('button', { name: 'Link', exact: true })).toBeHidden();
   expect(await toolbar.getByRole('button').filter({ visible: true }).count()).toBeLessThanOrEqual(8);
   expect(await seriousIssues(page)).toEqual([]);
 
@@ -39,7 +39,7 @@ test('a new writer starts at Simple, and the More menu and Settings switch the l
   await toolbar.getByRole('button', { name: 'More tools' }).click();
   await page.getByRole('menuitem', { name: 'Show all tools' }).click();
   // A phone shows its narrow toolbar at both levels, so only a wider screen shows the extra tools.
-  if (!isMobile) await expect(toolbar.getByRole('button', { name: 'Underline' })).toBeVisible();
+  if (!isMobile) await expect(toolbar.getByRole('button', { name: 'Link', exact: true })).toBeVisible();
 
   await page.goto('/settings');
   const all = page.getByRole('switch', { name: 'Show all tools in the toolbar' });
@@ -47,5 +47,5 @@ test('a new writer starts at Simple, and the More menu and Settings switch the l
   await all.click();
   await expect(all).not.toBeChecked();
   await page.goBack();
-  await expect(toolbar.getByRole('button', { name: 'Underline' })).toBeHidden();
+  await expect(toolbar.getByRole('button', { name: 'Link', exact: true })).toBeHidden();
 });

@@ -1,5 +1,5 @@
 import { clock } from '@/lib/clock';
-import { db, type Item, type ItemKind } from '@/lib/db';
+import { db, MAX_ITEM_TARGET, type Item, type ItemKind } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { orderAfterLast } from '@/lib/order';
@@ -98,6 +98,35 @@ export async function setWorkingTitle(id: string, on: boolean): Promise<void> {
       .modify((row) => {
         if (on) row.workingTitle = true;
         else delete row.workingTitle;
+        row.updatedAt = now;
+      });
+    await touchProject(item.projectId, now);
+  });
+}
+
+/** The target that the field holds: null for none, or NaN when the field holds no whole number in range. */
+export function parseTarget(value: string): number | null {
+  const clean = value.trim();
+  if (clean === '') return null;
+  // Digits, with a space, comma, dot or apostrophe between groups of three, such as 2,000 or 2 000.
+  const target = /^(\d+|\d{1,3}([\s,.'’]\d{3})+)$/.test(clean) ? Number(clean.replace(/\D/g, '')) : NaN;
+  return target >= 1 && target <= MAX_ITEM_TARGET ? target : NaN;
+}
+
+/** Gives an item a word target (Phase 19, Task A4), or takes the target off with null. */
+export async function setItemTarget(id: string, target: number | null): Promise<void> {
+  if (target !== null && (!Number.isInteger(target) || target < 1 || target > MAX_ITEM_TARGET))
+    throw new RangeError(`Type a target from 1 to ${MAX_ITEM_TARGET.toLocaleString()} words.`);
+  const now = clock.now();
+  await db.transaction('rw', db.items, db.projects, async () => {
+    const item = await db.items.get(id);
+    if (!item) return;
+    await db.items
+      .where('id')
+      .equals(id)
+      .modify((row) => {
+        if (target === null) delete row.target;
+        else row.target = target;
         row.updatedAt = now;
       });
     await touchProject(item.projectId, now);

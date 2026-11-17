@@ -1067,3 +1067,116 @@ html[data-calm='true'] .vlo-fill-shimmer {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/*
+ * Phone typing (Phase 19, Task A1, src/features/editor/phoneTyping.ts). While the on-screen keyboard is
+ * open, the rows above the text go and the toolbar sits on the keyboard. It scrolls sideways when its tools
+ * are wider than the screen.
+ */
+html[data-vlo-typing] [data-typing-hide] {
+  display: none;
+}
+html[data-vlo-typing] [data-vlo-keyboard-bar] {
+  position: fixed;
+  inset-inline: 0;
+  top: auto;
+  bottom: var(--vlo-keyboard-inset, 0px);
+  z-index: 40;
+  margin: 0;
+  border-top: 1px solid var(--rule);
+  box-shadow: 0 -6px 16px rgb(0 0 0 / 0.12);
+}
+html[data-vlo-typing] [data-vlo-keyboard-bar] [data-vlo-toolbar] {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  border-bottom: 0;
+  scrollbar-width: none;
+}
+
+/*
+ * Page look (Phase 19, Task A3): how paragraphs part on the screen. Indented is the book style: no gap, and
+ * an indent on each paragraph that follows a paragraph. A centered paragraph, a drop cap and a paragraph
+ * with its own first-line indent keep their own look. Exports keep the project layout.
+ */
+[data-paragraphs='indented'] .vlo-prose > p {
+  margin-bottom: 0;
+}
+[data-paragraphs='indented']
+  .vlo-prose
+  > p
+  + p:not([data-indent], [data-drop-cap='true'], [style*='center']) {
+  text-indent: 1.5em;
+}
+[data-paragraphs='indented'] .vlo-prose > p:has(+ :not(p)) {
+  margin-bottom: 0.9em;
+}
+[data-paragraphs='airy'] .vlo-prose > p {
+  margin-bottom: 1.5em;
+}
+
+/*
+ * Print (Phase 19, Task A5). Only the open text prints, in black on white, with its notes. The marks of
+ * the checks, find, focus and the page-end lines stay on the screen.
+ */
+@page {
+  margin: 2.2cm;
+}
+@media print {
+  html[data-vlo-printing] body * {
+    visibility: hidden;
+  }
+  html[data-vlo-printing] [data-vlo-print-root],
+  html[data-vlo-printing] [data-vlo-print-root] * {
+    visibility: visible;
+  }
+  html[data-vlo-printing] [data-vlo-print-root] {
+    --text: #111;
+    --muted: #444;
+    --bg: #fff;
+    --surface: #fff;
+    --rule: #bbb;
+    --accent: #111;
+    display: block;
+    position: absolute;
+    inset: 0 0 auto 0;
+    color: #111;
+    background: #fff;
+  }
+  html[data-vlo-printing] .vlo-manuscript {
+    min-height: 0;
+    font-size: 12pt;
+  }
+  html[data-vlo-printing] .vlo-manuscript > * {
+    content-visibility: visible;
+  }
+  html[data-vlo-printing] [data-vlo-print-root] :is(.vlo-page-lines, .vlo-page-end, .vlo-page-number) {
+    display: none;
+  }
+  html[data-vlo-printing] [data-vlo-print-root] :is(.vlo-sheet, .vlo-scene-page) {
+    box-shadow: none;
+    border: 0;
+    padding: 0;
+    background: none;
+  }
+  html[data-vlo-printing]
+    .vlo-manuscript
+    :is(
+      .vlo-find-match,
+      .vlo-find-current,
+      .vlo-style,
+      .vlo-style-long,
+      .vlo-continuity,
+      .vlo-codex,
+      .vlo-comment,
+      .vlo-held-selection,
+      .vlo-reading
+    ) {
+    background: none;
+    text-decoration: none;
+    box-shadow: none;
+    outline: none;
+  }
+  html[data-vlo-printing] .vlo-manuscript .vlo-dim {
+    opacity: 1;
+  }
+}
