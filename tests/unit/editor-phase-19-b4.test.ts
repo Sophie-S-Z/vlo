@@ -143,7 +143,7 @@ describe('the whole project', () => {
     }
   }, 20_000);
 
-  test('the open item changes in its editor, so one Undo puts it back', async () => {
+  test('the open item counts as it is now, changes in its editor, and one Undo puts it back', async () => {
     await db.open();
     try {
       const { projectId } = await projectWith([['open', 'scene', 'Open scene']]);
@@ -151,13 +151,18 @@ describe('the whole project', () => {
       const editor = editorOn('<p>Mira sings.</p>');
       yUndoPluginKey.getState(editor.state)?.undoManager.stopCapturing();
       const query = { ...EMPTY_QUERY, text: 'Mira' };
-      const hits = await findInProject(projectId, query);
+      // The list reads the open item as it is now, before its plain-text copy catches up.
+      editor.commands.insertContent(' Mira hums.');
+      yUndoPluginKey.getState(editor.state)?.undoManager.stopCapturing();
+      expect((await findInProject(projectId, query))[0]?.count).toBe(1);
+      const hits = await findInProject(projectId, query, { editor, itemId: 'open' });
+      expect(hits[0]?.count).toBe(2);
       const done = await replaceInProject(hits, query, 'Ines', undefined, { editor, itemId: 'open' });
-      expect(done).toEqual({ items: 1, matches: 1 });
-      expect(editor.getText()).toBe('Ines sings.');
+      expect(done).toEqual({ items: 1, matches: 2 });
+      expect(editor.getText()).toBe('Ines sings. Ines hums.');
       expect(await db.snapshots.where('itemId').equals('open').count()).toBe(1);
       editor.commands.undo();
-      expect(editor.getText()).toBe('Mira sings.');
+      expect(editor.getText()).toBe('Mira sings. Mira hums.');
     } finally {
       await db.delete();
     }

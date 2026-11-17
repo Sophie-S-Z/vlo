@@ -39,7 +39,7 @@ export function ProjectFind({ editor, itemId, projectId, language, query, replac
   useEffect(() => {
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      void findInProject(projectId, query).then((found) => {
+      void findInProject(projectId, query, { editor, itemId }).then((found) => {
         if (!cancelled) setHits(found);
       });
     }, SEARCH_MS);
@@ -47,7 +47,7 @@ export function ProjectFind({ editor, itemId, projectId, language, query, replac
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [projectId, query, round]);
+  }, [editor, itemId, projectId, query, round]);
 
   const total = (hits ?? []).reduce((sum, hit) => sum + hit.count, 0);
   const summary = `${plural(total, 'match', 'matches')} in ${plural(hits?.length ?? 0, 'item', 'items')}`;

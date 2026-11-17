@@ -41,8 +41,21 @@ const BATCH = 8;
 
 export const snapshotLabel = (query: FindQuery) => `Before replacing “${query.text}”`;
 
-/** The matches of the query in each item of the project that holds text. */
-export async function findInProject(projectId: string, query: FindQuery): Promise<ProjectHit[]> {
+/** The item in this editor. */
+export interface OpenText {
+  editor: Editor;
+  itemId: string;
+}
+
+/**
+ * The matches of the query in each item of the project that holds text. The item in this editor gives its
+ * text as it is now, because its plain-text copy waits for a pause in typing.
+ */
+export async function findInProject(
+  projectId: string,
+  query: FindQuery,
+  open: OpenText | null = null,
+): Promise<ProjectHit[]> {
   const pattern = queryPattern(query);
   if (!pattern) return [];
   const [project, items, texts] = await Promise.all([
@@ -58,7 +71,11 @@ export async function findInProject(projectId: string, query: FindQuery): Promis
     const form = def.editorKind(item.kind);
     if (!form) continue;
     // A match stays in one block, as in the editor, and the notes at the end are not the writing.
-    const blocks = withoutNotes(textOf.get(item.id) ?? '').split(form === 'prose' ? '\n\n' : '\n');
+    const source =
+      open?.itemId === item.id && !open.editor.isDestroyed
+        ? docText(open.editor.state.doc, form)
+        : (textOf.get(item.id) ?? '');
+    const blocks = withoutNotes(source).split(form === 'prose' ? '\n\n' : '\n');
     let count = 0;
     const lines: ProjectHit['lines'][number][] = [];
     blocks.forEach((text, block) => {
@@ -85,11 +102,6 @@ export async function findInProject(projectId: string, query: FindQuery): Promis
 /** The Yjs document of an editor. */
 function ydocOf(editor: Editor): Y.Doc | null {
   return (ySyncPluginKey.getState(editor.state) as { doc?: Y.Doc } | undefined)?.doc ?? null;
-}
-
-export interface OpenText {
-  editor: Editor;
-  itemId: string;
 }
 
 /**

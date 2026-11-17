@@ -38,6 +38,14 @@ const TURN_INTO = [
   .map((id) => COMMANDS.find((cmd) => cmd.id === id))
   .filter((cmd) => cmd !== undefined);
 
+/**
+ * Keeps the handle on its block while the menu is open. The React handle adds only the plugin, with no
+ * commands, so the meta that the plugin reads goes in a transaction.
+ */
+function lockHandle(editor: Editor, locked: boolean): void {
+  editor.view.dispatch(editor.state.tr.setMeta('lockDragHandle', locked));
+}
+
 interface Target {
   node: ProseMirrorNode;
   pos: number;
@@ -62,7 +70,7 @@ export function BlockHandle({ editor }: { editor: Editor }) {
   };
   const openMenu = () => {
     if (!target) return;
-    editor.commands.lockDragHandle();
+    lockHandle(editor, true);
     setOpen(true);
   };
   /** Runs the action on the block, unless an edit from another tab or device changed it first. */
@@ -82,11 +90,13 @@ export function BlockHandle({ editor }: { editor: Editor }) {
         if (!open) setTarget(node ? { node, pos } : null);
       }}
     >
+      {/* As in the toolbar menus, the page outside stays in the reading order while the menu is open. */}
       <DropdownMenu
+        modal={false}
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
-          if (!next) editor.commands.unlockDragHandle();
+          if (!next) lockHandle(editor, false);
         }}
       >
         <div
