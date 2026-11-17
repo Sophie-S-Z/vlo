@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { docxBytes, SCRIVENER_FILES, zipOf } from '../fixtures/import';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
@@ -93,6 +94,30 @@ test('a Markdown folder imports as pages in name order, and other files are in t
   await expect(page.getByRole('heading', { level: 1, name: "The Keeper's Debt" })).toBeVisible();
   await showBinder(page, isMobile);
   await expect.poll(() => binderTitles(page)).toEqual(['1-1', '1-2', '2-1', '2-2', '3-1', '3-2']);
+});
+
+test('a PDF imports with a chapter for each heading, read in the PDF worker', async ({ page, isMobile }) => {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.TimesRoman);
+  const pages = [
+    ['The ledger', 'Mira counted the coins twice.'],
+    ['The key', 'Rosa left at dawn.'],
+  ] as const;
+  for (const [n, [heading, words]] of pages.entries()) {
+    const sheet = pdf.addPage([612, 792]);
+    sheet.drawText(heading, { x: 72, y: 700, size: 20, font });
+    sheet.drawText(words, { x: 72, y: 660, size: 12, font });
+    sheet.drawText(String(n + 1), { x: 300, y: 40, size: 10, font });
+  }
+  await openImport(page);
+  await pickFiles(page, 'Salt Year.pdf', await pdf.save());
+  await expect(dialog(page).getByRole('status')).toContainText('Vlo found 2 texts with 9 words.');
+  await expect(dialog(page).getByLabel('Title')).toHaveValue('Salt Year');
+  await dialog(page).getByRole('button', { name: 'Import', exact: true }).click();
+  await showBinder(page, isMobile);
+  await expect(binder(page).getByRole('button', { name: 'The key', exact: true })).toBeVisible();
+  await binder(page).getByRole('button', { name: 'The key', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'The key' })).toContainText('Rosa left at dawn.');
 });
 
 test('a damaged file shows a message and adds no project', async ({ page }) => {

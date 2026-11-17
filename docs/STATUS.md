@@ -4,6 +4,16 @@ Last update: 2026-11-17
 
 ## Done
 
+- More file types (2026-11-17), from the product owner's ask:
+  - Import writing reads PDF, OpenDocument (.odt), RTF, EPUB, web pages (.html), and Final Draft (.fdx)
+    files, beside Word, Markdown, text, Fountain and Scrivener. An RTF heading keeps its outline level.
+  - A PDF has lines at places on a page, so the PDF reader joins them into paragraphs, finds headings by
+    size and verse by short lines, and leaves out page numbers and running heads. PDF.js (Apache-2.0)
+    reads the text in its own worker, and it loads only for a PDF. The service worker caches it on first
+    use. A PDF gives no bold or italic, and a scan of pages has no text, so the summary says so.
+  - Export adds Rich Text (.rtf), Web page (.html, with its images inside) and Plain text (.txt). Each one
+    reads back through Import writing with its words and its chapters, and a poem keeps every space.
+
 - Profiles (2026-11-17, ADR 0011, migration 0011), from the product owner's ask:
   - A new account gives its name after the sign-in code (`/profile/new`), with an optional photo that the
     writer places in a circle. Google's name fills the field. An older account gives its name once.

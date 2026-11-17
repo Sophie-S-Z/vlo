@@ -1,14 +1,20 @@
 import JSZip from 'jszip';
 import { readDocx } from './docx';
+import { readEpub } from './epub';
+import { readFdx } from './fdx';
 import { readFountain } from './fountain';
+import { readHtml } from './html';
 import { readMarkdown, readPlainText } from './markdown';
-import { titleOfFile, titleOfName } from './outline';
+import { readOdt } from './odt';
+import { outline, titleOfFile, titleOfName } from './outline';
+import { readRtf } from './rtf';
 import { readScrivener, type FileMap } from './scrivener';
 import { ImportError, type ImportNode, type ImportSource } from './tree';
 
 /*
  * Turns the files that the writer picked into one `ImportSource` (roadmap F34): a .scriv folder or its
- * zip, or Word, Markdown, Fountain and text files, alone, in a folder or in a zip. Folders become folders, in the
+ * zip, or Word, PDF, OpenDocument, RTF, EPUB, web page, Markdown, text, Fountain and Final Draft files,
+ * alone, in a folder or in a zip. A PDF reader of its own loads only for a PDF. Folders become folders, in the
  * order of their names. Hidden folders, such as Obsidian's .obsidian, stay out.
  */
 
@@ -19,7 +25,7 @@ export interface PickedFile {
 }
 
 /**
- * The text of a Markdown or text file: UTF-16 when it starts with a byte order mark, else UTF-8. A file
+ * The text of a text file, such as Markdown, RTF or a web page: UTF-16 when it starts with a byte order mark, else UTF-8. A file
  * that is not UTF-8 is most often from an older Windows editor, so it is read as Windows-1252.
  */
 function decodeText(bytes: Uint8Array): string {
@@ -54,17 +60,38 @@ async function unzip(file: PickedFile): Promise<PickedFile[]> {
     .map((entry) => ({ path: entry.name, read: () => entry.async('uint8array') }));
 }
 
+/** What one file holds. A title or an author is what the file itself names. */
+interface FileRead {
+  nodes: ImportNode[];
+  title?: string;
+  author?: string;
+}
+
 /** The nodes of one file, or null for a kind of file that Vlo does not read. */
-async function fileNodes(file: PickedFile, skipped: string[]): Promise<ImportNode[] | null> {
+async function readFile(file: PickedFile, skipped: string[]): Promise<FileRead | null> {
   const name = file.path.slice(file.path.lastIndexOf('/') + 1);
-  if (/\.docx$/i.test(name)) {
-    const docx = await readDocx(name, await file.read());
-    skipped.push(...docx.skipped);
-    return docx.nodes;
+  const text = async () => decodeText(await file.read());
+  const withSkipped = <T extends { skipped: string[] }>({ skipped: left, ...rest }: T) => {
+    skipped.push(...left);
+    return rest;
+  };
+  if (/\.docx$/i.test(name)) return withSkipped(await readDocx(name, await file.read()));
+  if (/\.odt$/i.test(name)) return withSkipped(await readOdt(name, await file.read()));
+  if (/\.rtf$/i.test(name)) {
+    const rtf = readRtf(await text());
+    skipped.push(...rtf.skipped);
+    return { nodes: outline(titleOfFile(name), rtf.html, '\n') };
   }
-  if (/\.(md|markdown)$/i.test(name)) return readMarkdown(name, decodeText(await file.read()));
-  if (/\.txt$/i.test(name)) return [readPlainText(name, decodeText(await file.read()))];
-  if (FOUNTAIN.test(name)) return readFountain(name, decodeText(await file.read())).nodes;
+  if (/\.pdf$/i.test(name)) {
+    const { readPdf } = await import('./pdf');
+    return withSkipped(await readPdf(name, await file.read()));
+  }
+  if (/\.epub$/i.test(name)) return withSkipped(await readEpub(name, await file.read()));
+  if (/\.(html?|xhtml)$/i.test(name)) return withSkipped(readHtml(name, await text()));
+  if (/\.(md|markdown)$/i.test(name)) return { nodes: readMarkdown(name, await text()) };
+  if (/\.txt$/i.test(name)) return { nodes: [readPlainText(name, await text())] };
+  if (/\.fdx$/i.test(name)) return { nodes: readFdx(await text()) };
+  if (FOUNTAIN.test(name)) return readFountain(name, await text());
   return null;
 }
 
@@ -75,14 +102,6 @@ export async function readPicked(picked: readonly PickedFile[]): Promise<ImportS
   const [zip] = files;
   if (files.length === 1 && zip && /\.zip$/i.test(zip.path))
     files = (await unzip(zip)).filter((f) => !hidden(f.path));
-
-  // One Fountain file keeps the title and the author of its title page.
-  const [only] = files;
-  if (files.length === 1 && only && FOUNTAIN.test(only.path)) {
-    const { title, author, nodes } = readFountain(only.path, decodeText(await only.read()));
-    if (nodes.length === 0) throw new ImportError('This Fountain file has no script in it.');
-    return { title, ...(author ? { author } : {}), nodes, skipped: [] };
-  }
 
   if (files.some((f) => /\.scrivx$/i.test(f.path))) {
     const map: FileMap = new Map(files.map((f) => [f.path, f.read]));
@@ -106,15 +125,18 @@ export async function readPicked(picked: readonly PickedFile[]): Promise<ImportS
   };
 
   const skipped: string[] = [];
+  const reads: FileRead[] = [];
   let other = 0;
   const sorted = [...files].sort((a, b) => byName.compare(a.path, b.path));
   for (const file of sorted) {
     const path = file.path.split('/').slice(top === '' ? 0 : 1);
-    const nodes = await fileNodes(file, skipped);
-    if (nodes === null) {
+    const read = await readFile(file, skipped);
+    if (read === null) {
       other += 1;
       continue;
     }
+    reads.push(read);
+    const { nodes } = read;
     // A file that splits into several items is a folder of its own when it sits beside other files.
     const node: ImportNode[] =
       nodes.length > 1 && sorted.length > 1
@@ -124,9 +146,15 @@ export async function readPicked(picked: readonly PickedFile[]): Promise<ImportS
   }
   if (other > 0) skipped.push(other === 1 ? '1 other file' : `${String(other)} other files`);
   const nodes = root.children ?? [];
-  if (nodes.length === 0)
-    throw new ImportError('Vlo found no Word, Markdown, Fountain or text file to import.');
+  if (reads.length === 0)
+    throw new ImportError(
+      'Vlo found no file that it can import. Vlo reads Word, PDF, OpenDocument, RTF, EPUB, web page, Markdown, text, Fountain and Final Draft files.',
+    );
+  if (nodes.length === 0) throw new ImportError('Vlo found no text in these files.');
+  // One file keeps the title and the author that it names, such as an EPUB's or a Fountain title page's.
+  const [named] = reads.length === 1 ? reads : [];
   const title =
-    top !== '' ? titleOfName(top) : picked.length === 1 ? titleOfFile(first.path) : 'Imported writing';
-  return { title, nodes, skipped };
+    named?.title ??
+    (top !== '' ? titleOfName(top) : picked.length === 1 ? titleOfFile(first.path) : 'Imported writing');
+  return { title, ...(named?.author ? { author: named.author } : {}), nodes, skipped };
 }

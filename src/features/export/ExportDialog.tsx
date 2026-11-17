@@ -1,4 +1,4 @@
-import { BookOpen, Clapperboard, FileText, FileType, Globe, Printer } from 'lucide-react';
+import { BookOpen, Clapperboard, FileCode, FileText, FileType, Globe, Printer } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { bookOf } from '@/features/book/book';
@@ -63,9 +63,27 @@ const FORMATS: {
     icon: BookOpen,
   },
   {
+    id: 'rtf',
+    label: 'Rich Text',
+    detail: 'An .rtf file for Word, Pages, TextEdit, Scrivener and most writing apps.',
+    icon: FileType,
+  },
+  {
     id: 'markdown',
     label: 'Markdown',
     detail: 'A .md text file with its marks. It opens in any notes app. With images, it comes in a zip file.',
+    icon: FileText,
+  },
+  {
+    id: 'html',
+    label: 'Web page',
+    detail: 'An .html file that opens in any browser, with its images inside.',
+    icon: FileCode,
+  },
+  {
+    id: 'text',
+    label: 'Plain text',
+    detail: 'A .txt file with only the words. Every app opens it, and poems keep every space.',
     icon: FileText,
   },
   {
