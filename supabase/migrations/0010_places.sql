@@ -51,7 +51,8 @@ begin
 end $$;
 
 -- Signed-out devices and the places of the devices of the last 30 days. A signed-out device had no account
--- on any count of the period. The place of a device is its newest place. Each list holds the 10 largest, as the page shows.
+-- on any count of the period. The place of a device is its newest place. Each list holds the 10 largest,
+-- as the page shows.
 create function public.owner_visitors(p_today date default null) returns jsonb
 language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare
