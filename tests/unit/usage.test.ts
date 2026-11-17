@@ -125,6 +125,15 @@ describe('usage counts', () => {
     expect(calls).toHaveLength(0);
   });
 
+  test('an empty week is marked, so later checks read nothing and send nothing', async () => {
+    at(LAST_WEEK - 7 * 86_400_000);
+    await m.sendWeeklyReport();
+    at(NOW);
+    expect(await m.sendWeeklyReport()).toBe(false);
+    expect((await m.usageState()).handledWeek).toBe('2026-W45');
+    expect(calls).toHaveLength(0);
+  });
+
   test('an older state with the switch off still counts and sends', async () => {
     await m.db.appMeta.put({ key: 'usage', value: { on: false, weeks: {} } });
     at(LAST_WEEK - 7 * 86_400_000);

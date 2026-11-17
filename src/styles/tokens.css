@@ -1,12 +1,9 @@
 /* Design tokens. Spec section 13. */
 :root {
   --radius-card: 10px;
-  --rule-width: 1px;
   /* Shadows take the Ink hue, not plain black, and stack a tight contact shadow over a soft lift. */
   --shadow-hover: 0 1px 2px rgb(11 14 20 / 0.06), 0 8px 24px -6px rgb(11 14 20 / 0.16);
   --ease-reveal: cubic-bezier(0.215, 0.61, 0.355, 1); /* GSAP power3.out */
-  --duration-reveal: 0.6s;
-  --gutter: 16px;
   --font-display: 'Fraunces Variable', Georgia, serif;
   --font-manuscript: 'Newsreader Variable', Georgia, serif;
   --font-ui: 'Inter Variable', system-ui, sans-serif;

@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 /*
  * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page), 0010 (places), 0011
- * (profiles), 0012 (feedback guards) and 0013 (the leaderboard) in PGlite. The app calls each function through
+ * (profiles), 0012 (feedback guards), 0013 (the leaderboard) and 0014 (the comment index) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -25,6 +25,7 @@ const MIGRATIONS = [
   '0011_profiles.sql',
   '0012_feedback_guards.sql',
   '0013_leaderboard.sql',
+  '0014_comment_index.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -629,5 +630,14 @@ describe('the leaderboard (migration 0013)', () => {
   test('refuses the anon role and a period that is not a day, a week, a month or a year', async () => {
     await expect(board(ALICE, 'decade')).rejects.toThrow('bad period');
     await expect(board('anon', 'day')).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe('the comment index (migration 0014)', () => {
+  test('the comments of one link have an index by link and time', async () => {
+    const rows = await db.query<{ indexdef: string }>(
+      "select indexdef from pg_indexes where schemaname = 'public' and indexname = 'share_comments_share'",
+    );
+    expect(rows.rows[0]?.indexdef).toContain('(share_id, created_at)');
   });
 });

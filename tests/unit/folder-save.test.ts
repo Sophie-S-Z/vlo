@@ -10,6 +10,7 @@ import {
 import type { FolderPermission, FolderStatus, SavedFolder } from '@/features/backup/folderAccess';
 import { FOLDER_STATUS_KEY } from '@/features/backup/folderKeys';
 import { createProject } from '@/features/library/projects';
+import { makeSeries, setStyleSheet, styleRule } from '@/features/series/series';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 import { writeItemUpdate } from '@/lib/ydocs';
@@ -175,6 +176,18 @@ describe('Folder save', () => {
     target?.files.clear();
     await saveToFolderIfChanged(project.id);
     expect(target?.files.size).toBe(0);
+  });
+
+  test('a change to the series of a book, such as its style sheet, saves the book again', async () => {
+    const project = await novel();
+    const series = await makeSeries('Salt', [project.id]);
+    await saveToFolderIfChanged(project.id);
+    const target = folder?.folders.get('Salt Year');
+    target?.files.clear();
+    vi.spyOn(clock, 'now').mockReturnValue(Date.now() + 60_000);
+    await setStyleSheet(series.id, [styleRule('grey', 'gray')]);
+    await saveToFolderIfChanged(project.id);
+    expect(target?.files.size).toBeGreaterThan(0);
   });
 
   test('a failed write is recorded for Settings and never throws', async () => {

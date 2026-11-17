@@ -113,7 +113,6 @@ function kindOf(message: string): ShareErrorKind {
   // Phase 18 (migration 0008): no session, not the owner, and the feedback limit of an install.
   if (message.includes('not signed in') || message.includes('not owner')) return 'unavailable';
   if (message.includes('feedback limit')) return 'limit';
-  if (message.includes('message too large')) return 'too-large';
   // Feedback guards (migration 0012).
   if (message.includes('feedback too fast')) return 'too-fast';
   if (message.includes('feedback duplicate')) return 'duplicate';

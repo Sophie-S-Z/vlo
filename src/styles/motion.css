@@ -40,20 +40,6 @@ html[data-focus-mode='true'] [data-chrome] {
   display: none;
 }
 
-/* Library cards rise out of a soft blur into place one after another, 45 ms apart. */
-.vlo-stagger > * {
-  animation: vlo-rise 0.8s var(--ease-out) both;
-  animation-delay: calc(min(var(--i, 0), 12) * 45ms);
-}
-
-@keyframes vlo-rise {
-  from {
-    transform: translateY(20px);
-    filter: blur(6px);
-    opacity: 0;
-  }
-}
-
 /* Cards morph between grid and list, and into the project screen. */
 ::view-transition-group(*) {
   animation-duration: 0.5s;

@@ -68,12 +68,12 @@ export function KeywordTable({ caption, rows }: { caption: string; rows: readonl
   );
 }
 
-export function useItemStats(text: string, kind: EditorForm) {
+export function useItemStats(text: string, kind: EditorForm, language?: string) {
   const [stats, setStats] = useState<FullStats | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     let current = true;
-    statsInWorker(text, kind).then(
+    statsInWorker(text, kind, language).then(
       (next) => {
         if (current) setStats(next);
       },
@@ -84,7 +84,7 @@ export function useItemStats(text: string, kind: EditorForm) {
     return () => {
       current = false;
     };
-  }, [text, kind]);
+  }, [text, kind, language]);
   return { stats, error };
 }
 

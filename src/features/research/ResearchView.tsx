@@ -1,5 +1,6 @@
 import { Trash2 } from 'lucide-react';
-import { useCallback, useId, useState } from 'react';
+import { useId, useState } from 'react';
+import { useBlobSource } from '@/app/useBlobSource';
 import type { ResearchFile } from '@/lib/db';
 import {
   AlertDialog,
@@ -18,24 +19,6 @@ import { deleteResearch, formatSize, MAX_RESEARCH_NAME, renameResearch, research
  * The research view (roadmap F41, plan Task H6). An image, a PDF or an audio file shows from a blob: URL,
  * so it never leaves the device. A clipping shows its text, and its link stays text.
  */
-
-/**
- * A ref that gives the element a blob: URL of the file in `src` while it is on the page. The URL goes
- * when the element goes.
- */
-function useBlobSource(blob: Blob | undefined) {
-  return useCallback(
-    (element: HTMLElement | null) => {
-      if (!element || !blob) return;
-      const url = URL.createObjectURL(blob);
-      element.setAttribute('src', url);
-      return () => {
-        URL.revokeObjectURL(url);
-      };
-    },
-    [blob],
-  );
-}
 
 const KIND_LABEL = { image: 'Image', pdf: 'PDF', audio: 'Audio', clip: 'Clipping', other: 'File' } as const;
 

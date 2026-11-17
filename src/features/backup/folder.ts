@@ -103,7 +103,14 @@ export async function saveToFolder(projectId: string): Promise<boolean> {
 export async function saveToFolderIfChanged(projectId: string): Promise<void> {
   const project = await db.projects.get(projectId).catch(() => undefined);
   if (!project) return;
-  if (project.lastBackupAt !== undefined && project.updatedAt <= project.lastBackupAt) return;
+  // The backup holds the series of the book too, with its shared Codex entries and style sheet.
+  const series = await db.series
+    .where('projectIds')
+    .equals(projectId)
+    .first()
+    .catch(() => undefined);
+  const changedAt = Math.max(project.updatedAt, series?.updatedAt ?? 0);
+  if (project.lastBackupAt !== undefined && changedAt <= project.lastBackupAt) return;
   let ok: boolean;
   try {
     if (!(await saveToFolder(projectId))) return;

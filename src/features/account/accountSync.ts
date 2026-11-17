@@ -1,6 +1,6 @@
 import { ShareError } from '@/features/share/rpc';
 import { forgetSpace, joinSpace, leaveSync, listDevices, startSpace } from '@/features/sync/pairing';
-import { readSpace, type SyncSpace } from '@/features/sync/space';
+import { ACCOUNT_SYNC_PAUSED as PAUSED, readSpace, type SyncSpace } from '@/features/sync/space';
 import { db, type VloDb } from '@/lib/db';
 import { accountRpc } from './auth';
 
@@ -35,6 +35,7 @@ export type AccountSyncState =
   | { kind: 'on'; space: SyncSpace; vault: Vault }
   | { kind: 'join'; vault: Vault }
   | { kind: 'paused'; vault: Vault }
+  | { kind: 'stopped' }
   | { kind: 'move'; space: SyncSpace; vault: Vault };
 
 export async function readVault(): Promise<Vault | null> {
@@ -44,7 +45,10 @@ export async function readVault(): Promise<Vault | null> {
 
 export async function accountSyncState(): Promise<AccountSyncState> {
   const [vault, space] = await Promise.all([readVault(), readSpace()]);
-  if (!vault) return space ? { kind: 'adopt', space } : { kind: 'off' };
+  if (!vault) {
+    if (space) return { kind: 'adopt', space };
+    return (await accountSyncPaused()) ? { kind: 'stopped' } : { kind: 'off' };
+  }
   if (!space) return (await accountSyncPaused()) ? { kind: 'paused', vault } : { kind: 'join', vault };
   return space.spaceId === vault.space_id ? { kind: 'on', space, vault } : { kind: 'move', space, vault };
 }
@@ -82,12 +86,6 @@ export async function turnOnAccountSync(deviceName: string): Promise<void> {
 
 /** The relay keeps the blobs of at most this many devices in a space (migration 0005). */
 const MAX_DEVICES = 5;
-
-/**
- * Set when the writer stops sync on this device in Settings. The account keeps its sync, so the Account
- * page must not turn it on here again by itself. A new sign-in or the writer's own press clears it.
- */
-const PAUSED = 'account-sync-paused';
 
 export async function pauseAccountSyncHere(): Promise<void> {
   await db.appMeta.put({ key: PAUSED, value: true });

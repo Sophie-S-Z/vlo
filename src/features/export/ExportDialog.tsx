@@ -207,14 +207,16 @@ export function ExportDialog({
   const [marking, setMarking] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const jobRef = useRef<ExportJob | null>(null);
+  const mounted = useRef(true);
 
   // A job left open when the dialog closes stops its worker.
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       jobRef.current?.close();
-    },
-    [],
-  );
+    };
+  }, []);
 
   // Book layout (F51) is for a PDF or an EPUB of the whole project, in place of manuscript format.
   // A script has its own page layout, so it has no book layout.
@@ -300,6 +302,11 @@ export function ExportDialog({
         ...(offersProvenance && provenance ? { provenance: { at: clock.now() } } : {}),
       };
       const { job, ownFonts, names } = await ExportJob.start(request);
+      // A dialog that closed while the worker started stops the worker at once.
+      if (!mounted.current) {
+        job.close();
+        return;
+      }
       jobRef.current = job;
       if (safe && (names.unmarked.length > 0 || names.changed.length > 0)) {
         setStatus({ step: 'names', names, job, ownFonts, marked: null });

@@ -7,7 +7,7 @@ Last update: 2026-11-17
 - Leaderboard, comedy and spacing (2026-11-17, ADR 0012, migration 0013), from the product owner's ask:
   - `/leaderboard`: the signed-in writers who wrote the most words today, this week, this month and this
     year, live. The first three glow and shimmer in gold, silver and bronze, and the first wears a crown.
-    A switch takes a writer off the board. Privacy version 18. Migration 0013 needs the live database.
+    A switch takes a writer off the board. Privacy version 18. Migration 0013 is on the live database.
   - The Comedy mode: bits in sets, six structures (stand-up set, sketch, parody, roast, top ten list,
     satirical news story), Punch words and Premise machine in the Workshop, and a /rimshot. Backup 15.
   - Spacing in the Format menu for every kind of writing: free sliders and number fields for the space
@@ -1122,14 +1122,14 @@ Last update: 2026-11-17
 
 ## Open
 
-- CI: the repository is public, so Actions minutes are free. A pull request runs the checks, the export files
+- CI: the repository is private, so Actions minutes are limited. A pull request runs the checks, the export files
   job and Chromium, and skips a change to docs only. "Run workflow" on the Actions tab runs all four browsers;
   run it before each phase gate. The browser jobs run one worker, so the timing tests have the CPU alone.
 - Phase 4: pull request #12 merged on 2026-11-06. The checks by hand for OpenRouter and Groq with a key,
   the in-browser model on WebGPU, and input method typing inside AI text are still open.
-- Supabase: sharing, sealed sync and sprint rooms stay off in each build until the Supabase project exists
-  (`docs/sharing-setup.md`, decision S1): the product owner makes it and gives the URL and the anon key.
-  Then the values go in a committed `.env`, and the host goes in the CSP in `vercel.json`.
+- Supabase: the live project is in the committed `.env` and in the CSP in `vercel.json`. On 2026-11-17 all
+  13 migrations were on it, and each function matched the repository. Migration 0014 (an index only) waits
+  for the product owner to run it (`docs/accounts-setup.md`).
 - Phase 5, Gate 5: a fresh security review found no critical issue. Its high findings are fixed: long quotes,
   share records kept on Replace import, comments read before Stop sharing, and the project limits in
   migration 0004. The minor findings are fixed too: purpose data in the seal, a size cap on opening, safe
@@ -1139,8 +1139,6 @@ Last update: 2026-11-17
 - Chromium stops when a page reads a folder back from IndexedDB in a private profile (Playwright test
   contexts). The folder save browser test uses a profile on disk. Check folder save in a Chrome Incognito
   window by hand.
-- Left for later: an EPUBCheck run in CI. EPUBCheck needs Java and a download from outside npm, so B2 uses
-  its own structure test.
 - Real Safari, by hand with `docs/safari-storage-test.md`: the 14-day storage runs, the offline open, and
   the budget checks (open under 300 ms, plain typing, typing with a moving scene and with 500 shimmering
   runs, each under 50 ms). CI WebKit runs on Linux and holds these to 700, 100, 150 and 120 ms ceilings.
@@ -1156,6 +1154,12 @@ Last update: 2026-11-17
   undo history groups changes within half a second. Ctrl+Shift+J (Justify) and Cmd+, (Subscript) are TipTap's
   keys, and some browsers keep those keys for themselves. Palette colors copy into other apps without their
   color; exports resolve them in pull request B.
+- "A new version waits while the writer works, then loads by itself on the next visit" (pwa.spec.ts) fails
+  about 4 runs in 6 in Chromium, on main too. After the reload, Vlo sends SKIP_WAITING to the waiting
+  service worker, and the worker gets it, but it never activates, and a script that the test runs in that
+  worker never answers. No request of the page or of the worker waits. So the stall is in the browser's
+  start of the waiting worker, and the app does no wrong step. A writer gets the new version when every
+  tab of Vlo closes. CI retries the test once.
 - Firefox in CI: about one `page.goto` in 50 waits 30 s for the load event, then passes on retry. Main showed the
   same thing in Phase 0. Firefox does not run in the build container, so the cause is still open. The CI
   retry covers it.

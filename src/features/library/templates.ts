@@ -246,11 +246,6 @@ export function hasTemplate(project: { templates: readonly Template[] }, templat
   return project.templates.includes(template);
 }
 
-/** A short name for the templates, such as "Novel" or "Novel + Memoir". */
-export function templatesLabel(templates: readonly Template[]): string {
-  return projectDef(templates).label;
-}
-
 function union<T>(lists: readonly (readonly T[] | undefined)[]): T[] {
   const out: T[] = [];
   for (const list of lists) for (const value of list ?? []) if (!out.includes(value)) out.push(value);

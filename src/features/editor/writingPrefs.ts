@@ -216,8 +216,12 @@ export function startWithSimpleTools(): void {
 
 export function setWritingPrefs(change: Partial<WritingPrefs>): void {
   current = { ...current, ...change, zoom: cleanZoom(change.zoom ?? current.zoom) };
+  // Only the switches that the writer set are stored, so a default such as the welcome's Simple tools
+  // still applies to the others.
+  const kept: Partial<Record<keyof WritingPrefs, unknown>> = { ...stored(), ...change };
+  if (change.zoom !== undefined) kept.zoom = current.zoom;
   try {
-    safeStorage()?.setItem(KEY, JSON.stringify(current));
+    safeStorage()?.setItem(KEY, JSON.stringify(kept));
   } catch {
     // Private windows can refuse storage. The switch still works until the page closes.
   }

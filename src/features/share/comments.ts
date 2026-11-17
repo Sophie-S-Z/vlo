@@ -56,9 +56,6 @@ export interface ReaderComment {
 export const MAX_COMMENT = 2000;
 export const MAX_NAME = 80;
 
-/** The most comments that a link holds, as add_comment counts them. */
-export const MAX_COMMENTS = 500;
-
 /**
  * What the check knows about the link: the number of its questions, and on the reader's device the text
  * of each block. The writer's device keeps no bundle, so there the selected words only need to fit their
@@ -169,7 +166,11 @@ export async function sendComment(shareId: string, key: CryptoKey, comment: Read
   return typeof id === 'string' ? id : '';
 }
 
-/** Reads the comments of the writer's link and keeps them in its record on this device. */
+/**
+ * Reads the comments of the writer's link and adds them to its record on this device. A stored comment
+ * that the server no longer gives stays, because the server deletes a link and its comments 30 days after
+ * the link ends.
+ */
 export async function refreshComments(record: ShareRecord): Promise<StoredComment[]> {
   const listed = await readComments(record.id, await importShareKey(record.key), {
     questions: record.questions?.length ?? 0,
@@ -186,6 +187,11 @@ export async function refreshComments(record: ShareRecord): Promise<StoredCommen
     text: c.text,
     at,
   }));
-  await db.shares.update(record.id, { comments, commentsReadAt: clock.now() });
-  return comments;
+  return db.transaction('rw', db.shares, async () => {
+    const listedIds = new Set(comments.map((c) => c.id));
+    const kept = ((await db.shares.get(record.id))?.comments ?? []).filter((c) => !listedIds.has(c.id));
+    const all = [...kept, ...comments].sort((a, b) => a.at - b.at);
+    await db.shares.update(record.id, { comments: all, commentsReadAt: clock.now() });
+    return all;
+  });
 }
