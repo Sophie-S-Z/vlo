@@ -6,8 +6,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
@@ -27,6 +25,7 @@ export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {/* In focus mode, Leave focus mode takes the place of this menu's button. */}
         <DropdownMenuItem onSelect={onFocusMode}>Enter focus mode</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuCheckboxItem
@@ -54,20 +53,18 @@ export function FocusControls({ onFocusMode }: { onFocusMode: () => void }) {
         >
           Hide the text
         </DropdownMenuCheckboxItem>
-        <DropdownMenuRadioGroup
-          aria-label="How to hide the text"
-          value={prefs.hideStyle}
-          onValueChange={(value) => {
-            // Picking a style shows it at once, so the choice turns Hide the text on.
-            setFocusPrefs({ hideStyle: value as HideStyle, hide: true });
-          }}
-        >
-          {HIDE_STYLES.map((style) => (
-            <DropdownMenuRadioItem key={style} value={style}>
-              {HIDE_LABEL[style]}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        {HIDE_STYLES.map((style) => (
+          // Each way to hide is a switch of its own: a second choice of the way that is on shows the text.
+          <DropdownMenuCheckboxItem
+            key={style}
+            checked={prefs.hide && prefs.hideStyle === style}
+            onCheckedChange={(checked) => {
+              setFocusPrefs(checked ? { hideStyle: style, hide: true } : { hide: false });
+            }}
+          >
+            {HIDE_LABEL[style]}
+          </DropdownMenuCheckboxItem>
+        ))}
         <DropdownMenuCheckboxItem
           checked={prefs.hideKeep}
           onCheckedChange={(checked) => {

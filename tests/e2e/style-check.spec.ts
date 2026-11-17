@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+import { openToolMenu, useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -13,8 +14,7 @@ const scene = (page: Page) => page.getByRole('textbox', { name: 'Scene 1' });
 const reason = (page: Page) => page.locator('[data-vlo-cursor-note]');
 
 async function switchStyleCheck(page: Page) {
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Style check' }).click();
+  await useTool(page, 'Style check');
 }
 
 test('the style check is off at first, marks the words, shows why, and goes when it turns off', async ({
@@ -30,8 +30,7 @@ test('the style check is off at first, marks the words, shows why, and goes when
   await page.keyboard.type('It was very cold.');
   // The word count rolls after the save, so the axe check below never meets a half-faded count.
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await expect(page.getByRole('menuitemcheckbox', { name: 'Style check' })).not.toBeChecked();
+  await expect(await openToolMenu(page, 'Style check')).not.toBeChecked();
   await page.keyboard.press('Escape');
 
   await switchStyleCheck(page);

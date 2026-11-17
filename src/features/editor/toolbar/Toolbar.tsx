@@ -1,14 +1,29 @@
 import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
-import { ChevronDown, Ellipsis } from 'lucide-react';
+import {
+  ChevronDown,
+  Ellipsis,
+  Eye,
+  FilePenLine,
+  KeyboardOff,
+  PenLine,
+  Plus,
+  ScanSearch,
+  Type,
+  type LucideIcon,
+} from 'lucide-react';
 import { Toolbar as ToolbarPrimitive } from 'radix-ui';
-import { Fragment, useMemo, useRef, useState } from 'react';
+import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/ui/cn';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
@@ -18,14 +33,19 @@ import type { Template } from '@/lib/db';
 import { command, commandsFor, type EditorCommand, type EditorForm } from '../commands/registry';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { SCRIPT_ROLES } from '../scriptRoles';
+import { modeOf, setMode, useTracking, type EditMode } from '../trackingStore';
 import { setWritingPrefs, useWritingPrefs } from '../writingPrefs';
 import { ToolButton, toolClass } from './ToolButton';
 import { NO_STATE, useCommandState, type CommandState } from './useCommandState';
 
 /*
- * The slim bar above the page. Arrow keys move inside it, so it is one Tab stop. Under 640 px, and at
- * every width at the Simple tool level (F36), the secondary tools move into the More menu. Focus mode
- * hides the bar (data-chrome).
+ * The slim bar above the page (Phase 19, Task A1). Arrow keys move inside it, so it is one Tab stop.
+ *
+ * From 640 px at the Full tool level, the daily tools are buttons and every other tool is in one of three
+ * menus with the names that writers use: Insert, Format and Review. The Mode menu switches between
+ * Editing, Suggesting and Viewing, as in Google Docs. Under 640 px, and at every width at the Simple tool
+ * level (F36), the bar keeps a few buttons and the More menu holds every other tool in the same groups.
+ * Focus mode hides the bar (data-chrome).
  */
 
 interface Segment {
@@ -35,109 +55,152 @@ interface Segment {
   wide?: boolean;
 }
 
-interface Layout {
-  /** The block style menu (prose only). */
-  blockMenu: readonly string[];
-  /** The alignment menu (prose only). */
-  alignMenu: readonly string[];
-  segments: readonly Segment[];
-  /** Always in the More menu. */
-  more: readonly string[];
+/** A named group of tools in a menu. */
+interface Section {
+  label: string;
+  tools: readonly string[];
 }
+
+type MenuId = 'insert' | 'format' | 'review';
+
+interface Layout {
+  /** The block style menu. */
+  blockMenu: readonly string[];
+  segments: readonly Segment[];
+  menus: Readonly<Record<MenuId, readonly Section[]>>;
+}
+
+const FIND: Section = { label: 'Find', tools: ['find', 'replace'] };
+const LISTEN: Section = { label: 'Listen and speak', tools: ['read-aloud', 'speak'] };
+const CHECKS: Section = { label: 'Checks', tools: ['style-check', 'continuity-check', 'track-changes'] };
+const SHOW: Section = { label: 'Show', tools: ['show-ai-text', 'show-codex-names'] };
+const HELP: Section = { label: 'Help', tools: ['print', 'shortcuts'] };
+const REVIEW: readonly Section[] = [FIND, LISTEN, CHECKS, SHOW, HELP];
 
 const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
   prose: {
     blockMenu: ['paragraph', 'heading-2', 'heading-3', 'quote', 'bullets', 'numbers'],
-    alignMenu: ['align-left', 'align-center', 'align-right', 'align-justify'],
     segments: [
       { tools: ['undo', 'redo'] },
       { tools: ['bold', 'italic'] },
-      { tools: ['underline', 'strike'], wide: true },
-      { tools: ['font', 'color', 'highlight', 'gradient'], wide: true },
-      { tools: ['characters', 'footnote'], wide: true },
+      { tools: ['link', 'comment'], wide: true },
     ],
-    more: [
-      'link',
-      'comment',
-      'track-changes',
-      'superscript',
-      'subscript',
-      'size',
-      'spacing',
-      'first-line-indent',
-      'drop-cap',
-      'scene-break',
-      'math',
-      'math-block',
-      'image',
-      'find',
-      'replace',
-      'read-aloud',
-      'speak',
-      'show-ai-text',
-      'show-codex-names',
-      'style-check',
-      'continuity-check',
-      'clear',
-      'shortcuts',
-    ],
+    menus: {
+      insert: [
+        { label: 'Notes', tools: ['footnote'] },
+        { label: 'Media', tools: ['image', 'math', 'math-block'] },
+        { label: 'Breaks and characters', tools: ['scene-break', 'characters'] },
+      ],
+      format: [
+        {
+          label: 'Text',
+          tools: [
+            'underline',
+            'strike',
+            'font',
+            'size',
+            'color',
+            'highlight',
+            'gradient',
+            'superscript',
+            'subscript',
+          ],
+        },
+        {
+          label: 'Paragraph',
+          tools: [
+            'align-left',
+            'align-center',
+            'align-right',
+            'align-justify',
+            'spacing',
+            'first-line-indent',
+            'drop-cap',
+          ],
+        },
+        { label: 'Clear', tools: ['clear'] },
+      ],
+      review: REVIEW,
+    },
   },
   poem: {
     blockMenu: [],
-    alignMenu: [],
     segments: [
       { tools: ['undo', 'redo'] },
       { tools: ['bold', 'italic'], wide: true },
-      { tools: ['underline', 'strike'], wide: true },
-      { tools: ['font', 'color', 'highlight', 'gradient'], wide: true },
-      { tools: ['characters', 'footnote', 'math'], wide: true },
+      { tools: ['comment'], wide: true },
     ],
-    more: [
-      'comment',
-      'track-changes',
-      'superscript',
-      'subscript',
-      'size',
-      'find',
-      'replace',
-      'read-aloud',
-      'speak',
-      'show-ai-text',
-      'show-codex-names',
-      'style-check',
-      'continuity-check',
-      'clear',
-      'shortcuts',
-    ],
+    menus: {
+      insert: [
+        { label: 'Notes', tools: ['footnote'] },
+        { label: 'Media', tools: ['math'] },
+        { label: 'Characters', tools: ['characters'] },
+      ],
+      format: [
+        {
+          label: 'Text',
+          tools: [
+            'underline',
+            'strike',
+            'font',
+            'size',
+            'color',
+            'highlight',
+            'gradient',
+            'superscript',
+            'subscript',
+          ],
+        },
+        { label: 'Clear', tools: ['clear'] },
+      ],
+      review: REVIEW,
+    },
   },
   script: {
     blockMenu: SCRIPT_ROLES.map((role) => `role-${role}`),
-    alignMenu: [],
     segments: [
       { tools: ['undo', 'redo'] },
       { tools: ['bold', 'italic'] },
-      { tools: ['underline', 'characters'], wide: true },
+      { tools: ['comment'], wide: true },
     ],
-    more: [
-      'comment',
-      'track-changes',
-      'find',
-      'replace',
-      'read-aloud',
-      'speak',
-      'show-ai-text',
-      'show-codex-names',
-      'style-check',
-      'continuity-check',
-      'clear',
-      'shortcuts',
-    ],
+    menus: {
+      insert: [{ label: 'Characters', tools: ['characters'] }],
+      format: [
+        { label: 'Text', tools: ['underline'] },
+        { label: 'Clear', tools: ['clear'] },
+      ],
+      review: REVIEW,
+    },
   },
 };
 
-/** Phones show no separators: the six phone tools then fit one row at 360 px. */
-function Separator() {
-  return <ToolbarPrimitive.Separator className="mx-0.5 h-6 w-px shrink-0 bg-rule max-sm:hidden" />;
+const MENU_LABELS: Readonly<Record<MenuId, string>> = {
+  insert: 'Insert',
+  format: 'Format',
+  review: 'Review',
+};
+const MENU_IDS: readonly MenuId[] = ['insert', 'format', 'review'];
+
+const MODES: readonly { value: EditMode; label: string; icon: LucideIcon; hint: string }[] = [
+  { value: 'editing', label: 'Editing', icon: PenLine, hint: 'Change the text directly' },
+  { value: 'suggesting', label: 'Suggesting', icon: FilePenLine, hint: 'Each change waits for Accept' },
+  { value: 'viewing', label: 'Viewing', icon: Eye, hint: 'Read the text with no changes' },
+];
+
+/** Phones show no separators: the phone tools then fit one row at 360 px. */
+function Separator({ className }: { className?: string }) {
+  return (
+    <ToolbarPrimitive.Separator className={cn('mx-0.5 h-6 w-px shrink-0 bg-rule max-sm:hidden', className)} />
+  );
+}
+
+/** The menus with each tool of this template only, such as the private-name tools of a memoir. */
+function withOwnTools(menus: Layout['menus'], own: readonly EditorCommand[]): Layout['menus'] {
+  const insert = own.filter((c) => c.group === 'insert').map((c) => c.id);
+  const review = own.filter((c) => c.group !== 'insert').map((c) => c.id);
+  const add = (sections: readonly Section[], tools: string[]) =>
+    tools.length > 0 ? [...sections, { label: 'For this project', tools }] : sections;
+  return { insert: add(menus.insert, insert), format: menus.format, review: add(menus.review, review) };
 }
 
 /** The formatting toolbar. */
@@ -152,28 +215,27 @@ export function Toolbar({
 }) {
   const layout = LAYOUTS[kind];
   const simple = useWritingPrefs().toolLevel === 'simple';
-  // The tools of this template only, such as the private-name tools of a memoir, end the More menu.
-  const own = useMemo(
+  const tracking = useTracking();
+  const mode = modeOf(tracking);
+  const menus = useMemo(
     () =>
-      commandsFor(kind, templates)
-        .filter((c) => c.templates !== undefined)
-        .map((c) => c.id),
-    [kind, templates],
+      withOwnTools(
+        layout.menus,
+        commandsFor(kind, templates).filter((c) => c.templates !== undefined),
+      ),
+    [layout, kind, templates],
   );
   const all = useMemo(() => {
     const ids = [
       ...layout.blockMenu,
-      ...layout.alignMenu,
       ...layout.segments.flatMap((s) => s.tools),
-      ...layout.more,
-      ...own,
+      ...MENU_IDS.flatMap((id) => menus[id].flatMap((s) => s.tools)),
       ...(kind === 'poem' ? ['hang-less', 'hang-more'] : []),
     ];
     return ids.map(command);
-  }, [layout, kind, own]);
+  }, [layout, menus, kind]);
   const state = useCommandState(editor, all);
   const at = (id: string) => state[id] ?? NO_STATE;
-  const more = useRef<HTMLButtonElement>(null);
   // A tool chosen from a menu runs after the menu has closed and given focus back.
   const pending = useRef<EditorCommand | null>(null);
 
@@ -201,13 +263,10 @@ export function Toolbar({
 
   const blockLabel =
     layout.blockMenu.map(command).find((c) => at(c.id).active)?.label ?? command('paragraph').label;
-  const alignActive = layout.alignMenu.map(command).find((c) => at(c.id).active) ?? command('align-left');
-  const AlignIcon = alignActive.icon;
-  const narrowOnly = layout.segments.filter((s) => s.wide).flatMap((s) => s.tools);
-  if (layout.alignMenu.length > 0) narrowOnly.push(...layout.alignMenu);
+  const wideTools = layout.segments.filter((s) => s.wide).flatMap((s) => s.tools);
   const segments = simple ? layout.segments.filter((s) => !s.wide) : layout.segments;
 
-  const menuItem = (id: string, narrow = false) => {
+  const menuItem = (id: string) => {
     const cmd = command(id);
     const s = at(id);
     const Icon = cmd.icon;
@@ -227,24 +286,61 @@ export function Toolbar({
     const select = () => {
       pending.current = cmd;
     };
-    const className = cn(narrow && 'sm:hidden');
     // Toggles show a check, so the menu says which formats are on.
     return cmd.isActive && cmd.kind === 'run' ? (
-      <DropdownMenuCheckboxItem
-        key={id}
-        checked={s.active}
-        disabled={!s.enabled}
-        onSelect={select}
-        className={className}
-      >
+      <DropdownMenuCheckboxItem key={id} checked={s.active} disabled={!s.enabled} onSelect={select}>
         {body}
       </DropdownMenuCheckboxItem>
     ) : (
-      <DropdownMenuItem key={id} disabled={!s.enabled} onSelect={select} className={cn('pl-9', className)}>
+      <DropdownMenuItem key={id} disabled={!s.enabled} onSelect={select} className="pl-9">
         {body}
       </DropdownMenuItem>
     );
   };
+
+  const sections = (list: readonly Section[]) =>
+    list.map((section, i) => (
+      <Fragment key={section.label}>
+        {i > 0 && <DropdownMenuSeparator />}
+        <DropdownMenuGroup aria-label={section.label}>
+          <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+          {section.tools.map((id) => menuItem(id))}
+        </DropdownMenuGroup>
+      </Fragment>
+    ));
+
+  const modeChoices =
+    tracking.projectId === null ? null : (
+      <DropdownMenuRadioGroup
+        value={mode}
+        onValueChange={(value) => {
+          void setMode(value as EditMode).catch(() => undefined);
+        }}
+      >
+        {MODES.map((m) => (
+          <DropdownMenuRadioItem key={m.value} value={m.value}>
+            <m.icon aria-hidden="true" className="size-4 text-muted" />
+            <span className="grid flex-1">
+              <span>{m.label}</span>
+              <span className="text-xs text-muted">{m.hint}</span>
+            </span>
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    );
+  const ModeIcon = MODES.find((m) => m.value === mode)?.icon ?? PenLine;
+  const modeLabel = MODES.find((m) => m.value === mode)?.label ?? 'Editing';
+
+  const levelSwitch = (
+    <DropdownMenuItem
+      className="pl-9"
+      onSelect={() => {
+        setWritingPrefs({ toolLevel: simple ? 'full' : 'simple' });
+      }}
+    >
+      {simple ? 'Show all tools' : 'Show fewer tools'}
+    </DropdownMenuItem>
+  );
 
   return (
     <>
@@ -252,81 +348,39 @@ export function Toolbar({
         aria-label="Formatting"
         data-chrome=""
         data-vlo-toolbar=""
-        className="flex flex-wrap items-center gap-0.5 border-b border-rule bg-bg px-1 py-1"
+        className="@container flex flex-wrap items-center gap-0.5 border-b border-rule bg-bg px-1 py-1"
       >
         {segments[0] && <SegmentButtons segment={segments[0]} at={at} onRun={run} />}
 
         {layout.blockMenu.length > 0 && (
           <>
             <Separator />
-            <DropdownMenu modal={false}>
-              <ToolbarPrimitive.Button asChild>
-                <DropdownMenuTrigger
-                  aria-label={`Text style: ${blockLabel}`}
-                  title="Text style"
-                  onMouseDown={(event) => {
-                    // Radix opens the menu on pointer down; keep the editor selection.
-                    if (event.button === 0) event.preventDefault();
-                  }}
-                  className={cn(toolClass, 'w-auto gap-1 px-2 text-sm text-text pointer-fine:w-auto')}
-                >
+            <ToolMenu
+              trigger={
+                <>
                   <span className="max-w-24 truncate">{blockLabel}</span>
                   <ChevronDown aria-hidden="true" className="size-3.5 text-muted" />
-                </DropdownMenuTrigger>
-              </ToolbarPrimitive.Button>
-              <DropdownMenuContent
-                align="start"
-                onCloseAutoFocus={(event) => {
-                  closeMenu(event, null);
-                }}
-                onEscapeKeyDown={() => {
-                  focusText(editor);
-                }}
-              >
-                {layout.blockMenu.map((id) => menuItem(id))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </>
+              }
+              label={`Text style: ${blockLabel}`}
+              title="Text style"
+              triggerClass="w-auto gap-1 px-2 text-sm text-text pointer-fine:w-auto"
+              onClose={(event) => {
+                closeMenu(event, null);
+              }}
+              editor={editor}
+            >
+              {layout.blockMenu.map((id) => menuItem(id))}
+            </ToolMenu>
           </>
         )}
 
         {segments.slice(1).map((segment) => (
           <Fragment key={segment.tools.join()}>
-            <Separator />
+            <Separator className={cn(segment.wide && 'max-sm:hidden')} />
             <SegmentButtons segment={segment} at={at} onRun={run} />
           </Fragment>
         ))}
-
-        {layout.alignMenu.length > 0 && !simple && (
-          <>
-            <Separator />
-            <DropdownMenu modal={false}>
-              <ToolbarPrimitive.Button asChild>
-                <DropdownMenuTrigger
-                  aria-label={`Alignment: ${alignActive.label}`}
-                  title="Alignment"
-                  onMouseDown={(event) => {
-                    if (event.button === 0) event.preventDefault();
-                  }}
-                  className={cn(toolClass, 'w-auto gap-0.5 px-1.5 max-sm:hidden pointer-fine:w-auto')}
-                >
-                  <AlignIcon aria-hidden="true" className="size-4" />
-                  <ChevronDown aria-hidden="true" className="size-3 text-muted" />
-                </DropdownMenuTrigger>
-              </ToolbarPrimitive.Button>
-              <DropdownMenuContent
-                align="start"
-                onCloseAutoFocus={(event) => {
-                  closeMenu(event, null);
-                }}
-                onEscapeKeyDown={() => {
-                  focusText(editor);
-                }}
-              >
-                {layout.alignMenu.map((id) => menuItem(id))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        )}
 
         {kind === 'poem' && (
           <>
@@ -349,47 +403,117 @@ export function Toolbar({
           </>
         )}
 
-        <Separator />
-        <DropdownMenu modal={false}>
-          <ToolbarPrimitive.Button asChild>
-            <DropdownMenuTrigger
-              ref={more}
-              aria-label="More tools"
-              title="More tools"
-              onMouseDown={(event) => {
-                if (event.button === 0) event.preventDefault();
-              }}
-              className={toolClass}
-            >
-              <Ellipsis aria-hidden="true" className="size-4" />
-            </DropdownMenuTrigger>
-          </ToolbarPrimitive.Button>
-          <DropdownMenuContent
-            align="end"
-            className="max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-60 overflow-y-auto"
-            onCloseAutoFocus={(event) => {
-              closeMenu(event, more.current);
-            }}
-            onEscapeKeyDown={() => {
-              focusText(editor);
-            }}
-          >
-            {narrowOnly.map((id) => menuItem(id, !simple))}
-            {narrowOnly.length > 0 && <DropdownMenuSeparator className={cn(!simple && 'sm:hidden')} />}
-            {layout.more.map((id) => menuItem(id))}
-            {own.length > 0 && <DropdownMenuSeparator />}
-            {own.map((id) => menuItem(id))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="pl-9"
-              onSelect={() => {
-                setWritingPrefs({ toolLevel: simple ? 'full' : 'simple' });
-              }}
-            >
-              {simple ? 'Show all tools' : 'Show fewer tools'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* From 640 px at the Full level: the three named menus and the Mode menu. */}
+        {!simple && (
+          <>
+            <Separator />
+            {MENU_IDS.map((id) => (
+              <ToolMenu
+                key={id}
+                trigger={
+                  <>
+                    <span className="@max-[40rem]:sr-only">{MENU_LABELS[id]}</span>
+                    <MenuIcon id={id} />
+                    <ChevronDown aria-hidden="true" className="size-3.5 text-muted" />
+                  </>
+                }
+                label={MENU_LABELS[id]}
+                triggerClass="w-auto gap-0.5 px-1.5 text-sm text-text max-sm:hidden pointer-fine:w-auto"
+                contentClass="max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-64 overflow-y-auto"
+                onClose={closeMenu}
+                editor={editor}
+              >
+                {sections(menus[id])}
+                {id === 'review' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {levelSwitch}
+                  </>
+                )}
+              </ToolMenu>
+            ))}
+            {modeChoices && (
+              <>
+                <Separator />
+                <ToolMenu
+                  trigger={
+                    <>
+                      <ModeIcon aria-hidden="true" className="size-4" />
+                      <span className="@max-[44rem]:sr-only">{modeLabel}</span>
+                      <ChevronDown aria-hidden="true" className="size-3.5 text-muted" />
+                    </>
+                  }
+                  label={`Mode: ${modeLabel}`}
+                  title="Mode"
+                  align="end"
+                  triggerClass={cn(
+                    'ml-auto w-auto gap-0.5 px-1.5 text-sm max-sm:hidden pointer-fine:w-auto',
+                    mode === 'editing' ? 'text-text' : 'text-accent-text',
+                  )}
+                  contentClass="min-w-64"
+                  onClose={(event) => {
+                    closeMenu(event, null);
+                  }}
+                  editor={editor}
+                >
+                  {modeChoices}
+                </ToolMenu>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Under 640 px, and at the Simple level: one More menu with the same groups. */}
+        <Separator className={cn(!simple && 'sm:hidden')} />
+        <ToolMenu
+          trigger={<Ellipsis aria-hidden="true" className="size-4" />}
+          label="More tools"
+          title="More tools"
+          align="end"
+          triggerClass={cn(!simple && 'sm:hidden')}
+          contentClass="max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-64 overflow-y-auto"
+          onClose={closeMenu}
+          editor={editor}
+        >
+          {wideTools.length > 0 && (
+            <>
+              <DropdownMenuGroup aria-label="Quick tools">
+                {wideTools.map((id) => menuItem(id))}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          {MENU_IDS.map((id) => (
+            <Fragment key={id}>
+              <DropdownMenuLabel className="pt-3 text-sm text-text">{MENU_LABELS[id]}</DropdownMenuLabel>
+              {sections(menus[id])}
+              <DropdownMenuSeparator />
+            </Fragment>
+          ))}
+          {modeChoices && (
+            <>
+              <DropdownMenuLabel className="pt-3 text-sm text-text">Mode</DropdownMenuLabel>
+              {modeChoices}
+              <DropdownMenuSeparator />
+            </>
+          )}
+          {levelSwitch}
+        </ToolMenu>
+        {/* Only while a phone keyboard is open (phoneTyping.ts): the bar sits on the keyboard. */}
+        <ToolbarPrimitive.Button
+          type="button"
+          aria-label="Hide keyboard"
+          title="Hide keyboard"
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={() => {
+            editor.commands.blur();
+          }}
+          className={cn(toolClass, 'hidden [html[data-vlo-typing]_&]:inline-flex')}
+        >
+          <KeyboardOff aria-hidden="true" className="size-4" />
+        </ToolbarPrimitive.Button>
       </ToolbarPrimitive.Root>
       {kind === 'poem' && (
         <p role="status" className="sr-only">
@@ -397,6 +521,69 @@ export function Toolbar({
         </p>
       )}
     </>
+  );
+}
+
+/** The small icon after a menu name, shown only when the name hides in a narrow column. */
+const MENU_ICONS: Readonly<Record<MenuId, LucideIcon>> = { insert: Plus, format: Type, review: ScanSearch };
+
+function MenuIcon({ id }: { id: MenuId }) {
+  const Icon = MENU_ICONS[id];
+  return <Icon aria-hidden="true" className="hidden size-4 @max-[40rem]:block" />;
+}
+
+/** A toolbar button that opens a menu. Pressing it keeps the editor's selection. */
+function ToolMenu({
+  trigger,
+  label,
+  title,
+  triggerClass,
+  contentClass,
+  align = 'start',
+  onClose,
+  editor,
+  children,
+}: {
+  trigger: ReactNode;
+  label: string;
+  title?: string;
+  triggerClass?: string;
+  contentClass?: string;
+  align?: 'start' | 'end';
+  onClose: (event: Event, trigger: HTMLButtonElement | null) => void;
+  editor: Editor;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  return (
+    <DropdownMenu modal={false}>
+      <ToolbarPrimitive.Button asChild>
+        <DropdownMenuTrigger
+          ref={ref}
+          aria-label={label}
+          title={title ?? label}
+          onMouseDown={(event) => {
+            // Radix opens the menu on pointer down; keep the editor selection.
+            if (event.button === 0) event.preventDefault();
+          }}
+          className={cn(toolClass, triggerClass)}
+        >
+          {trigger}
+        </DropdownMenuTrigger>
+      </ToolbarPrimitive.Button>
+      <DropdownMenuContent
+        align={align}
+        className={contentClass}
+        onCloseAutoFocus={(event) => {
+          onClose(event, ref.current);
+        }}
+        onEscapeKeyDown={() => {
+          focusText(editor);
+        }}
+      >
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

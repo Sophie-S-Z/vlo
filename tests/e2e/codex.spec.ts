@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -44,8 +45,7 @@ test('a Codex entry marks its names in the text, shows on the cursor, and counts
   await expect(scene(page).locator('[spellcheck="false"]')).toHaveText(['Mira', 'Mi']);
   await expect(scene(page).locator('.vlo-codex')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Show Codex names' }).click();
+  await useTool(page, 'Show Codex names');
   const names = scene(page).locator('.vlo-codex');
   await expect(names).toHaveText(['Mira', 'Mi']);
   await names.first().click();
@@ -93,8 +93,7 @@ test('F65: a change at Scene 2 shows on the cursor in Scene 2, and not in Scene 
   expect(await seriousIssues(page)).toEqual([]);
 
   await views(page).getByRole('link', { name: 'Write' }).click();
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Show Codex names' }).click();
+  await useTool(page, 'Show Codex names');
   const note = page.locator('[data-vlo-cursor-note]');
   await binder.getByRole('button', { name: 'Scene 2', exact: true }).click();
   await second.locator('.vlo-codex').click();

@@ -435,9 +435,9 @@ export function ProjectPage() {
   const actions: CommandAction[] = [
     {
       id: 'focus',
-      label: 'Enter focus mode',
+      label: focusMode ? 'Leave focus mode' : 'Enter focus mode',
       run: () => {
-        changeFocusMode(true);
+        changeFocusMode(!focusMode);
       },
     },
     {

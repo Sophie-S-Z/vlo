@@ -35,6 +35,8 @@ import { cleanPageFormat, PAGE_SIZES } from './format/page';
 import { docParts, docText, refreshItemText, writeItemText } from './itemText';
 import { ManuscriptContext, type ManuscriptSettings } from './manuscript';
 import { PageControl } from './PageControl';
+import { PageLookControl } from './PageLook';
+import { TargetRing } from './TargetRing';
 import { SaveStatus } from './SaveStatus';
 import { trackSaves, type SaveState } from './saveTracker';
 import { TAB_ORIGIN } from './tabSync';
@@ -248,7 +250,10 @@ export function EditorPane({
           data-script-style={kind === 'script' ? scriptStyle : undefined}
         >
           {/* One row (Phase 17 decision S2): the title, then its counts and the item's quiet icon tools. */}
-          <header className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <header
+            data-typing-hide
+            className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1"
+          >
             <h2 className="min-w-0 font-display text-2xl font-semibold [overflow-wrap:anywhere]">
               {item.title}
             </h2>
@@ -261,6 +266,7 @@ export function EditorPane({
                 />
                 <SaveStatus state={save} />
                 <div className="-mr-2 flex flex-wrap items-center">
+                  {!beside && <TargetRing item={item} />}
                   <PageControl
                     page={page}
                     onPage={(next) => onSettings?.({ page: next })}
@@ -277,6 +283,7 @@ export function EditorPane({
                         : undefined
                     }
                   />
+                  {kind === 'prose' && <PageLookControl projectFont={font} />}
                   {!beside && (
                     <>
                       <ScenePicker scene={scene} onScene={(next) => onSettings?.({ scene: next })} />

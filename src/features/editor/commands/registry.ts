@@ -34,6 +34,7 @@ import {
   List,
   ListOrdered,
   Pilcrow,
+  Printer,
   Quote,
   Replace,
   Redo2,
@@ -963,6 +964,20 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     run: (e) => e.commands.clearFormatting(),
+  },
+  {
+    kind: 'run',
+    id: 'print',
+    label: 'Print',
+    icon: Printer,
+    group: 'help',
+    forms: ALL,
+    keywords: ['paper', 'printer', 'pdf'],
+    // The print sheet in editor.css prints the open text only. The browser keeps Mod-P for itself.
+    run: () => {
+      window.print();
+      return true;
+    },
   },
   {
     kind: 'panel',

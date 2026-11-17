@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 26,
-  date: '2026-11-12',
+  version: 27,
+  date: '2026-11-17',
   guide: [
     {
       title: 'Start a project',
@@ -44,6 +44,25 @@ export const HELP = {
       ],
     },
     {
+      title: 'Use the menus above the text',
+      steps: [
+        'Insert holds footnotes, images, math, scene breaks and special characters.',
+        'Format holds the text styles, the fonts, the colors and the paragraph styles.',
+        'Review holds Find, Read aloud, Speak to write, the checks and Print. Print shows only the open text.',
+        'Mode, at the end of the toolbar, changes between Editing, Suggesting and Viewing. In Viewing, the text cannot change.',
+        'On a phone, these menus are in More tools. While the keyboard is open, the toolbar sits on top of it.',
+      ],
+    },
+    {
+      title: 'Make the page your own',
+      steps: [
+        'An item opens with the cursor where you left it.',
+        'In prose, choose Page look (next to the word count). Set the text width, the paragraphs, the line spacing and a screen font.',
+        'A look changes this screen only. Choose Save this look to keep it with a name.',
+        'Choose Word target to set the words for one item. A ring fills as you write, and the binder shows how far the item is.',
+      ],
+    },
+    {
       title: 'Write and find your text',
       steps: [
         'Vlo saves each change on this device within a second. The save status shows "Saved".',
@@ -51,7 +70,7 @@ export const HELP = {
         'Press Ctrl+K (Cmd+K on a Mac) to find an item by its title or its text, or to run an action.',
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
         'To make a note to yourself, select the words and choose Comment. Comments show under the text, and exports leave them out.',
-        'In an English project, More tools has Style check. It marks repeated words, filler words, cliches and long sentences. Put the cursor in the marked words to see why. The check never changes your text.',
+        'In an English project, Review has Style check. It marks repeated words, filler words, cliches and long sentences. Put the cursor in the marked words to see why. The check never changes your text.',
       ],
     },
     {
@@ -68,7 +87,7 @@ export const HELP = {
     {
       title: 'Hear your text read aloud',
       steps: [
-        'Choose Read aloud in More tools. Vlo reads from the cursor, or only the selected words.',
+        'Choose Read aloud in Review. Vlo reads from the cursor, or only the selected words.',
         'Vlo uses only the voices on this device, so your text stays here.',
         'When the Codex has characters, turn on Table read. Each character speaks in a voice of their own, and you can pick each voice.',
       ],
@@ -76,7 +95,7 @@ export const HELP = {
     {
       title: 'Write a poem in a form',
       steps: [
-        'In a poem, choose More tools, then Craft labels.',
+        'In a poem, choose Review, then Craft labels.',
         'Pick a form above the poem: sonnet, villanelle, ghazal, haiku, pantoum or sestina.',
         'Vlo lists each line that breaks the form: the line count, the rhyme, a refrain, an end word or the syllables. Choose a note to go to its line.',
         'Rhyme and syllables are checked in English. The lines, stanzas, refrains and end words are checked in every language.',
@@ -114,7 +133,7 @@ export const HELP = {
     {
       title: 'Revise with Track changes',
       steps: [
-        'Choose Track changes in More tools. New words are underlined and deleted words are struck through.',
+        'Choose Mode, then Suggesting. New words are underlined and deleted words are struck through.',
         'Pick a pass under the text. Each pass has its own color, so you can see each round of revision.',
         'Accept or reject each change under the text, or all the changes of a pass at once.',
         'Exports, shares and word counts use the text as if you accepted every change.',
@@ -199,7 +218,7 @@ export const HELP = {
       title: 'Hide the text from people near you',
       steps: [
         'Choose Focus, then Hide the text, or press Ctrl+Shift+. (Command+Shift+. on a Mac). While the text is hidden, an eye button next to the timer shows it again.',
-        'In the Focus menu, pick Blur the words or Cover the words with bars.',
+        'In the Focus menu, pick Blur the words or Cover the words with bars. Pick it again to show the text.',
         'Turn on Keep my paragraph clear to read only the paragraph that you type in. When you leave the text, it hides too.',
         'Only the screen changes. Your words, the word count and each export stay the same, and a screen reader still reads the text.',
       ],
@@ -259,7 +278,7 @@ export const HELP = {
       steps: [
         'Every project has the Outline: a table and index cards of the binder, with synopses, statuses and labels.',
         'Every project has the Codex: its characters, places, things and lore, with other names and a note.',
-        'The browser does not mark Codex names as spelling mistakes. Show Codex names in More tools underlines them.',
+        'The browser does not mark Codex names as spelling mistakes. Show Codex names in Review underlines them.',
         'Exports and shares leave the Codex out. Only the Reader panel of the Assistant sends the notes of the names in its text.',
         'Open the Outline and the Codex from the More tab, or from the command menu.',
       ],
@@ -268,7 +287,7 @@ export const HELP = {
       title: 'Keep the facts of the story straight',
       steps: [
         'When an entry changes in the story, open it and choose Add a change, such as “Loses her left eye” from Scene 4. The change holds from that scene on. The cursor line and the Reader panel show the entry as it is at the open scene.',
-        'More tools also has Continuity check, which is off at first. In an English project, it marks a capital word in a sentence that is one letter away from a Codex name, such as “Mria” for “Mira”. In every project, it marks a name after the scene where its entry leaves the story. Put the cursor in the mark to see why, and choose Not a problem to keep it.',
+        'Review also has Continuity check, which is off at first. In an English project, it marks a capital word in a sentence that is one letter away from a Codex name, such as “Mria” for “Mira”. In every project, it marks a name after the scene where its entry leaves the story. Put the cursor in the mark to see why, and choose Not a problem to keep it.',
         'In the binder, open the menu of a scene and choose Story date. Type a year, a month or a day, such as 1994-07. In a series, the Series page shows the dated scenes of every book on one Timeline, with the undated scenes after them.',
       ],
     },
@@ -315,7 +334,7 @@ export const HELP = {
     {
       title: 'Cite a source',
       steps: [
-        'In Open writing, a memoir, an essay, an article or a research paper, choose Cite a source in More tools, or type /cite.',
+        'In Open writing, a memoir, an essay, an article or a research paper, choose Cite a source in Insert, or type /cite.',
         'Add a source, or import a BibTeX or CSL JSON file from Zotero or another reference manager.',
         'Type a page if you want one, then choose the source. The citation goes in at the cursor.',
         'Style sets APA 7, MLA 9 or Chicago author-date for each citation in the project. Type each title in the case that your style asks for.',
@@ -325,7 +344,7 @@ export const HELP = {
     {
       title: 'Speak to write',
       steps: [
-        'Put the cursor where the words go, then choose Speak to write in More tools, the / menu or the command menu.',
+        'Put the cursor where the words go, then choose Speak to write in Review, the / menu or the command menu.',
         'Choose Speak and talk. Choose Stop and write, or stop after 30 seconds, and your words go in at the cursor.',
         'The first time, Vlo downloads the speech model. The model runs on this device, the audio never leaves it, and Vlo does not keep the audio.',
         'The authorship record counts these words as dictated, and they are your own words, with no AI mark.',
@@ -334,7 +353,7 @@ export const HELP = {
     {
       title: 'Record a memory out loud',
       steps: [
-        'In a memoir, put the cursor in a memory and choose Record a memory in More tools or the command menu.',
+        'In a memoir, put the cursor in a memory and choose Record a memory in Insert or the command menu.',
         'A card asks a question about one stage of your life. Choose Next or Shuffle for another question.',
         'Choose Record, answer out loud, then choose Stop. The recording stays with the memory, in its research files.',
         'Choose Turn into text to put your words in at the cursor. The first time, Vlo downloads the speech model, and the audio never leaves this device.',

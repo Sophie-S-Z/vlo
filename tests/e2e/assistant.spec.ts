@@ -3,6 +3,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { openView } from './support/views';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -249,8 +250,7 @@ test('a Co-writer draft goes in with the AI mark, one Undo takes it out, and the
   await saved(page);
 
   // "Show AI text" hides the tint, and the mark stays in the text.
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name: 'Show AI text' }).click();
+  await useTool(page, 'Show AI text');
   await expect(text(page)).not.toHaveAttribute('data-show-ai', '');
   await expect(mark).toHaveCount(1);
 

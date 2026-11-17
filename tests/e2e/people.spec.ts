@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { editorSelection } from './support/selection';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -67,8 +68,7 @@ async function openExport(page: Page) {
 }
 
 async function moreTool(page: Page, name: string) {
-  await page.getByRole('button', { name: 'More tools' }).click();
-  await page.getByRole('menuitemcheckbox', { name }).click();
+  await useTool(page, name);
 }
 
 test('US06: Mark all, Show aliases and a share-safe export with no real name', async ({ page }) => {

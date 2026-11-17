@@ -10,9 +10,14 @@ import type { Pass, Tracking } from '@/lib/db';
 export interface TrackingState extends Tracking {
   /** The open project, or null on other screens. */
   projectId: string | null;
+  /** Viewing mode: the text is read only on this screen. It is not stored, so a new visit starts in Editing. */
+  viewing: boolean;
 }
 
-const OFF: TrackingState = { projectId: null, on: false, pass: 1 };
+/** The three modes of the Mode menu, as in Google Docs. Suggesting is Track changes. */
+export type EditMode = 'editing' | 'suggesting' | 'viewing';
+
+const OFF: TrackingState = { projectId: null, on: false, pass: 1, viewing: false };
 let state: TrackingState = OFF;
 const listeners = new Set<() => void>();
 
@@ -29,7 +34,8 @@ export function getTracking(): TrackingState {
 export function setProjectTracking(projectId: string, tracking: Tracking | undefined): void {
   const on = tracking?.on ?? false;
   const pass = tracking?.pass ?? 1;
-  if (projectId !== state.projectId || on !== state.on || pass !== state.pass) set({ projectId, on, pass });
+  if (projectId !== state.projectId) set({ projectId, on, pass, viewing: false });
+  else if (on !== state.on || pass !== state.pass) set({ ...state, on, pass });
 }
 
 /** Clears the state when the writer leaves the project. */
@@ -44,6 +50,23 @@ export async function saveTracking(change: Partial<Tracking>): Promise<void> {
   const next: Tracking = { on: change.on ?? on, pass: change.pass ?? pass };
   setProjectTracking(projectId, next);
   await updateProjectSettings(projectId, { tracking: next });
+}
+
+/** The mode that the Mode menu shows. */
+export function modeOf(tracking: TrackingState): EditMode {
+  return tracking.viewing ? 'viewing' : tracking.on ? 'suggesting' : 'editing';
+}
+
+/** Changes the mode. Editing and Suggesting store the Track changes switch; Viewing keeps it as it is. */
+export async function setMode(mode: EditMode): Promise<void> {
+  if (state.projectId === null) return;
+  if (mode === 'viewing') {
+    if (!state.viewing) set({ ...state, viewing: true });
+    return;
+  }
+  if (state.viewing) set({ ...state, viewing: false });
+  const on = mode === 'suggesting';
+  if (on !== state.on) await saveTracking({ on });
 }
 
 export function subscribeTracking(listener: () => void): () => void {

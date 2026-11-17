@@ -1,6 +1,6 @@
 import { Bot, Minimize2, PanelLeft, PanelRight } from 'lucide-react';
 import { useId, useState, type CSSProperties, type ReactNode } from 'react';
-import { safeStorage } from '@/app/preferences';
+import { useWritingPrefs } from '@/features/editor/writingPrefs';
 import { useMediaQuery } from '@/app/useMediaQuery';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -14,16 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/ui/dialog';
-
-const WIDTH_KEY = 'vlo:pageWidth';
-export const MIN_WIDTH = 56;
-export const MAX_WIDTH = 90;
-const DEFAULT_WIDTH = 68;
-
-function loadWidth(): number {
-  const stored = Number(safeStorage()?.getItem(WIDTH_KEY));
-  return stored >= MIN_WIDTH && stored <= MAX_WIDTH ? stored : DEFAULT_WIDTH;
-}
 
 interface ProjectLayoutProps {
   /**
@@ -73,10 +63,10 @@ export function ProjectLayout({
   const wide = useMediaQuery('(min-width: 1024px)');
   const [showBinder, setShowBinder] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
-  const [width, setWidth] = useState(loadWidth);
+  // The text column, from Page look on the item row (Phase 19, Task A3).
+  const width = useWritingPrefs().pageWidth;
   const binderId = useId();
   const detailsId = useId();
-  const widthId = useId();
   const assistantId = useId();
   // The right column holds the details or the Assistant, one at a time.
   const showAssistant = assistant !== undefined && assistantOpen && !focusMode;
@@ -86,7 +76,7 @@ export function ProjectLayout({
   // One quiet row of icon tools (Phase 17 decision S1): the binder first, then the rest. Each icon names
   // itself in a tooltip and keeps its name for the screen reader.
   const toolRow = (
-    <div className="flex items-center gap-0.5 sm:gap-1">
+    <div data-typing-hide className="flex items-center gap-0.5 sm:gap-1">
       {focusMode ? null : small ? (
         <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
           <DialogTrigger asChild>
@@ -168,7 +158,7 @@ export function ProjectLayout({
   return (
     <div className="grid gap-4">
       {/* On a wide screen the tools join the tab row. Elsewhere, and in focus mode, they take a row of their own. */}
-      {!focusMode && title(wide ? toolRow : null)}
+      {!focusMode && <div data-typing-hide>{title(wide ? toolRow : null)}</div>}
       {(focusMode || !wide) && toolRow}
       {!focusMode && <Tips />}
       <div
@@ -194,29 +184,6 @@ export function ProjectLayout({
         {!focusMode && showDetails && !showAssistant && (
           <aside id={detailsId} aria-label="Details" className="grid content-start gap-6 min-w-0">
             {details}
-            <div className="grid gap-2">
-              <label htmlFor={widthId} className="text-sm font-medium">
-                Page width: <span className="tabular-nums">{width} ch</span>
-              </label>
-              <input
-                id={widthId}
-                type="range"
-                min={MIN_WIDTH}
-                max={MAX_WIDTH}
-                step={2}
-                value={width}
-                onChange={(event) => {
-                  const next = Number(event.target.value);
-                  setWidth(next);
-                  try {
-                    safeStorage()?.setItem(WIDTH_KEY, String(next));
-                  } catch {
-                    // Full or blocked storage: the width still applies to this visit.
-                  }
-                }}
-                className="accent-[var(--accent)]"
-              />
-            </div>
           </aside>
         )}
       </div>
