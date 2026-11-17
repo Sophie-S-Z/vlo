@@ -8,10 +8,11 @@ import type { Block, ExportDoc, Run } from './model';
  */
 
 /**
- * `web` is a copy for a web editor (F52), which goes to the clipboard and not to a file. `fountain` and
- * `fdx` are script files (F63).
+ * `web` is a copy for a web editor (F52), which goes to the clipboard and not to a file. `html` is a web
+ * page file. `fountain` and `fdx` are script files (F63).
  */
-export type ExportFormat = 'docx' | 'pdf' | 'epub' | 'markdown' | 'web' | 'fountain' | 'fdx';
+export type ExportFormat =
+  'docx' | 'pdf' | 'epub' | 'rtf' | 'markdown' | 'html' | 'text' | 'web' | 'fountain' | 'fdx';
 
 export interface NoticeExtras {
   /** Own fonts that the file swaps for a Vlo font. */
@@ -164,13 +165,15 @@ function drawnNotices(drawn: NoticeExtras['drawnStyles'], format: ExportFormat):
 function imageNotices(looks: Looks, format: ExportFormat, manuscript: boolean): string[] {
   if (looks.images === 0) return [];
   const one = looks.images === 1;
-  if (manuscript || format === 'web' || format === 'fountain' || format === 'fdx') {
+  if (manuscript || format === 'web' || format === 'text' || format === 'fountain' || format === 'fdx') {
     const where =
       format === 'web'
         ? 'Web editors get'
         : manuscript
           ? 'Standard manuscript format puts'
-          : `${format === 'fdx' ? 'A Final Draft file' : 'Fountain'} gets`;
+          : format === 'text'
+            ? 'A plain text file gets'
+            : `${format === 'fdx' ? 'A Final Draft file' : 'Fountain'} gets`;
     return [
       `${where} a line such as “[Image: caption]” in place of ${one ? 'the image' : 'each image'}. The ${one ? 'image stays' : 'images stay'} in Vlo.`,
     ];
@@ -268,12 +271,34 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
     if (looks.math)
       notices.push('Equations are MathML. An e-reader without MathML shows their symbols in one line.');
     notices.push(...drawnNotices(extras.drawnStyles, format));
-  } else if (format === 'web') {
+  } else if (format === 'web' || format === 'html') {
+    const who = format === 'web' ? 'Web editors' : 'The web page';
     if (looks.color || looks.highlight || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {
-      notices.push('Web editors set their own colors, fonts and sizes. Those words keep only their text.');
+      notices.push(
+        format === 'web'
+          ? 'Web editors set their own colors, fonts and sizes. Those words keep only their text.'
+          : 'The web page uses one font, size and color. Those words keep only their text.',
+      );
     }
     if (looks.hanging)
-      notices.push('Web editors have no hanging indents. Poem lines keep their leading spaces.');
+      notices.push(
+        `${who} ${format === 'web' ? 'have' : 'has'} no hanging indents. Poem lines keep their leading spaces.`,
+      );
+    if (looks.math) notices.push('Equations stay as LaTeX between $ signs.');
+  } else if (format === 'rtf') {
+    if (looks.color || looks.highlight || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {
+      notices.push(
+        'RTF keeps bold, italic, underline, links and alignment. Colors, highlights, fonts and sizes stay in Vlo.',
+      );
+    }
+    if (looks.hanging)
+      notices.push('RTF keeps each stanza as one paragraph, so poem lines have no hanging indents.');
+    if (looks.math) notices.push('Equations stay as LaTeX between $ signs.');
+    notices.push(...fontNameNotice([doc.font]));
+  } else if (format === 'text') {
+    notices.push(
+      'Plain text has no bold, italic, colors, fonts or sizes. Each word keeps its text, and footnotes go at the end.',
+    );
     if (looks.math) notices.push('Equations stay as LaTeX between $ signs.');
   } else if (format === 'fountain' || format === 'fdx') {
     if (looks.color || looks.highlight || looks.size || looks.fills.size > 0 || looks.fonts.size > 1) {

@@ -214,7 +214,9 @@ export function LibraryPage() {
                 }}
               >
                 <span className="font-medium">Import writing</span>
-                <span className="text-xs text-muted">Word, Markdown, Fountain, text or Scrivener</span>
+                <span className="text-xs text-muted">
+                  Word, PDF, EPUB, RTF, Markdown, text, scripts or Scrivener
+                </span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -80,6 +80,7 @@
     "minisearch": "7.2.0",
     "motion": "14.9.0",
     "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.5.438",
     "radix-ui": "1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",

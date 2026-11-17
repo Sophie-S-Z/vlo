@@ -1,8 +1,9 @@
 import { escapeHtml } from './outline';
 
 /*
- * A small RTF reader for Scrivener's content files (roadmap F34). It keeps paragraphs, line breaks, tabs,
- * bold, italic, underline, strike, superscript, subscript, footnotes and every character (\uN and \'hh).
+ * A small RTF reader for .rtf files and Scrivener's content files (roadmap F34). It keeps paragraphs, line breaks, tabs,
+ * bold, italic, underline, strike, superscript, subscript, footnotes, every character (\uN and \'hh)
+ * and the outline level of a heading.
  * Font, color and style tables, pictures and other destinations are skipped. A table cell becomes a tab
  * and a row becomes a paragraph.
  */
@@ -66,7 +67,9 @@ export function readRtf(source: string): RtfText {
   let group: Group = { style: { ...PLAIN }, skip: false, note: false, uc: 1 };
   let pendingSkip = 0;
   let star = false;
-  const paragraphs: { html: string; text: string }[] = [];
+  const paragraphs: { html: string; text: string; level: number }[] = [];
+  // The outline level of the paragraph: 1 for a Heading 1, and 0 for body text.
+  let level = 0;
   let html = '';
   let text = '';
   let note = '';
@@ -106,7 +109,7 @@ export function readRtf(source: string): RtfText {
   };
   const endParagraph = () => {
     flush();
-    paragraphs.push({ html, text });
+    paragraphs.push({ html, text, level });
     html = '';
     text = '';
   };
@@ -188,6 +191,13 @@ export function readRtf(source: string): RtfText {
         else if (!group.skip) endParagraph();
         if (name === 'row') tables += 1;
         break;
+      case 'pard':
+        level = 0;
+        break;
+      case 'outlinelevel':
+        // The style table names outline levels too, but only a paragraph's own level counts.
+        if (!group.skip) level = param !== null && param >= 0 && param < 9 ? Math.min(param + 1, 3) : 0;
+        break;
       case 'line':
         if (!group.skip && !group.note) {
           flush();
@@ -263,7 +273,13 @@ export function readRtf(source: string): RtfText {
   if (html !== '' || text !== '') endParagraph();
 
   return {
-    html: paragraphs.map((p) => `<p>${p.html}</p>`).join(''),
+    html: paragraphs
+      .map((p) => {
+        if (p.level === 0) return `<p>${p.html}</p>`;
+        // A heading style is bold, and Vlo draws its headings bold, so the mark goes.
+        return `<h${String(p.level)}>${p.html.replace(/<\/?strong>/g, '')}</h${String(p.level)}>`;
+      })
+      .join(''),
     text: `${paragraphs.map((p) => p.text).join('\n')}\n`,
     skipped: [
       ...(pictures > 0 ? [pictures === 1 ? '1 picture' : `${String(pictures)} pictures`] : []),
