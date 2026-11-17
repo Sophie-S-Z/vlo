@@ -20,6 +20,31 @@ export function checkHourly(registration: { update: () => Promise<unknown> }): (
   };
 }
 
+function idleFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestIdleCallback === 'function')
+      requestIdleCallback(
+        () => {
+          resolve();
+        },
+        { timeout: 2000 },
+      );
+    else setTimeout(resolve, 500);
+  });
+}
+
+/**
+ * Resolves once the page has drawn, loaded its fonts and gone idle. Chrome starts to stop the old service
+ * worker when the new one may take over. A request that comes in during that stop restarts the old worker,
+ * and Chrome then holds the new version for five minutes. So a visit asks for the new version only after
+ * its first burst of requests.
+ */
+export async function whenSettled(): Promise<void> {
+  await idleFrame();
+  await document.fonts.ready;
+  await idleFrame();
+}
+
 const idle: UpdateState = { needRefresh: false, applyUpdate: () => undefined };
 
 export const UpdateContext = createContext<UpdateState>(idle);
@@ -70,8 +95,15 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!needRefresh || !untouched.current) return;
-    requestedHere.current = true;
-    void updateServiceWorker(true);
+    let current = true;
+    void whenSettled().then(() => {
+      if (!current || !untouched.current) return;
+      requestedHere.current = true;
+      void updateServiceWorker(true);
+    });
+    return () => {
+      current = false;
+    };
   }, [needRefresh, updateServiceWorker]);
 
   const value = useMemo<UpdateState>(
