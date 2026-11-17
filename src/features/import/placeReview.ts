@@ -1,14 +1,14 @@
 import type { Mark, MarkType, Node as ProseMirrorNode, NodeType } from '@tiptap/pm/model';
 import { Transform } from '@tiptap/pm/transform';
 import { diffArrays } from 'diff';
-import { COMMENT } from '@/features/editor/format/comment';
+import { COMMENT, repliesOf, type CommentReply } from '@/features/editor/format/comment';
 import { changeStoredDoc, type StoredTarget } from '@/features/editor/storedDoc';
 import { SUGGESTION } from '@/features/editor/format/suggestion';
 import { NODE_MARK } from '@/features/editor/textMap';
 import { clock } from '@/lib/clock';
 import type { Pass } from '@/lib/db';
 import { newId } from '@/lib/ids';
-import type { ReviewChange, ReviewParagraph } from './review';
+import type { ReviewChange, ReviewParagraph, WordMessage } from './review';
 
 /*
  * Puts an editor's Word changes into an item (F45, decision R3). Each Word paragraph goes on the Vlo
@@ -74,6 +74,16 @@ function quoteOf(change: ReviewChange, paragraph: ReviewParagraph): string {
 }
 
 /** True when every text node from `from` to `to` has a mark that `has` accepts. */
+/** The first mark of `type` on the text from `from` to `to`, or null. */
+function firstMark(doc: ProseMirrorNode, from: number, to: number, type: MarkType): Mark | null {
+  let found: Mark | null = null;
+  doc.nodesBetween(from, to, (node) => {
+    if (found === null && node.isText) found = type.isInSet(node.marks) ?? null;
+    return found === null;
+  });
+  return found;
+}
+
 function everyText(doc: ProseMirrorNode, from: number, to: number, has: (marks: readonly Mark[]) => boolean) {
   let all = true;
   doc.nodesBetween(from, to, (node) => {
@@ -122,14 +132,40 @@ export function placeChanges(
     inserted.set(change.at, { from: pos, to: pos + change.text.length, step: tr.steps.length });
     placement.changes += 1;
   };
+  const reply = (r: WordMessage): CommentReply => ({
+    id: newId(),
+    text: r.text,
+    by: r.by,
+    at: r.date || now,
+  });
   const addComment = (from: number, to: number, change: Extract<ReviewChange, { kind: 'comment' }>) => {
     const same = (marks: readonly Mark[]) => comment.isInSet(marks)?.attrs.text === change.text;
-    // The writer's own comment comes back from the file as it went out.
-    if (everyText(tr.doc, from, to, same)) return;
+    // The writer's own comment comes back from the file as it went out, with the editor's new replies.
+    if (everyText(tr.doc, from, to, same)) {
+      const own = firstMark(tr.doc, from, to, comment);
+      if (!own) return;
+      const replies = repliesOf(own.attrs.replies);
+      const known = new Set(replies.map((r) => r.text));
+      const added = change.replies.filter((r) => !known.has(r.text));
+      if (added.length === 0) return;
+      placement.comments += 1;
+      tr.addMark(from, to, comment.create({ ...own.attrs, replies: [...replies, ...added.map(reply)] }));
+      return;
+    }
     const id = commentIds.get(change.id) ?? newId();
     if (!commentIds.has(change.id)) placement.comments += 1;
     commentIds.set(change.id, id);
-    tr.addMark(from, to, comment.create({ id, text: change.text, at: change.date || now, by: change.by }));
+    tr.addMark(
+      from,
+      to,
+      comment.create({
+        id,
+        text: change.text,
+        at: change.date || now,
+        by: change.by,
+        replies: change.replies.map(reply),
+      }),
+    );
   };
   /** The range of a comment on no words: the editor's insert at that place, or else the whole paragraph. */
   const emptyRange = (offset: number, start: number, end: number): [number, number] => {

@@ -18,6 +18,7 @@ import { dropEmptyMath, leaveMath, selectedMath } from '../extensions/math';
 import { useMathKeyboard } from '../math/keyboard';
 import { saveOpenField } from '../math/openField';
 import { CharactersPanel } from './panels/CharactersPanel';
+import { AllComments } from './panels/AllComments';
 import { CommentPanel } from './panels/CommentPanel';
 import { ColorPanel } from './panels/ColorPanel';
 import { FontPanel } from './panels/FontPanel';
@@ -73,15 +74,18 @@ function PanelBody({
   editor,
   panel,
   language,
+  itemId,
 }: {
   editor: Editor;
   panel: PanelId;
   language: string | undefined;
+  itemId: string | undefined;
 }) {
   switch (panel) {
     case 'shortcuts':
     case 'memory':
     case 'image':
+    case 'comments':
       return null;
     case 'font':
       return <FontPanel editor={editor} />;
@@ -98,7 +102,7 @@ function PanelBody({
     case 'person':
       return <PersonPanel editor={editor} onDone={closePanel} />;
     case 'comment':
-      return <CommentPanel editor={editor} onDone={closePanel} />;
+      return <CommentPanel editor={editor} itemId={itemId} onDone={closePanel} />;
     case 'cite':
       return <SourcesPanel editor={editor} onDone={closePanel} />;
     case 'characters':
@@ -152,6 +156,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   memory: 'Record a memory',
   person: 'Mark as person',
   comment: 'Comment',
+  comments: 'All comments',
   cite: 'Cite a source',
   image: 'Image',
 };
@@ -162,7 +167,7 @@ function inMathLiveUi(target: EventTarget | null): boolean {
 }
 
 /** The panels that open as a dialog, not as a popover. */
-const DIALOGS: readonly PanelId[] = ['shortcuts', 'memory', 'image'];
+const DIALOGS: readonly PanelId[] = ['shortcuts', 'memory', 'image', 'comments'];
 
 /**
  * Shows the panel any tool surface asked for: a popover at its button or the caret, the shortcut sheet, or
@@ -268,7 +273,7 @@ export function PanelHost({
               focusText(editor);
             }}
           >
-            <PanelBody editor={editor} panel={popover.panel} language={language} />
+            <PanelBody editor={editor} panel={popover.panel} language={language} itemId={item?.id} />
           </PopoverContent>
         )}
       </Popover>
@@ -290,6 +295,27 @@ export function PanelHost({
               <DialogDescription>These keys work while the cursor is in the text.</DialogDescription>
             </div>
             <ShortcutSheet form={form} />
+          </DialogContent>
+        )}
+      </Dialog>
+      <Dialog
+        open={mine?.panel === 'comments'}
+        onOpenChange={(open) => {
+          if (!open) closePanel();
+        }}
+      >
+        {mine?.panel === 'comments' && (
+          <DialogContent className="max-w-lg" onCloseAutoFocus={backIfLost}>
+            <DialogClose asChild>
+              <Button variant="ghost" aria-label="Close" className="absolute top-4 right-4 px-3">
+                <X aria-hidden="true" className="size-4" />
+              </Button>
+            </DialogClose>
+            <div className="grid gap-1 pr-10">
+              <DialogTitle>All comments</DialogTitle>
+              <DialogDescription>Only you see comments. Exports and shares leave them out.</DialogDescription>
+            </div>
+            <AllComments editor={editor} itemId={item?.id} onDone={closePanel} />
           </DialogContent>
         )}
       </Dialog>

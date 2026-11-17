@@ -7,6 +7,8 @@ import type { Editor } from '@tiptap/core';
  *
  * A browser does not say when its keyboard opens. The visual viewport gets shorter than the window by the
  * keyboard's height, so a gap of more than `KEYBOARD_MIN_PX` on a touch screen counts as an open keyboard.
+ * The window height goes to the scale of the visual viewport first: a zoom, or a line wider than the screen
+ * that widens the layout for a moment, changes the window height with no keyboard.
  */
 
 /** A smaller gap is a browser bar that slides, not a keyboard. */
@@ -17,10 +19,11 @@ const INSET = '--vlo-keyboard-inset';
 
 /** The height under the visual viewport that the keyboard covers, in CSS pixels. */
 export function keyboardInset(
-  view: Pick<VisualViewport, 'height' | 'offsetTop'>,
-  innerHeight: number,
+  view: Pick<VisualViewport, 'width' | 'height' | 'offsetTop'>,
+  win: Pick<Window, 'innerWidth' | 'innerHeight'>,
 ): number {
-  return Math.max(0, Math.round(innerHeight - view.height - view.offsetTop));
+  const fullHeight = (win.innerHeight * view.width) / win.innerWidth;
+  return Math.max(0, Math.round(fullHeight - view.height - view.offsetTop));
 }
 
 /** Starts phone typing for this editor on a touch screen. Returns the stop function. */
@@ -32,7 +35,7 @@ export function watchPhoneTyping(editor: Editor, win: Window = window): () => vo
 
   const update = () => {
     if (editor.isDestroyed) return;
-    const inset = keyboardInset(view, win.innerHeight);
+    const inset = keyboardInset(view, win);
     const next = editor.view.hasFocus() && inset > KEYBOARD_MIN_PX;
     if (next) root.style.setProperty(INSET, `${String(inset)}px`);
     if (next === on) return;

@@ -102,25 +102,41 @@ export function usePanelRequest(): PanelRequest | null {
   return useSyncExternalStore(panel.subscribe, panel.get, panel.get);
 }
 
-/** The words that another screen asks an item's editor to select when it opens, such as a reader's quote. */
-interface WordsToShow {
-  words: string;
-  /** The top-level block where the words were, so the nearest place of the same words wins. */
-  block: number;
-}
+/**
+ * What another screen asks an item's editor to show when it opens: some words, such as a reader's quote,
+ * or a comment thread from a link.
+ */
+type ToShow =
+  | {
+      words: string;
+      /** The top-level block where the words were, so the nearest place of the same words wins. */
+      block: number;
+    }
+  | { comment: string };
 
-let wordsToShow: (WordsToShow & { itemId: string }) | null = null;
+let toShow: { itemId: string; what: ToShow } | null = null;
 
 export function showWordsOnOpen(itemId: string, words: string, block: number): void {
-  wordsToShow = { itemId, words, block };
+  toShow = { itemId, what: { words, block } };
 }
 
-/** The words that the editor of this item must select, once. */
-export function takeWordsToShow(itemId: string): WordsToShow | null {
-  if (wordsToShow?.itemId !== itemId) return null;
-  const { words, block } = wordsToShow;
-  wordsToShow = null;
-  return { words, block };
+export function showCommentOnOpen(itemId: string, comment: string): void {
+  toShow = { itemId, what: { comment } };
+}
+
+/** What the editor of this item must show, once. */
+export function takeWordsToShow(itemId: string): ToShow | null {
+  if (toShow?.itemId !== itemId) return null;
+  const { what } = toShow;
+  toShow = null;
+  return what;
+}
+
+/** The address of a comment thread, for Copy link. The project page opens the item at the thread. */
+export function commentLink(itemId: string, comment: string): string {
+  const url = new URL(window.location.pathname, window.location.origin);
+  url.search = new URLSearchParams({ item: itemId, comment }).toString();
+  return url.toString();
 }
 
 /** Gives the text focus now. TipTap's own focus command waits a frame, and keys typed in that frame are lost. */

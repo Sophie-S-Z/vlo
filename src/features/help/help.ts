@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 29,
+  version: 30,
   date: '2026-11-17',
   guide: [
     {
@@ -69,7 +69,7 @@ export const HELP = {
         'Add, rename and drag items in the binder on the left. The keyboard and the item menu move them too.',
         'Press Ctrl+K (Cmd+K on a Mac) to find an item by its title or its text, or to run an action.',
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
-        'To make a note to yourself, select the words and choose Comment. Comments show under the text, and exports leave them out.',
+        'To make a note to yourself, select the words and choose Comment. Exports and shares leave comments out.',
         'In an English project, Review has Style check. It marks repeated words, filler words, cliches and long sentences. Put the cursor in the marked words to see why. The check never changes your text.',
       ],
     },
@@ -190,11 +190,21 @@ export const HELP = {
       ],
     },
     {
+      title: 'Reply to and resolve comments',
+      steps: [
+        'On a wide screen, each comment is a card beside its words. On a narrow screen, click the small count beside the line.',
+        'Put the cursor in the words of a comment, or press Ctrl+Alt+M (Cmd+Option+M on a Mac), to reply. Ctrl+Enter sends the reply.',
+        'Choose Resolve when the comment is done. Review, then All comments, shows the resolved comments, and Reopen puts one back.',
+        'The menu on a comment edits or deletes it. Ctrl+Z puts back a deleted comment.',
+        'Copy link gives a link that opens the item at the comment, on this device.',
+      ],
+    },
+    {
       title: 'Revise with Track changes',
       steps: [
         'Choose Mode, then Suggesting. New words are underlined and deleted words are struck through.',
         'Pick a pass under the text. Each pass has its own color, so you can see each round of revision.',
-        'Accept or reject each change under the text, or all the changes of a pass at once.',
+        'Accept or reject each change on its card in the margin, or under the text on a narrow screen. Review has Accept all changes and Reject all changes.',
         'Exports, shares and word counts use the text as if you accepted every change.',
         'For an editor, export as Word with Keep my tracked changes and Include my comments on.',
         'When the editor sends the file back, choose Search, then Import an editor’s changes. Their changes wait under the text.',

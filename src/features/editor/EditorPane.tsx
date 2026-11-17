@@ -27,7 +27,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/ui/dialog';
-import { takeWordsToShow } from './commands/editorBus';
+import { openPanel, takeWordsToShow } from './commands/editorBus';
+import { selectComment } from './extensions/comment';
+import { ReviewMargin } from './ReviewMargin';
 import { Editor } from './Editor';
 import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
@@ -196,20 +198,45 @@ export function EditorPane({
     });
   }, [open, snapshotEveryMinutes, readText, target]);
 
+  const stage = useRef<HTMLDivElement>(null);
+  const sheet = useRef<HTMLElement>(null);
+  // The main pane has margins for the outline and the review cards.
+  const hasMargins = !beside && item.role !== 'references';
+  const railRoom = useRailRoom(stage, sheet, hasMargins);
+  const marginShown = useRef(railRoom);
+  useEffect(() => {
+    marginShown.current = railRoom;
+  }, [railRoom]);
+
   const onEditor = useCallback(
     (next: TiptapEditor | null) => {
       setEditor(next);
-      // Another screen, such as Feedback, can ask this editor to select some words when it opens. The
-      // selection waits for the editor's own focus at its first render.
-      const words = next && !beside ? takeWordsToShow(id) : null;
-      if (!next || words === null) return;
+      // Another screen, such as Feedback or a comment link, can ask this editor to show some words or a
+      // comment when it opens. The selection waits a frame, until the editor puts the caret at the
+      // writer's last place.
+      const what = next && !beside ? takeWordsToShow(id) : null;
+      if (!next || what === null) return;
       const show = () => {
-        const match = findWords(next.state.doc, words.words, words.block);
+        if ('comment' in what) {
+          if (!selectComment(next, what.comment)) {
+            setNotice('This comment is not in the text now.');
+            return;
+          }
+          next.commands.focus();
+          // The margin shows the card of the comment at the caret. With no margin, the panel shows it.
+          if (!marginShown.current) openPanel({ editor: next, panel: 'comment', anchor: 'caret' });
+          return;
+        }
+        const match = findWords(next.state.doc, what.words, what.block);
         if (match) next.chain().focus().setTextSelection(match).scrollIntoView().run();
         else setNotice('The words of the reply are not in this text now.');
       };
-      if (next.isInitialized) show();
-      else next.once('create', show);
+      const later = () =>
+        requestAnimationFrame(() => {
+          if (!next.isDestroyed) show();
+        });
+      if (next.isInitialized) later();
+      else next.once('create', later);
     },
     [beside, id],
   );
@@ -222,9 +249,6 @@ export function EditorPane({
   const [pages, setPages] = useState<number | null>(null);
   // The main pane of prose and scripts has an outline. A poem has no headings.
   const hasOutline = !beside && kind !== 'poem' && item.role !== 'references';
-  const stage = useRef<HTMLDivElement>(null);
-  const sheet = useRef<HTMLElement>(null);
-  const railRoom = useRailRoom(stage, sheet, hasOutline);
   const manuscript = useMemo<ManuscriptSettings>(
     () => ({
       projectId: item.projectId,
@@ -257,8 +281,11 @@ export function EditorPane({
           style={{ maxWidth }}
           data-script-style={kind === 'script' ? scriptStyle : undefined}
         >
-          {railRoom && outline && state.status === 'ready' && (
+          {hasOutline && railRoom && outline && state.status === 'ready' && (
             <OutlineRail editor={editor} language={language} />
+          )}
+          {hasMargins && state.status === 'ready' && editor && (
+            <ReviewMargin editor={editor} itemId={item.id} room={railRoom} />
           )}
           {/* One row (Phase 17 decision S2): the title, then its counts and the item's quiet icon tools. */}
           <header
@@ -485,6 +512,7 @@ export function EditorPane({
               focusOnOpen={!beside}
               craft={labels}
               poemForm={item.form}
+              changesInMargin={hasMargins && railRoom}
               onEditor={onEditor}
               font={font}
               page={page}

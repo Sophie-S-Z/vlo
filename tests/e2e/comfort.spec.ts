@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -55,8 +56,7 @@ test('the Spacing panel of a poem changes the space between letters', async ({ p
   await dialog.getByRole('button', { name: 'Create project' }).click();
   const editor = page.getByRole('textbox', { name: 'Poem 1' });
   await expect(editor).toBeFocused();
-  await page.getByRole('button', { name: 'Format', exact: true }).click();
-  await page.getByRole('menu').getByRole('group', { name: 'Spacing' }).getByRole('menuitem').click();
+  await useTool(page, 'Spacing');
   await page.getByRole('spinbutton', { name: 'Space between letters' }).fill('0.25');
   const letter = await editor.evaluate((element) => {
     const s = getComputedStyle(element);

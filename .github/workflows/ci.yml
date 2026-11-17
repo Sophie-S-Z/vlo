@@ -75,8 +75,9 @@ jobs:
   e2e:
     name: Playwright (${{ matrix.project }})
     runs-on: ubuntu-latest
-    # Chromium needs about 29 minutes for its tests with one worker, and a slow package mirror can add 10 more.
-    timeout-minutes: 45
+    # Chromium needs about 31 minutes for its tests with one worker, and a slow package mirror can add 10 more.
+    # Firefox, WebKit and the phone run slower, and the run of all four (workflow_dispatch) needs more time.
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 90 || 45 }}
     strategy:
       fail-fast: false
       matrix:

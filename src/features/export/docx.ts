@@ -149,8 +149,8 @@ interface Context {
   comments: ICommentOptions[];
   /** The characters of each comment that this section has yet to write. The range ends with the last. */
   commentLeft: Map<string, number>;
-  /** The Word id of each comment whose range started in this section. */
-  commentWord: Map<string, number>;
+  /** The Word ids of each comment whose range started in this section: the comment, then its replies. */
+  commentWord: Map<string, number[]>;
   /** The bytes of each image in the text, by id (Phase 16). */
   images: Readonly<Record<string, ExportImage>>;
   /** The width and the height of the text area, in twips. */
@@ -258,23 +258,31 @@ function textParts(run: TextRunModel, ctx: Context, extra: IRunOptions = {}): Pa
   const comment = run.comment;
   if (!comment) return [part];
   const out: ParagraphChild[] = [];
-  let word = ctx.commentWord.get(comment.id);
-  if (word === undefined) {
-    word = ctx.comments.length;
-    ctx.commentWord.set(comment.id, word);
-    ctx.comments.push({
-      id: word,
-      author: comment.by || ctx.writer,
-      date: new Date(comment.at),
-      children: comment.text.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] })),
+  let words = ctx.commentWord.get(comment.id);
+  if (words === undefined) {
+    // A reply is a Word comment with its parent's id, on the same words, so Word shows one thread.
+    const parent = ctx.comments.length;
+    words = [comment, ...comment.replies].map((message, i) => {
+      const id = parent + i;
+      ctx.comments.push({
+        id,
+        author: message.by || ctx.writer,
+        date: new Date(message.at),
+        children: message.text.split('\n').map((line) => new Paragraph({ children: [new TextRun(line)] })),
+        ...(i > 0 ? { parentId: parent } : {}),
+        ...(comment.resolved ? { resolved: true } : {}),
+      });
+      return id;
     });
-    out.push(new CommentRangeStart(word));
+    ctx.commentWord.set(comment.id, words);
+    out.push(...words.map((id) => new CommentRangeStart(id)));
   }
   out.push(part);
   const left = (ctx.commentLeft.get(comment.id) ?? 0) - run.text.length;
   ctx.commentLeft.set(comment.id, left);
   if (left <= 0) {
-    out.push(new CommentRangeEnd(word), new TextRun({ children: [new CommentReference(word)] }));
+    for (const id of words)
+      out.push(new CommentRangeEnd(id), new TextRun({ children: [new CommentReference(id)] }));
   }
   return out;
 }

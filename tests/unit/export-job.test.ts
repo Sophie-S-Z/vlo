@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { DEFAULT_BOOK } from '@/features/book/book';
-import type { ExportMessage, ExportResponse } from '@/features/export/export.worker';
+import type { ExportMessage, ExportResponse } from '@/features/export/exportWork';
 import { ExportJob } from '@/features/export/startExport';
 import { item, project } from './export-fixtures';
 

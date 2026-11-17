@@ -294,6 +294,60 @@ test('typing stays under 50 ms at p95 in the 10,000-word scene with a pane open 
   expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
 });
 
+test('typing stays under 50 ms at p95 in the 10,000-word scene with 200 comments in the margin', async ({
+  page,
+  browserName,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'A phone has no margin for cards.');
+  test.slow();
+  await page.setViewportSize({ width: 1700, height: 1000 });
+  await skipOnboarding(page);
+  const seeded = await seedLarge(page);
+  await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}`);
+  const editor = page.getByRole('textbox', { name: seeded.longSceneTitle });
+  await expect(editor).toContainText(seeded.longSceneEnd);
+  // Phase 19, Task C1: 200 comments, one on some words in each 120 characters.
+  await editor.evaluate((element) => {
+    interface Commands {
+      setTextSelection: (range: { from: number; to: number }) => boolean;
+      addComment: (text: string) => boolean;
+    }
+    const tiptap = (element as unknown as { editor: { state: { doc: unknown }; commands: Commands } }).editor;
+    const doc = tiptap.state.doc as {
+      forEach: (f: (node: { textContent: string; nodeSize: number }, offset: number) => void) => void;
+    };
+    const ranges: { from: number; to: number }[] = [];
+    doc.forEach((node, offset) => {
+      for (let at = 0; ranges.length < 200 && at + 12 < node.textContent.length; at += 120)
+        ranges.push({ from: offset + 1 + at, to: offset + 12 + at });
+    });
+    for (const range of ranges) {
+      tiptap.commands.setTextSelection(range);
+      tiptap.commands.addComment('Check this.');
+    }
+  });
+  const margin = page.getByRole('complementary', { name: 'Comments and changes' });
+  await expect(margin.getByRole('article')).toHaveCount(200);
+
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.evaluate(() => {
+    window.__keyDelays = [];
+  });
+  const typed = 'The lamp caught on the third match and light swung out over the water. '
+    .repeat(3)
+    .slice(0, 200);
+  await page.keyboard.type(typed, { delay: 30 });
+  await expect(editor).toContainText(typed.trim().slice(-30));
+  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+  const sorted = (await page.evaluate(() => window.__keyDelays)).sort((a, b) => a - b);
+  const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+  console.log(`[${browserName}] keystroke to paint with 200 comment cards, p95: ${p95.toFixed(1)} ms`);
+  // The same budget and WebKit ceiling as Gate 1.
+  expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
+});
+
 test('typing stays under 50 ms at p95 with 500 shimmering runs on screen, and the shimmer pauses', async ({
   page,
   browserName,

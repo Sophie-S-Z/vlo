@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { seriousIssues } from './support/axe';
 import { fakeSupabase } from './support/share';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -76,10 +77,10 @@ async function giveImage(
           }),
         );
       } else {
-        const target = document.activeElement ?? document.body;
-        target.dispatchEvent(
-          new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: data }),
-        );
+        // Firefox leaves out the clipboardData of a new ClipboardEvent, so the test sets it.
+        const paste = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, 'clipboardData', { value: data });
+        (document.activeElement ?? document.body).dispatchEvent(paste);
       }
     },
     { how, size },
@@ -167,7 +168,7 @@ test('a drag moves an image above the first paragraph, and Undo puts it back', a
   expect(await storedImages(page)).toHaveLength(1);
 });
 
-test('Alt with an arrow key moves the selected image one block', async ({ page }) => {
+test('Alt with an arrow key moves the selected image one block', async ({ page, isMobile }) => {
   const scene = await sceneWithThreeParagraphs(page);
   await dropOnParagraph(page, scene, 1);
   await page.getByRole('dialog', { name: 'Image' }).getByRole('button', { name: 'Done' }).click();
@@ -179,8 +180,10 @@ test('Alt with an arrow key moves the selected image one block', async ({ page }
   await expect.poll(() => blocks(scene)).toEqual(['FIGURE', 'P', 'P', 'P']);
   await page.keyboard.press('Alt+ArrowDown');
   await expect.poll(() => blocks(scene)).toEqual(['P', 'FIGURE', 'P', 'P']);
-  // Enter on a selected image opens its panel.
-  await page.keyboard.press('Enter');
+  // Enter on a selected image opens its panel. ProseMirror takes no Enter key from Chrome on Android, so a
+  // phone opens the panel with the Image tool.
+  if (isMobile) await useTool(page, 'Image');
+  else await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'Image' })).toBeVisible();
 });
 

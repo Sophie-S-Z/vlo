@@ -3,6 +3,7 @@ import { seriousIssues } from './support/axe';
 import { skipOnboarding, writeWithoutAccount } from './support/onboarding';
 import { editorSelection } from './support/selection';
 import { fakeSupabase } from './support/share';
+import { useTool } from './support/tools';
 
 // A signed-out visit opens on the sign-in screen; these tests write with no account.
 test.beforeEach(async ({ page }) => {
@@ -110,8 +111,9 @@ test('a reader reacts to words and answers, and the writer makes a comment from 
   await expect.poll(async () => (await editorSelection(scene(writer))).text).toBe('lights came');
 
   await writer.reload();
-  const list = writer.getByRole('region', { name: 'Comments' });
-  await expect(list).toContainText('“lights came”, Ines');
+  await useTool(writer, 'All comments');
+  const list = writer.getByRole('article', { name: 'Comment on “lights came”' });
+  await expect(list).toContainText('Ines');
   await expect(list).toContainText('Moved me');
   await expect(list).toContainText('I could see them.');
   await writerContext.close();

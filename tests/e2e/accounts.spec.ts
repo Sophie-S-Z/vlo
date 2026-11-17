@@ -338,6 +338,7 @@ test('a visitor writes without an account, and the choice holds in that tab', as
 test('the daily count goes once a day with numbers and no text, and Settings has no switch for it', async ({
   page,
   context,
+  isMobile,
 }) => {
   const fake = await fakeSupabase(context);
   // Vercel's place headers, as api/geo.ts sends them back. The preview server has no such function.
@@ -365,7 +366,7 @@ test('the daily count goes once a day with numbers and no text, and Settings has
     'p_words',
   ]);
   expect(call?.body).toMatchObject({
-    p_device: 'computer',
+    p_device: isMobile ? 'phone' : 'computer',
     p_words: 0,
     p_projects: 0,
     p_country: 'NZ',

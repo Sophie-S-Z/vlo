@@ -48,6 +48,10 @@ export interface TextComment {
   text: string;
   by: string;
   at: number;
+  /** The answers in its thread (Phase 19, Task C1), as Word comment replies. */
+  replies: readonly { text: string; by: string; at: number }[];
+  /** A resolved thread, which Word shows as done. */
+  resolved: boolean;
 }
 
 /** What a Word export keeps for an editor (F45). Every other export keeps neither. */
