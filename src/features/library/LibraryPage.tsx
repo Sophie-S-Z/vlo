@@ -1,18 +1,16 @@
-import { ChevronDown, Hourglass, Library as Shelf, List, NotebookPen, Search, Upload } from 'lucide-react';
+import { ChevronDown, Download, Layers, Library as Shelf, NotebookPen, Search, Upload } from 'lucide-react';
 import { ToggleGroup } from 'radix-ui';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { startTransition, useDeferredValue, useRef, useState } from 'react';
+import { useDeferredValue, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { MARKETING_URL } from '@/app/links';
-import { safeStorage } from '@/app/preferences';
-import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { BackupDialog } from '@/features/backup/BackupDialog';
 import { FolderAllow } from '@/features/backup/FolderAllow';
 import { ImportBackup, type ImportHandle } from '@/features/backup/ImportBackup';
 import { ImportWriting } from '@/features/import/ImportWriting';
 import { downloadBackup } from '@/features/backup/downloadBackup';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
-import { backupDue, changedSinceBackup } from '@/features/backup/reminder';
+import { backupDue, backupLabel, changedSinceBackup } from '@/features/backup/reminder';
 import { SafariSteps } from '@/features/backup/SafariSteps';
 import { SeriesDialog } from '@/features/series/SeriesDialog';
 import { clock } from '@/lib/clock';
@@ -23,34 +21,26 @@ import { cn } from '@/ui/cn';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 import { ICON_BUTTON } from '@/ui/tip';
 import { Bookshelf } from './Bookshelf';
+import { BookStack } from './BookStack';
 import { DeleteDialog } from './DeleteDialog';
 import { formatWords } from './format';
 import { NewProjectDialog } from './NewProjectDialog';
-import { ProjectCard, type LibraryLayout } from './ProjectCard';
 import type { ProjectActions } from './ProjectMenu';
 import { RenameDialog } from './RenameDialog';
-import { Sigil } from './Sigil';
 import { TemplatesDialog } from './TemplatesDialog';
 import { projectDef } from './templates';
 import { useLibrary, type LibraryProject } from './useLibrary';
 import { useDocumentTitle } from '@/app/useDocumentTitle';
 import { WeeklyReport } from '@/features/usage/WeeklyReport';
 
-const LAYOUT_KEY = 'vlo:libraryLayout';
-
-function loadLayout(): LibraryLayout {
-  try {
-    return safeStorage()?.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'shelf';
-  } catch {
-    return 'shelf';
-  }
-}
+/** The shelf shows first on every visit. The stack is one press away. */
+type LibraryLayout = 'shelf' | 'stack';
 
 const toggleClass =
   'relative z-10 inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-4 text-sm text-muted transition-colors hover:text-text data-[state=on]:text-text';
 
 const pillClass =
-  'inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 font-mono text-[0.6875rem] tracking-[0.18em] text-muted uppercase ring-1 ring-rule transition-colors hover:text-text data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:ring-muted';
+  'inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 text-sm text-muted ring-1 ring-rule transition-colors hover:text-text data-[state=on]:bg-surface data-[state=on]:text-text data-[state=on]:ring-muted';
 
 /** The search and the kind pills show once the shelf holds this many books. */
 const FIND_FROM = 4;
@@ -82,29 +72,13 @@ function kindsOf(projects: LibraryProject[]): string[] {
 export function LibraryPage() {
   useDocumentTitle('Library');
   const library = useLibrary();
-  const motion = useMotionAllowed();
-  const [layout, setLayout] = useState<LibraryLayout>(loadLayout);
+  const [layout, setLayout] = useState<LibraryLayout>('shelf');
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('');
   const find = useDeferredValue(query.trim().toLowerCase());
   const backupRef = useRef<ImportHandle>(null);
   const writingRef = useRef<ImportHandle>(null);
 
-  const changeLayout = (next: LibraryLayout) => {
-    try {
-      safeStorage()?.setItem(LAYOUT_KEY, next);
-    } catch {
-      // Blocked storage: the layout still changes for this visit.
-    }
-    // In a transition, each book morphs to its new place. With motion off, the change is instant.
-    if (motion) {
-      startTransition(() => {
-        setLayout(next);
-      });
-    } else {
-      setLayout(next);
-    }
-  };
   const [renaming, setRenaming] = useState<Project | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
   const [changing, setChanging] = useState<Project | null>(null);
@@ -171,13 +145,10 @@ export function LibraryPage() {
     <section className="grain">
       <div className="relative isolate grid justify-items-center gap-3 pt-2 text-center">
         <div aria-hidden="true" className="vlo-haze" />
-        <p className="vlo-eyebrow">A private archive</p>
         <h1 className="vlo-caret font-manuscript text-5xl leading-[1.05] font-light tracking-[-0.02em] italic sm:text-6xl">
           Welcome to your library
         </h1>
-        {projects.length > 0 && (
-          <p className="vlo-eyebrow text-accent-text tabular-nums">{summary(projects)}</p>
-        )}
+        {projects.length > 0 && <p className="text-sm text-muted tabular-nums">{summary(projects)}</p>}
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           {/* Three quiet ways in, behind one menu (Phase 17 decision S4), then the main action. */}
           <ImportBackup ref={backupRef} trigger={false} />
@@ -265,7 +236,7 @@ export function LibraryPage() {
               value={layout}
               data-layout={layout}
               onValueChange={(value) => {
-                if (value === 'shelf' || value === 'list') changeLayout(value);
+                if (value === 'shelf' || value === 'stack') setLayout(value);
               }}
               className="vlo-toggle relative grid grid-cols-2 rounded-full p-0.5 ring-1 ring-rule"
             >
@@ -273,9 +244,9 @@ export function LibraryPage() {
                 <Shelf aria-hidden="true" strokeWidth={1.5} className="size-4" />
                 Shelf
               </ToggleGroup.Item>
-              <ToggleGroup.Item value="list" className={toggleClass}>
-                <List aria-hidden="true" strokeWidth={1.5} className="size-4" />
-                List
+              <ToggleGroup.Item value="stack" className={toggleClass}>
+                <Layers aria-hidden="true" strokeWidth={1.5} className="size-4" />
+                Stack
               </ToggleGroup.Item>
             </ToggleGroup.Root>
           </div>
@@ -294,60 +265,45 @@ export function LibraryPage() {
         </div>
       )}
 
-      {shown.length > 0 && layout === 'list' && (
-        <ul aria-label="Projects" className="mt-10 grid divide-y divide-rule/70">
-          {shown.map(({ project, wordCount }, index) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              wordCount={wordCount}
-              index={index}
-              now={now}
-              series={seriesOf(project)}
-              {...actionsFor(project)}
-            />
-          ))}
-        </ul>
+      {shown.length > 0 && layout === 'stack' && (
+        <div className="mt-12">
+          <BookStack projects={shown} now={now} seriesOf={seriesOf} actionsFor={actionsFor} />
+        </div>
       )}
 
       <WeeklyReport />
 
       {due.length > 0 && (
-        <section
-          aria-labelledby="backup-reminder"
-          className="vlo-notice mt-10 grid gap-4 rounded-[1.25rem] p-5 sm:p-6"
-        >
-          <div className="flex items-start gap-3">
-            <Hourglass
-              aria-hidden="true"
-              strokeWidth={1.25}
-              className="mt-1 size-5 shrink-0 text-accent-text"
-            />
-            <div className="grid gap-1">
-              <h2 id="backup-reminder" className="font-display text-xl font-medium">
-                Time for a backup
-              </h2>
-              <p className="text-sm text-muted">
-                {due.length === 1 ? 'This project has' : 'These projects have'} work that is not in a backup
-                file. Browsers can clear the data of a website, and a backup file keeps a copy of your work.
-              </p>
-            </div>
+        <section aria-labelledby="backup-reminder" className="vlo-notice mt-12 overflow-hidden rounded-2xl">
+          <div className="grid gap-1 px-5 pt-5 pb-4 sm:px-6">
+            <h2 id="backup-reminder" className="font-display text-xl font-medium">
+              Time for a backup
+            </h2>
+            <p className="max-w-prose text-sm text-muted">
+              {due.length === 1 ? 'This project has' : 'These projects have'} work that is not in a backup
+              file. Browsers can clear the data of a website, and a backup file keeps a copy of your work.
+            </p>
           </div>
-          <ul className="flex flex-wrap gap-2 sm:pl-8">
+          <ul className="vlo-notice-rows">
             {due.map(({ project }) => (
-              <li
-                key={project.id}
-                className="flex max-w-full min-w-0 items-center gap-3 rounded-full bg-surface py-1 pr-1 pl-4 ring-1 ring-rule"
-              >
-                <span className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{project.title}</span>
+              <li key={project.id} className="flex items-center gap-4 px-5 py-3 sm:px-6">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{project.title}</p>
+                  <p className="text-xs text-muted">
+                    {project.lastBackupAt !== undefined && changedSinceBackup(project)
+                      ? 'Changed since the last backup'
+                      : backupLabel(project, now)}
+                  </p>
+                </div>
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-9 shrink-0 rounded-full px-3.5"
+                  className="min-h-9 shrink-0 gap-1.5 rounded-full px-3.5"
                   aria-label={`Back up ${project.title}`}
                   disabled={quick.busy !== null}
                   onClick={() => void backUpNow(project)}
                 >
+                  <Download aria-hidden="true" strokeWidth={1.75} className="size-4" />
                   {quick.busy === project.id ? 'Backing up…' : 'Back up'}
                 </Button>
               </li>
@@ -376,10 +332,14 @@ export function LibraryPage() {
       )}
 
       {library.status === 'ready' && library.projects.length === 0 && (
-        <div className="vlo-folio mt-10">
-          <div className="vlo-folio-core grid justify-items-center gap-3 px-6 py-14 text-center">
-            <Sigil seed="A first page" className="size-20 text-accent-text opacity-80" />
-            <p className="mt-4 font-display text-3xl font-light tracking-[-0.01em]">
+        <div className="mt-2">
+          {/* An empty shelf waits for the first book. */}
+          <div aria-hidden="true" className="vlo-shelf-wrap">
+            <div className="vlo-shelf" />
+            <div className="vlo-shelf-plank" />
+          </div>
+          <div className="mt-4 grid justify-items-center gap-3 px-6 text-center">
+            <p className="font-display text-3xl font-light tracking-[-0.01em]">
               Your projects will live here, on this device.
             </p>
             <p className="max-w-md text-muted">
@@ -402,14 +362,13 @@ export function LibraryPage() {
           <ul className="divide-y divide-rule border-y border-rule">
             {series.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-4">
-                <Sigil seed={s.id} className="size-7 shrink-0 text-accent-text" />
                 <Link
                   to={`/series/${s.id}`}
                   className="min-w-0 flex-1 font-display text-xl font-medium text-text no-underline [overflow-wrap:anywhere] hover:underline"
                 >
                   {s.title}
                 </Link>
-                <span className="vlo-eyebrow">
+                <span className="text-sm text-muted tabular-nums">
                   {s.projectIds.length === 1 ? '1 book' : `${String(s.projectIds.length)} books`}
                 </span>
               </li>

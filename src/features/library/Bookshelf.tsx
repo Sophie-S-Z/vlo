@@ -1,7 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router';
-import { useMotionAllowed } from '@/app/PreferencesProvider';
 import type { Project, Series } from '@/lib/db';
 import { countUnit } from '@/lib/wordcount';
 import { backupDue, backupLabel } from '@/features/backup/reminder';
@@ -11,11 +9,10 @@ import { formatWords } from './format';
 import type { ProjectActions } from './ProjectMenu';
 import { projectDef } from './templates';
 import type { LibraryProject } from './useLibrary';
+import { preloadProject, useOpenBook } from './useOpenBook';
 
 /** The most that a book at the edge of the shelf turns, in degrees. */
 const CURVE = 34;
-/** How long a book takes to come off the shelf before its project opens, in ms. */
-const OPEN_MS = 520;
 /** A press that moves more than this many pixels drags the shelf instead of opening a book. */
 const DRAG_PX = 6;
 
@@ -43,13 +40,10 @@ interface BookshelfProps {
  * opens the project. Calm mode and reduced motion keep every pose and drop the movement between them.
  */
 export function Bookshelf({ projects, now, seriesOf, actionsFor }: BookshelfProps) {
-  const motion = useMotionAllowed();
-  const navigate = useNavigate();
+  const { opening, open } = useOpenBook();
   const shelfRef = useRef<HTMLUListElement>(null);
   const [shown, setShown] = useState<Shown | null>(null);
-  const [opening, setOpening] = useState<string | null>(null);
   const hideTimer = useRef(0);
-  const openTimer = useRef(0);
   const drag = useRef({ x: 0, left: 0, active: false, moved: false });
 
   // Each book turns by its distance from the middle of the view. A book on the left half sits in front of
@@ -106,21 +100,9 @@ export function Bookshelf({ projects, now, seriesOf, actionsFor }: BookshelfProp
   useEffect(
     () => () => {
       window.clearTimeout(hideTimer.current);
-      window.clearTimeout(openTimer.current);
     },
     [],
   );
-
-  const open = (id: string) => (event: MouseEvent<HTMLAnchorElement>) => {
-    const plain = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
-    if (!motion || !plain || opening !== null) return;
-    event.preventDefault();
-    setShown(null);
-    setOpening(id);
-    openTimer.current = window.setTimeout(() => {
-      void navigate(`/p/${id}`);
-    }, OPEN_MS);
-  };
 
   return (
     <div className="vlo-shelf-wrap">
@@ -177,10 +159,14 @@ export function Bookshelf({ projects, now, seriesOf, actionsFor }: BookshelfProp
               index={index}
               series={seriesOf(project)}
               opening={opening === project.id}
-              onOpen={open(project.id)}
+              onOpen={(event) => {
+                open(project.id)(event);
+                if (event.isDefaultPrevented()) setShown(null);
+              }}
               onShow={(event) => {
                 window.clearTimeout(hideTimer.current);
                 if (opening !== null) return;
+                preloadProject();
                 const box = event.currentTarget.getBoundingClientRect();
                 setShown({
                   title: project.title,
@@ -218,11 +204,9 @@ export function Bookshelf({ projects, now, seriesOf, actionsFor }: BookshelfProp
             <p className="font-display text-xl leading-tight font-medium [overflow-wrap:anywhere]">
               {shown.title}
             </p>
-            <p className="vlo-eyebrow mt-1.5">{shown.label}</p>
-            <p className="mt-3 font-mono text-xs text-muted tabular-nums">{shown.words}</p>
-            <p className={`font-mono text-xs ${shown.due ? 'text-accent-text' : 'text-muted'}`}>
-              {shown.backup}
-            </p>
+            <p className="mt-1 text-sm text-muted">{shown.label}</p>
+            <p className="mt-3 text-sm tabular-nums">{shown.words}</p>
+            <p className={`text-sm ${shown.due ? 'text-accent-text' : 'text-muted'}`}>{shown.backup}</p>
           </div>,
           document.body,
         )}

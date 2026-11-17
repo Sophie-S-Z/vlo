@@ -21,13 +21,13 @@ function renderError(update: UpdateState) {
 
 test('the error screen offers the waiting update, because a plain reload keeps the broken build', async () => {
   const applyUpdate = vi.fn();
-  renderError({ needRefresh: true, updatedElsewhere: false, applyUpdate });
+  renderError({ needRefresh: true, applyUpdate });
   fireEvent.click(await screen.findByRole('button', { name: 'Reload to update' }));
   expect(applyUpdate).toHaveBeenCalledOnce();
 });
 
 test('the error screen offers a plain reload when no update waits', async () => {
-  renderError({ needRefresh: false, updatedElsewhere: false, applyUpdate: vi.fn() });
+  renderError({ needRefresh: false, applyUpdate: vi.fn() });
   expect(await screen.findByRole('button', { name: 'Reload Vlo' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Reload to update' })).toBeNull();
 });

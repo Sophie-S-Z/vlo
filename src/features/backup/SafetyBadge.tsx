@@ -127,7 +127,8 @@ export function SafetyBadge() {
           <Button
             type="button"
             variant="ghost"
-            className={cn('px-3', level === 'safe' ? 'text-muted' : 'text-text')}
+            data-tip="How safe your work is"
+            className={cn('vlo-tip px-3', level === 'safe' ? 'text-muted' : 'text-text')}
           >
             <Icon aria-hidden="true" className="size-4" />
             <span className="sr-only">Safety: </span>

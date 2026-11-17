@@ -24,7 +24,11 @@ export function ProjectMenu({
 }: ProjectActions & { project: Project; series: Series | undefined; className: string }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger aria-label={`Options for ${project.title}`} className={className}>
+      <DropdownMenuTrigger
+        aria-label={`Options for ${project.title}`}
+        data-tip="Options"
+        className={`vlo-tip ${className}`}
+      >
         <Ellipsis aria-hidden="true" strokeWidth={1.5} className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center">

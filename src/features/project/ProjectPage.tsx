@@ -42,7 +42,6 @@ import { useResearch } from '@/features/research/research';
 import { ResearchList } from '@/features/research/ResearchList';
 import { ResearchView } from '@/features/research/ResearchView';
 import { updateProjectSettings } from '@/features/library/projects';
-import { projectTransitionName } from '@/features/library/ProjectCard';
 import { hasTemplate, projectDef, templateList } from '@/features/library/templates';
 import { db, type AiMode, type Item, type Project, type StyleRule } from '@/lib/db';
 import { countUnit } from '@/lib/wordcount';
@@ -761,7 +760,7 @@ export function ProjectPage() {
   ];
 
   return (
-    <MotionViewTransition name={projectTransitionName(project.id)} update="none">
+    <MotionViewTransition update="none">
       <section>
         <ProjectLayout
           binderOpen={drawer}
