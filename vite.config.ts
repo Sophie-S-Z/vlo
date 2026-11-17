@@ -91,12 +91,14 @@ export default defineConfig({
         // either (plan decision D2). It is cached the first time a poet turns the labels on. The in-browser
         // AI engine (about 2 MB gzip, Phase 4 plan decision P3) is cached the first time a writer picks it.
         // The speech-to-text worker and its ONNX Runtime file (about 7 MB gzip, Phase 11 plan Task K9) are
-        // cached the first time a writer turns a recording into text.
+        // cached the first time a writer turns speech into text. The worker of the natural voices is cached
+        // the first time a writer reads with one, and it runs the same ONNX Runtime file.
         globIgnores: [
           'assets/fonts/**',
           'assets/craft/**',
           'assets/ai-model/**',
           'assets/transcribe.worker-*',
+          'assets/speak.worker-*',
         ],
         runtimeCaching: [
           {
@@ -119,16 +121,23 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
-          {
-            urlPattern: /\/assets\/(transcribe\.worker-[^/]+\.js|ort-wasm-[^/]+\.wasm)$/,
-            handler: 'CacheFirst',
+          // Each cache name is in src/features/voice, whose Delete buttons free them.
+          ...(
+            [
+              [/\/assets\/transcribe\.worker-[^/]+\.js$/, 'vlo-speech-engine'],
+              [/\/assets\/speak\.worker-[^/]+\.js$/, 'vlo-voice-engine'],
+              [/\/assets\/ort-wasm-[^/]+\.wasm$/, 'vlo-onnx-runtime'],
+            ] as const
+          ).map(([urlPattern, cacheName]) => ({
+            urlPattern,
+            handler: 'CacheFirst' as const,
             options: {
-              cacheName: 'vlo-speech-engine',
+              cacheName,
               // The file names carry a content hash, so a cached file never goes stale.
               expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [200] },
             },
-          },
+          })),
           {
             urlPattern: /\/assets\/fonts\/[^/]+\.woff2?$/,
             handler: 'CacheFirst',

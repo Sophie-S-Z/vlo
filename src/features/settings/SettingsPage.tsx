@@ -17,7 +17,7 @@ import { UsageSettings } from '@/features/usage/UsageSettings';
 import { DailyCountSetting } from '@/features/account/DailyCountSetting';
 import { sharingReady } from '@/features/share/rpc';
 import { Link } from 'react-router';
-import { SpeechSettings } from '@/features/voice/SpeechSettings';
+import { SpeechSettings, VoiceSettings } from '@/features/voice/SpeechSettings';
 
 // Sync loads with Settings only when it opens, so the first screen stays small.
 const DevicesSection = lazy(async () => ({
@@ -245,6 +245,10 @@ export function SettingsPage() {
 
         <Section title="Speech to text">
           <SpeechSettings onAnnounce={setAnnouncement} />
+        </Section>
+
+        <Section title="Natural voices">
+          <VoiceSettings onAnnounce={setAnnouncement} />
         </Section>
 
         <Section title="Storage">

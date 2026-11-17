@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import { DICTATION } from '@/features/authorship/sourcePlugin';
 import { cleanLanguage, LANGUAGES } from '@/lib/language';
+import { SPEECH_MODELS, type SpeechModelId } from './model';
 import type { TranscribeRequest, TranscribeResponse } from './transcribe.worker';
 
 /*
@@ -8,7 +9,7 @@ import type { TranscribeRequest, TranscribeResponse } from './transcribe.worker'
  * device: the main thread decodes it, and the worker runs the model.
  */
 
-const RATE = 16_000;
+export const RATE = 16_000;
 
 /** The audio of a recording as mono samples at 16 kHz, the input of Whisper. */
 async function samplesOf(audio: Blob): Promise<Float32Array> {
@@ -47,12 +48,20 @@ function speechWorker(): Worker {
   return made;
 }
 
-/** The text of a recording in the project's language. A project with no language is English. */
-export async function transcribe(audio: Blob, language?: string): Promise<string> {
-  const samples = await samplesOf(audio);
+/**
+ * The text of a recording, or of mono samples at 16 kHz, in the project's language. A project with no
+ * language is English.
+ */
+export async function transcribe(
+  audio: Blob | Float32Array,
+  model: SpeechModelId,
+  language?: string,
+): Promise<string> {
+  const samples = audio instanceof Float32Array ? audio : await samplesOf(audio);
   const base = (cleanLanguage(language) ?? 'en').split('-')[0];
   const request: TranscribeRequest = {
     id: nextId++,
+    model: SPEECH_MODELS[model].id,
     samples,
     ...(base && (LANGUAGES as readonly string[]).includes(base) ? { language: base } : {}),
   };
@@ -64,14 +73,14 @@ export async function transcribe(audio: Blob, language?: string): Promise<string
 
 /**
  * Puts the writer's dictated words in at the cursor. The authorship record counts them as dictated, and
- * no AI mark goes on them, since they are the writer's own words.
+ * no AI mark goes on them, since they are the writer's own words. Live dictation leaves the focus in its
+ * panel, so `focus` is false there.
  */
-export function insertDictation(editor: Editor, text: string): boolean {
+export function insertDictation(editor: Editor, text: string, focus = true): boolean {
   const words = text.trim();
-  if (words === '') return false;
-  return editor
-    .chain()
-    .focus()
+  if (words === '' || editor.isDestroyed) return false;
+  const chain = editor.chain();
+  return (focus ? chain.focus() : chain)
     .command(({ tr }) => {
       const at = tr.selection.from;
       const before = tr.doc.textBetween(Math.max(0, at - 1), at, '', ' ');

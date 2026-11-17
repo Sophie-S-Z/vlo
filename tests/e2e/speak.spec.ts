@@ -8,8 +8,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 /*
- * Plan Task M1 (roadmap 2 F62, Review Focus 1): Speak to write. speak.test.tsx holds the text, the time
- * limit and the closed panel. A tone from the page stands in for the microphone, so every browser can run it.
+ * Plan Task M1 (roadmap 2 F62, Review Focus 1): Speak to write. speak.test.tsx holds live dictation and the
+ * closed panel, and segments.test.ts holds the pauses that cut the speech into clips.
  */
 
 const text = (page: Page) => page.getByRole('textbox', { name: 'Poem 1' });
@@ -19,16 +19,6 @@ test('Speak to write in a poem asks before any download, and nothing leaves the 
   page.on('request', (request) => {
     const url = new URL(request.url());
     if (url.protocol.startsWith('http') && url.hostname !== 'localhost') leaving.push(url.href);
-  });
-  await page.addInitScript(() => {
-    navigator.mediaDevices.getUserMedia = () => {
-      const context = new AudioContext();
-      const tone = context.createOscillator();
-      const out = context.createMediaStreamDestination();
-      tone.connect(out);
-      tone.start();
-      return Promise.resolve(out.stream);
-    };
   });
   await skipOnboarding(page);
   await page.getByRole('button', { name: 'New project' }).click();
@@ -43,13 +33,11 @@ test('Speak to write in a poem asks before any download, and nothing leaves the 
   await page.getByRole('option', { name: 'Speak to write…' }).click();
   const panel = page.getByRole('dialog', { name: 'Speak to write' });
   await panel.getByRole('button', { name: 'Speak' }).click();
-  await expect(panel.getByRole('status').filter({ hasText: /^Listening$/ })).toBeVisible();
-  await expect(panel.getByText(/^Listening, 0:0\d of 0:30$/)).toBeVisible();
-  expect(await seriousIssues(page)).toEqual([]);
-  await panel.getByRole('button', { name: 'Stop and write' }).click();
 
+  // The first use asks before the microphone or a download starts.
   const ask = panel.getByRole('region', { name: 'Download the speech model' });
-  await expect(ask).toContainText('the Whisper base model once (80 MB)');
+  await expect(ask).toContainText('Whisper small (252 MB) makes the fewest mistakes.');
+  await expect(ask.getByRole('button', { name: 'Download the fast model (80 MB)' })).toBeVisible();
   expect(await seriousIssues(page)).toEqual([]);
   await ask.getByRole('button', { name: 'Cancel' }).click();
   await expect(ask).toBeHidden();
