@@ -1,3 +1,4 @@
+import { UserRound } from 'lucide-react';
 import { cn } from '@/ui/cn';
 import { initials, type Profile } from './profile';
 
@@ -13,6 +14,7 @@ export function Avatar({
   profile: Pick<Profile, 'name' | 'photo'> | null;
   className?: string;
 }) {
+  const letters = initials(profile?.name ?? '');
   return (
     <span
       aria-hidden="true"
@@ -23,6 +25,8 @@ export function Avatar({
     >
       {profile?.photo ? (
         <img src={profile.photo} alt="" className="size-full object-cover" />
+      ) : letters === '' ? (
+        <UserRound strokeWidth={1.25} className="size-1/2" />
       ) : (
         <svg viewBox="0 0 40 40" className="size-full">
           <text
@@ -33,7 +37,7 @@ export function Avatar({
             fill="currentColor"
             className="font-display text-[15px] font-semibold"
           >
-            {initials(profile?.name ?? '')}
+            {letters}
           </text>
         </svg>
       )}
