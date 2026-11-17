@@ -76,7 +76,7 @@ export function ProjectLayout({
   // One quiet row of icon tools (Phase 17 decision S1): the binder first, then the rest. Each icon names
   // itself in a tooltip and keeps its name for the screen reader.
   const toolRow = (
-    <div data-typing-hide className="flex items-center gap-0.5 sm:gap-1">
+    <div data-typing-hide className="flex min-w-0 items-center gap-0.5 sm:gap-1">
       {focusMode ? null : small ? (
         <Dialog open={binderOpen} onOpenChange={onBinderOpen}>
           <DialogTrigger asChild>
@@ -107,7 +107,13 @@ export function ProjectLayout({
           <span className="sr-only">{showBinder ? 'Hide binder' : 'Show binder'}</span>
         </Button>
       )}
-      <div className="ml-auto flex flex-wrap items-center justify-end gap-0.5 sm:gap-1">
+      {/* On a phone the tools keep one row and scroll sideways. The padding keeps each focus ring in view. */}
+      <div
+        className={cn(
+          'ml-auto flex items-center gap-0.5 sm:gap-1',
+          small ? '-m-1 min-w-0 overflow-x-auto p-1' : 'flex-wrap justify-end',
+        )}
+      >
         {timer}
         {focusMode ? (
           <Button variant="ghost" aria-keyshortcuts="Escape" onClick={onLeaveFocus}>
@@ -134,24 +140,24 @@ export function ProjectLayout({
             <span className="sr-only">{assistantOpen ? 'Hide the Assistant' : 'Assistant'}</span>
           </Button>
         )}
-        {!focusMode && (
-          <Button
-            variant="ghost"
-            className={ICON_BUTTON}
-            data-tip={showDetails ? 'Hide details' : 'Show details'}
-            data-tip-align="end"
-            aria-expanded={showDetails}
-            aria-controls={detailsId}
-            onClick={() => {
-              if (!showDetails) onAssistantOpen?.(false);
-              setShowDetails(!showDetails);
-            }}
-          >
-            <PanelRight aria-hidden="true" className="size-4" />
-            <span className="sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
-          </Button>
-        )}
       </div>
+      {!focusMode && (
+        <Button
+          variant="ghost"
+          className={ICON_BUTTON}
+          data-tip={showDetails ? 'Hide details' : 'Show details'}
+          data-tip-align="end"
+          aria-expanded={showDetails}
+          aria-controls={detailsId}
+          onClick={() => {
+            if (!showDetails) onAssistantOpen?.(false);
+            setShowDetails(!showDetails);
+          }}
+        >
+          <PanelRight aria-hidden="true" className="size-4" />
+          <span className="sr-only">{showDetails ? 'Hide details' : 'Show details'}</span>
+        </Button>
+      )}
     </div>
   );
 

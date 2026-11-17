@@ -173,6 +173,37 @@ test('under 600 px the binder opens as a drawer, and picking an item closes it',
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('the project tools keep one row, with the binder first and the details last', async ({ page }) => {
+    await skipOnboarding(page);
+    await page.getByRole('button', { name: 'New project' }).click();
+    await page
+      .getByRole('dialog', { name: 'New project' })
+      .getByRole('button', { name: 'Create project' })
+      .click();
+    // Co-writer adds the Assistant, so the row has more icons than the screen is wide.
+    await page.getByRole('button', { name: /^AI mode: / }).click();
+    const mode = page.getByRole('dialog', { name: 'AI mode' });
+    await mode.getByRole('radio', { name: /^Co-writer/ }).click();
+    await mode.getByRole('button', { name: 'Switch to Co-writer mode' }).click();
+    await expect(mode).toHaveCount(0);
+
+    const boxes = await Promise.all(
+      ['Binder', 'Share', 'Assistant', 'Show details'].map((name) =>
+        page.getByRole('button', { name, exact: true }).boundingBox(),
+      ),
+    );
+    const [first, , , last] = boxes;
+    expect(new Set(boxes.map((box) => box?.y)).size).toBe(1);
+    expect(first?.x).toBe(16);
+    expect((last?.x ?? 0) + (last?.width ?? 0)).toBe(390 - 16);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
 test('the project screen with its binder has no serious axe issues', async ({ page, isMobile }) => {
   if (isMobile) {
     await novelWithTwoScenesSmall(page);
