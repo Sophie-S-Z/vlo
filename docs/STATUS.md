@@ -29,6 +29,25 @@ Last update: 2026-11-17
     Portuguese and Korean. The device voices stay in the list. A natural voice is the default.
   - Privacy version 17.
 
+- Phase 19, Part C: review like Google Docs (2026-11-17, `docs/plans/phase-19.md`):
+  - A comment is a thread: the first comment, replies, and a resolve time, all in the comment mark, so
+    sync, tab sync, snapshots and backups carry them, and Ctrl+Z takes back each change. Document schema 13. A comment from before Phase 19 is a thread with no replies.
+  - When the window has room right of the page, each open thread and each waiting change is a card beside
+    its words. Cards that would overlap stack down, the card at the cursor moves to its words, and a line
+    joins a card to its words. The cards move after a typing pause. 200 cards on the 10,000-word scene
+    keep typing at 20 ms p95. Without room, a 24 px count beside each line with comments opens the thread
+    in the Comment panel. The comment list under the text is gone.
+  - Resolve keeps the thread on its words, out of sight. All comments (Review menu, Ctrl+Alt+Shift+A)
+    lists the open and the resolved threads, and Reopen puts one back. Copy link gives an address that
+    opens the item at the thread. Ctrl+Alt+M on a thread's words goes to its reply field.
+  - Change cards have Accept and Reject with the pass color. Review has Accept all changes and Reject all
+    changes, each one step of Undo. Viewing mode shows the cards with no tools.
+  - A Word export with comments writes each reply as a Word reply (with a parent in commentsExtended)
+    and marks a resolved thread as done. An import puts Word replies back in the thread, and an editor's
+    new reply on the writer's own comment joins it.
+  - Not built yet: reactions on a comment, a sheet from the bottom for a thread on phones (the Comment
+    panel opens at the words), and the resolved state from a Word file.
+
 - Phase 19, Part B: the core writing tools (2026-11-17, `docs/plans/phase-19.md`):
   - Prose has Heading 4, checklists and page breaks (Ctrl+Enter). Each export maps them: Word has a real
     page break and a box for each item, the PDF starts a new page, Markdown writes `- [x]`, and a share
