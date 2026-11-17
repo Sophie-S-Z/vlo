@@ -127,7 +127,7 @@ export function NewProjectDialog() {
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy || pick.value.length === 0}>
               Create project
             </Button>
           </div>

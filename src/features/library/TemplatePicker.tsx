@@ -42,35 +42,37 @@ const CARD_ORDER: readonly Template[] = [
 export const SUGGESTED_TEMPLATE: Template = 'novel';
 
 export interface TemplatePick {
-  /** The picked templates, in `TEMPLATE_ORDER`. Never empty. */
+  /** The picked templates, in `TEMPLATE_ORDER`. Empty until the writer picks one, or after the last goes. */
   value: Template[];
   /** True while the value is only the suggestion, so the writer's first pick replaces it. */
   suggested: boolean;
 }
 
-/** The first pick of the writer replaces the suggestion. Each later pick adds or removes a template. */
+/**
+ * The first pick of the writer replaces the suggestion. Each later pick adds or removes a template, so a
+ * second click on a card always takes it away. A form with an empty pick creates no project.
+ */
 export function togglePick(pick: TemplatePick, template: Template): TemplatePick {
   if (pick.suggested) return { value: [template], suggested: false };
   const on = pick.value.includes(template);
-  // A project needs one template, so the last one stays.
-  if (on && pick.value.length === 1) return { ...pick, suggested: false };
   const next = on ? pick.value.filter((t) => t !== template) : [...pick.value, template];
   return { value: TEMPLATE_ORDER.filter((t) => next.includes(t)), suggested: false };
 }
 
-export function newPick(): TemplatePick {
-  return { value: [SUGGESTED_TEMPLATE], suggested: true };
+/** A new pick: the suggestion, or no template when the writer must pick, as on the welcome. */
+export function newPick(suggest = true): TemplatePick {
+  return suggest ? { value: [SUGGESTED_TEMPLATE], suggested: true } : { value: [], suggested: false };
 }
 
 /** The state of a template picker: the pick, a toggle for one card and a reset. */
-export function useTemplatePick() {
-  const [pick, setPick] = useState<TemplatePick>(newPick);
+export function useTemplatePick(suggest = true) {
+  const [pick, setPick] = useState<TemplatePick>(() => newPick(suggest));
   const toggle = useCallback((template: Template) => {
     setPick((prev) => togglePick(prev, template));
   }, []);
   const reset = useCallback(() => {
-    setPick(newPick());
-  }, []);
+    setPick(newPick(suggest));
+  }, [suggest]);
   return { pick, toggle, reset };
 }
 

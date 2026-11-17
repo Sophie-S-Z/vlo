@@ -159,9 +159,13 @@ describe('New project', () => {
     expect(box(/Novel/).getAttribute('aria-checked')).toBe('false');
     expect(box(/Open writing/).getAttribute('aria-checked')).toBe('true');
     expect(title.value).toBe('Untitled writing');
-    // The last pick stays, so a project always has one template.
+    // A second click takes the last pick away, and a project with no template cannot be created.
+    const create = within(dialog).getByRole<HTMLButtonElement>('button', { name: 'Create project' });
     fireEvent.click(box(/Open writing/));
-    expect(box(/Open writing/).getAttribute('aria-checked')).toBe('true');
+    expect(box(/Open writing/).getAttribute('aria-checked')).toBe('false');
+    expect(create.disabled).toBe(true);
+    fireEvent.click(box(/Open writing/));
+    expect(create.disabled).toBe(false);
     fireEvent.click(box(/Memoir/));
     fireEvent.click(box(/Poetry collection/));
     expect(title.value).toBe('Untitled project');

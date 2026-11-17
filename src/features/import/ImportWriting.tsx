@@ -246,7 +246,7 @@ export function ImportWriting({ ref, trigger = true }: { ref?: Ref<ImportHandle>
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" disabled={busy || pick.value.length === 0}>
                 Import
               </Button>
             </div>

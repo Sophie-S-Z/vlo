@@ -271,6 +271,58 @@ test('a signed-out visit opens on the sign-in screen, which can make an account 
   await page.getByLabel('Your full name').fill('Noor Haddad');
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page).toHaveURL(/\/welcome$/);
+  // The welcome picks no kind of writing for the writer. A second click takes a pick away.
+  const kinds = page.getByRole('group', { name: 'What do you write?' }).getByRole('checkbox');
+  await expect(kinds).toHaveCount(8);
+  for (const kind of await kinds.all()) await expect(kind).not.toBeChecked();
+  const next = page.getByRole('button', { name: 'Next' });
+  await expect(next).toBeDisabled();
+  const memoir = page.getByRole('checkbox', { name: /Memoir/ });
+  await memoir.click();
+  await expect(memoir).toBeChecked();
+  await expect(next).toBeEnabled();
+  await memoir.click();
+  await expect(memoir).not.toBeChecked();
+  await expect(next).toBeDisabled();
+});
+
+test('a writer sets a password, then signs in with it and no code', async ({ page, context }) => {
+  const fake = await fakeSupabase(context);
+  await skipOnboarding(page);
+  await signIn(page, 'pia@example.com');
+  await page.goto('/account');
+  const panel = page.getByRole('region', { name: 'Password' });
+  await panel.getByLabel('New password').fill('short');
+  await panel.getByLabel('Type the password again').fill('short');
+  await panel.getByRole('button', { name: 'Save password' }).click();
+  await expect(panel.getByRole('status')).toHaveText('Use at least 8 characters.');
+  // A server with "Secure password change" on asks for a code from the email first.
+  if (fake.accounts) fake.accounts.passwordNeedsCode = true;
+  await panel.getByLabel('New password').fill('salt and harbour');
+  await panel.getByLabel('Type the password again').fill('salt and harbour');
+  await panel.getByRole('button', { name: 'Save password' }).click();
+  await expect(panel.getByRole('status')).toContainText(
+    'For your safety, Vlo sent a code to pia@example.com.',
+  );
+  await panel.getByLabel('Code from the email').fill(CODE);
+  await panel.getByRole('button', { name: 'Save password' }).click();
+  await expect(panel.getByRole('status')).toContainText('Your password is saved.');
+  expect(await seriousIssues(page)).toEqual([]);
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Library' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Sign in' }).click();
+  // This browser set a password, so the form starts with the password.
+  await page.getByLabel('Email').fill('pia@example.com');
+  await page.getByLabel('Password').fill('wrong password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'This email and password do not match.' }),
+  ).toBeVisible();
+  await page.getByLabel('Password').fill('salt and harbour');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByText('Signed in as pia@example.com')).toBeVisible();
+  expect(fake.calls.filter((c) => c.name === 'auth:otp')).toHaveLength(1);
 });
 
 test('a visitor writes without an account, and the choice holds in that tab', async ({ page, context }) => {
@@ -350,7 +402,7 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
   await expect(writer.getByRole('heading', { level: 1, name: 'Send feedback' })).toBeVisible();
   expect(await seriousIssues(writer)).toEqual([]);
   await writer.getByRole('button', { name: 'Send feedback' }).click();
-  await expect(writer.getByRole('status').filter({ hasText: 'Type your feedback first.' })).toBeVisible();
+  await expect(writer.getByRole('status').filter({ hasText: 'Type your message first.' })).toBeVisible();
   await writer.getByRole('radio', { name: 'A problem' }).click();
   await writer.getByLabel('Your feedback').fill('Sync on my phone would help a lot.');
   await writer.getByRole('button', { name: '5 of 5' }).click();
@@ -365,6 +417,12 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
     place: 'settings',
     user_id: null,
   });
+  // A second message within 30 seconds waits. The note link picks the note kind.
+  await writer.getByRole('contentinfo').getByRole('link', { name: 'Write to Sophie' }).click();
+  await expect(writer.getByRole('radio', { name: 'A personal note to Sophie' })).toBeChecked();
+  await writer.getByLabel('Your note').fill('Thank you for Vlo.');
+  await writer.getByRole('button', { name: 'Send the note' }).click();
+  await expect(writer.getByRole('status').filter({ hasText: 'Wait 30 seconds' })).toBeVisible();
 
   // An account that is not the owner cannot open the owner page.
   const ownerContext = await browser.newContext();
@@ -414,6 +472,17 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
   await item.getByRole('button', { name: 'Planned' }).click();
   await expect(item.getByRole('status')).toHaveText('Saved.');
   expect(fake.accounts?.feedback[0]?.status).toBe('planned');
+  await item.getByRole('button', { name: 'Block this sender' }).click();
+  await expect(item.getByRole('status')).toHaveText('Blocked. This sender cannot send more messages.');
+  await expect(item).toContainText('Sender blocked');
+  await writer.reload();
+  await writer.getByLabel('Your note').fill('One more note.');
+  await writer.getByRole('button', { name: 'Send the note' }).click();
+  await expect(
+    writer.getByRole('status').filter({ hasText: 'Vlo cannot send messages from this device or account.' }),
+  ).toBeVisible();
+  await item.getByRole('button', { name: 'Unblock this sender' }).click();
+  await expect(item.getByRole('status')).toHaveText('Unblocked.');
 
   const download = owner.waitForEvent('download');
   await owner.getByRole('button', { name: 'Download all as CSV' }).click();

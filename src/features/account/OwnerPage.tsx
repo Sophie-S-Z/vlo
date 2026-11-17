@@ -16,6 +16,7 @@ import { accountErrorText } from './AccountPage';
 import { accountsReady } from './auth';
 import {
   benchmarks,
+  blockSender,
   change,
   feedbackCsv,
   insights,
@@ -609,6 +610,7 @@ const KIND_LABELS: Record<OwnerFeedback['kind'], string> = {
   problem: 'Problem',
   praise: 'Praise',
   question: 'Question',
+  note: 'Note to you',
 };
 
 function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: OwnerFeedback) => void }) {
@@ -627,12 +629,25 @@ function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: 
       },
     );
   };
+  const block = (blocked: boolean) => {
+    setMessage('');
+    blockSender(item.id, blocked).then(
+      () => {
+        onSaved({ ...item, blocked });
+        setMessage(blocked ? 'Blocked. This sender cannot send more messages.' : 'Unblocked.');
+      },
+      (error: unknown) => {
+        setMessage(accountErrorText(error));
+      },
+    );
+  };
   const from = item.email ?? item.contact;
   return (
     <li className="grid gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-4">
       <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted">
         <span className="font-semibold text-text">{KIND_LABELS[item.kind]}</span>
         <span>{dayText(item.created_at)}</span>
+        {item.blocked && <span className="font-semibold text-accent-text">Sender blocked</span>}
         {item.rating !== null && <span>Rating {item.rating} of 5</span>}
         <span>
           {item.device}, version {item.app_version}
@@ -674,7 +689,7 @@ function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: 
             setNote(e.target.value);
           }}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             variant="outline"
@@ -684,6 +699,15 @@ function FeedbackItem({ item, onSaved }: { item: OwnerFeedback; onSaved: (item: 
             }}
           >
             Save the note
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              block(!item.blocked);
+            }}
+          >
+            {item.blocked ? 'Unblock this sender' : 'Block this sender'}
           </Button>
           <span role="status" className="text-sm">
             {message}
