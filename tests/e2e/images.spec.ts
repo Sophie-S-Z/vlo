@@ -255,7 +255,7 @@ test('Markdown and Word exports hold the stored image with its alt text', async 
   await expect(scene.getByRole('img', { name: /Fishing boats/ })).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
 
-  const markdown = await exportFile(page, /Markdown/);
+  const markdown = await exportFile(page, /^Markdown/);
   expect(markdown.name).toBe('Scene 1.zip');
   const zip = await JSZip.loadAsync(markdown.bytes);
   const text = (await zip.file('Scene 1.md')?.async('string')) ?? '';
@@ -264,7 +264,7 @@ test('Markdown and Word exports hold the stored image with its alt text', async 
   // The file is the JPEG that Vlo stored, not the PNG that was dropped.
   expect([...(stored ?? new Uint8Array()).subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
 
-  const word = await JSZip.loadAsync((await exportFile(page, /Word/)).bytes);
+  const word = await JSZip.loadAsync((await exportFile(page, /^Word/)).bytes);
   expect(Object.keys(word.files).filter((name) => name.startsWith('word/media/'))).toHaveLength(1);
   expect((await word.file('word/document.xml')?.async('string')) ?? '').toContain(
     'descr="Fishing boats at the harbour wall"',
