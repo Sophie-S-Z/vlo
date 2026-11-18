@@ -20,6 +20,8 @@ import { UsageSettings } from '@/features/usage/UsageSettings';
 import { sharingReady } from '@/features/share/rpc';
 import { Link } from 'react-router';
 import { SpeechSettings, VoiceSettings } from '@/features/voice/SpeechSettings';
+import { GrammarSettings } from '@/features/grammar/GrammarSettings';
+import { TextShortcutSettings } from './TextShortcutSettings';
 
 // Sync loads with Settings only when it opens, so the first screen stays small.
 const DevicesSection = lazy(async () => ({
@@ -254,6 +256,16 @@ export function SettingsPage() {
                 setAnnouncement(on ? 'All tools in the toolbar.' : 'Main tools in the toolbar.');
               }}
             />
+            <SettingSwitch
+              label="Complete Codex names"
+              hint="After three letters of a Codex name, the rest shows faintly, and Tab takes it. @ lists your Codex and items."
+              checked={writing.codexCompletion}
+              onChange={(on) => {
+                setWritingPrefs({ codexCompletion: on });
+                setAnnouncement(on ? 'Codex name completion on.' : 'Codex name completion off.');
+              }}
+            />
+            <TextShortcutSettings onAnnounce={setAnnouncement} />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="grid gap-0.5">
                 <p className="text-sm font-medium">Getting-started guide</p>
@@ -273,6 +285,10 @@ export function SettingsPage() {
               </Button>
             </div>
           </div>
+        </Section>
+
+        <Section title="Spelling and grammar" id="grammar">
+          <GrammarSettings onAnnounce={setAnnouncement} />
         </Section>
 
         <Section title="AI" id="ai">

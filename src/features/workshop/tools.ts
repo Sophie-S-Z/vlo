@@ -10,6 +10,7 @@ export type WorkshopToolId =
   | 'shovel'
   | 'echoes'
   | 'endings'
+  | 'rhymes'
   | 'spine'
   | 'headlines'
   | 'citations'
@@ -55,6 +56,13 @@ export const WORKSHOP_TOOLS: readonly WorkshopTool[] = [
     hint: 'Where each line ends: on a pause or running on, on a strong word or a small one.',
     templates: ['poetry'],
     keywords: ['line breaks', 'enjambment', 'end-stopped', 'lineation'],
+  },
+  {
+    id: 'rhymes',
+    label: 'Rhymes',
+    hint: 'The rhymes and near rhymes of a word, from the pronouncing dictionary on this device.',
+    templates: ['poetry'],
+    keywords: ['rhyming dictionary', 'rhyme', 'slant rhyme', 'near rhyme', 'syllables'],
   },
   {
     id: 'spine',

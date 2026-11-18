@@ -13,7 +13,7 @@ Last update: 2026-11-18
   - AI modes are off on each device until the writer turns on Offer AI modes in Settings, under AI. Until
     then the mode dialog offers Pen only, and says where to turn the modes on. A project that is in an AI
     mode keeps its mode and can go back to Pen. Co-writer is now Drafting; the stored value stays
-    `cowriter`, so backups and sync need no change. AI policy version 3 and privacy version 19.
+    `cowriter`, so backups and sync need no change. AI policy version 3 and privacy version 20.
 
 - Leaderboard, comedy and spacing (2026-11-17, ADR 0012, migration 0013), from the product owner's ask:
   - `/leaderboard`: the signed-in writers who wrote the most words today, this week, this month and this
@@ -39,6 +39,26 @@ Last update: 2026-11-18
     which runs in its own worker on WebGPU or WASM. The voices speak English, Spanish, French,
     Portuguese and Korean. The device voices stay in the list. A natural voice is the default.
   - Privacy version 17.
+
+- Phase 19, Part D: words and language tools (2026-11-17, `docs/plans/phase-19.md`). Every tool runs on the
+  device from Vlo's own files, and each data file loads the first time a writer uses its tool:
+  - Spelling and grammar: Harper (harper.js 3.2.0, Apache-2.0) in a worker, about 8.4 MB gzip with its
+    dictionary. It is off until the writer turns it on in Review, because of that download. After a 1.5 s
+    pause it checks the English prose blocks near the screen. A fix, Add to dictionary, Ignore and Turn off
+    this rule sit in the note at the cursor. Codex and People names are never spelling marks. Typing p95
+    on the 10,000-word scene with grammar and parts of speech on: 21 ms.
+  - Thesaurus and rhymes: Shift+F7 or Review, Thesaurus opens a card at the word with each meaning, its
+    words and its opposites, from Open English WordNet 2024 (CC BY 4.0, 1.8 MB gzip, built by
+    `scripts/build-thesaurus.mjs`). A choice keeps the case and the formats of the word. A poem gets a
+    Rhymes tab, and a poetry collection gets Rhymes in the Workshop, from the CMU data. Ethnic slurs are
+    out of the thesaurus, and obscene words are out of the rhymes.
+  - Text shortcuts and a typo list of about 65 common typos (English prose), with Backspace to undo. Codex
+    name completion after three letters (Tab takes it) and an @ list of Codex entries and items.
+  - Focus, Dim other sentences keeps only the sentence at the cursor clear. Review, Show parts of speech
+    colors nouns, verbs, adjectives, adverbs and conjunctions in an English item, each with its own line
+    shape and a switch in the legend (wink-pos-tagger 2.2.2, MIT, 645 KB gzip). Privacy version 19.
+  - Not as planned: Mod-Shift-T is Shift+F7, because browsers keep Ctrl+Shift+T to reopen a closed tab.
+    The right-click menu stays the browser's own, with its paste and spell check.
 
 - Phase 19, Part C: review like Google Docs (2026-11-17, `docs/plans/phase-19.md`):
   - A comment is a thread: the first comment, replies, and a resolve time, all in the comment mark, so

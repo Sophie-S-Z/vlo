@@ -8,7 +8,7 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 19,
+  version: 20,
   date: '2026-11-18',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
@@ -17,6 +17,7 @@ export const PRIVACY = {
     'The authorship record of each project stays in this browser. It holds counts and times, never text. It leaves only in a file that you download, or encrypted in sync.',
     'The recordings of a memory stay in this browser, with the research files of the project. Turn into text and Speak to write run the speech model on this device, so the audio never leaves it. Speak to write keeps no audio.',
     'Read aloud runs every voice on this device, the natural voices too, so your text never leaves it.',
+    "The spelling and grammar check, the thesaurus, the rhymes and the parts-of-speech colors run on this device from Vlo's own files, so your text never leaves it. Your dictionary, your text shortcuts and the rules that you turned off stay in this browser.",
     'A provider key stays in memory until you close the tab, unless you save it on this device with a passphrase. It goes only to its own provider.',
     'The key of each share link stays in the link and on this device. A backup file leaves out the key and the owner token.',
     'The network log stays in this browser.',

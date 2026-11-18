@@ -39,6 +39,11 @@ import { SmartPunctuation } from './extensions/smartPunctuation';
 import { StyleCheck } from './extensions/styleCheck';
 import { CodexNames } from './extensions/codexNames';
 import { ContinuityCheck } from './extensions/continuityCheck';
+import { GrammarCheck } from './extensions/grammar';
+import { PartsOfSpeech } from './extensions/partsOfSpeech';
+import { PosLegend } from '@/features/pos/PosLegend';
+import { TextShortcuts } from './extensions/textShortcuts';
+import { useGrammarPrefs } from '@/features/grammar/grammarPrefs';
 import { TypingState } from './extensions/textFill';
 import { BASE_STACK, COMFORT_FONT, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
@@ -49,6 +54,8 @@ import { PanelHost } from './toolbar/PanelHost';
 import { ReadAloudBar } from './toolbar/ReadAloudBar';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
+import { MentionMenuList } from './toolbar/MentionMenuList';
+import { CodexCompletion } from './extensions/codexCompletion';
 import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
 import { restorePlace, savePlace, scrollToCaret } from './lastPlace';
@@ -113,19 +120,22 @@ const EXTENSIONS = {
   script: scriptExtensions,
 } satisfies Record<EditorForm, (doc: Y.Doc) => AnyExtension[]>;
 
-/** The editor element's attributes. A rename passes a new label. */
+/**
+ * The editor element's attributes. A rename passes a new label. The browser's spell check stays off while
+ * Vlo's own check of spelling and grammar runs, so a word never gets two marks.
+ */
 function editorAttributes(
   label: string,
   kind: EditorProps['kind'],
   helpId: string,
-  showAi: boolean,
+  { showAi, grammar }: { showAi: boolean; grammar: boolean },
 ): Record<string, string> {
   return {
     'aria-label': label,
     'aria-multiline': 'true',
     'aria-describedby': helpId,
     role: 'textbox',
-    spellcheck: 'true',
+    spellcheck: grammar ? 'false' : 'true',
     class: `vlo-manuscript vlo-${kind}`,
     // "Show AI text" draws the aiOrigin mark. The mark stays in the text when it is hidden.
     ...(showAi ? { 'data-show-ai': '' } : {}),
@@ -175,15 +185,22 @@ export function Editor({
 }: EditorProps) {
   const helpId = useId();
   const listId = `${useId()}-tools`;
+  const mentionListId = `${useId()}-names`;
   const writing = useWritingPrefs();
   const smart = kind === 'poem' ? writing.smartPoems : writing.smartProse;
   // The style check's word lists are English. A project with no language is English.
   const english = (language ?? 'en').split('-')[0] === 'en';
+  // Harper checks English prose. A poem's and a script's lines keep the browser's spell check.
+  const grammarForm = english && kind === 'prose';
+  const grammar = useGrammarPrefs().on && grammarForm;
   const editor = useEditor(
     {
       extensions: [
         ...EXTENSIONS[kind](doc),
         ...(smart ? [SmartPunctuation] : []),
+        ...(kind === 'script'
+          ? []
+          : [TextShortcuts.configure({ typos: english && kind === 'prose', curly: smart })]),
         FocusTools,
         ClickBelow,
         CaretBlock,
@@ -195,8 +212,12 @@ export function Editor({
         StyleCheck.configure({ form: kind, english }),
         CodexNames,
         ContinuityCheck.configure({ itemId, english }),
+        ...(grammarForm ? [GrammarCheck.configure({ itemId, language })] : []),
+        // The tagger reads English only.
+        ...(english ? [PartsOfSpeech] : []),
         AuthorshipCount.configure({ projectId: projectId ?? null }),
         ...(kind === 'script' ? [] : [ImageInput.configure({ projectId: projectId ?? null })]),
+        CodexCompletion.configure({ listId: mentionListId }),
         SlashMenu.configure({
           items: slashItems(kind, templates),
           listId,
@@ -216,34 +237,37 @@ export function Editor({
           onToolFocus: focusTools,
         }),
       ],
-      // Poems run no input rules, so "1." or "- " stays as typed. Smart punctuation is the one opt-in rule.
-      enableInputRules: kind === 'prose' ? true : smart ? ['typography'] : false,
+      // Poems run no input rules, so "1." or "- " stays as typed. Smart punctuation turns on its rules and
+      // the writer's text shortcuts.
+      enableInputRules: kind === 'prose' ? true : smart ? ['typography', 'textShortcuts'] : false,
       enablePasteRules: kind === 'prose',
       // The tool surfaces read editor state on their own, so a keystroke does not re-render this tree.
       shouldRerenderOnTransaction: false,
       editorProps: {
-        attributes: editorAttributes(label, kind, helpId, writing.showAiText),
+        attributes: editorAttributes(label, kind, helpId, { showAi: writing.showAiText, grammar }),
         // Room for the sticky toolbar above the caret, and for the phone keyboard bar under it.
         scrollMargin: { top: 56, bottom: 72, left: 0, right: 0 },
       },
     },
-    [doc, kind, smart, english, projectId],
+    [doc, kind, smart, language, projectId],
   );
 
   // A rename changes the editor's accessible name at once, without reopening the item.
-  // The "Show AI text" switch also changes the attributes at once.
-  const namedAs = useRef({ label, showAi: writing.showAiText });
+  // The "Show AI text" and grammar switches also change the attributes at once.
+  const namedAs = useRef({ label, showAi: writing.showAiText, grammar });
   useEffect(() => {
     const showAi = writing.showAiText;
-    if (editor.isDestroyed || (namedAs.current.label === label && namedAs.current.showAi === showAi)) return;
-    namedAs.current = { label, showAi };
+    const was = namedAs.current;
+    if (editor.isDestroyed || (was.label === label && was.showAi === showAi && was.grammar === grammar))
+      return;
+    namedAs.current = { label, showAi, grammar };
     editor.setOptions({
       editorProps: {
         ...editor.options.editorProps,
-        attributes: editorAttributes(label, kind, helpId, showAi),
+        attributes: editorAttributes(label, kind, helpId, { showAi, grammar }),
       },
     });
-  }, [editor, label, kind, helpId, writing.showAiText]);
+  }, [editor, label, kind, helpId, writing.showAiText, grammar]);
 
   // Viewing mode (Phase 19, Task A1) makes the text read only. Each tool reads the editable state, so an
   // empty transaction lets them see the change.
@@ -404,6 +428,7 @@ export function Editor({
         <Toolbar editor={editor} kind={kind} templates={templates} />
         {find?.editor === editor && <FindBar editor={editor} request={find} itemId={itemId} />}
         <ReadAloudBar editor={editor} />
+        {english && <PosLegend />}
         <CursorNote editor={editor} itemId={itemId} />
         {kind === 'prose' && <PasteNotice editor={editor} />}
       </div>
@@ -426,6 +451,7 @@ export function Editor({
       {kind === 'prose' && <BlockHandle editor={editor} />}
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />
+      <MentionMenuList editor={editor} listId={mentionListId} />
       <PanelHost
         editor={editor}
         form={kind}

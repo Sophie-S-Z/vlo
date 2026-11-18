@@ -1,11 +1,13 @@
 import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { openPanel } from '../commands/editorBus';
 
 /*
  * Small editor helpers for the tool surfaces.
  * HeldSelection keeps the selected text marked while a panel has focus, so the writer sees what a color
- * or size will change. ToolKeys adds Mod-/ (shortcut sheet) and Alt-F10 (move to the tools).
+ * or size will change. ToolKeys adds Mod-/ (shortcut sheet), Alt-F10 (move to the tools) and Shift-F7 (the
+ * thesaurus at the word).
  */
 
 export const heldKey = new PluginKey<DecorationSet>('heldSelection');
@@ -63,6 +65,10 @@ export const ToolKeys = Extension.create<ToolKeysOptions>({
         return true;
       },
       'Alt-F10': () => this.options.onToolFocus(this.editor),
+      'Shift-F7': () => {
+        openPanel({ editor: this.editor, panel: 'thesaurus', anchor: 'caret' });
+        return true;
+      },
     };
   },
 });

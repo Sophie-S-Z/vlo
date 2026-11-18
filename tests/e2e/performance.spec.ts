@@ -348,6 +348,50 @@ test('typing stays under 50 ms at p95 in the 10,000-word scene with 200 comments
   expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
 });
 
+test('typing stays under 50 ms at p95 in the 10,000-word scene with grammar and parts of speech on', async ({
+  page,
+  browserName,
+}) => {
+  test.slow();
+  await page.addInitScript(() => {
+    localStorage.setItem('vlo:grammar', JSON.stringify({ on: true }));
+    localStorage.setItem('vlo:parts-of-speech', JSON.stringify({ on: true }));
+    // The typo list would fix "teh" as it is typed (Task D3), so the check would never see it.
+    localStorage.setItem('vlo:writing', JSON.stringify({ typoFixes: false }));
+  });
+  await skipOnboarding(page);
+  const seeded = await seedLarge(page);
+  await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}`);
+  const editor = page.getByRole('textbox', { name: seeded.longSceneTitle });
+  await expect(editor).toContainText(seeded.longSceneEnd);
+
+  // Phase 19, Task D1: a typo at the end shows that Harper checked the blocks on the screen.
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type(' Then teh boat.');
+  await expect(editor.locator('.vlo-spelling').filter({ hasText: 'teh' })).toHaveCount(1, {
+    timeout: 60_000,
+  });
+  // Phase 19, Task D5: the tagger colored the same words.
+  await expect(editor.locator('.vlo-pos-noun').filter({ hasText: /^boat$/ })).toHaveCount(1);
+  await page.evaluate(() => {
+    window.__keyDelays = [];
+  });
+  const typed = 'The lamp caught on the third match and light swung out over the water. '
+    .repeat(3)
+    .slice(0, 200);
+  await page.keyboard.type(typed, { delay: 30 });
+  await expect(editor).toContainText(typed.trim().slice(-30));
+  await expect.poll(() => page.evaluate(() => window.__keyDelays.length)).toBe(typed.length);
+  const sorted = (await page.evaluate(() => window.__keyDelays)).sort((a, b) => a - b);
+  const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+  console.log(
+    `[${browserName}] keystroke to paint with grammar and parts of speech on, p95: ${p95.toFixed(1)} ms`,
+  );
+  // The same budget and WebKit ceiling as Gate 1.
+  expect(p95).toBeLessThan(browserName === 'webkit' ? 100 : 50);
+});
+
 test('typing stays under 50 ms at p95 with 500 shimmering runs on screen, and the shimmer pauses', async ({
   page,
   browserName,

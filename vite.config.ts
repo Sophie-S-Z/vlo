@@ -93,7 +93,10 @@ export default defineConfig({
         // The speech-to-text worker and its ONNX Runtime file (about 7 MB gzip, Phase 11 plan Task K9) are
         // cached the first time a writer turns speech into text. The worker of the natural voices is cached
         // the first time a writer reads with one, and it runs the same ONNX Runtime file. The PDF reader's
-        // worker (about 400 KB gzip) is cached the first time a writer imports a PDF.
+        // worker (about 400 KB gzip) is cached the first time a writer imports a PDF. The spelling and grammar
+        // check (Harper, about 8.5 MB gzip with its dictionary) is cached the first time a writer turns it on.
+        // The thesaurus (WordNet, about 1.8 MB gzip) is cached the first time a writer opens it, and the
+        // parts-of-speech tagger the first time a writer shows the parts of speech.
         globIgnores: [
           'assets/fonts/**',
           'assets/craft/**',
@@ -101,6 +104,10 @@ export default defineConfig({
           'assets/transcribe.worker-*',
           'assets/speak.worker-*',
           'assets/pdf.worker-*',
+          'assets/grammar.worker-*',
+          'assets/grammar/**',
+          'assets/thesaurus/**',
+          'assets/pos/**',
         ],
         runtimeCaching: [
           {
@@ -140,6 +147,26 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           })),
+          {
+            urlPattern: /\/assets\/(?:grammar\.worker-[^/]+\.js|grammar\/[^/]+\.js|harper_wasm_[^/]+\.wasm)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-grammar-check',
+              // The file names carry a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 8 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            urlPattern: /\/assets\/(?:thesaurus|pos)\/[^/]+\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vlo-word-data',
+              // The file names carry a content hash, so a cached file never goes stale.
+              expiration: { maxEntries: 12 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
           {
             urlPattern: /\/assets\/pdf\.worker-[^/]+\.js$/,
             handler: 'CacheFirst',
@@ -196,11 +223,16 @@ export default defineConfig({
     format: 'es',
     rolldownOptions: {
       output: {
-        // The Craft worker's dictionary goes under assets/craft/, so the install leaves it out.
-        chunkFileNames: (chunk) =>
-          chunk.moduleIds.some((id) => id.includes('cmu-pronouncing-dictionary'))
-            ? 'assets/craft/[name]-[hash].js'
-            : 'assets/[name]-[hash].js',
+        // The pronouncing dictionary goes under assets/craft/, Harper under assets/grammar/, WordNet under
+        // assets/thesaurus/ and the tagger under assets/pos/, so the install leaves them out.
+        chunkFileNames: (chunk) => {
+          const has = (name: string) => chunk.moduleIds.some((id) => id.includes(name));
+          if (has('cmu-pronouncing-dictionary')) return 'assets/craft/[name]-[hash].js';
+          if (has('harper.js')) return 'assets/grammar/[name]-[hash].js';
+          if (has('thesaurus.json')) return 'assets/thesaurus/[name]-[hash].js';
+          if (has('/wink-')) return 'assets/pos/[name]-[hash].js';
+          return 'assets/[name]-[hash].js';
+        },
       },
     },
   },

@@ -24,7 +24,7 @@ const LEAF = '￼';
 const WORD_AT = /[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}]+)*/gu;
 
 /** The selection, or the word at the caret. Null when the caret is in no word. */
-function rangeOf(state: EditorState): { from: number; to: number } | null {
+export function wordRange(state: EditorState): { from: number; to: number } | null {
   const { from, to, empty, $from } = state.selection;
   if (!empty) return { from, to };
   const text = $from.parent.textBetween(0, $from.parent.content.size, undefined, LEAF);
@@ -80,7 +80,7 @@ function piecesOf(doc: ProseMirrorNode, from: number, to: number, rule: TextCase
 }
 
 function applyCase(state: EditorState, tr: Transaction, rule: TextCase, language: string): boolean {
-  const range = rangeOf(state);
+  const range = wordRange(state);
   if (!range) return false;
   const pieces = piecesOf(tr.doc, range.from, range.to, rule, language);
   for (const piece of pieces.reverse()) {
@@ -104,7 +104,7 @@ export const TextCaseCommands = Extension.create({
       nextTextCase:
         () =>
         ({ state, tr, view }) => {
-          const range = rangeOf(state);
+          const range = wordRange(state);
           if (!range) return false;
           const language = languageOf(view.dom);
           return applyCase(

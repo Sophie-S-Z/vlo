@@ -4,10 +4,14 @@ import { safeStorage } from '@/app/preferences';
 /** How Hide the text covers the words: a blur, or a bar over each line. */
 export type HideStyle = 'blur' | 'bars';
 export const HIDE_STYLES: readonly HideStyle[] = ['blur', 'bars'];
+/** What stays clear while dimming is on: the line (or paragraph) with the caret, or its sentence. */
+export type DimScope = 'line' | 'sentence';
+export const DIM_SCOPES: readonly DimScope[] = ['line', 'sentence'];
 
 export interface FocusPrefs {
   typewriter: boolean;
   dim: boolean;
+  dimScope: DimScope;
   /** Hide the text on the screen, so nobody nearby can read it. The text and every export stay the same. */
   hide: boolean;
   hideStyle: HideStyle;
@@ -19,6 +23,7 @@ const KEY = 'vlo:focus';
 const DEFAULTS: FocusPrefs = {
   typewriter: false,
   dim: false,
+  dimScope: 'line',
   hide: false,
   hideStyle: 'blur',
   hideKeep: false,
@@ -33,6 +38,7 @@ function load(): FocusPrefs {
       return {
         typewriter: value.typewriter === true,
         dim: value.dim === true,
+        dimScope: DIM_SCOPES.includes(value.dimScope as DimScope) ? (value.dimScope as DimScope) : 'line',
         hide: value.hide === true,
         hideStyle: HIDE_STYLES.includes(value.hideStyle as HideStyle)
           ? (value.hideStyle as HideStyle)
