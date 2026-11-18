@@ -35,7 +35,7 @@ export function AnalysisPanel({ editor, kind, itemId, projectId, onShow }: Analy
   const markedNames = useMemo(() => markedNamesIn(editor.getJSON()).map((n) => n.text), [editor]);
   // Chinese and Japanese count characters, as the stats bar does.
   const { stats, error } = useItemStats(mapped.text, kind, useManuscript()?.language);
-  // The deep check loads a language model, and Pen mode loads no AI code, so it needs Reader or Co-writer.
+  // The deep check loads a language model, and Pen mode loads no AI code, so it needs Reader or Drafting.
   const aiMode = useLiveQuery(async () => (await db.projects.get(projectId))?.aiMode, [projectId]);
   const show = (from: number, to: number) => {
     onShow(mapped.at(from), mapped.at(to));

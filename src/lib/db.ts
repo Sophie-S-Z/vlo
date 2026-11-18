@@ -50,7 +50,7 @@ export interface Project {
     challenge?: Challenge;
     /** Net words added on each local day, by the date as YYYY-MM-DD, for goals and streaks (F21). */
     wordsByDay?: Record<string, number>;
-    /** The time of the first Co-writer insert, so each export offers the AI provenance page (F26). */
+    /** The time of the first AI insert in Drafting mode, so each export offers the AI provenance page (F26). */
     aiInsertedAt?: number;
     /** The language of the writing, as a BCP 47 tag such as "he" (F38). None means English. */
     language?: string;

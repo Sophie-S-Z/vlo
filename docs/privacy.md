@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 20, 18 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 21, 18 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -20,13 +20,13 @@ Version 20, 18 November 2026. The app shows these words at `/privacy` (`src/feat
 
 ### AI requests
 
-Only in a project in Reader or Co-writer mode, after you press the button that sends a request or loads the model list of a provider.
+Only in a project in Reader or Drafting mode, after you press the button that sends a request or loads the model list of a provider.
 
 The text of the request, which Vlo shows you before it goes unless you turned that off, and the provider key. The Reader panel also sends the Codex notes of the names in its text. In a memoir, the aliases replace the real names when that switch is on. A local server on this computer keeps the text on the device.
 
 ### In-browser model files
 
-Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check. In any mode, when you download a speech model for Turn into text or Speak to write, or the natural voices for Read aloud.
+Only in a project in Reader or Drafting mode, when you load an in-browser model for the Assistant or the deep AI check. In any mode, when you download a speech model for Turn into text or Speak to write, or the natural voices for Read aloud.
 
 Requests for the model files. No text or audio goes with them.
 

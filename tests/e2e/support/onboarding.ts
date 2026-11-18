@@ -17,14 +17,14 @@ export async function writeWithoutAccount(page: Page) {
  */
 export async function skipOnboarding(page: Page, { dailyCount = false } = {}) {
   await writeWithoutAccount(page);
-  // The welcome starts a new writer at the Simple tool level. These tests use every tool, so they start
-  // at Full; tool-level.spec.ts tests the Simple start.
+  // The welcome starts a new writer at the Simple tool level, with no AI modes. These tests use every tool
+  // and mode, so they start at Full with AI modes on; tool-level.spec.ts and ai-mode.spec.ts test the start.
   await page.addInitScript(() => {
     if (localStorage.getItem('vlo:writing') === null)
-      localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full' }));
-    // The first-use tips line (Phase 17) stays closed here; tips.spec.ts tests it.
-    if (localStorage.getItem('vlo:tips') === null)
-      localStorage.setItem('vlo:tips', JSON.stringify({ closed: true, index: 0 }));
+      localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full', aiModes: true }));
+    // The getting-started guide stays closed here; guide.spec.ts tests it.
+    if (localStorage.getItem('vlo:guide') === null)
+      localStorage.setItem('vlo:guide', JSON.stringify({ closed: true, index: 0 }));
   });
   // The daily count (Phase 18) is always on for a real writer. Here it stays quiet, so the network tests
   // see only what they test; accounts.spec.ts tests the count.

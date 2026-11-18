@@ -4,6 +4,18 @@ Last update: 2026-11-18
 
 ## Done
 
+- Beta feedback: a wider page, a guide and AI by choice (2026-11-18):
+  - The text is 100 characters wide at first, not 68, and the width goes to 160. Page look has a Wide look
+    that fills a large screen. The project screen uses the whole window width, so the margins beside the
+    text stay small. A width that a writer chose stays.
+  - A getting-started guide in six plain steps replaces the tip line above the text. Back, Next, Done and
+    Close move through it or hide it, and Settings, Writing, shows it again. It never takes the focus.
+  - The stats bar shows the words and the reading time at first. The welcome names the authorship record.
+  - AI modes are off on each device until the writer turns on Offer AI modes in Settings, under AI. Until
+    then the mode dialog offers Pen only, and says where to turn the modes on. A project that is in an AI
+    mode keeps its mode and can go back to Pen. Co-writer is now Drafting; the stored value stays
+    `cowriter`, so backups and sync need no change. AI policy version 3 and privacy version 21.
+
 - Phase 19, Part E: the writer's own tools (2026-11-18, `docs/plans/phase-19.md`, ADR 0013, migration 0015):
   - Customize toolbar (at the end of Insert, Format, Review and More tools) pins any tool of the form on
     the toolbar, in the writer's order, by drag or by the arrows. A pinned tool stays in its menu. A phone

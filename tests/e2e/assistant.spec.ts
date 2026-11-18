@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
 /*
  * Plan Tasks D5 and D6 (spec section 10, F23 to F26, US10, US11). The Assistant panel against fake
  * providers on their real addresses: the "What will be sent" drawer, Reader answers that never reach the
- * text, Co-writer Insert with the AI mark and one Undo, the key terms, the limit and blocked messages, and
+ * text, Drafting Insert with the AI mark and one Undo, the key terms, the limit and blocked messages, and
  * the AI provenance page. Real providers are checked by hand (plan decision P4).
  */
 
@@ -45,7 +45,7 @@ async function saved(page: Page) {
   await expect(page.getByRole('status').filter({ hasText: /Saved/ })).toHaveText('Saved');
 }
 
-async function switchTo(page: Page, label: 'Reader' | 'Co-writer' | 'Pen') {
+async function switchTo(page: Page, label: 'Reader' | 'Drafting' | 'Pen') {
   await badge(page).click();
   const dialog = page.getByRole('dialog', { name: 'AI mode' });
   await dialog.getByRole('radio', { name: new RegExp(`^${label}`) }).click();
@@ -172,8 +172,8 @@ test('F61: the reader panel sends the Codex notes of the names in the text, and 
   await page.getByRole('heading', { level: 2, name: 'Codex' }).click();
   await views.getByRole('link', { name: 'Write' }).click();
 
-  // Co-writer mode has Insert for drafts, and still none for the readers' notes.
-  await switchTo(page, 'Co-writer');
+  // Drafting mode has Insert for drafts, and still none for the readers' notes.
+  await switchTo(page, 'Drafting');
   await openAssistant(page);
   await useOllama(page);
   const sent = await fakeChat(page, 'http://localhost:11434/v1/chat/completions', [
@@ -202,13 +202,13 @@ test('F61: the reader panel sends the Codex notes of the names in the text, and 
   expect(await seriousIssues(page)).toEqual([]);
 });
 
-test('a Co-writer draft goes in with the AI mark, one Undo takes it out, and the export can list it', async ({
+test('a draft in Drafting mode goes in with the AI mark, one Undo takes it out, and the export can list it', async ({
   page,
 }) => {
   await newProject(page);
   await page.keyboard.type('The rain stopped.');
   await saved(page);
-  await switchTo(page, 'Co-writer');
+  await switchTo(page, 'Drafting');
   await openAssistant(page);
   await useOllama(page);
   const sent = await fakeChat(page, 'http://localhost:11434/v1/chat/completions', [
@@ -278,7 +278,7 @@ test('each version of a rewrite replaces the words that the last Insert put in, 
   await page.keyboard.press('Home');
   for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowRight');
   for (let i = 0; i < 7; i += 1) await page.keyboard.press('Shift+ArrowRight');
-  await switchTo(page, 'Co-writer');
+  await switchTo(page, 'Drafting');
   await openAssistant(page);
   await useOllama(page);
   const sent = await fakeChat(page, 'http://localhost:11434/v1/chat/completions', [
@@ -432,7 +432,7 @@ for (const theme of ['ink', 'paper', 'sepia'] as const) {
     await newProject(page);
     await page.keyboard.type('A short scene for the check.');
     await saved(page);
-    await switchTo(page, 'Co-writer');
+    await switchTo(page, 'Drafting');
     await openAssistant(page);
     expect(await seriousIssues(page)).toEqual([]);
     await panel(page).getByRole('button', { name: 'Change engine' }).click();

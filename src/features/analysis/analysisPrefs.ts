@@ -3,7 +3,7 @@ import { safeStorage } from '@/app/preferences';
 
 /*
  * The stats bar under the writing, on this device: whether it shows, and which counts it shows. It is on,
- * with five counts, and the writer can turn it off or pick other counts.
+ * with the words and the reading time, and the writer can turn it off or pick other counts.
  */
 
 export const METRICS = [
@@ -42,7 +42,7 @@ export interface AnalysisPrefs {
 const KEY = 'vlo:analysis';
 export const ANALYSIS_DEFAULTS: AnalysisPrefs = {
   bar: true,
-  metrics: ['words', 'characters', 'sentences', 'reading', 'grade'],
+  metrics: ['words', 'reading'],
 };
 const listeners = new Set<() => void>();
 

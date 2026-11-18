@@ -7,7 +7,7 @@ import { MODE_INFO } from './modes';
 
 /*
  * The AI mode badge (spec section 10, F23). It shows on every project screen, next to the view tabs, and
- * opens the mode dialog. Pen is quiet. Reader has the accent line, and Co-writer is filled, so a writer
+ * opens the mode dialog. Pen is quiet. Reader has the accent line, and Drafting is filled, so a writer
  * sees at a glance how much AI the project allows.
  */
 

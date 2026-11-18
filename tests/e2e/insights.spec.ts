@@ -39,7 +39,7 @@ async function newNovel(page: Page, words: string) {
 test('the stats bar counts after a pause and can be changed or hidden', async ({ page }) => {
   await newNovel(page, 'The cat sat on the mat. It was a sunny day.');
   await expect(bar(page)).toContainText('11 words');
-  await expect(bar(page)).toContainText('2 sentences');
+  await expect(bar(page)).toContainText('to read');
   await page.keyboard.insertText(' The dog came home.');
   await expect(bar(page)).toContainText('15 words');
 
@@ -144,7 +144,7 @@ test('the deep check waits for Reader mode, names its model and says when the br
   const dialog = insights(page);
   await dialog.getByRole('tab', { name: 'AI check' }).click();
   // Pen mode loads no AI code (decision of 2026-11-08), so the deep check asks for another mode.
-  await expect(dialog.getByText('it works only in Reader or Co-writer mode')).toBeVisible();
+  await expect(dialog.getByText('it works only in Reader or Drafting mode')).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Run the deep check' })).toHaveCount(0);
   await page.keyboard.press('Escape');
 

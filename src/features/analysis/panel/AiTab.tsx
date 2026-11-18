@@ -5,7 +5,7 @@ import { FLAG_INFO, type FlagKind } from '../ai/integrity';
 import { TELL_INFO } from '../ai/tells';
 import { aiCheckInWorker } from '../analysisClient';
 
-// The deep check loads only in Reader or Co-writer mode, so a project in Pen mode loads none of its AI code.
+// The deep check loads only in Reader or Drafting mode, so a project in Pen mode loads none of its AI code.
 const DeepCheck = lazy(async () => ({ default: (await import('./DeepCheck')).DeepCheck }));
 
 /*
@@ -61,7 +61,7 @@ export function AiTab({
 }: {
   text: string;
   provenance: { ai: number; total: number };
-  /** True in Reader or Co-writer mode. */
+  /** True in Reader or Drafting mode. */
   deepCheck: boolean;
   onShow: (from: number, to: number) => void;
 }) {
@@ -115,7 +115,7 @@ export function AiTab({
         </Suspense>
       ) : (
         <p className="text-muted">
-          The deep check loads a language model, so it works only in Reader or Co-writer mode. Choose the AI
+          The deep check loads a language model, so it works only in Reader or Drafting mode. Choose the AI
           mode button to switch this project.
         </p>
       )}

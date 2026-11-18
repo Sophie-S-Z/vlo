@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 32,
+  version: 33,
   date: '2026-11-18',
   guide: [
     {
@@ -40,7 +40,7 @@ export const HELP = {
         'Press Ctrl+K (Cmd+K on a Mac), or choose Search, and type what you want: a tool such as Insights, History or Sound, a view such as the Codex, or an item.',
         'Type / in the text for headings, lists, footnotes, images, citations and more. Select words for a small menu of styles, links and comments.',
         'The More tab next to the views holds the Outline, the Codex, Feedback, Book, Submissions and Progress.',
-        'A tip line above the text names one of these ways at a time. Close it when you know them. Settings, Writing, can show the tips again.',
+        'A short guide above the text shows the basics, one step at a time. Close it when you know them. Settings, Writing, can show the guide again.',
       ],
     },
     {
@@ -57,7 +57,7 @@ export const HELP = {
       title: 'Make the page your own',
       steps: [
         'An item opens with the cursor where you left it.',
-        'In prose, choose Page look (next to the word count). Set the text width, the paragraphs, the line spacing and a screen font.',
+        'In prose, choose Page look (next to the word count). Set the text width, the paragraphs, the line spacing and a screen font. The Wide look fills the screen.',
         'A look changes this screen only. Choose Save this look to keep it with a name.',
         'Choose Word target to set the words for one item. A ring fills as you write, and the binder shows how far the item is.',
       ],
@@ -500,10 +500,11 @@ export const HELP = {
       title: 'Choose an AI mode',
       steps: [
         'Each project starts in Pen mode. Pen mode loads no AI code, and it sends nothing unless you press "Check the web too" in Insights.',
-        'Choose the AI mode button to switch a project to Reader or Co-writer mode.',
-        'Reader mode gives feedback in the side panel only. Co-writer mode can draft words, and marks them.',
-        'The deep AI check in Insights needs Reader or Co-writer mode too, because it loads a language model.',
+        'AI modes are off at first. To use them, turn on Offer AI modes in Settings, under AI. Then choose the AI mode button (Pen) to switch a project to Reader or Drafting mode.',
+        'Reader mode gives feedback in the side panel only. Drafting mode writes a draft in the panel when you ask. Insert puts it in your text, and Vlo marks each AI word.',
+        'The deep AI check in Insights needs Reader or Drafting mode too, because it loads a language model.',
         'Before each request, Vlo shows the exact text and where it goes. The network log lists each request.',
+        'The authorship record counts each AI word, so you can show how much of the work is your own.',
       ],
     },
     {

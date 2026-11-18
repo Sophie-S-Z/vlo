@@ -301,7 +301,7 @@ test('typing stays under 50 ms at p95 in the 10,000-word scene with 200 comments
 }) => {
   test.skip(isMobile, 'A phone has no margin for cards.');
   test.slow();
-  await page.setViewportSize({ width: 1700, height: 1000 });
+  await page.setViewportSize({ width: 1920, height: 1000 });
   await skipOnboarding(page);
   const seeded = await seedLarge(page);
   await page.goto(`/p/${seeded.projectId}?item=${seeded.longSceneId}`);
