@@ -3,6 +3,7 @@ import { textDirection } from '@/lib/language';
 import { gradientCss, type TextFill } from '@/features/editor/format/fill';
 import { fontLabel, localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
+import { styleDeclarations } from '@/features/editor/format/paragraphStyles';
 import { toBase64 } from '@/lib/crypto';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { parseMathml, type MathNode } from './mathml';
@@ -11,6 +12,7 @@ import type { BookSettings } from '@/lib/db';
 import {
   imageNames,
   boxedItems,
+  paragraphStyleOf,
   imageStandIn,
   repeatsTitle,
   runsText,
@@ -137,12 +139,16 @@ function equation(book: Book, latex: string, display: boolean): string {
   return `<math xmlns="${MATHML_NS}" display="${display ? 'block' : 'inline'}" alttext="${xmlText(latex)}">${body}</math>`;
 }
 
-function runStyle(book: Book, style: RunStyle, base: { bold: boolean; italic: boolean }): string[] {
+function runStyle(
+  book: Book,
+  style: RunStyle,
+  base: { bold: boolean; italic: boolean; font?: string },
+): string[] {
   const css: string[] = [];
   const bold = base.bold || style.bold === true;
   const italic = base.italic || style.italic === true;
   if (style.font) css.push(`font-family: ${cssFamily(book.use(style.font, bold, italic))}`);
-  else book.use(undefined, bold, italic);
+  else book.use(base.font, bold, italic);
   if (style.color && !style.fill) css.push(`color: ${style.color}`);
   if (style.size !== undefined) css.push(`font-size: ${String(style.size)}em`);
   const lines = [style.underline ? 'underline' : '', style.strike ? 'line-through' : ''].filter(
@@ -159,6 +165,8 @@ interface Context {
   poem: boolean;
   bold: boolean;
   italic: boolean;
+  /** The font of the paragraph's style, when it has one (Phase 19, Task E2). */
+  font?: string;
 }
 
 function noteText(book: Book, note: NoteContent): string {
@@ -228,7 +236,7 @@ function inline(book: Book, runs: readonly Run[], ctx: Context): string {
 
 function alignStyle(align: string | undefined, extra: string[] = []): string {
   const css = [...(align ? [`text-align: ${align}`] : []), ...extra];
-  return css.length > 0 ? ` style="${css.join('; ')}"` : '';
+  return css.length > 0 ? ` style="${xmlText(css.join('; '))}"` : '';
 }
 
 /** The first letter of a paragraph with a drop cap, in a span that floats over three lines. */
@@ -247,17 +255,27 @@ function withDropCap(book: Book, runs: readonly Run[], ctx: Context): string | n
 function blockHtml(book: Book, block: Block, ctx: Context): string {
   switch (block.type) {
     case 'paragraph': {
-      const extra: string[] = [];
+      // The paragraph's style, under the alignment that the writer gave the paragraph directly.
+      const style = paragraphStyleOf(book.doc, block);
+      const italic = style?.italic === true;
+      const css = style
+        ? styleDeclarations(style, (font) => cssFamily(book.use(font, false, italic)))
+            .filter(([property]) => !(block.align && property === 'text-align'))
+            .map(([property, value]) => `${property}: ${value}`)
+        : [];
       if (block.lineSpacing !== undefined)
-        extra.push(`line-height: ${String(Math.round(block.lineSpacing * 115) / 100)}`);
-      const drop = block.dropCap ? withDropCap(book, block.runs, ctx) : null;
+        css.push(`line-height: ${String(Math.round(block.lineSpacing * 115) / 100)}`);
+      const inner: Context = style
+        ? { ...ctx, italic: ctx.italic || italic, ...(style.font ? { font: style.font } : {}) }
+        : ctx;
+      const drop = block.dropCap ? withDropCap(book, block.runs, inner) : null;
       // A drop cap takes the place of the first-line indent.
       const classes = [
         drop ? 'has-drop-cap' : block.hanging ? 'hanging' : block.firstLineIndent ? 'indent' : '',
       ].filter((c) => c !== '');
       const cls = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
-      const body = drop ?? inline(book, block.runs, ctx);
-      return `<p${cls}${alignStyle(block.align, extra)}>${body === '' ? '<br/>' : body}</p>`;
+      const body = drop ?? inline(book, block.runs, inner);
+      return `<p${cls}${alignStyle(block.align, css)}>${body === '' ? '<br/>' : body}</p>`;
     }
     case 'heading': {
       const tag = `h${String(block.level)}`;

@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 31,
-  date: '2026-11-17',
+  version: 32,
+  date: '2026-11-18',
   guide: [
     {
       title: 'Start a project',
@@ -156,6 +156,26 @@ export const HELP = {
         'In English prose, Vlo fixes common typos as you type, such as “teh” to “the”. Press Backspace at once to keep what you typed. Settings, Writing turns the typo list off.',
         'In Settings, Writing, add your own text shortcuts: type “mh” and a space to get “Marigold Harbour”. Each shortcut has its own switch.',
         'After three letters of a Codex name, the rest of the name shows faintly. Press Tab to take it, or type on. Type @ for a list of the Codex entries and the items, and press Enter to put a name in the text.',
+      ],
+    },
+    {
+      title: 'Make the toolbar and the keys yours',
+      steps: [
+        'Open Insert, Format, Review or More tools, and choose Customize toolbar at the end. Turn on the switch of a tool to pin it on the toolbar. Drag a pinned tool, or use its arrows, to change the order.',
+        'A pinned tool stays in its menu too. A phone shows the first four pinned tools, and the More menu lists the others. Reset the toolbar puts Vlo’s own tools back.',
+        'In Settings, Keyboard, choose Change next to a tool, then press the new key. A key needs Ctrl or Alt (Command, Control or Option on a Mac), or it is an F key.',
+        'When another tool or the browser uses the key, Vlo asks before it gives the key to your tool. Reset puts Vlo’s key back. The shortcut sheet (Ctrl+/) shows your keys.',
+        'When you sign in, your toolbar and your keys go with your account to each device.',
+      ],
+    },
+    {
+      title: 'Give paragraphs a style',
+      steps: [
+        'A prose project starts with five paragraph styles: Epigraph, Letter, Text message, Song lyrics and Sign.',
+        'Put the cursor in a paragraph, open the Text style menu, and choose a style. Format, Paragraph styles, the block handle, the / menu and the command menu (Ctrl+K) list the styles too.',
+        'To change a style, choose Format, then Change this style. Set the name, the font, the size, the alignment, the indent, the space before and after, and italic. Each paragraph with the style changes with it.',
+        'Format a paragraph directly, then choose Update the style to match: the style takes the alignment, italic, font and size of that paragraph. New style from this paragraph makes a style from its look.',
+        'Word exports get real Word styles with the same names. PDF, EPUB and the book layout use the style values. Markdown keeps only the text.',
       ],
     },
     {

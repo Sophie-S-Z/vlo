@@ -24,6 +24,7 @@ import { commandsFor, matchesCommand, type EditorCommand } from './commands/regi
 import { CaretBlock } from './extensions/caretBlock';
 import { ClickBelow } from './extensions/clickBelow';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
+import { WriterKeys } from './extensions/writerKeys';
 import { FindReplace } from './extensions/findReplace';
 import { ImageInput } from './extensions/image';
 import { ChangesList } from './ChangesList';
@@ -142,11 +143,13 @@ function editorAttributes(
   };
 }
 
-/** Tools for the / menu: label matches first, then keyword matches, each in registry order. */
+/**
+ * Tools for the / menu: label matches first, then keyword matches, each in registry order. The list is
+ * read at each query, so a new paragraph style shows at once.
+ */
 function slashItems(kind: EditorProps['kind'], templates: readonly Template[] | undefined) {
-  const tools = commandsFor(kind, templates).filter((c) => c.slash);
   return (query: string): EditorCommand[] => {
-    const found = tools.filter((c) => matchesCommand(c, query));
+    const found = commandsFor(kind, templates).filter((c) => c.slash && matchesCommand(c, query));
     const q = query.trim().toLowerCase();
     if (q === '') return found;
     const byLabel = found.filter((c) => c.label.toLowerCase().includes(q));
@@ -230,6 +233,7 @@ export function Editor({
             openFind(e, field);
           },
         }),
+        WriterKeys.configure({ form: kind, templates }),
         ToolKeys.configure({
           onShortcuts: (e) => {
             openPanel({ editor: e, panel: 'shortcuts', anchor: 'caret' });

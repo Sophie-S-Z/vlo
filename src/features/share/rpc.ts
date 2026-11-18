@@ -53,6 +53,9 @@ export type RpcName =
   // The writer's profile (migration 0011).
   | 'profile_get'
   | 'profile_put'
+  // The writer's toolbar and keys (migration 0015).
+  | 'writer_settings_get'
+  | 'writer_settings_put'
   // The writing leaderboard (migration 0012).
   | 'leaderboard'
   | 'leaderboard_show';

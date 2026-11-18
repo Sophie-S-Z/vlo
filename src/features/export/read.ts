@@ -4,6 +4,7 @@ import * as Y from 'yjs';
 import { parseFill } from '@/features/editor/format/fill';
 import { parsePlay } from '@/features/editor/format/typePlay';
 import { cleanFontValue } from '@/features/editor/format/fonts';
+import { cleanStyleId } from '@/features/editor/format/paragraphStyles';
 import { cleanLatex } from '@/features/editor/format/math';
 import { parseNote } from '@/features/editor/format/notes';
 import { resolveColor } from '@/features/editor/format/palette';
@@ -300,6 +301,8 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, rev
         if (spacing !== undefined) block.lineSpacing = spacing;
         if (attrs?.firstLineIndent === true) block.firstLineIndent = true;
         if (attrs?.dropCap === true) block.dropCap = true;
+        const style = cleanStyleId(attrs?.styleId);
+        if (style !== null) block.style = style;
         blocks.push(block);
         break;
       }

@@ -34,6 +34,8 @@ import { Editor } from './Editor';
 import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
 import { cleanPageFormat, PAGE_SIZES } from './format/page';
+import { styleSheet } from './format/paragraphStyles';
+import { useParagraphStyles } from './format/paragraphStyleStore';
 import { docParts, docText, refreshItemText, writeItemText } from './itemText';
 import { OutlineControl, OutlineRail, useRailRoom } from './ItemOutline';
 import { ManuscriptContext, type ManuscriptSettings } from './manuscript';
@@ -269,6 +271,7 @@ export function EditorPane({
 
   return (
     <ManuscriptContext value={manuscript}>
+      {kind === 'prose' && <ParagraphStyleSheet />}
       <div
         ref={stage}
         className={cn(scene !== NO_SCENE && 'vlo-scene-stage')}
@@ -529,4 +532,11 @@ export function EditorPane({
       </div>
     </ManuscriptContext>
   );
+}
+
+/** The rules of the project's paragraph styles. Each paragraph with a style follows a change at once. */
+function ParagraphStyleSheet() {
+  const styles = useParagraphStyles();
+  const css = useMemo(() => styleSheet(styles, '.vlo-manuscript.vlo-prose'), [styles]);
+  return <style>{css}</style>;
 }

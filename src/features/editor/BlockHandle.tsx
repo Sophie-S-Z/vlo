@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
 import { runCommand } from './commands/editorBus';
-import { COMMANDS } from './commands/registry';
+import { COMMANDS, styleCommand } from './commands/registry';
+import { useParagraphStyles } from './format/paragraphStyleStore';
 import { IMAGE } from '@/features/images/attrs';
 
 /*
@@ -54,6 +55,7 @@ interface Target {
 export function BlockHandle({ editor }: { editor: Editor }) {
   const [target, setTarget] = useState<Target | null>(null);
   const [open, setOpen] = useState(false);
+  const styles = useParagraphStyles();
 
   /** Puts the selection on the block: the whole block, or the caret at its start. */
   const select = (block: Target, whole: boolean) => {
@@ -80,6 +82,8 @@ export function BlockHandle({ editor }: { editor: Editor }) {
   };
   // A block with text, a list or a quote can turn into another block. A break or an image cannot.
   const turns = target !== null && !target.node.isAtom;
+  // A paragraph or a heading can take a paragraph style (Phase 19, Task E2).
+  const styled = target !== null && target.node.isTextblock && styles.length > 0;
 
   return (
     <DragHandle
@@ -139,6 +143,24 @@ export function BlockHandle({ editor }: { editor: Editor }) {
                     >
                       <cmd.icon aria-hidden="true" className="size-4" />
                       {cmd.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
+            {styled && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Paragraph style</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {styles.map((style) => (
+                    <DropdownMenuItem
+                      key={style.id}
+                      onSelect={act((block) => {
+                        select(block, false);
+                        runCommand(editor, styleCommand(style));
+                      })}
+                    >
+                      {style.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>

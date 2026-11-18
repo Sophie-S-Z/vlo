@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FakeSyncRelay } from './syncRelay';
 
 /*
- * A fake of Supabase Auth and the functions of migrations 0008, 0009, 0011, 0012 and 0016 (Phase 18, the live owner page, profiles, feedback guards and the owner's accounts), for the Playwright tests. Each
+ * A fake of Supabase Auth and the functions of migrations 0008, 0009, 0011, 0012, 0015 and 0016 (Phase 18, the live owner page, profiles, feedback guards, the writer's settings and the owner's accounts), for the Playwright tests. Each
  * email gets the code 123456. The fake keeps the rules that the app relies on: a function for a signed-in
  * writer reads the account from the bearer token, a vault needs the space token, and the owner functions
  * refuse any account that is not an owner.
@@ -63,6 +63,8 @@ export class FakeAccounts {
     string,
     { name: string; called: string; pen_name: string; bio: string; photo: string | null; updated_at: string }
   >();
+  /** The writer's toolbar and keys of each account (migration 0015). */
+  readonly writerSettings = new Map<string, { settings: unknown; changed_at: number }>();
   /** The accounts that left the leaderboard (migration 0012). */
   readonly offBoard = new Set<string>();
   private readonly tokens = new Map<string, string>();
@@ -182,6 +184,7 @@ export class FakeAccounts {
         if (vault) this.sync.spaces.delete(vault.space_id);
         this.vaults.delete(id);
         this.profiles.delete(id);
+        this.writerSettings.delete(id);
         this.users.delete(id);
         return { value: true };
       }
@@ -206,6 +209,18 @@ export class FakeAccounts {
           updated_at,
         });
         return { value: updated_at };
+      }
+      case 'writer_settings_get': {
+        const row = this.writerSettings.get(signedIn());
+        return { value: row ? [row] : [] };
+      }
+      case 'writer_settings_put': {
+        const id = signedIn();
+        const changed_at = Number(body.p_changed_at);
+        const old = this.writerSettings.get(id);
+        if (old && old.changed_at >= changed_at) return { value: false };
+        this.writerSettings.set(id, { settings: body.p_settings, changed_at });
+        return { value: true };
       }
       case 'daily_count': {
         const install = String(body.p_install);
@@ -458,6 +473,7 @@ export class FakeAccounts {
         if (vault) this.sync.spaces.delete(vault.space_id);
         this.vaults.delete(id);
         this.profiles.delete(id);
+        this.writerSettings.delete(id);
         return { value: this.users.delete(id) };
       }
       default:

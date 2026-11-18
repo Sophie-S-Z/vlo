@@ -1,6 +1,6 @@
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { FontSwap } from './fontCheck';
-import type { Block, ExportDoc, Run } from './model';
+import { paragraphStyleOf, type Block, type ExportDoc, type Run } from './model';
 
 /*
  * The export notice (plan decisions 5 to 7): each look that a format drops or draws in a simpler way, in
@@ -77,18 +77,23 @@ function scan(doc: ExportDoc): Looks {
   const blocks = (list: readonly Block[]) => {
     for (const block of list) {
       switch (block.type) {
-        case 'paragraph':
+        case 'paragraph': {
+          // A paragraph style is layout, and its font is a font of the export (Phase 19, Task E2).
+          const style = paragraphStyleOf(doc, block);
+          if (style?.font) looks.fonts.add(style.font);
           // A script line's place comes from its role, so it is not the writer's layout.
           if (
             (block.align && !block.role) ||
             block.lineSpacing !== undefined ||
             block.dropCap ||
-            block.firstLineIndent
+            block.firstLineIndent ||
+            style
           ) {
             looks.layout = true;
           }
           runs(block.runs);
           break;
+        }
         case 'heading':
           if (block.align) looks.layout = true;
           runs(block.runs);
