@@ -542,9 +542,7 @@ function ReaderBody({
       <ShareImages.Provider value={images.load}>
         <article className="grid gap-10">
           <header className="grid gap-3 font-ui">
-            <h1 className="font-display text-4xl font-semibold [overflow-wrap:anywhere] sm:text-5xl">
-              {bundle.title}
-            </h1>
+            <h1 className="font-display text-hero font-semibold [overflow-wrap:anywhere]">{bundle.title}</h1>
             {bundle.author !== undefined && (
               <p className="text-lg [overflow-wrap:anywhere]">{bundle.author}</p>
             )}
@@ -673,7 +671,7 @@ function ReaderBody({
           )}
         </article>
         {picked && openAt?.place !== picked.place && (
-          <div className="fixed inset-x-0 bottom-0 flex justify-center p-4 font-ui">
+          <div className="fixed inset-x-0 bottom-0 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] font-ui">
             <Button
               type="button"
               className="max-w-full shadow-[var(--shadow-hover)]"

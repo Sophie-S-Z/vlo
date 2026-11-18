@@ -18,7 +18,7 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 33,
+  version: 34,
   date: '2026-11-18',
   guide: [
     {
@@ -65,7 +65,7 @@ export const HELP = {
     {
       title: 'Write and find your text',
       steps: [
-        'Vlo saves each change on this device within a second. The save status shows "Saved".',
+        'Vlo saves each change on this device within a second. The save status shows “Saved”.',
         'Add, rename and drag items in the binder on the left. The keyboard and the item menu move them too.',
         'Press Ctrl+K (Cmd+K on a Mac) to find an item by its title or its text, or to run an action.',
         'Choose Focus to hide everything but the text. Escape leaves Focus mode.',
@@ -392,7 +392,7 @@ export const HELP = {
         'A deadline takes a date and the words that the project must have by then. Vlo divides the words left by the writing days left, and the bar shows how far you are.',
         'To cut a draft down, type a target under the words that the project has now. Each day then counts the words that you remove.',
         'While goals are on, a ring next to the timer shows the goal of today. Choose it to open Progress.',
-        'Vlo counts words as Word and Scrivener do. "Well-known", "and/or", a web address and a time such as 10:30 are one word each. A dash between two words keeps them two words.',
+        'Vlo counts words as Word and Scrivener do. “Well-known”, “and/or”, a web address and a time such as 10:30 are one word each. A dash between two words keeps them two words.',
       ],
     },
     {
@@ -430,7 +430,7 @@ export const HELP = {
       steps: [
         'At the end of the binder, Research takes images, PDFs, audio files and clippings. Add, then Files or Clipping.',
         'A clipping is text that you paste, with its link. Vlo keeps the link as text and never opens it.',
-        'Research stays on this device. Backups and "Download all my writing" include it, and exports leave it out.',
+        'Research stays on this device. Backups and “Download all my writing” include it, and exports leave it out.',
         'Vlo takes files up to 50 MB, and warns when the research of a project is over 100 MB.',
         'On a wide screen, choose Open beside in the item menu, or the Open beside button of a research file. The item or file shows next to the open item, and both texts save. Swap panes and Close pane are above it.',
       ],
@@ -526,7 +526,7 @@ export const HELP = {
     {
       title: 'Choose an AI mode',
       steps: [
-        'Each project starts in Pen mode. Pen mode loads no AI code, and it sends nothing unless you press "Check the web too" in Insights.',
+        'Each project starts in Pen mode. Pen mode loads no AI code, and it sends nothing unless you press “Check the web too” in Insights.',
         'AI modes are off at first. To use them, turn on Offer AI modes in Settings, under AI. Then choose the AI mode button (Pen) to switch a project to Reader or Drafting mode.',
         'Reader mode gives feedback in the side panel only. Drafting mode writes a draft in the panel when you ask. Insert puts it in your text, and Vlo marks each AI word.',
         'The deep AI check in Insights needs Reader or Drafting mode too, because it loads a language model.',

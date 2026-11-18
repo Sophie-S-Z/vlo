@@ -28,6 +28,7 @@ The thesaurus file (src/features/thesaurus/thesaurus.json) comes from Open Engli
 | @fontsource-variable/crimson-pro | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/dancing-script | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/eb-garamond | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource-variable/familjen-grotesk | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/fraunces | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/grenze-gotisch | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 | runtime |
@@ -41,6 +42,7 @@ The thesaurus file (src/features/thesaurus/thesaurus.json) comes from Open Engli
 | @fontsource-variable/recursive | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/courier-prime | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/fredericka-the-great | 5.3.0 | OFL-1.1 | runtime |
+| @fontsource/ibm-plex-mono | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/im-fell-english | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/instrument-serif | 5.3.0 | OFL-1.1 | runtime |
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 | runtime |

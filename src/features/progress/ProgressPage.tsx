@@ -55,7 +55,7 @@ export function ProgressPage() {
     <section className="grid gap-10">
       <header className="min-w-0">
         <p className="text-sm text-muted">{template.label}</p>
-        <h1 className="mt-1 font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
+        <h1 className="mt-1 font-display text-title font-semibold [overflow-wrap:anywhere]">
           {project.title}
         </h1>
         <ViewTabs project={project} />

@@ -164,6 +164,8 @@ function ReaderImage({ block }: { block: ShareImage }) {
           alt={block.decorative ? '' : block.alt}
           width={block.w}
           height={block.h}
+          loading="lazy"
+          decoding="async"
           className="h-auto w-full rounded-[var(--radius-card)]"
           style={shape}
         />

@@ -67,9 +67,7 @@ export function WelcomePage() {
     <MotionViewTransition exit="vlo-zoom-through">
       <div className="grain flex min-h-dvh flex-col">
         <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-3">
-          <span className="font-display text-2xl font-semibold [font-variation-settings:'SOFT'_50,'opsz'_72]">
-            Vlo
-          </span>
+          <span className="font-display text-2xl font-semibold">Vlo</span>
           <Button variant="ghost" onClick={() => void skip()}>
             Skip
           </Button>
@@ -79,7 +77,7 @@ export function WelcomePage() {
           <h1
             ref={headingRef}
             tabIndex={-1}
-            className="mt-2 font-display text-4xl font-semibold outline-none sm:text-5xl"
+            className="mt-2 font-display text-hero font-semibold outline-none"
           >
             {STEPS[step]}
           </h1>
@@ -137,7 +135,7 @@ export function WelcomePage() {
           )}
 
           {/* On a phone the step's options can fill the screen, so the actions stay in view at the bottom. */}
-          <div className="sticky bottom-0 -mx-4 mt-10 flex flex-wrap items-center gap-3 bg-bg px-4 py-3 sm:static sm:mx-0 sm:bg-transparent sm:p-0">
+          <div className="sticky bottom-0 -mx-4 mt-10 flex flex-wrap items-center gap-3 bg-bg px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:bg-transparent sm:p-0">
             {step > 0 && (
               <Button
                 variant="ghost"
