@@ -6,7 +6,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 /*
  * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page), 0010 (places), 0011
- * (profiles), 0012 (feedback guards), 0013 (the leaderboard) and 0014 (the comment index) in PGlite. The app calls each function through
+ * (profiles), 0012 (feedback guards), 0013 (the leaderboard), 0014 (the comment index) and 0016 (the owner's
+ * accounts) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -26,6 +27,7 @@ const MIGRATIONS = [
   '0012_feedback_guards.sql',
   '0013_leaderboard.sql',
   '0014_comment_index.sql',
+  '0016_owner_accounts.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -48,7 +50,20 @@ beforeAll(async () => {
       email text,
       created_at timestamptz not null default now(),
       last_sign_in_at timestamptz,
-      raw_app_meta_data jsonb not null default '{}'
+      raw_app_meta_data jsonb not null default '{}',
+      instance_id uuid, aud text, role text, email_confirmed_at timestamptz, raw_user_meta_data jsonb,
+      updated_at timestamptz, confirmation_token text, recovery_token text, email_change_token_new text,
+      email_change text, email_change_token_current text default ''
+    );
+    create table auth.identities (
+      id uuid primary key default gen_random_uuid(),
+      provider_id text not null,
+      user_id uuid not null references auth.users (id) on delete cascade,
+      identity_data jsonb not null,
+      provider text not null,
+      created_at timestamptz,
+      updated_at timestamptz,
+      unique (provider_id, provider)
     );
     create function auth.uid() returns uuid language sql stable as $$
       select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
@@ -639,5 +654,108 @@ describe('the comment index (migration 0014)', () => {
       "select indexdef from pg_indexes where schemaname = 'public' and indexname = 'share_comments_share'",
     );
     expect(rows.rows[0]?.indexdef).toContain('(share_id, created_at)');
+  });
+});
+
+describe("the owner's accounts (migration 0016)", () => {
+  const add = (who: string, email: string, name = '') =>
+    as<{ id: string }>(who, 'select public.owner_add_account($1, $2) as id', [email, name]);
+  const edit = (who: string, id: string, email: string, name: string) =>
+    as<{ ok: boolean }>(who, 'select public.owner_edit_account($1, $2, $3) as ok', [id, email, name]);
+  const remove = (who: string, id: string) =>
+    as<{ ok: boolean }>(who, 'select public.owner_delete_account($1) as ok', [id]);
+
+  beforeEach(async () => {
+    await db.query('insert into app_owners (user_id) values ($1)', [ALICE]);
+    await db.exec(`insert into auth.identities (provider_id, user_id, identity_data, provider)
+      values ('${ALICE}', '${ALICE}', '{"email":"alice@example.com"}', 'email'),
+        ('g-bob', '${BOB}', '{"email":"bob@example.com"}', 'google')`);
+  });
+
+  test('only an owner adds, changes or deletes an account', async () => {
+    await expect(add(BOB, 'carol@example.com')).rejects.toThrow('not owner');
+    await expect(edit(BOB, ALICE, 'alice@example.com', '')).rejects.toThrow('not owner');
+    await expect(remove(BOB, ALICE)).rejects.toThrow('not owner');
+    await expect(add('anon', 'carol@example.com')).rejects.toThrow(/permission denied/);
+    await expect(as(ALICE, "select public.vlo_check_email('a@b.co')")).rejects.toThrow(/permission denied/);
+  });
+
+  test('adds an account with an email sign-in and a profile, and refuses a bad or taken email', async () => {
+    const [row] = await add(ALICE, '  Carol@Example.com ', 'Carol Ann');
+    const carol = row?.id ?? '';
+    const [user] = (
+      await db.query<Record<string, unknown>>(
+        'select email, aud, role, email_confirmed_at is not null as confirmed, raw_app_meta_data, confirmation_token from auth.users where id = $1',
+        [carol],
+      )
+    ).rows;
+    expect(user).toEqual({
+      email: 'carol@example.com',
+      aud: 'authenticated',
+      role: 'authenticated',
+      confirmed: true,
+      raw_app_meta_data: { provider: 'email', providers: ['email'] },
+      confirmation_token: '',
+    });
+    expect(
+      (await db.query('select provider_id, provider from auth.identities where user_id = $1', [carol])).rows,
+    ).toEqual([{ provider_id: carol, provider: 'email' }]);
+    expect(
+      (
+        await as<{ name: string }>(ALICE, 'select name from public.owner_accounts() where id = $1', [carol])
+      )[0]?.name,
+    ).toBe('Carol Ann');
+    await expect(add(ALICE, 'CAROL@example.com')).rejects.toThrow('email taken');
+    await expect(add(ALICE, 'not an email')).rejects.toThrow('bad email');
+    // With no name, the account has no profile.
+    const [dan] = await add(ALICE, 'dan@example.com');
+    expect((await db.query('select 1 from profiles where user_id = $1', [dan?.id])).rows).toHaveLength(0);
+  });
+
+  test('changes the email of an email sign-in and the name, and keeps the email of a Google account', async () => {
+    await putProfile(ALICE, 'Alice');
+    expect(await edit(ALICE, ALICE, 'ada@example.com', 'Ada')).toEqual([{ ok: true }]);
+    expect(
+      (
+        await db.query("select email, raw_user_meta_data->>'email' as meta from auth.users where id = $1", [
+          ALICE,
+        ])
+      ).rows,
+    ).toEqual([{ email: 'ada@example.com', meta: 'ada@example.com' }]);
+    expect(
+      (
+        await db.query("select identity_data->>'email' as email from auth.identities where user_id = $1", [
+          ALICE,
+        ])
+      ).rows,
+    ).toEqual([{ email: 'ada@example.com' }]);
+    expect(await as(ALICE, 'select name from public.profile_get()')).toEqual([{ name: 'Ada' }]);
+    await expect(edit(ALICE, ALICE, 'ada@example.com', '')).rejects.toThrow('bad name');
+    await expect(edit(ALICE, BOB, 'robert@example.com', '')).rejects.toThrow('email locked');
+    await expect(edit(ALICE, ALICE, 'bob@example.com', 'Ada')).rejects.toThrow('email taken');
+    // A Google account gets a name with the same email.
+    expect(await edit(ALICE, BOB, 'bob@example.com', 'Bob')).toEqual([{ ok: true }]);
+    expect(await edit(ALICE, '00000000-0000-4000-8000-0000000000ff', 'x@example.com', '')).toEqual([
+      { ok: false },
+    ]);
+  });
+
+  test("deletes an account with its sign-ins, profile and sync, and keeps the counts, but not the owner's own", async () => {
+    const space = await newSpace();
+    await putVault(BOB, space);
+    await putProfile(BOB, 'Bob');
+    await count(BOB, INSTALL('b'));
+    await expect(remove(ALICE, ALICE)).rejects.toThrow('own account');
+    expect(await remove(ALICE, BOB)).toEqual([{ ok: true }]);
+    for (const table of [
+      'auth.users where id = $1',
+      'auth.identities where user_id = $1',
+      'profiles where user_id = $1',
+      'sync_vaults where user_id = $1',
+    ])
+      expect((await db.query(`select 1 from ${table}`, [BOB])).rows).toHaveLength(0);
+    expect((await db.query('select 1 from sync_spaces where id = $1', [space])).rows).toHaveLength(0);
+    expect((await db.query('select user_id from app_pings')).rows).toEqual([{ user_id: null }]);
+    expect(await remove(ALICE, BOB)).toEqual([{ ok: false }]);
   });
 });

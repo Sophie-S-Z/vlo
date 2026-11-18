@@ -38,6 +38,7 @@ import {
   type OwnerSummary,
   type OwnerVisitors,
 } from './owner';
+import { AccountDialog, DeleteAccountDialog } from './OwnerAccountDialogs';
 import { Breakdown, dayText, Meter, n, Sparkline, TrendChart, WeekdayBars, YearMap } from './ownerCharts';
 import { readSession } from './session';
 
@@ -541,10 +542,28 @@ const SORTERS: Record<Sort, (a: OwnerAccount, b: OwnerAccount) => number> = {
   joined: (a, b) => b.created_at.localeCompare(a.created_at),
 };
 
-function People({ accounts }: { accounts: OwnerAccount[] }) {
+function People({
+  accounts,
+  self,
+  onChanged,
+}: {
+  accounts: OwnerAccount[];
+  /** The owner's own account, which the owner deletes on the account page. */
+  self: string;
+  onChanged: () => void;
+}) {
   const id = useId();
   const [filter, setFilter] = useState('');
   const [sort, setSort] = useState<Sort>('active');
+  const [editing, setEditing] = useState<OwnerAccount | 'new' | null>(null);
+  const [deleting, setDeleting] = useState<OwnerAccount | null>(null);
+  const [status, setStatus] = useState('');
+  const done = (text: string) => {
+    setEditing(null);
+    setDeleting(null);
+    setStatus(text);
+    onChanged();
+  };
   const find = filter.trim().toLowerCase();
   const shown = accounts
     .filter((a) => `${a.name ?? ''} ${a.email}`.toLowerCase().includes(find))
@@ -567,13 +586,25 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
           />
         </div>
         <Segmented<Sort> label="Sort" options={[...SORTS]} value={sort} onChange={setSort} />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setEditing('new');
+          }}
+        >
+          Add an account
+        </Button>
       </div>
       <p className="text-sm text-muted">
         {n(shown.length)} of {n(accounts.length)} accounts. People who write with no account show only in the
         device and word counts.
       </p>
+      <p role="status" className="text-sm">
+        {status}
+      </p>
       <TableBox name={{ label: 'Accounts' }}>
-        <table aria-label="Accounts" className="w-full min-w-[56rem] text-sm">
+        <table aria-label="Accounts" className="w-full min-w-[64rem] text-sm">
           <thead>
             <tr className="text-left text-muted">
               <th className="py-2 pr-4 font-medium">Writer</th>
@@ -585,7 +616,8 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
               <th className="py-2 pr-4 font-medium">Projects</th>
               <th className="py-2 pr-4 font-medium">Devices</th>
               <th className="py-2 pr-4 font-medium">Sync</th>
-              <th className="py-2 font-medium">Feedback</th>
+              <th className="py-2 pr-4 font-medium">Feedback</th>
+              <th className="py-2 font-medium">Change</th>
             </tr>
           </thead>
           <tbody className="tabular-nums">
@@ -613,12 +645,58 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
                 <td className="py-2 pr-4">{a.projects === null ? 'Not yet' : n(a.projects)}</td>
                 <td className="py-2 pr-4">{n(a.devices)}</td>
                 <td className="py-2 pr-4">{a.syncing ? 'On' : 'Off'}</td>
-                <td className="py-2">{n(a.feedback)}</td>
+                <td className="py-2 pr-4">{n(a.feedback)}</td>
+                <td className="py-1">
+                  <span className="flex flex-wrap gap-x-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="px-2"
+                      aria-label={`Edit ${a.email}`}
+                      onClick={() => {
+                        setEditing(a);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    {a.id !== self && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="px-2"
+                        aria-label={`Delete ${a.email}`}
+                        onClick={() => {
+                          setDeleting(a);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </TableBox>
+      {editing && (
+        <AccountDialog
+          account={editing === 'new' ? null : editing}
+          onClose={() => {
+            setEditing(null);
+          }}
+          onSaved={done}
+        />
+      )}
+      {deleting && (
+        <DeleteAccountDialog
+          account={deleting}
+          onClose={() => {
+            setDeleting(null);
+          }}
+          onDeleted={done}
+        />
+      )}
     </div>
   );
 }
@@ -823,7 +901,7 @@ async function loadAll(): Promise<Data> {
   return { summary, days, accounts, feedback, visitors, at: Date.now() };
 }
 
-function Dashboard() {
+function Dashboard({ self }: { self: string }) {
   const motion = useMotionAllowed();
   const [data, setData] = useState<Data | null>(null);
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -927,7 +1005,15 @@ function Dashboard() {
               {view === 'overview' && (
                 <Overview summary={data.summary} days={data.days} visitors={data.visitors} />
               )}
-              {view === 'people' && <People accounts={data.accounts} />}
+              {view === 'people' && (
+                <People
+                  accounts={data.accounts}
+                  self={self}
+                  onChanged={() => {
+                    setLoads((x) => x + 1);
+                  }}
+                />
+              )}
               {view === 'feedback' && (
                 <Inbox
                   items={data.feedback}
@@ -965,7 +1051,7 @@ export function OwnerPage() {
         with the owner account to see who uses Vlo.
       </p>
     );
-  else body = <Dashboard key={session.userId} />;
+  else body = <Dashboard key={session.userId} self={session.userId} />;
   return (
     <div className="grid gap-6">
       <h1 className="font-display text-4xl font-semibold">Owner</h1>

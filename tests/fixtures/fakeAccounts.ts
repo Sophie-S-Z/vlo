@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FakeSyncRelay } from './syncRelay';
 
 /*
- * A fake of Supabase Auth and the functions of migrations 0008, 0009, 0011 and 0012 (Phase 18, the live owner page, profiles and feedback guards), for the Playwright tests. Each
+ * A fake of Supabase Auth and the functions of migrations 0008, 0009, 0011, 0012 and 0016 (Phase 18, the live owner page, profiles, feedback guards and the owner's accounts), for the Playwright tests. Each
  * email gets the code 123456. The fake keeps the rules that the app relies on: a function for a signed-in
  * writer reads the account from the bearer token, a vault needs the space token, and the owner functions
  * refuse any account that is not an owner.
@@ -421,6 +421,44 @@ export class FakeAccounts {
           else this.blocked.delete(key);
         }
         return { value: true };
+      }
+      case 'owner_add_account': {
+        owner();
+        const email = String(body.p_email).trim().toLowerCase();
+        if ([...this.users.values()].some((u) => u.email === email)) throw new Error('email taken');
+        const id = randomUUID();
+        this.users.set(id, { id, email, provider: 'email', createdAt: new Date().toISOString() });
+        const name = String(body.p_name).trim();
+        if (name !== '')
+          this.profiles.set(id, { name, called: '', pen_name: '', bio: '', photo: null, updated_at: '' });
+        return { value: id };
+      }
+      case 'owner_edit_account': {
+        owner();
+        const user = this.users.get(String(body.p_id));
+        if (!user) return { value: false };
+        const email = String(body.p_email).trim().toLowerCase();
+        if (email !== user.email) {
+          if (user.provider !== 'email') throw new Error('email locked');
+          if ([...this.users.values()].some((u) => u.email === email)) throw new Error('email taken');
+          user.email = email;
+        }
+        const name = String(body.p_name).trim();
+        const profile = this.profiles.get(user.id);
+        if (name === '' && profile) throw new Error('bad name');
+        if (name !== '')
+          this.profiles.set(user.id, { called: '', pen_name: '', bio: '', photo: null, ...profile, name, updated_at: '' });
+        return { value: true };
+      }
+      case 'owner_delete_account': {
+        owner();
+        const id = String(body.p_id);
+        if (id === uid) throw new Error('own account');
+        const vault = this.vaults.get(id);
+        if (vault) this.sync.spaces.delete(vault.space_id);
+        this.vaults.delete(id);
+        this.profiles.delete(id);
+        return { value: this.users.delete(id) };
       }
       default:
         return undefined;
