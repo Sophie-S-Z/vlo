@@ -42,7 +42,7 @@ import type { EditorForm } from '@/features/library/templates';
 
 /*
  * The Assistant panel (spec section 10, plan decision P5). It loads only outside Pen mode. Every answer
- * stays here. In Reader mode no answer has a way into the manuscript. In Co-writer mode, Insert puts a
+ * stays here. In Reader mode no answer has a way into the manuscript. In Drafting mode, Insert puts a
  * draft in the text with the aiOrigin mark, and only when the writer presses it.
  */
 
@@ -124,7 +124,7 @@ export default function AssistantPanel({ project, items, item, kind, onInserted 
     };
   }, []);
 
-  // A switch from Co-writer to Reader leaves no drafting action chosen.
+  // A switch from Drafting to Reader leaves no drafting action chosen.
   const action: ActionId = !cowriter && isCowriterAction(chosen) ? 'feedback' : chosen;
 
   const aliasOn = hasTemplate(project, 'memoir') && project.settings.aliasAiRequests;
@@ -317,7 +317,7 @@ export default function AssistantPanel({ project, items, item, kind, onInserted 
         </h2>
         <p className="text-sm text-muted">
           {cowriter
-            ? 'Co-writer mode. Each draft shows here first. Insert puts it in your text with the AI mark.'
+            ? 'Drafting mode. Each draft shows here first. Insert puts it in your text with the AI mark.'
             : 'Reader mode. Answers stay in this panel and never enter your text.'}
         </p>
       </div>

@@ -33,7 +33,7 @@ const passages = passagesOf([
 ]);
 
 describe('the spec prompts', () => {
-  it('keeps the Reader and Co-writer system prompts word for word', () => {
+  it('keeps the Reader and Drafting system prompts word for word', () => {
     expect(READER_SYSTEM).toContain('Give observations and questions, never replacement text.');
     expect(READER_SYSTEM).toContain('Quote at most 12 words from the text');
     expect(COWRITER_SYSTEM).toContain('Write only what the writer asked for, with no preamble and no notes.');

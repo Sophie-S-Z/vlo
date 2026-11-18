@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, Ellipsis, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { AnimatePresence, domAnimation, LazyMotion, m, MotionConfig } from 'motion/react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
@@ -9,11 +9,13 @@ import { CountUp } from '@/features/progress/CountUp';
 import { dayKey } from '@/features/progress/streaks';
 import { downloadBytes } from '@/lib/download';
 import { Button } from '@/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/dropdown-menu';
 import { Input } from '@/ui/input';
 import { Segmented } from '@/ui/segmented';
 import { Textarea } from '@/ui/textarea';
 import { accountErrorText } from './AccountPage';
 import { accountsReady } from './auth';
+import { Avatar } from './Avatar';
 import {
   benchmarks,
   blockSender,
@@ -38,6 +40,7 @@ import {
   type OwnerSummary,
   type OwnerVisitors,
 } from './owner';
+import { AccountDialog, DeleteAccountDialog } from './OwnerAccountDialogs';
 import { Breakdown, dayText, Meter, n, Sparkline, TrendChart, WeekdayBars, YearMap } from './ownerCharts';
 import { readSession } from './session';
 
@@ -82,9 +85,9 @@ function Tile({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="grid content-start gap-1 rounded-[var(--radius-card)] border border-rule bg-surface p-4">
+    <div className="grid content-start gap-1 border-t border-rule pt-3">
       <dt className="text-sm text-muted">{label}</dt>
-      <dd className="text-2xl font-semibold sm:text-3xl">
+      <dd className="font-display text-3xl font-semibold tabular-nums sm:text-4xl">
         {typeof value === 'number' ? <CountUp value={value} /> : value}
       </dd>
       {children && <dd>{children}</dd>}
@@ -120,15 +123,15 @@ function Today({ summary, days }: { summary: OwnerSummary; days: OwnerDay[] }) {
   if (seen.words !== words) setSeen({ words, gain: words - seen.words, key: seen.key + 1 });
   const average = Math.round(total(days, 'words', 7, 1) / 7);
   return (
-    <section
-      aria-labelledby="owner-today"
-      className="grid content-start gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-5"
-    >
+    <section aria-labelledby="owner-today" className="grid content-start gap-3">
       <h2 id="owner-today" className="text-sm text-muted">
         Words written today
       </h2>
       <p className="relative flex items-baseline gap-3">
-        <CountUp value={words} className="text-6xl font-semibold tracking-tight" />
+        <CountUp
+          value={words}
+          className="font-display text-7xl leading-none font-semibold tracking-tight tabular-nums sm:text-8xl"
+        />
         <AnimatePresence>
           {seen.gain > 0 && (
             <m.span
@@ -150,14 +153,10 @@ function Today({ summary, days }: { summary: OwnerSummary; days: OwnerDay[] }) {
           an average day
         </p>
         <p className="flex items-center gap-2">
-          <span className="relative flex size-2.5" aria-hidden="true">
-            {summary.now > 0 && (
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
-            )}
-            <span
-              className={`relative inline-flex size-2.5 rounded-full ${summary.now > 0 ? 'bg-accent' : 'bg-rule'}`}
-            />
-          </span>
+          <span
+            aria-hidden="true"
+            className={`size-2 rounded-full ${summary.now > 0 ? 'bg-accent' : 'bg-rule'}`}
+          />
           {n(summary.now)} {summary.now === 1 ? 'writer' : 'writers'} in Vlo in the last 15 minutes
         </p>
       </div>
@@ -169,7 +168,7 @@ function Insights({ lines }: { lines: string[] }) {
   return (
     <section
       aria-labelledby="owner-insights"
-      className="grid content-start gap-3 rounded-[var(--radius-card)] border border-rule bg-surface p-5"
+      className="grid content-start gap-3 border-t border-rule pt-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8"
     >
       <h2 id="owner-insights" className="text-sm text-muted">
         What stands out
@@ -177,17 +176,11 @@ function Insights({ lines }: { lines: string[] }) {
       {lines.length === 0 ? (
         <p className="text-sm text-muted">Facts show here when writers start to write.</p>
       ) : (
-        <ul className="grid gap-2">
-          {lines.map((line, i) => (
-            <m.li
-              key={line}
-              className="border-l-2 border-accent pl-3"
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-            >
+        <ul className="grid list-disc gap-2 pl-5 marker:text-muted">
+          {lines.map((line) => (
+            <li key={line} className="text-pretty">
               {line}
-            </m.li>
+            </li>
           ))}
         </ul>
       )}
@@ -243,7 +236,7 @@ function OverTime({ days }: { days: OwnerDay[] }) {
   return (
     <section aria-labelledby="owner-time" className="grid gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 id="owner-time" className="mr-auto text-lg font-semibold">
+        <h2 id="owner-time" className="mr-auto font-display text-2xl font-semibold">
           {def?.unit} each day
         </h2>
         <Segmented label="Days" options={RANGES} value={range} onChange={setRange} />
@@ -308,7 +301,7 @@ function OverTime({ days }: { days: OwnerDay[] }) {
 function Daily({ days }: { days: OwnerDay[] }) {
   return (
     <section aria-labelledby="owner-daily" className="grid content-start gap-3">
-      <h2 id="owner-daily" className="text-lg font-semibold">
+      <h2 id="owner-daily" className="font-display text-2xl font-semibold">
         Today against other days
       </h2>
       <TableBox name={{ labelledBy: 'owner-daily' }}>
@@ -369,10 +362,10 @@ const percent = (part: number, whole: number) =>
 function Visitors({ summary, visitors }: { summary: OwnerSummary; visitors: OwnerVisitors }) {
   return (
     <section aria-labelledby="owner-visitors" className="grid gap-4">
-      <h2 id="owner-visitors" className="text-lg font-semibold">
+      <h2 id="owner-visitors" className="font-display text-2xl font-semibold">
         Signed-out visitors and places
       </h2>
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-3">
         <Tile
           label="Signed out today"
           value={visitors.signed_out_1d}
@@ -421,11 +414,11 @@ function Overview({
   const newFeedback = summary.feedback.new ?? 0;
   return (
     <div className="grid gap-10">
-      <div className="grid gap-3 lg:grid-cols-[3fr_2fr]">
+      <div className="grid gap-8 lg:grid-cols-[3fr_2fr]">
         <Today summary={summary} days={days} />
         <Insights lines={lines} />
       </div>
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-4">
         <Tile label="Words this week" value={total(days, 'words', 7)} trend={spark('words')}>
           <Delta now={total(days, 'words', 7)} before={total(days, 'words', 7, 7)} period="last week" />
         </Tile>
@@ -478,13 +471,13 @@ function Overview({
       <OverTime days={days} />
       <div className="grid gap-10 lg:grid-cols-[3fr_2fr]">
         <section aria-labelledby="owner-year" className="grid content-start gap-3">
-          <h2 id="owner-year" className="text-lg font-semibold">
+          <h2 id="owner-year" className="font-display text-2xl font-semibold">
             A year of writing
           </h2>
           <YearMap days={days} />
         </section>
         <section aria-labelledby="owner-week" className="grid content-start gap-3">
-          <h2 id="owner-week" className="text-lg font-semibold">
+          <h2 id="owner-week" className="font-display text-2xl font-semibold">
             Average words on each weekday
           </h2>
           <WeekdayBars values={weekdayWords(days)} />
@@ -503,7 +496,7 @@ function Overview({
         <Breakdown title="Features in weekly reports" counts={summary.features} labels={LABELS} />
       </div>
       <section aria-labelledby="owner-server" className="grid gap-4">
-        <h2 id="owner-server" className="text-lg font-semibold">
+        <h2 id="owner-server" className="font-display text-2xl font-semibold">
           Server and storage
         </h2>
         <Meter
@@ -511,7 +504,7 @@ function Overview({
           used={summary.db_bytes}
           of={FREE_DB_BYTES}
         />
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
           <Tile
             label="Sealed sync copies"
             value={mb(summary.sync_bytes)}
@@ -541,17 +534,65 @@ const SORTERS: Record<Sort, (a: OwnerAccount, b: OwnerAccount) => number> = {
   joined: (a, b) => b.created_at.localeCompare(a.created_at),
 };
 
-function People({ accounts }: { accounts: OwnerAccount[] }) {
+/** The account's numbers in one cell: the main figure, and a quieter line under it. */
+function Cell({ label, main, sub }: { label: string; main: React.ReactNode; sub?: React.ReactNode }) {
+  return (
+    <td className="py-3 pr-6 align-top max-md:py-1.5">
+      <span className="block text-xs text-muted md:hidden">{label}</span>
+      <span className="block">{main}</span>
+      {sub && <span className="block text-muted">{sub}</span>}
+    </td>
+  );
+}
+
+function People({
+  accounts,
+  self,
+  onChanged,
+}: {
+  accounts: OwnerAccount[];
+  /** The owner's own account, which the owner deletes on the account page. */
+  self: string;
+  onChanged: () => void;
+}) {
   const id = useId();
   const [filter, setFilter] = useState('');
   const [sort, setSort] = useState<Sort>('active');
+  const [editing, setEditing] = useState<OwnerAccount | 'new' | null>(null);
+  const [deleting, setDeleting] = useState<OwnerAccount | null>(null);
+  const [status, setStatus] = useState('');
+  const done = (text: string) => {
+    setEditing(null);
+    setDeleting(null);
+    setStatus(text);
+    onChanged();
+  };
   const find = filter.trim().toLowerCase();
   const shown = accounts
     .filter((a) => `${a.name ?? ''} ${a.email}`.toLowerCase().includes(find))
     .sort(SORTERS[sort]);
   const top = Math.max(1, ...accounts.map((a) => a.words_30d));
+  const active = accounts.filter((a) => a.days_30d > 0).length;
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid gap-1">
+          <h2 className="font-display text-2xl font-semibold">Writers with an account</h2>
+          <p className="text-sm text-muted">
+            {n(accounts.length)} {accounts.length === 1 ? 'account' : 'accounts'}, {n(active)} active in the
+            last 30 days. People who write with no account show only in the counts.
+          </p>
+        </div>
+        <Button
+          type="button"
+          onClick={() => {
+            setEditing('new');
+          }}
+        >
+          <UserPlus aria-hidden="true" className="size-4" />
+          Add an account
+        </Button>
+      </div>
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid w-full max-w-sm gap-1.5">
           <label htmlFor={id} className="text-sm">
@@ -568,57 +609,137 @@ function People({ accounts }: { accounts: OwnerAccount[] }) {
         </div>
         <Segmented<Sort> label="Sort" options={[...SORTS]} value={sort} onChange={setSort} />
       </div>
-      <p className="text-sm text-muted">
-        {n(shown.length)} of {n(accounts.length)} accounts. People who write with no account show only in the
-        device and word counts.
+      <p role="status" className="text-sm empty:hidden">
+        {status}
       </p>
-      <TableBox name={{ label: 'Accounts' }}>
-        <table aria-label="Accounts" className="w-full min-w-[56rem] text-sm">
-          <thead>
-            <tr className="text-left text-muted">
-              <th className="py-2 pr-4 font-medium">Writer</th>
-              <th className="py-2 pr-4 font-medium">Joined</th>
-              <th className="py-2 pr-4 font-medium">Last active</th>
-              <th className="py-2 pr-4 font-medium">Words, 30 days</th>
-              <th className="py-2 pr-4 font-medium">Days with Vlo, 30 days</th>
-              <th className="py-2 pr-4 font-medium">Words in Vlo</th>
-              <th className="py-2 pr-4 font-medium">Projects</th>
-              <th className="py-2 pr-4 font-medium">Devices</th>
-              <th className="py-2 pr-4 font-medium">Sync</th>
-              <th className="py-2 font-medium">Feedback</th>
-            </tr>
-          </thead>
-          <tbody className="tabular-nums">
-            {shown.map((a) => (
-              <tr key={a.id} className="border-t border-rule">
-                <td className="py-2 pr-4">
-                  {a.name && <span className="block font-medium">{a.name}</span>}
-                  <span className={a.name ? 'text-muted' : undefined}>{a.email}</span>
-                  {a.provider === 'google' ? <span className="text-muted"> (Google)</span> : null}
-                </td>
-                <td className="py-2 pr-4">{dayText(a.created_at)}</td>
-                <td className="py-2 pr-4">{dayText(a.last_active)}</td>
-                <td className="py-2 pr-4">
-                  <span className="flex items-center gap-2">
-                    {n(a.words_30d)}
-                    <span
-                      aria-hidden="true"
-                      className="h-2 rounded-r-[4px] bg-accent"
-                      style={{ width: `${String((a.words_30d / top) * 4)}rem` }}
-                    />
-                  </span>
-                </td>
-                <td className="py-2 pr-4">{n(a.days_30d)}</td>
-                <td className="py-2 pr-4">{a.words_total === null ? 'Not yet' : n(a.words_total)}</td>
-                <td className="py-2 pr-4">{a.projects === null ? 'Not yet' : n(a.projects)}</td>
-                <td className="py-2 pr-4">{n(a.devices)}</td>
-                <td className="py-2 pr-4">{a.syncing ? 'On' : 'Off'}</td>
-                <td className="py-2">{n(a.feedback)}</td>
+      {shown.length === 0 ? (
+        <p className="border-t border-rule pt-4 text-muted">
+          {accounts.length === 0
+            ? 'No accounts yet. Add one, or wait for a writer to sign in.'
+            : `No account matches “${filter.trim()}”.`}
+        </p>
+      ) : (
+        <TableBox name={{ label: 'Accounts' }}>
+          <table aria-label="Accounts" className="w-full text-sm max-md:block md:min-w-[52rem]">
+            <thead className="max-md:sr-only">
+              <tr className="border-b border-rule text-left text-muted">
+                <th className="py-2 pr-6 font-medium">Writer</th>
+                <th className="py-2 pr-6 font-medium">Last active</th>
+                <th className="py-2 pr-6 font-medium">Last 30 days</th>
+                <th className="py-2 pr-6 font-medium">Words in Vlo</th>
+                <th className="py-2 pr-6 font-medium">Devices</th>
+                <th className="py-2 pr-6 font-medium">Feedback</th>
+                <th className="py-2">
+                  <span className="sr-only">Change</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableBox>
+            </thead>
+            <tbody className="tabular-nums max-md:grid">
+              {shown.map((a) => (
+                <tr
+                  key={a.id}
+                  className="border-b border-rule last:border-b-0 max-md:relative max-md:grid max-md:grid-cols-2 max-md:gap-x-4 max-md:py-3"
+                >
+                  <td className="py-3 pr-6 align-top max-md:col-span-2 max-md:pt-0 max-md:pr-12">
+                    <span className="flex items-start gap-3">
+                      <Avatar profile={{ name: a.name ?? '', photo: null }} className="size-9" />
+                      <span className="grid min-w-0">
+                        <span className="font-medium [overflow-wrap:anywhere]">
+                          {a.name ?? a.email}
+                          {a.id === self && <span className="font-normal text-muted"> (you)</span>}
+                        </span>
+                        {a.name && <span className="text-muted [overflow-wrap:anywhere]">{a.email}</span>}
+                        <span className="text-muted">
+                          Joined {dayText(a.created_at)}
+                          {a.provider === 'google' ? ', with Google' : ''}
+                        </span>
+                      </span>
+                    </span>
+                  </td>
+                  <Cell label="Last active" main={dayText(a.last_active)} />
+                  <Cell
+                    label="Last 30 days"
+                    main={
+                      <span className="flex items-center gap-2">
+                        {n(a.words_30d)} words
+                        <span
+                          aria-hidden="true"
+                          className="h-1.5 rounded-full bg-accent"
+                          style={{ width: `${String((a.words_30d / top) * 3)}rem` }}
+                        />
+                      </span>
+                    }
+                    sub={`On ${n(a.days_30d)} ${a.days_30d === 1 ? 'day' : 'days'}`}
+                  />
+                  <Cell
+                    label="Words in Vlo"
+                    main={a.words_total === null ? 'Not yet' : `${n(a.words_total)} words`}
+                    sub={
+                      a.projects === null
+                        ? undefined
+                        : `${n(a.projects)} ${a.projects === 1 ? 'project' : 'projects'}`
+                    }
+                  />
+                  <Cell label="Devices" main={n(a.devices)} sub={a.syncing ? 'Sync on' : 'Sync off'} />
+                  <Cell label="Feedback" main={n(a.feedback)} />
+                  <td className="py-2 text-right align-top max-md:absolute max-md:top-1 max-md:right-0 max-md:py-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="px-3"
+                          aria-label={`Change ${a.email}`}
+                        >
+                          <Ellipsis aria-hidden="true" className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setEditing(a);
+                          }}
+                        >
+                          <Pencil aria-hidden="true" className="size-4" />
+                          Edit name and email
+                        </DropdownMenuItem>
+                        {a.id !== self && (
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setDeleting(a);
+                            }}
+                          >
+                            <Trash2 aria-hidden="true" className="size-4" />
+                            Delete account
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableBox>
+      )}
+      {editing && (
+        <AccountDialog
+          account={editing === 'new' ? null : editing}
+          onClose={() => {
+            setEditing(null);
+          }}
+          onSaved={done}
+        />
+      )}
+      {deleting && (
+        <DeleteAccountDialog
+          account={deleting}
+          onClose={() => {
+            setDeleting(null);
+          }}
+          onDeleted={done}
+        />
+      )}
     </div>
   );
 }
@@ -823,7 +944,7 @@ async function loadAll(): Promise<Data> {
   return { summary, days, accounts, feedback, visitors, at: Date.now() };
 }
 
-function Dashboard() {
+function Dashboard({ self }: { self: string }) {
   const motion = useMotionAllowed();
   const [data, setData] = useState<Data | null>(null);
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -893,14 +1014,10 @@ function Dashboard() {
             />
             <div className="flex items-center gap-3">
               <p className="flex items-center gap-2 text-sm text-muted">
-                <span className="relative flex size-2" aria-hidden="true">
-                  {!message && (
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
-                  )}
-                  <span
-                    className={`relative inline-flex size-2 rounded-full ${message ? 'bg-muted' : 'bg-accent'}`}
-                  />
-                </span>
+                <span
+                  aria-hidden="true"
+                  className={`size-2 rounded-full ${message ? 'bg-muted' : 'bg-accent'}`}
+                />
                 {message
                   ? `Not live: ${message} Vlo tries again in 30 seconds.`
                   : `Live. Updated at ${TIME.format(data.at)}.`}
@@ -927,7 +1044,15 @@ function Dashboard() {
               {view === 'overview' && (
                 <Overview summary={data.summary} days={data.days} visitors={data.visitors} />
               )}
-              {view === 'people' && <People accounts={data.accounts} />}
+              {view === 'people' && (
+                <People
+                  accounts={data.accounts}
+                  self={self}
+                  onChanged={() => {
+                    setLoads((x) => x + 1);
+                  }}
+                />
+              )}
               {view === 'feedback' && (
                 <Inbox
                   items={data.feedback}
@@ -965,7 +1090,7 @@ export function OwnerPage() {
         with the owner account to see who uses Vlo.
       </p>
     );
-  else body = <Dashboard key={session.userId} />;
+  else body = <Dashboard key={session.userId} self={session.userId} />;
   return (
     <div className="grid gap-6">
       <h1 className="font-display text-4xl font-semibold">Owner</h1>

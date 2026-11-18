@@ -5,7 +5,7 @@ import { useMediaQuery } from '@/app/useMediaQuery';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { ICON_BUTTON } from '@/ui/tip';
-import { Tips } from '@/features/onboarding/Tips';
+import { Guide } from '@/features/onboarding/Guide';
 import {
   Dialog,
   DialogClose,
@@ -166,7 +166,7 @@ export function ProjectLayout({
       {/* On a wide screen the tools join the tab row. Elsewhere, and in focus mode, they take a row of their own. */}
       {!focusMode && <div data-typing-hide>{title(wide ? toolRow : null)}</div>}
       {(focusMode || !wide) && toolRow}
-      {!focusMode && <Tips />}
+      {!focusMode && <Guide />}
       <div
         className={cn(
           'grid gap-6',

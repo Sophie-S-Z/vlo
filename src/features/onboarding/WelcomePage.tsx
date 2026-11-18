@@ -107,6 +107,10 @@ export function WelcomePage() {
                   </span>
                 </RadioGroupPrimitive.Item>
               </RadioGroupPrimitive.Root>
+              <p className="mt-4 text-muted">
+                Vlo also keeps a signed record of how you write each project. It counts what you type, paste,
+                dictate or take from AI, and it holds none of your text. You can download it in Export.
+              </p>
             </div>
           )}
 

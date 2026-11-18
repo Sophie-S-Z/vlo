@@ -84,7 +84,7 @@ test('a narrow page shows a count in the margin, and the thread opens in the Com
 
 test('a wide page shows each thread as a card beside its words', async ({ page, isMobile }) => {
   test.skip(isMobile, 'A phone has no margin for cards.');
-  await page.setViewportSize({ width: 1700, height: 1000 });
+  await page.setViewportSize({ width: 1920, height: 1000 });
   await newNovel(page, 'Mira finds the ledger.');
   await commentOnLine(page, 'Too quick?');
   // The panel gives the selection back as it closes, so End repeats until the caret is at the end.
@@ -163,7 +163,7 @@ test('in Suggesting, each change is a card with Accept and Reject, and Accept al
   isMobile,
 }) => {
   test.skip(isMobile, 'A phone has no margin for cards.');
-  await page.setViewportSize({ width: 1700, height: 1000 });
+  await page.setViewportSize({ width: 1920, height: 1000 });
   await newNovel(page, 'Mira finds the ledger.');
   await useTool(page, 'Track changes');
   await scene(page).click();

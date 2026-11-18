@@ -46,6 +46,10 @@ export type RpcName =
   | 'owner_set_feedback'
   // Feedback guards (migration 0012).
   | 'owner_block_sender'
+  // The owner adds, changes and deletes accounts (migration 0016).
+  | 'owner_add_account'
+  | 'owner_edit_account'
+  | 'owner_delete_account'
   // The writer's profile (migration 0011).
   | 'profile_get'
   | 'profile_put'
@@ -66,6 +70,7 @@ export type ShareErrorKind =
   | 'too-fast'
   | 'duplicate'
   | 'blocked'
+  | 'taken'
   | 'server';
 
 const MESSAGES: Record<ShareErrorKind, string> = {
@@ -78,6 +83,7 @@ const MESSAGES: Record<ShareErrorKind, string> = {
   'too-fast': 'Wait 30 seconds, then try again.',
   duplicate: 'The server has this message already.',
   blocked: 'The server does not take messages from this sender.',
+  taken: 'Another account has this email.',
   server: 'The share server refused the request. Try again later.',
 };
 
@@ -120,6 +126,8 @@ function kindOf(message: string): ShareErrorKind {
   if (message.includes('feedback too fast')) return 'too-fast';
   if (message.includes('feedback duplicate')) return 'duplicate';
   if (message.includes('feedback blocked')) return 'blocked';
+  // The owner's accounts (migration 0016).
+  if (message.includes('email taken')) return 'taken';
   return 'server';
 }
 

@@ -7,8 +7,8 @@ import { leafText } from '../leafText';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
- * The aiOrigin mark (spec section 5, F26). Co-writer text that the writer inserts carries the provider,
- * the model and the time. Text that the writer types, also inside AI text, is the writer's own, so a
+ * The aiOrigin mark (spec section 5, F26). AI text that the writer inserts in Drafting mode carries the
+ * provider, the model and the time. Text that the writer types, also inside AI text, is the writer's own, so a
  * plugin takes the mark off each range that a writer's edit adds. A paste or a drop keeps the mark only
  * when its own content carried it, so moved AI text stays marked and the writer's pasted words do not take
  * the mark of the text around them. While an input method composes, the plugin waits for the end of the

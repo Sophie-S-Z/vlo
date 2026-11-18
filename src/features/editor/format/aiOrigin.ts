@@ -1,6 +1,6 @@
 /*
  * The data of the aiOrigin mark (spec section 5, F26), with no editor code, so the export worker can read
- * it too. Co-writer text that the writer inserts carries the provider, the model and the time.
+ * it too. AI text that the writer inserts in Drafting mode carries the provider, the model and the time.
  */
 
 export const AI_ORIGIN = 'aiOrigin';

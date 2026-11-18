@@ -25,7 +25,7 @@ const PURPOSE_LABEL: Record<NetPurpose, string> = {
   feedback: 'Feedback',
 };
 
-const MODE_LABEL: Record<AiMode, string> = { pen: 'Pen', reader: 'Reader', cowriter: 'Co-writer' };
+const MODE_LABEL: Record<AiMode, string> = { pen: 'Pen', reader: 'Reader', cowriter: 'Drafting' };
 
 const time = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
 const numbers = new Intl.NumberFormat();

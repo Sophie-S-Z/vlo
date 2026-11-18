@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 import { seriousIssues } from './support/axe';
 import { writeWithoutAccount } from './support/onboarding';
 
-/* Phase 17 decision S5: a new writer sees one tip line that names the ways to the hidden tools. */
+/* The getting-started guide: a new writer sees the basics above the text, one step at a time. */
 
 test.beforeEach(async ({ page }) => {
   await writeWithoutAccount(page);
 });
 
-test('a new writer sees one tip at a time, Close hides the tips, and Settings shows them again', async ({
+test('a new writer steps through the guide, Close hides it, and Settings shows it again', async ({
   page,
 }) => {
   await page.goto('/welcome');
@@ -18,15 +18,19 @@ test('a new writer sees one tip at a time, Close hides the tips, and Settings sh
     .getByRole('dialog', { name: 'New project' })
     .getByRole('button', { name: 'Create project' })
     .click();
+  // The guide never takes the focus from the text.
   await expect(page.getByRole('textbox', { name: 'Scene 1' })).toBeFocused();
 
-  const tip = page.getByRole('complementary', { name: 'Tip' });
-  await expect(tip).toContainText('to find any tool, view or item by name');
+  const guide = page.getByRole('complementary', { name: 'Getting started' });
+  await expect(guide).toContainText('Step 1 of 6. Click the page and type.');
+  await expect(guide.getByRole('button', { name: 'Back' })).toHaveCount(0);
   expect(await seriousIssues(page)).toEqual([]);
-  await tip.getByRole('button', { name: 'Next tip' }).click();
-  await expect(tip).toContainText('Type / in the text');
+  for (let step = 2; step <= 4; step++) await guide.getByRole('button', { name: 'Next' }).click();
+  await expect(guide).toContainText('to find any tool, view or item by name');
+  await guide.getByRole('button', { name: 'Back' }).click();
+  await expect(guide).toContainText('Step 3 of 6.');
 
-  // The command menu that the first tip names finds a tool that sits on the screen as an icon.
+  // The command menu that the guide names finds a tool that sits on the screen as an icon.
   await page.keyboard.press('ControlOrMeta+k');
   const menu = page.getByRole('dialog', { name: 'Command menu' });
   await menu.getByRole('combobox').fill('readability');
@@ -34,16 +38,21 @@ test('a new writer sees one tip at a time, Close hides the tips, and Settings sh
   await expect(page.getByRole('dialog', { name: 'Insights' })).toBeVisible();
   await page.keyboard.press('Escape');
 
-  await tip.getByRole('button', { name: 'Close the tips' }).click();
-  await expect(tip).toHaveCount(0);
+  await guide.getByRole('button', { name: 'Close the guide' }).click();
+  await expect(guide).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Scene 1' })).toBeVisible();
-  await expect(tip).toHaveCount(0);
+  await expect(guide).toHaveCount(0);
 
   await page.goto('/settings');
-  await page.getByRole('button', { name: 'Show the tips again' }).click();
+  await page.getByRole('button', { name: 'Show the guide again' }).click();
   await page.goBack();
-  await expect(tip).toContainText('to find any tool, view or item by name');
+  await expect(guide).toContainText('Step 1 of 6.');
+  // Done on the last step hides the guide too.
+  for (let step = 2; step <= 6; step++) await guide.getByRole('button', { name: 'Next' }).click();
+  await expect(guide).toContainText('signed record of how you wrote');
+  await guide.getByRole('button', { name: 'Done' }).click();
+  await expect(guide).toHaveCount(0);
 });
 
 test('the views that are not tabs sit in the More menu, with a line that says what each is for', async ({

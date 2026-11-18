@@ -493,6 +493,69 @@ test('a writer sends feedback, and the owner reads it, marks it and sees the cou
   await ownerContext.close();
 });
 
+test('the owner adds an account, edits it and deletes it, and the server changes with each step', async ({
+  browser,
+}) => {
+  const ownerContext = await browser.newContext();
+  const fake = await fakeSupabase(ownerContext);
+  const owner = await ownerContext.newPage();
+  await skipOnboarding(owner);
+  await owner.goto('/');
+  await signIn(owner, 'owner@example.com');
+  fake.accounts?.makeOwner('owner@example.com');
+  await owner.goto('/owner');
+  await owner.getByRole('button', { name: /^People/ }).click();
+  const table = owner.getByRole('table', { name: 'Accounts' });
+  // The owner deletes the own account on the account page only.
+  await table.getByRole('button', { name: 'Change owner@example.com' }).click();
+  await expect(owner.getByRole('menuitem', { name: 'Edit name and email' })).toBeVisible();
+  await expect(owner.getByRole('menuitem', { name: 'Delete account' })).toHaveCount(0);
+  await owner.keyboard.press('Escape');
+
+  await owner.getByRole('button', { name: 'Add an account' }).click();
+  const add = owner.getByRole('dialog', { name: 'Add an account' });
+  await add.getByLabel('Email').fill('Carol@Example.com');
+  await add.getByLabel('Name (optional)').fill('Carol Ann');
+  expect(await seriousIssues(owner)).toEqual([]);
+  await add.getByRole('button', { name: 'Add account' }).click();
+  await expect(owner.getByRole('status').filter({ hasText: 'Added Carol@Example.com.' })).toBeVisible();
+  await expect(table).toContainText('Carol Ann');
+  const carol = [...(fake.accounts?.users.values() ?? [])].find((u) => u.email === 'carol@example.com');
+  expect(fake.accounts?.profiles.get(carol?.id ?? '')?.name).toBe('Carol Ann');
+
+  // The same email cannot make a second account.
+  await owner.getByRole('button', { name: 'Add an account' }).click();
+  await add.getByLabel('Email').fill('carol@example.com');
+  await add.getByRole('button', { name: 'Add account' }).click();
+  await expect(add.getByRole('alert')).toHaveText('Another account has this email.');
+  await add.getByRole('button', { name: 'Cancel' }).click();
+
+  await table.getByRole('button', { name: 'Change carol@example.com' }).click();
+  await owner.getByRole('menuitem', { name: 'Edit name and email' }).click();
+  const edit = owner.getByRole('dialog', { name: 'Edit Carol Ann' });
+  await edit.getByLabel('Email').fill('carol.ann@example.com');
+  await edit.getByLabel('Name').fill('');
+  await expect(edit.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  await edit.getByLabel('Name').fill('Carol A. Duffy');
+  await edit.getByRole('button', { name: 'Save changes' }).click();
+  await expect(table).toContainText('carol.ann@example.com');
+  await expect(table).toContainText('Carol A. Duffy');
+  expect(carol?.email).toBe('carol.ann@example.com');
+
+  await table.getByRole('button', { name: 'Change carol.ann@example.com' }).click();
+  await owner.getByRole('menuitem', { name: 'Delete account' }).click();
+  const confirm = owner.getByRole('alertdialog', { name: 'Delete Carol A. Duffy?' });
+  const remove = confirm.getByRole('button', { name: 'Delete account' });
+  await expect(remove).toBeDisabled();
+  await confirm.getByLabel('Type carol.ann@example.com to confirm').fill('carol.ann@example.com');
+  await remove.click();
+  await expect(owner.getByRole('status').filter({ hasText: 'Deleted carol.ann@example.com.' })).toBeVisible();
+  await expect(table).not.toContainText('carol.ann@example.com');
+  expect(fake.accounts?.users.has(carol?.id ?? '')).toBe(false);
+  expect(fake.accounts?.profiles.has(carol?.id ?? '')).toBe(false);
+  await ownerContext.close();
+});
+
 test('the leaderboard ranks the signed-in writers, crowns the first, and a writer can leave it', async ({
   page,
   context,

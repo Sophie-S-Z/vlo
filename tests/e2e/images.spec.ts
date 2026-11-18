@@ -158,6 +158,8 @@ test('a drag moves an image above the first paragraph, and Undo puts it back', a
 
   const figure = scene.locator('figure');
   await expect(figure.locator('img')).toBeVisible();
+  // The image and the first paragraph both stay in view, so the page does not scroll in the drag.
+  await page.setViewportSize({ width: 1280, height: 1000 });
   await figure.dragTo(scene.locator('p').first(), { targetPosition: { x: 2, y: 2 } });
   await expect.poll(() => blocks(scene)).toEqual(['FIGURE', 'P', 'P', 'P']);
   await expect(scene.locator('p').first()).toHaveText('The harbour at dawn.');

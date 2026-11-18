@@ -644,7 +644,7 @@ export function ProjectPage() {
     {
       id: 'ai-mode',
       label: 'Change AI mode…',
-      keywords: ['ai', 'pen', 'reader', 'co-writer', 'assistant', 'mode', 'privacy'],
+      keywords: ['ai', 'pen', 'reader', 'drafting', 'co-writer', 'assistant', 'mode', 'privacy'],
       run: () => {
         afterMenu.current = () => {
           setModeOpen(true);

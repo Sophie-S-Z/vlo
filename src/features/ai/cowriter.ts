@@ -3,7 +3,7 @@ import { ALTERNATIVE_BREAK, COWRITER_SYSTEM } from './prompts';
 import { fitText, type AiRequest, type ItemContext } from './reader';
 
 /*
- * Co-writer actions (spec section 10, F23, plan Task D6). The AI drafts only when the writer asks. Each
+ * Drafting actions (spec section 10, F23, plan Task D6). The AI drafts only when the writer asks. Each
  * draft shows in the Assistant panel first, and only Insert puts it in the text, with the aiOrigin mark.
  * Brainstorm stays in the panel.
  */

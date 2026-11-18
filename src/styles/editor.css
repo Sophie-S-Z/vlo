@@ -1046,8 +1046,8 @@ html[data-calm='true'] .vlo-fill-shimmer {
 }
 
 /*
- * AI text (F26). With "Show AI text" on, Co-writer words have a soft tint and a dashed line under them, so
- * they differ from the dotted line of a private name. The mark stays in the text when the tint is off.
+ * AI text (F26). With "Show AI text" on, AI words from Drafting mode have a soft tint and a dashed line under
+ * them, so they differ from the dotted line of a private name. The mark stays in the text when the tint is off.
  */
 .vlo-manuscript[data-show-ai] .vlo-ai {
   background: color-mix(in oklab, var(--muted) 14%, transparent);

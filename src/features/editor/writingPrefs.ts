@@ -40,6 +40,8 @@ export interface WritingPrefs {
   looks: SavedLook[];
   /** The item outline (Phase 19, Task B1) stays open in the margin, where the window has room for it. */
   outline: boolean;
+  /** The mode dialog offers Reader and Drafting next to Pen. Off, so Vlo is a pen until the writer opts in. */
+  aiModes: boolean;
   /** Text shortcuts (Phase 19, Task D3): each "type this" becomes "get this" after a space or a mark. */
   shortcuts: TextShortcut[];
   /** The starter list of common typos, such as "teh", in English prose. */
@@ -99,9 +101,9 @@ export interface SavedLook extends PageLook {
 export const MAX_LOOKS = 6;
 export const MAX_LOOK_NAME = 40;
 export const PAGE_WIDTH_MIN = 56;
-export const PAGE_WIDTH_MAX = 90;
+export const PAGE_WIDTH_MAX = 160;
 export const PAGE_WIDTH_STEP = 2;
-const PAGE_WIDTH_DEFAULT = 68;
+const PAGE_WIDTH_DEFAULT = 100;
 /** The page width from before Phase 19, when the details panel kept it under its own key. */
 const OLD_WIDTH_KEY = 'vlo:pageWidth';
 
@@ -151,6 +153,7 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   screenFont: null,
   looks: [],
   outline: false,
+  aiModes: false,
   shortcuts: [],
   typoFixes: true,
   codexCompletion: true,
@@ -242,6 +245,7 @@ function load(): WritingPrefs {
     screenFont: value.screenFont === undefined ? null : cleanFontValue(value.screenFont),
     looks: cleanLooks(value.looks),
     outline: value.outline === true,
+    aiModes: value.aiModes === true,
     shortcuts: cleanShortcuts(value.shortcuts),
     typoFixes: value.typoFixes !== false,
     codexCompletion: value.codexCompletion !== false,

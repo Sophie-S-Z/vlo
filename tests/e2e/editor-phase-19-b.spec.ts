@@ -39,7 +39,7 @@ test('the outline shows in the margin of a wide window, and in a popover of a na
   isMobile,
 }) => {
   test.skip(isMobile, 'A phone has no margin for the outline.');
-  await page.setViewportSize({ width: 1700, height: 1000 });
+  await page.setViewportSize({ width: 1920, height: 1000 });
   await newNovel(page);
   await write(page, ['## Harbour', 'Mira rows out.', '## Storm', 'The tide turns.']);
 

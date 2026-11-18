@@ -1,5 +1,7 @@
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { useId, useState, type RefObject } from 'react';
+import { Link } from 'react-router';
+import { useWritingPrefs } from '@/features/editor/writingPrefs';
 import type { AiMode, Project } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -10,7 +12,8 @@ import { changesFor, MODE_INFO, MODES, setAiMode } from './modes';
 /*
  * The mode dialog (spec section 10, F23). The writer picks a mode, and the dialog lists what will change
  * before the switch. The switch happens only on the button, so a change away from Pen is always a
- * confirmed choice.
+ * confirmed choice. Reader and Drafting show only after the writer turns on AI modes in Settings, or while
+ * the project is in one of them, so a writer can always go back to Pen.
  */
 
 export function ModeDialog({
@@ -30,6 +33,7 @@ export function ModeDialog({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const current = project.aiMode;
+  const offered = useWritingPrefs().aiModes || current !== 'pen' ? MODES : (['pen'] as const);
   const changes = changesFor(chosen, {
     templates: project.templates,
     aliasAiRequests: project.settings.aliasAiRequests,
@@ -74,7 +78,7 @@ export function ModeDialog({
           }}
           className="grid gap-2"
         >
-          {MODES.map((mode) => (
+          {offered.map((mode) => (
             <RadioGroupPrimitive.Item
               key={mode}
               value={mode}
@@ -97,6 +101,15 @@ export function ModeDialog({
             </RadioGroupPrimitive.Item>
           ))}
         </RadioGroupPrimitive.Root>
+        {offered.length === 1 && (
+          <p className="text-sm text-muted">
+            AI modes are off. To use AI in a project, turn on Offer AI modes in{' '}
+            <Link to="/settings#ai" className="underline">
+              Settings
+            </Link>
+            . Vlo marks each AI word and counts it in the authorship record.
+          </p>
+        )}
 
         {chosen !== current && (
           <section aria-labelledby={`${id}-changes`} className="grid gap-2" data-testid="mode-changes">

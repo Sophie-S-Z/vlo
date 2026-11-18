@@ -29,11 +29,12 @@ import {
 
 /** The looks that Vlo offers. The first is the look of a new writer. */
 export const PAGE_LOOKS: readonly SavedLook[] = [
-  { name: 'Vlo', pageWidth: 68, paragraphs: 'spaced', screenFont: null, lineHeight: 1.7 },
+  { name: 'Vlo', pageWidth: 100, paragraphs: 'spaced', screenFont: null, lineHeight: 1.7 },
   { name: 'Book', pageWidth: 64, paragraphs: 'indented', screenFont: null, lineHeight: 1.7 },
   { name: 'Manuscript', pageWidth: 68, paragraphs: 'indented', screenFont: 'courier-prime', lineHeight: 2.3 },
   { name: 'Modern', pageWidth: 72, paragraphs: 'airy', screenFont: 'inter', lineHeight: 1.7 },
   { name: 'Quiet', pageWidth: 60, paragraphs: 'spaced', screenFont: 'literata', lineHeight: 2 },
+  { name: 'Wide', pageWidth: 160, paragraphs: 'spaced', screenFont: null, lineHeight: 1.7 },
 ];
 
 const PARAGRAPH_OPTIONS: { value: ParagraphLook; label: string }[] = [

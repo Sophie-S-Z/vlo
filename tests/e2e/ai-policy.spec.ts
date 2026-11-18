@@ -15,7 +15,7 @@ test('the footer opens the AI policy, which states the four rules', async ({ pag
   await expect(page).toHaveURL(/\/ai-policy$/);
   await expect(page).toHaveTitle(/AI policy/);
   await expect(page.getByRole('heading', { level: 1, name: 'AI policy' })).toBeVisible();
-  await expect(page.getByText('Version 2, November 8, 2026')).toBeVisible();
+  await expect(page.getByText('Version 3, November 18, 2026')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
     'Vlo trains no model on your text.',
     'No Vlo server receives your manuscript text.',

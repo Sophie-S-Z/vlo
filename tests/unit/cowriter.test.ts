@@ -3,7 +3,7 @@ import { cowriterRequest, splitAlternatives, type CowriterContext } from '@/feat
 import { estimateTokens } from '@/features/ai/engine/types';
 import { ALTERNATIVE_BREAK, COWRITER_SYSTEM } from '@/features/ai/prompts';
 
-/* Co-writer requests (spec F23, plan Task D6): what each action sends, and the checks before it sends. */
+/* Drafting requests (spec F23, plan Task D6): what each action sends, and the checks before it sends. */
 
 function context(change: Partial<CowriterContext> = {}): CowriterContext {
   return {

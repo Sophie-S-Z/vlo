@@ -42,7 +42,7 @@ async function watchIcon(page: Page) {
 const shapes = (page: Page) => page.evaluate(() => (window as unknown as { __shapes: string[] }).__shapes);
 
 /** Opens the dialog, picks a mode and switches, and gives the shape of that mode's icon. */
-async function switchTo(page: Page, label: 'Reader' | 'Co-writer') {
+async function switchTo(page: Page, label: 'Reader' | 'Drafting') {
   await badge(page).click();
   await dialog(page)
     .getByRole('radio', { name: new RegExp(`^${label}`) })
@@ -58,6 +58,28 @@ async function switchTo(page: Page, label: 'Reader' | 'Co-writer') {
   await expect(badge(page)).toHaveAccessibleName(`AI mode: ${label}`);
   return shape ?? '';
 }
+
+test('AI modes are off at first, so the dialog offers Pen only until Settings turns them on', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    if (localStorage.getItem('vlo:writing') === null)
+      localStorage.setItem('vlo:writing', JSON.stringify({ toolLevel: 'full' }));
+  });
+  await newProject(page);
+  await badge(page).click();
+  await expect(dialog(page).getByRole('radio')).toHaveCount(1);
+  await expect(dialog(page).getByRole('radio', { name: /^Pen/ })).toBeChecked();
+  await expect(dialog(page)).toContainText('AI modes are off.');
+  expect(await seriousIssues(page)).toEqual([]);
+  await dialog(page).getByRole('link', { name: 'Settings' }).click();
+
+  await page.getByRole('switch', { name: 'Offer AI modes' }).click();
+  await page.goBack();
+  await badge(page).click();
+  await expect(dialog(page).getByRole('radio')).toHaveText([/^Pen/, /^Reader/, /^Drafting/]);
+  await expect(dialog(page)).not.toContainText('AI modes are off.');
+});
 
 test('the badge shows Pen on every project screen, and a change away from Pen explains itself first', async ({
   page,
@@ -108,13 +130,13 @@ test('the badge shows Pen on every project screen, and a change away from Pen ex
   );
   await expect(badge(page)).toHaveAccessibleName('AI mode: Reader');
 
-  await switchTo(page, 'Co-writer');
+  await switchTo(page, 'Drafting');
   await expect(badge(page)).toHaveAttribute('data-mode', 'cowriter');
   expect(await seriousIssues(page)).toEqual([]);
 
   // The network log counts the mode of this project.
   await page.getByRole('link', { name: 'See the network log' }).click();
-  await expect(page.getByTestId('network-count')).toContainText('1 in Co-writer mode');
+  await expect(page.getByTestId('network-count')).toContainText('1 in Drafting mode');
 });
 
 test('a switch back to Pen from the command menu needs no confirm', async ({ page }) => {
@@ -140,7 +162,7 @@ test('a memoir explains that its requests carry aliases', async ({ page }) => {
   await newProject(page, 'Memoir');
   await badge(page).click();
   await dialog(page)
-    .getByRole('radio', { name: /^Co-writer/ })
+    .getByRole('radio', { name: /^Drafting/ })
     .click();
   const changes = dialog(page).getByTestId('mode-changes');
   await expect(changes).toContainText('This memoir sends aliases, never real names.');
@@ -161,7 +183,7 @@ test('the badge icon morphs, and Calm mode swaps it at once', async ({ page }) =
   await page.reload();
   await expect(badge(page)).toHaveAccessibleName('AI mode: Reader');
   await watchIcon(page);
-  const cowriter = await switchTo(page, 'Co-writer');
+  const cowriter = await switchTo(page, 'Drafting');
   await expect.poll(async () => (await shapes(page)).at(-1)).toBe(cowriter);
   expect(await shapes(page)).toEqual([cowriter]);
 });
@@ -191,7 +213,7 @@ for (const theme of ['ink', 'paper', 'sepia'] as const) {
     expect(await seriousIssues(page)).toEqual([]);
     await switchTo(page, 'Reader');
     expect(await seriousIssues(page)).toEqual([]);
-    await switchTo(page, 'Co-writer');
+    await switchTo(page, 'Drafting');
     expect(await seriousIssues(page)).toEqual([]);
     await badge(page).click();
     expect(await seriousIssues(page)).toEqual([]);

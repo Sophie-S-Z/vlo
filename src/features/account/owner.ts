@@ -123,6 +123,14 @@ export const setFeedbackStatus = (id: string, status: FeedbackStatus, note: stri
 /** Blocks or unblocks the sender of a message: its device, its account and its internet address. */
 export const blockSender = (id: string, blocked: boolean) =>
   accountRpc<boolean>('owner_block_sender', { p_id: id, p_blocked: blocked });
+/** Adds an account that signs in with this email and a code (migration 0016). Vlo sends no email. */
+export const addAccount = (email: string, name: string) =>
+  accountRpc<string>('owner_add_account', { p_email: email, p_name: name });
+/** Changes the email and profile name of an account. False when the account is not there. */
+export const editAccount = (id: string, email: string, name: string) =>
+  accountRpc<boolean>('owner_edit_account', { p_id: id, p_email: email, p_name: name });
+/** Deletes an account with its sign-ins, profile and sync. False when the account is not there. */
+export const removeAccount = (id: string) => accountRpc<boolean>('owner_delete_account', { p_id: id });
 
 /** One CSV field: quoted when it holds a comma, a quote or a line break. A formula start gets a quote. */
 function csvField(value: string | number | null): string {
