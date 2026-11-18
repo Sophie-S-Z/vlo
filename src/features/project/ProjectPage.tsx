@@ -19,7 +19,7 @@ import { wordsToday } from '@/features/editor/stats/stats';
 import { WritingStats } from '@/features/editor/stats/WritingStats';
 import { pause as stopSound } from '@/features/sound/controller';
 import { FocusControls } from '@/features/focus/FocusControls';
-import { getFocusPrefs, setFocusPrefs } from '@/features/focus/focusPrefs';
+import { getFocusPrefs, setFocusPrefs, type DimScope } from '@/features/focus/focusPrefs';
 import { SessionTimer } from '@/features/focus/SessionTimer';
 import { HideTextButton } from '@/features/focus/HideTextButton';
 import { HIDE_TEXT_KEYS, isHideTextKey, toggleHideText, useHideText } from '@/features/focus/hideText';
@@ -144,6 +144,12 @@ const AssistantPanel = lazy(async () => {
   assistantModule = await import('@/features/ai/AssistantPanel');
   return assistantModule;
 });
+
+/** True while dimming is on with this scope. */
+function dimming(scope: DimScope): boolean {
+  const prefs = getFocusPrefs();
+  return prefs.dim && prefs.dimScope === scope;
+}
 
 /** True while a dialog, a menu or the / tool list is open, so Escape belongs to it. */
 function layerOpen(): boolean {
@@ -469,9 +475,17 @@ export function ProjectPage() {
     },
     {
       id: 'dim',
-      label: getFocusPrefs().dim ? 'Stop dimming other lines' : 'Dim other lines',
+      label: dimming('line') ? 'Stop dimming other lines' : 'Dim other lines',
       run: () => {
-        setFocusPrefs({ dim: !getFocusPrefs().dim });
+        setFocusPrefs(dimming('line') ? { dim: false } : { dim: true, dimScope: 'line' });
+      },
+    },
+    {
+      id: 'dim-sentence',
+      label: dimming('sentence') ? 'Stop dimming other sentences' : 'Dim other sentences',
+      keywords: ['sentence focus', 'one sentence'],
+      run: () => {
+        setFocusPrefs(dimming('sentence') ? { dim: false } : { dim: true, dimScope: 'sentence' });
       },
     },
     {

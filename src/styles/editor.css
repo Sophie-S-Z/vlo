@@ -967,6 +967,73 @@ html[data-calm='true'] .vlo-fill-shimmer {
   box-decoration-break: clone;
 }
 
+/* A Codex name's completion (Phase 19, Task D4): the rest of the name, faint after the caret. */
+.vlo-manuscript .vlo-completion {
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/*
+ * Spelling and grammar (Phase 19, Task D1): a rose wavy line under a spelling mark and a sky dotted line
+ * under a grammar mark, so the two differ by shape as well as by color.
+ */
+.vlo-manuscript .vlo-spelling {
+  text-decoration: underline wavy var(--vlo-text-rose);
+  text-decoration-skip-ink: none;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.25em;
+}
+
+.vlo-manuscript .vlo-grammar {
+  text-decoration: underline dotted var(--vlo-text-sky);
+  text-decoration-skip-ink: none;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3em;
+}
+
+/*
+ * Parts of speech (Phase 19, Task D5). Each kind gets a text color that meets 4.5:1 in every theme, and a
+ * line shape of its own for writers who do not see the color. The legend uses the same classes.
+ */
+:is(.vlo-pos-noun, .vlo-pos-verb, .vlo-pos-adjective, .vlo-pos-adverb, .vlo-pos-conjunction) {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0.2em;
+}
+.vlo-pos-noun {
+  color: var(--vlo-text-sky);
+  text-decoration-style: solid;
+}
+.vlo-pos-verb {
+  color: var(--vlo-text-rose);
+  text-decoration-style: double;
+}
+.vlo-pos-adjective {
+  color: var(--vlo-text-moss);
+  text-decoration-style: wavy;
+}
+.vlo-pos-adverb {
+  color: var(--vlo-text-amber);
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+}
+.vlo-pos-conjunction {
+  color: var(--vlo-text-plum);
+  text-decoration-style: dashed;
+}
+/* Dimmed text keeps 4.5:1 only in the text color, so a dimmed word keeps its line and drops its color. */
+.vlo-manuscript
+  :is(.vlo-dim, .vlo-dim *):is(
+    .vlo-pos-noun,
+    .vlo-pos-verb,
+    .vlo-pos-adjective,
+    .vlo-pos-adverb,
+    .vlo-pos-conjunction
+  ) {
+  color: inherit;
+}
+
 /* The continuity check (F66): a double underline, so it differs from the wavy style check mark by shape. */
 .vlo-manuscript .vlo-continuity {
   text-decoration: underline double var(--accent);
@@ -1252,6 +1319,13 @@ html[data-vlo-typing] [data-vlo-keyboard-bar] [data-vlo-toolbar] {
       .vlo-find-current,
       .vlo-style,
       .vlo-style-long,
+      .vlo-spelling,
+      .vlo-grammar,
+      .vlo-pos-noun,
+      .vlo-pos-verb,
+      .vlo-pos-adjective,
+      .vlo-pos-adverb,
+      .vlo-pos-conjunction,
       .vlo-continuity,
       .vlo-codex,
       .vlo-comment,
@@ -1259,6 +1333,7 @@ html[data-vlo-typing] [data-vlo-keyboard-bar] [data-vlo-toolbar] {
       .vlo-reading
     ) {
     background: none;
+    color: inherit;
     text-decoration: none;
     box-shadow: none;
     outline: none;

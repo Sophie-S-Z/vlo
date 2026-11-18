@@ -7,6 +7,7 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { Switch } from '@/ui/switch';
 import { Textarea } from '@/ui/textarea';
+import { RhymeList } from '@/features/thesaurus/WordLists';
 import { addPoem } from './newPoem';
 import { echoes, erasurePoem, erasureTokens, goldenShovel, lineEndings, shovelWords } from './poetry';
 import type { TextItem } from './WorkshopPage';
@@ -401,6 +402,40 @@ export function EndingsTool({ project, texts }: { project: Project; texts: TextI
         </Link>{' '}
         to change a line.
       </p>
+    </div>
+  );
+}
+
+/** The rhymes of a word that the poet types (Phase 19, Task D2). */
+export function RhymesTool() {
+  const id = useId();
+  const [typed, setTyped] = useState('');
+  const [word, setWord] = useState('');
+  return (
+    <div className="grid max-w-prose gap-6">
+      <form
+        className="grid gap-2 sm:max-w-md"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setWord(typed.trim());
+        }}
+      >
+        <Label htmlFor={`${id}-word`}>Word to rhyme</Label>
+        <div className="flex gap-2">
+          <Input
+            id={`${id}-word`}
+            type="search"
+            autoComplete="off"
+            spellCheck={false}
+            value={typed}
+            onChange={(event) => {
+              setTyped(event.target.value);
+            }}
+          />
+          <Button type="submit">Find rhymes</Button>
+        </div>
+      </form>
+      {word !== '' && <RhymeList word={word} />}
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
+import { splitSentences } from '@/features/editor/readAloud/sentences';
+import { blockText } from '@/features/editor/textMap';
+import type { DimScope } from './focusPrefs';
 
 export const focusPluginKey = new PluginKey<FocusState>('vlo-focus');
 
@@ -8,7 +11,8 @@ export const focusPluginKey = new PluginKey<FocusState>('vlo-focus');
 export const DIM_CLASS = 'vlo-dim';
 
 interface FocusOptions {
-  dim: () => boolean;
+  /** What stays clear, or false when dimming is off. */
+  dim: () => DimScope | false;
   typewriter: () => boolean;
 }
 
@@ -55,8 +59,41 @@ function blockCount(doc: ProseMirrorNode): number {
   return count;
 }
 
-function build(state: EditorState, dim: boolean): FocusState {
+/**
+ * The sentence with the caret, from the same sentence rules as Read aloud. A sentence never runs across two
+ * paragraphs or two poem lines. Null when the caret is in no text.
+ */
+export function sentenceAt(state: EditorState): { from: number; to: number } | null {
+  const { $head, head } = state.selection;
+  if (!$head.parent.isTextblock) return null;
+  const { text, at } = blockText($head.parent, $head.before());
+  let found: { from: number; to: number } | null = null;
+  for (const part of splitSentences(text)) {
+    const from = at(part.index);
+    // The caret after the last character of a sentence still belongs to it.
+    const to = part.text.length === 0 ? from : at(part.index + part.text.length - 1) + 1;
+    if (head < from) break;
+    found = { from, to };
+    if (head < to) break;
+  }
+  return found ?? { from: $head.start(), to: $head.end() };
+}
+
+/** The whole document dims, except the sentence with the caret. */
+function buildSentence(state: EditorState): FocusState {
+  const sentence = sentenceAt(state);
+  if (!sentence) return OFF;
+  const end = state.doc.content.size;
+  const decorations = [
+    ...(sentence.from > 0 ? [Decoration.inline(0, sentence.from, { class: DIM_CLASS })] : []),
+    ...(sentence.to < end ? [Decoration.inline(sentence.to, end, { class: DIM_CLASS })] : []),
+  ];
+  return { current: sentence.from, decorations: DecorationSet.create(state.doc, decorations) };
+}
+
+function build(state: EditorState, dim: DimScope | false): FocusState {
   if (!dim) return OFF;
+  if (dim === 'sentence') return buildSentence(state);
   const current = currentBlock(state);
   const decorations = blocks(state)
     .filter((block) => block.from !== current)
@@ -96,7 +133,7 @@ export function centerCaret(view: EditorView) {
 }
 
 /**
- * Focus-line dimming and typewriter scrolling. Both read their switch on each change. After a switch
+ * Focus-line and sentence dimming and typewriter scrolling. Both read their switch on each change. After a switch
  * changes, dispatch a transaction with `refreshFocus(tr)` so the view updates at once.
  */
 export function focusPlugin({ dim, typewriter }: FocusOptions): Plugin<FocusState> {
@@ -105,7 +142,13 @@ export function focusPlugin({ dim, typewriter }: FocusOptions): Plugin<FocusStat
     state: {
       init: (_config, state) => build(state, dim()),
       apply(tr: Transaction, old: FocusState, _oldState, state): FocusState {
-        if (!dim()) return old.decorations === DecorationSet.empty ? old : OFF;
+        const scope = dim();
+        if (!scope) return old.decorations === DecorationSet.empty ? old : OFF;
+        // The sentence can change with each key, and finding it reads only the caret's paragraph.
+        if (scope === 'sentence')
+          return tr.docChanged || tr.selectionSet || tr.getMeta(focusPluginKey) !== undefined
+            ? build(state, scope)
+            : old;
         const refresh = tr.getMeta(focusPluginKey) !== undefined;
         const current = currentBlock(state);
         const sameBlock = old.current !== -1 && current === tr.mapping.map(old.current);
@@ -116,7 +159,7 @@ export function focusPlugin({ dim, typewriter }: FocusOptions): Plugin<FocusStat
             return { current, decorations: old.decorations.map(tr.mapping, tr.doc) };
           }
         }
-        return build(state, true);
+        return build(state, scope);
       },
     },
     props: {

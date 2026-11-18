@@ -42,6 +42,10 @@ const RecordDialog = lazy(async () => ({
   default: (await import('@/features/voice/RecordDialog')).RecordDialog,
 }));
 const SpeakPanel = lazy(async () => ({ default: (await import('@/features/voice/SpeakPanel')).SpeakPanel }));
+// And the thesaurus, whose worker loads WordNet in turn (Phase 19).
+const ThesaurusPanel = lazy(async () => ({
+  default: (await import('@/features/thesaurus/ThesaurusPanel')).ThesaurusPanel,
+}));
 // And the image panel (Phase 16).
 const ImagePanel = lazy(async () => ({ default: (await import('@/features/images/ImagePanel')).ImagePanel }));
 
@@ -73,11 +77,13 @@ function measurable(editor: Editor, anchor: PanelAnchor) {
 function PanelBody({
   editor,
   panel,
+  form,
   language,
   itemId,
 }: {
   editor: Editor;
   panel: PanelId;
+  form: EditorForm;
   language: string | undefined;
   itemId: string | undefined;
 }) {
@@ -135,6 +141,12 @@ function PanelBody({
           <MathPanel editor={editor} />
         </Suspense>
       );
+    case 'thesaurus':
+      return (
+        <Suspense fallback={<p className="text-sm text-muted">Loading the thesaurus.</p>}>
+          <ThesaurusPanel editor={editor} form={form} onDone={closePanel} />
+        </Suspense>
+      );
   }
 }
 
@@ -159,6 +171,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   comments: 'All comments',
   cite: 'Cite a source',
   image: 'Image',
+  thesaurus: 'Thesaurus',
 };
 
 /** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */
@@ -257,7 +270,8 @@ export function PanelHost({
               popover.panel === 'math' ||
               popover.panel === 'read-aloud' ||
               popover.panel === 'speak' ||
-              popover.panel === 'cite'
+              popover.panel === 'cite' ||
+              popover.panel === 'thesaurus'
                 ? 'w-[min(24rem,calc(100vw-1.5rem))]'
                 : undefined
             }
@@ -273,7 +287,13 @@ export function PanelHost({
               focusText(editor);
             }}
           >
-            <PanelBody editor={editor} panel={popover.panel} language={language} itemId={item?.id} />
+            <PanelBody
+              editor={editor}
+              panel={popover.panel}
+              form={form}
+              language={language}
+              itemId={item?.id}
+            />
           </PopoverContent>
         )}
       </Popover>

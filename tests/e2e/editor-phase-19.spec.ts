@@ -91,6 +91,7 @@ test('every switch in the Focus and Review menus turns off on a second click', a
       names: [
         'Typewriter scrolling',
         'Dim other lines',
+        'Dim other sentences',
         'Hide the text',
         'Blur the words',
         'Cover the words with bars',

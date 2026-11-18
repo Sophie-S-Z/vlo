@@ -8,6 +8,7 @@ import {
   ArrowRightToLine,
   AudioLines,
   Bot,
+  BookA,
   BookMarked,
   BookUser,
   Asterisk,
@@ -37,6 +38,7 @@ import {
   MessageSquareText,
   MessagesSquare,
   Mic,
+  Palette,
   MoveDown,
   MoveUp,
   Music,
@@ -54,6 +56,7 @@ import {
   RemoveFormatting,
   Sigma,
   Speech,
+  SpellCheck,
   SpellCheck2,
   ScanSearch,
   TextSearch,
@@ -85,6 +88,10 @@ import { ROLE_LABELS, SCRIPT_LINE, SCRIPT_ROLES, type ScriptRole } from '../scri
 import { openFind, openPanel } from './editorBus';
 import { isReading } from '../readAloud/reader';
 import { canStyleCheck } from '../extensions/styleCheck';
+import { canCheckGrammar } from '../extensions/grammar';
+import { getGrammarPrefs, setGrammarOn } from '@/features/grammar/grammarPrefs';
+import { canShowPartsOfSpeech } from '../extensions/partsOfSpeech';
+import { getPosPrefs, setPosOn } from '@/features/pos/posPrefs';
 import { rimshot } from '../rimshot';
 import { changesOf } from '../extensions/suggestion';
 import { getTracking, saveTracking } from '../trackingStore';
@@ -121,6 +128,7 @@ export type PanelId =
   | 'comments'
   | 'cite'
   | 'image'
+  | 'thesaurus'
   | 'shortcuts';
 
 export type CommandGroup =
@@ -1046,6 +1054,59 @@ export const COMMANDS: readonly EditorCommand[] = [
       return true;
     },
     isActive: () => getCodex().show,
+  },
+  {
+    kind: 'run',
+    id: 'parts-of-speech',
+    label: 'Show parts of speech',
+    icon: Palette,
+    group: 'review',
+    forms: ALL,
+    keywords: ['nouns', 'verbs', 'adjectives', 'adverbs', 'conjunctions', 'grammar colors', 'syntax'],
+    run: () => {
+      setPosOn(!getPosPrefs().on);
+      return true;
+    },
+    isActive: () => getPosPrefs().on,
+    // The tagger reads English, so a project in another language has no colors.
+    isEnabled: (e) => canShowPartsOfSpeech(e.state),
+  },
+  {
+    kind: 'panel',
+    id: 'thesaurus',
+    label: 'Thesaurus',
+    icon: BookA,
+    group: 'review',
+    forms: ALL,
+    // Word's key. Browsers keep Mod-Shift-T for reopening a closed tab.
+    keys: 'Shift-F7',
+    keywords: [
+      'synonyms',
+      'antonyms',
+      'opposites',
+      'other words',
+      'rhymes',
+      'rhyming dictionary',
+      'definition',
+    ],
+    slash: true,
+    panel: 'thesaurus',
+  },
+  {
+    kind: 'run',
+    id: 'grammar-check',
+    label: 'Spelling and grammar',
+    icon: SpellCheck,
+    group: 'review',
+    forms: ['prose'],
+    keywords: ['spell check', 'spelling', 'grammar', 'typos', 'proofread', 'harper'],
+    run: () => {
+      setGrammarOn(!getGrammarPrefs().on);
+      return true;
+    },
+    isActive: () => getGrammarPrefs().on,
+    // Harper checks English, so a project in another language keeps the browser's spell check.
+    isEnabled: (e) => canCheckGrammar(e.state),
   },
   {
     kind: 'run',

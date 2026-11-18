@@ -8,6 +8,8 @@ The photographs of the scenes and atmospheres come from Unsplash, under the Unsp
 
 Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. Model files download only when the writer asks, and each keeps its own license: Qwen2.5 1.5B and SmolLM2 1.7B (Apache-2.0), Whisper small and Whisper base by OpenAI (MIT) in the ONNX form of onnx-community (Apache-2.0), and the natural voices of Supertonic 2 by Supertone (OpenRAIL-M) in the ONNX form of onnx-community.
 
+The thesaurus file (src/features/thesaurus/thesaurus.json) comes from Open English WordNet 2024 (CC BY 4.0, https://en-word.net). scripts/build-thesaurus.mjs makes it, and the thesaurus card names the source.
+
 | Package | Version | License | Used at |
 | --- | --- | --- | --- |
 | @axe-core/playwright | 4.14.0 | MPL-2.0 | build and test |
@@ -91,6 +93,7 @@ Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. 
 | fake-indexeddb | 6.2.7 | Apache-2.0 | build and test |
 | fractional-indexing | 4.0.0 | CC0-1.0 | runtime |
 | globals | 17.14.0 | MIT | build and test |
+| harper.js | 3.2.0 | Apache-2.0 | runtime |
 | jsdom | 30.1.3 | MIT | build and test |
 | jszip | 3.10.2 | (MIT OR GPL-3.0-or-later) | runtime |
 | lucide-react | 1.66.0 | ISC | runtime |
@@ -116,6 +119,7 @@ Vlo serves the WASM file of ONNX Runtime Web (MIT), which Transformers.js runs. 
 | vite | 8.3.5 | MIT | build and test |
 | vite-plugin-pwa | 2.0.0 | MIT | build and test |
 | vitest | 5.1.0 | MIT | build and test |
+| wink-pos-tagger | 2.2.2 | MIT | runtime |
 | workbox-window | 7.4.1 | MIT | runtime |
 | y-indexeddb | 9.0.12 | MIT | runtime |
 | y-protocols | 1.0.7 | MIT | runtime |

@@ -105,3 +105,37 @@ test('focus switches persist on this device', () => {
   reloadFocusPrefs();
   expect(getFocusPrefs()).toMatchObject({ typewriter: true, dim: false, hide: false });
 });
+
+describe('sentence focus', () => {
+  /** The words of the text that are not dimmed. */
+  const clear = () =>
+    [...editor.view.dom.querySelectorAll('p')]
+      .flatMap((p) => [...p.childNodes])
+      .filter((n) => !(n instanceof HTMLElement && n.classList.contains(DIM_CLASS)))
+      .map((n) => n.textContent)
+      .join('|');
+
+  test('only the sentence with the caret stays clear, and it moves with the caret', () => {
+    setFocusPrefs({ dim: true, dimScope: 'sentence' });
+    mount('prose');
+    editor.commands.setContent('<p>The tide came in. The boats lay down.</p><p>Night fell.</p>');
+    editor.commands.setTextSelection(3);
+    expect(clear()).toBe('The tide came in. ');
+    editor.commands.setTextSelection(25);
+    expect(clear()).toBe('The boats lay down.');
+    editor.commands.setTextSelection(42);
+    expect(clear()).toBe('Night fell.');
+  });
+
+  test('typing keeps the light on the sentence, and a switch back to lines dims by block', () => {
+    setFocusPrefs({ dim: true, dimScope: 'sentence' });
+    mount('prose');
+    editor.commands.setContent('<p>One. Two</p><p>Three.</p>');
+    editor.commands.setTextSelection(9);
+    editor.commands.insertContent(' more');
+    expect(clear()).toBe('Two more');
+    setFocusPrefs({ dimScope: 'line' });
+    editor.view.dispatch(refreshFocus(editor.state.tr));
+    expect(dimmed('p')).toEqual([false, true]);
+  });
+});
