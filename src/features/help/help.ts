@@ -133,6 +133,33 @@ export const HELP = {
       ],
     },
     {
+      title: 'Link to another item',
+      steps: [
+        'Type [[ in a text, or choose Insert, Link to an item. Vlo lists the items of the project and their headings. Type to filter the list, then press Enter.',
+        'The link shows the title of the item, and it follows a new title. Click a link to open its item. Ctrl-click opens it beside the text, in split view.',
+        'Select a link and press Enter to open it. The line under the toolbar also offers Open beside and Remove link. A link to a deleted item shows a quiet broken style.',
+        'The details panel lists under Links here each item that links to the open item. PDF, Word and EPUB exports keep each link to an item in the export.',
+      ],
+    },
+    {
+      title: 'Put a table in the text',
+      steps: [
+        'Choose Insert, Table, or type / and choose Table. Move over the grid, or use the arrow keys, to set the rows and the columns, then click or press Enter.',
+        'Tab moves to the next cell, and Shift+Tab to the cell before it. Tab in the last cell adds a row. Drag the edge of a column to change its width.',
+        'With the cursor in a table, Format, Table adds and deletes rows and columns, turns the header row on and off, merges the selected cells, splits a cell and deletes the table.',
+        'Word, PDF, EPUB, Rich Text and Markdown exports keep each table. Plain text, Fountain and Final Draft files put each row on one line, with “|” between its cells. A web copy keeps tables for AO3. Medium and Substack get the words of each cell as lines of text.',
+      ],
+    },
+    {
+      title: 'Set the margins, page numbers and page lines',
+      steps: [
+        'Open Page, the page icon above the text. Under Page setup, choose Normal, Narrow, Wide or Custom margins. Custom margins take a value for each side, in inches or millimeters.',
+        'Choose where the page numbers go: at the bottom center, at the top right, or nowhere.',
+        'A header line and a footer line can show the project title, the item title or your own text. The item title is the title of the item or chapter on the page.',
+        'The page view, PDF, Word and Rich Text exports use the same values. A book layout, standard manuscript format and a script keep the pages of their own format.',
+      ],
+    },
+    {
       title: 'Check spelling and grammar',
       steps: [
         'In English prose, choose Review, then Spelling and grammar. The first time, Vlo downloads the check (about 8 MB) from its own files. Then it works offline.',

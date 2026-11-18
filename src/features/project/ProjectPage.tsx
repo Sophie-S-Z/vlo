@@ -1075,6 +1075,8 @@ export function ProjectPage() {
                         snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
                         font={project.settings.font}
                         page={project.settings.page}
+                        pageSetup={project.settings.pageSetup}
+                        projectTitle={project.title}
                         scene={project.settings.scene}
                         language={project.settings.language}
                         scriptStyle={project.settings.scriptStyle}
@@ -1108,6 +1110,8 @@ export function ProjectPage() {
                         snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
                         font={project.settings.font}
                         page={project.settings.page}
+                        pageSetup={project.settings.pageSetup}
+                        projectTitle={project.title}
                         language={project.settings.language}
                         scriptStyle={project.settings.scriptStyle}
                         onSettings={changeSettings}

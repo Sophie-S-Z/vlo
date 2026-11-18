@@ -7,7 +7,7 @@ import { setCraftPoem, useCraftOf } from '@/features/craft/craftStore';
 import { activeMinutesOf, watchActiveMinutes } from '@/features/snapshots/autoSnapshot';
 import { latestSnapshotText, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
-import type { Item, PageFormat, ScriptStyle, Template } from '@/lib/db';
+import type { Item, PageFormat, PageSetup, ScriptStyle, Template } from '@/lib/db';
 import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { countUnit } from '@/lib/wordcount';
 import { SceneBackdrop } from '@/features/scenes/SceneBackdrop';
@@ -34,12 +34,14 @@ import { Editor } from './Editor';
 import { findWords } from './extensions/findReplace';
 import { cleanFontValue, DEFAULT_FONT, type FontValue } from './format/fonts';
 import { cleanPageFormat, PAGE_SIZES } from './format/page';
+import { cleanPageSetup, DEFAULT_PAGE_SETUP, pageLineText } from './format/pageSetup';
 import { styleSheet } from './format/paragraphStyles';
 import { useParagraphStyles } from './format/paragraphStyleStore';
 import { docParts, docText, refreshItemText, writeItemText } from './itemText';
 import { OutlineControl, OutlineRail, useRailRoom } from './ItemOutline';
 import { ManuscriptContext, type ManuscriptSettings } from './manuscript';
 import { PageControl } from './PageControl';
+import type { SheetSetup } from './PageFrame';
 import { PageLookControl } from './PageLook';
 import { TargetRing } from './TargetRing';
 import { SaveStatus } from './SaveStatus';
@@ -78,16 +80,21 @@ interface EditorPaneProps {
   font?: string | undefined;
   /** The project page format, as stored. */
   page?: PageFormat | undefined;
+  /** The project page setup (Phase 19, Task F3), as stored. */
+  pageSetup?: PageSetup | undefined;
+  /** The project title, for a header or footer line that names it. */
+  projectTitle: string;
   /** The project scene, as stored. */
   scene?: string | undefined;
   /** The project language, as stored (F38). */
   language?: string | undefined;
   /** The project's script layout (F63), as stored. */
   scriptStyle?: ScriptStyle | undefined;
-  /** Changes the project's font, page format, scene, language or script layout. */
+  /** Changes the project's font, page format, page setup, scene, language or script layout. */
   onSettings?: (change: {
     font?: FontValue;
     page?: PageFormat;
+    pageSetup?: PageSetup;
     scene?: SceneChoice;
     language?: string;
     scriptStyle?: ScriptStyle;
@@ -106,6 +113,8 @@ export function EditorPane({
   snapshotEveryMinutes,
   font: storedFont,
   page: storedPage,
+  pageSetup: storedPageSetup,
+  projectTitle,
   scene: storedScene,
   language: storedLanguage,
   scriptStyle = 'screenplay',
@@ -244,6 +253,17 @@ export function EditorPane({
 
   const font = cleanFontValue(storedFont) ?? DEFAULT_FONT;
   const page = cleanPageFormat(storedPage);
+  const pageSetup = cleanPageSetup(storedPageSetup) ?? DEFAULT_PAGE_SETUP;
+  // A script keeps the page of its format, as in the exports.
+  const pageSheet = useMemo<SheetSetup | undefined>(() => {
+    if (kind === 'script') return undefined;
+    const names = { project: projectTitle, item: item.title };
+    return {
+      setup: pageSetup,
+      header: pageLineText(pageSetup.header, pageSetup.headerText, names),
+      footer: pageLineText(pageSetup.footer, pageSetup.footerText, names),
+    };
+  }, [kind, pageSetup, projectTitle, item.title]);
   // Only the main pane shows the scene.
   const scene = beside ? NO_SCENE : cleanScene(storedScene);
   const { zoom, outline } = useWritingPrefs();
@@ -310,6 +330,9 @@ export function EditorPane({
                   <PageControl
                     page={page}
                     onPage={(next) => onSettings?.({ page: next })}
+                    {...(pageSheet
+                      ? { setup: { value: pageSetup, onChange: (next) => onSettings?.({ pageSetup: next }) } }
+                      : {})}
                     zoom={zoom}
                     onZoom={(next) => {
                       setWritingPrefs({ zoom: next });
@@ -518,6 +541,7 @@ export function EditorPane({
               onEditor={onEditor}
               font={font}
               page={page}
+              {...(pageSheet ? { sheet: pageSheet } : {})}
               zoom={zoom}
               onPages={setPages}
               templates={templates}

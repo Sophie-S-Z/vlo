@@ -48,7 +48,8 @@ import { useGrammarPrefs } from '@/features/grammar/grammarPrefs';
 import { TypingState } from './extensions/textFill';
 import { BASE_STACK, COMFORT_FONT, DEFAULT_FONT, fontStack, type FontValue } from './format/fonts';
 import { ensurePaletteStyles } from './format/palette';
-import { PageFrame } from './PageFrame';
+import { PageFrame, type SheetSetup } from './PageFrame';
+import { DEFAULT_PAGE_SETUP } from './format/pageSetup';
 import { ReadAloudMark, stopReadingFor } from './readAloud/reader';
 import { FindBar } from './toolbar/FindBar';
 import { PanelHost } from './toolbar/PanelHost';
@@ -77,6 +78,8 @@ const PLACE_DELAY_MS = 1000;
 // The theme colors behind each palette swatch. The editor chunk adds them once.
 ensurePaletteStyles();
 
+const DEFAULT_SHEET: SheetSetup = { setup: DEFAULT_PAGE_SETUP, header: '', footer: '' };
+
 interface EditorProps {
   doc: Y.Doc;
   kind: EditorForm;
@@ -90,6 +93,8 @@ interface EditorProps {
   font?: FontValue;
   /** Pageless, or a Letter or A4 sheet with page-end lines. */
   page?: PageFormat;
+  /** The margins, page numbers and page lines of the sheet (Phase 19, Task F3). */
+  sheet?: SheetSetup;
   /** Page zoom in percent. */
   zoom?: number;
   /** Receives the page count, or null when no sheet shows. */
@@ -178,6 +183,7 @@ export function Editor({
   onEditor,
   font = DEFAULT_FONT,
   page = 'pageless',
+  sheet = DEFAULT_SHEET,
   zoom = 100,
   onPages,
   templates,
@@ -442,7 +448,14 @@ export function Editor({
         {kind === 'prose' && <PasteNotice editor={editor} />}
       </div>
       <div ref={printRoot} className="contents">
-        <PageFrame editor={editor} format={page} zoom={zoom} layoutKey={layoutKey} onPages={onPages}>
+        <PageFrame
+          editor={editor}
+          format={page}
+          sheet={sheet}
+          zoom={zoom}
+          layoutKey={layoutKey}
+          onPages={onPages}
+        >
           {/* The Craft labels sit in a layer over the poem, outside the editable text. */}
           <div
             className={cn('relative', craft && 'vlo-craft')}

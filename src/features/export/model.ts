@@ -1,7 +1,7 @@
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { TextFill } from '@/features/editor/format/fill';
 import type { ScriptRole } from '@/features/editor/scriptRoles';
-import type { BookSettings, ScriptStyle } from '@/lib/db';
+import type { BookSettings, PageSetup, ScriptStyle } from '@/lib/db';
 import type { EditorForm } from '@/features/library/templates';
 import type { ImageAlign, ImageWidth } from '@/features/images/attrs';
 import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
@@ -324,6 +324,31 @@ export interface ExportDoc {
   images?: Readonly<Record<string, ExportImage>>;
   /** The project's paragraph styles (Phase 19, Task E2). Word, PDF and EPUB use them. */
   styles?: readonly ParagraphStyle[];
+  /**
+   * The project's page setup (Phase 19, Task F3), with the project title for a page line that names it.
+   * The PDF, Word and RTF files read it, unless a book layout, standard manuscript format or a script
+   * gives the pages. The default page setup when absent.
+   */
+  page?: { setup: PageSetup; project: string };
+}
+
+/**
+ * The item title of each section that an "item" page line can show: a section that starts with a heading
+ * at level 2, such as a chapter or a titled item, as Word finds them with a STYLEREF field. A scene has no
+ * heading, so its pages show the title of its chapter.
+ */
+export function itemTitles(doc: ExportDoc): Map<string, string> {
+  return new Map(
+    doc.sections
+      .filter((s) => s.blocks[0]?.type === 'heading' && s.blocks[0].level === 2)
+      .map((s) => [s.id, s.title]),
+  );
+}
+
+/** The item title of an export of one section, which every page shows. Null for more sections. */
+export function singleItemTitle(doc: ExportDoc): string | null {
+  const [only, ...rest] = doc.sections;
+  return only && rest.length === 0 ? only.title || doc.title : null;
 }
 
 /** The paragraph style of a block, or undefined for body text or a style that the project no longer has. */

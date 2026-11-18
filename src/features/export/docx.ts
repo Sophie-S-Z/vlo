@@ -8,6 +8,7 @@ import {
   Document,
   DropCapType,
   ExternalHyperlink,
+  Footer,
   FootnoteReferenceRun,
   FrameAnchorType,
   FrameWrap,
@@ -25,6 +26,7 @@ import {
   PageNumber,
   Paragraph,
   ShadingType,
+  SimpleField,
   Tab,
   Table,
   TableCell,
@@ -42,8 +44,10 @@ import {
 import JSZip from 'jszip';
 import type { TextFill } from '@/features/editor/format/fill';
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
+import { DEFAULT_PAGE_SETUP, marginsOf, pageLineText } from '@/features/editor/format/pageSetup';
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
+import type { PageLineKind, PageSetup } from '@/lib/db';
 import { textDirection } from '@/lib/language';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manuscript';
@@ -54,9 +58,11 @@ import {
   headerParagraphs,
   headerRows,
   imageStandIn,
+  itemTitles,
   linkPlace,
   repeatsTitle,
   runsOf,
+  singleItemTitle,
   type Align,
   type Block,
   type ExportDoc,
@@ -757,9 +763,74 @@ function styles(font: string, manuscript: boolean, language: string, own: readon
         basedOn: 'Normal',
         paragraph: { spacing: { after: 0, line: 276 } },
       },
+      {
+        id: PAGE_LINE_STYLE,
+        name: 'Page Line',
+        basedOn: 'Normal',
+        run: { size: 20, color: '5C5751' },
+        paragraph: { spacing: { before: 0, after: 0, line: 240 } },
+      },
       ...own.map(wordStyle),
     ],
   };
+}
+
+/** The paragraph style of the header line and the footer line. */
+const PAGE_LINE_STYLE = 'VloPageLine';
+
+/**
+ * The header and the footer of the page setup (Phase 19, Task F3). Each line starts at the left edge of
+ * the text. The number sits at the right of the header, or in the center of the footer. An item line in an
+ * export of more items is a STYLEREF field, so Word shows the chapter or item title of each page.
+ */
+function pageSetupParts(doc: ExportDoc, setup: PageSetup, textWidth: number) {
+  const titles = [...itemTitles(doc).values()];
+  const single = singleItemTitle(doc);
+  const line = (kind: PageLineKind, own: string | undefined): ParagraphChild[] => {
+    const [first] = titles;
+    if (kind === 'item' && single === null && first !== undefined)
+      return [new SimpleField('STYLEREF "Heading 2"', first)];
+    const names = { project: doc.page?.project ?? doc.title, item: single ?? doc.title };
+    const text = pageLineText(kind, own, names);
+    return text === '' ? [] : [new TextRun(text)];
+  };
+  const number = new TextRun({ children: [new Tab(), PageNumber.CURRENT] });
+  const top = line(setup.header, setup.headerText);
+  const foot = line(setup.footer, setup.footerText);
+  const paragraph = (
+    children: ParagraphChild[],
+    tab: (typeof TabStopType)[keyof typeof TabStopType],
+    at: number,
+  ) => new Paragraph({ style: PAGE_LINE_STYLE, tabStops: [{ type: tab, position: at }], children });
+  const headers =
+    top.length > 0 || setup.numbers === 'top-right'
+      ? {
+          default: new Header({
+            children: [
+              paragraph(
+                [...top, ...(setup.numbers === 'top-right' ? [number] : [])],
+                TabStopType.RIGHT,
+                textWidth,
+              ),
+            ],
+          }),
+        }
+      : undefined;
+  const footers =
+    foot.length > 0 || setup.numbers === 'bottom-center'
+      ? {
+          default: new Footer({
+            children: [
+              paragraph(
+                [...foot, ...(setup.numbers === 'bottom-center' ? [number] : [])],
+                TabStopType.CENTER,
+                Math.round(textWidth / 2),
+              ),
+            ],
+          }),
+        }
+      : undefined;
+  return { ...(headers ? { headers } : {}), ...(footers ? { footers } : {}) };
 }
 
 /**
@@ -810,8 +881,17 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     doc.paper === 'a4'
       ? { width: 11906, height: 16838 }
       : { width: Math.round(8.5 * INCH), height: 11 * INCH };
-  const textWidth = page.width - 2 * INCH;
-  const textHeight = page.height - 2 * INCH;
+  // Standard manuscript format keeps 1 inch margins. Other exports take the project's page setup.
+  const pageSetup = setup ? undefined : (doc.page?.setup ?? DEFAULT_PAGE_SETUP);
+  const inches = marginsOf(pageSetup ?? DEFAULT_PAGE_SETUP);
+  const margin = {
+    top: Math.round(inches.top * INCH),
+    right: Math.round(inches.right * INCH),
+    bottom: Math.round(inches.bottom * INCH),
+    left: Math.round(inches.left * INCH),
+  };
+  const textWidth = page.width - margin.left - margin.right;
+  const textHeight = page.height - margin.top - margin.bottom;
   let list = 0;
   const ctx: Context = {
     fills: [],
@@ -883,7 +963,8 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
         properties: {
           page: {
             size: page,
-            margin: { top: INCH, right: INCH, bottom: INCH, left: INCH, header: INCH / 2 },
+            // The header and the footer sit in the middle of their margins, as in the PDF.
+            margin: { ...margin, header: Math.round(margin.top / 2), footer: Math.round(margin.bottom / 2) },
             ...(setup ? { pageNumbers: { start: 0 } } : {}),
           },
           ...(setup ? { titlePage: true } : {}),
@@ -906,7 +987,9 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
                 }),
               },
             }
-          : {}),
+          : pageSetup
+            ? pageSetupParts(doc, pageSetup, textWidth)
+            : {}),
         children,
       },
     ],

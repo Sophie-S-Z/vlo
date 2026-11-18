@@ -5,6 +5,7 @@ import { isDate } from '@/features/timeline/dates';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
 import { cleanAnchor, cleanItemId } from '@/features/editor/format/itemLink';
 import { cleanParagraphStyles } from '@/features/editor/format/paragraphStyles';
+import { cleanPageSetup } from '@/features/editor/format/pageSetup';
 import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
@@ -85,7 +86,9 @@ import type {
  * file can also hold the word target of an item (`target`, Phase 19); an older build keeps the row and skips
  * the target. Version 15 adds the Comedy template. Version 16 adds the paragraph styles of the project
  * (`settings.paragraphStyles`, Phase 19, Task E2). Version 17 adds the links between items in the text and
- * the `links` and `headings` of each text copy (Phase 19, Task F1). Vlo still reads versions 1 to 16.
+ * the `links` and `headings` of each text copy (Phase 19, Task F1). A version 17 file can also hold the
+ * page setup (`settings.pageSetup`, Phase 19, Task F3); an older build keeps it and shows its own pages.
+ * Vlo still reads versions 1 to 16.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
@@ -385,6 +388,7 @@ function checkProject(value: unknown): Project {
     (!Array.isArray(styles) || cleanParagraphStyles(styles)?.length !== styles.length)
   )
     fail(`${DAMAGED} The project settings are wrong.`);
+  if (cleanPageSetup(settings.pageSetup) === null) fail(`${DAMAGED} The project settings are wrong.`);
   const followUp = settings.followUpDays;
   if (
     followUp !== undefined &&

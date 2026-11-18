@@ -3,6 +3,7 @@ import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
 import { stylesOf } from '@/features/editor/format/paragraphStyles';
+import { cleanPageSetup, DEFAULT_PAGE_SETUP } from '@/features/editor/format/pageSetup';
 import { inText, listTitle, reference, sortReferences } from '@/features/cite/styles';
 import type { BookSettings, CiteStyle, Item, Project, Source } from '@/lib/db';
 import { linkLabel, shownTitle } from '@/features/editor/format/itemLink';
@@ -275,5 +276,6 @@ export function buildExportDoc({
     ...(isScript(sections) ? { script: project.settings.scriptStyle ?? 'screenplay' } : {}),
     ...(cites?.missing ? { missingSources: cites.missing } : {}),
     styles: stylesOf(project.settings.paragraphStyles),
+    page: { setup: cleanPageSetup(project.settings.pageSetup) ?? DEFAULT_PAGE_SETUP, project: project.title },
   };
 }

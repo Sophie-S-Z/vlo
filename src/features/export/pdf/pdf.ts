@@ -2,20 +2,23 @@ import { PDFDocument, PDFName } from 'pdf-lib';
 import { bookMargins, gutterFor, isNumbered, TRIM_POINTS } from '@/features/book/book';
 import type { TextFill } from '@/features/editor/format/fill';
 import { fontLabel } from '@/features/editor/format/fonts';
+import { DEFAULT_PAGE_SETUP, marginsOf, pageLineText } from '@/features/editor/format/pageSetup';
 import type { NoteContent } from '@/features/editor/format/notes';
 import { mathmlFor, type LatexToMathml } from '../latex';
 import { headerText, roundedWords, type ManuscriptSetup } from '../manuscript';
-import type { BookSettings } from '@/lib/db';
+import type { BookSettings, PageSetup } from '@/lib/db';
 import {
   footnotesOf,
   headerParagraphs,
   headerRows,
   imageStandIn,
+  itemTitles,
   placedCells,
   linkPlace,
   paragraphStyleOf,
   repeatsTitle,
   runsText,
+  singleItemTitle,
   textBlocks,
   type Align,
   type Block,
@@ -1262,6 +1265,42 @@ async function backMatter(layout: Layout, book: BookSettings): Promise<Row[]> {
   return rows;
 }
 
+/** A text cut with "…" so it fits a width. */
+function fitText(text: string, width: number, widthOf: (text: string) => number): string {
+  if (widthOf(text) <= width) return text;
+  let end = text.length;
+  while (end > 0 && widthOf(`${text.slice(0, end).trimEnd()}…`) > width) end -= 1;
+  return end > 0 ? `${text.slice(0, end).trimEnd()}…` : '';
+}
+
+/**
+ * The text of the header line and the footer line of each page. An item line shows the first item that
+ * starts on the page, or else the item that runs on from the page before, as a STYLEREF field in Word.
+ */
+function pageLinesOf(
+  doc: ExportDoc,
+  setup: PageSetup,
+  pages: readonly PageRows[],
+): { header: string; footer: string }[] {
+  const titles = itemTitles(doc);
+  let running = singleItemTitle(doc) ?? doc.title;
+  return pages.map((page) => {
+    let first: string | undefined;
+    for (const { row } of page.rows)
+      for (const name of row.places ?? []) {
+        const title = titles.get(name);
+        if (title === undefined) continue;
+        first ??= title;
+        running = title;
+      }
+    const names = { project: doc.page?.project ?? doc.title, item: first ?? running };
+    return {
+      header: pageLineText(setup.header, setup.headerText, names),
+      footer: pageLineText(setup.footer, setup.footerText, names),
+    };
+  });
+}
+
 /** One layout of every page. A book lays out again when its page count needs a wider gutter. */
 async function layOutOnce(
   doc: ExportDoc,
@@ -1273,9 +1312,14 @@ async function layOutOnce(
   const book = doc.book;
   const manuscript = book ? undefined : options.manuscript;
   const [pageWidth, pageHeight] = book ? TRIM_POINTS[book.trim] : POINTS[doc.paper];
+  // The page setup (Phase 19, Task F3) gives the margins, unless a book or a manuscript has its own.
+  const setup = book || manuscript ? undefined : (doc.page?.setup ?? DEFAULT_PAGE_SETUP);
+  const own = setup ? marginsOf(setup) : undefined;
   const margins = book
     ? bookMargins(pagesGuess)
-    : { inside: MARGIN, outside: MARGIN, top: MARGIN, bottom: MARGIN };
+    : own
+      ? { inside: own.left * 72, outside: own.right * 72, top: own.top * 72, bottom: own.bottom * 72 }
+      : { inside: MARGIN, outside: MARGIN, top: MARGIN, bottom: MARGIN };
   const bodyFont = manuscript?.typewriter ? 'courier-prime' : doc.font;
   const textSize = book ? BOOK_TEXT_SIZE : TEXT_SIZE;
   const spacing = manuscript ? 2 : book ? 1.2 : 1.15;
@@ -1482,6 +1526,7 @@ async function layOutOnce(
   const plain = await layout.face(bodyFont, false, false);
   const italic = await layout.face(bodyFont, false, true);
   const header = manuscript ? headerText(manuscript.name, doc.title) : '';
+  const pageLines = setup ? pageLinesOf(doc, setup, kept) : [];
   const drawPage = (index: number, sink: Sink) => {
     const content = kept[index];
     if (!content) return;
@@ -1523,9 +1568,30 @@ async function layOutOnce(
         size: TEXT_SIZE,
         color: INK,
       });
-    } else {
-      const width = plain.font.widthOfTextAtSize(number, 10);
-      sink.text(number, (pageWidth - width) / 2, MARGIN / 2, { face: plain, size: 10, color: MUTED });
+      return;
+    }
+    if (!setup) return;
+    // The page lines start at the left edge of the text. The number sits at the right of the header line,
+    // or in the center of the footer line.
+    const lineSize = 10;
+    const style = { face: plain, size: lineSize, color: MUTED };
+    const widthOf = (text: string) => plain.font.widthOfTextAtSize(text, lineSize);
+    const numberWidth = widthOf(number);
+    const gap = lineSize;
+    const top = pageHeight - margins.top / 2;
+    const foot = margins.bottom / 2;
+    const lines = pageLines[index];
+    if (setup.numbers === 'top-right') d.text(number, settings.textWidth - numberWidth, top, style);
+    if (setup.numbers === 'bottom-center')
+      d.text(number, (settings.textWidth - numberWidth) / 2, foot, style);
+    if (lines?.header) {
+      const room = settings.textWidth - (setup.numbers === 'top-right' ? numberWidth + gap : 0);
+      d.text(fitText(lines.header, room, widthOf), 0, top, style);
+    }
+    if (lines?.footer) {
+      const room =
+        setup.numbers === 'bottom-center' ? (settings.textWidth - numberWidth) / 2 - gap : settings.textWidth;
+      d.text(fitText(lines.footer, room, widthOf), 0, foot, style);
     }
   };
   return {

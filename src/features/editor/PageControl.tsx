@@ -1,16 +1,19 @@
 import { FileText, Minus, Plus } from 'lucide-react';
 import { useId } from 'react';
-import { SCRIPT_STYLES, type PageFormat, type ScriptStyle } from '@/lib/db';
+import { SCRIPT_STYLES, type PageFormat, type PageSetup, type ScriptStyle } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { ICON_BUTTON } from '@/ui/tip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { DEFAULT_LANGUAGE, LANGUAGES, languageLabel } from '@/lib/language';
 import { cleanZoom, PAGE_FORMATS, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from './format/page';
+import { PageSetupFields } from './PageSetupFields';
 
 interface PageControlProps {
   page: PageFormat;
   onPage: (page: PageFormat) => void;
+  /** The margins, page numbers and page lines (Phase 19, Task F3). A script item has none. */
+  setup?: { value: PageSetup; onChange: (setup: PageSetup) => void } | undefined;
   /** Page zoom in percent, on this device. */
   zoom: number;
   onZoom: (zoom: number) => void;
@@ -32,6 +35,7 @@ const SCRIPT_STYLE_LABELS: Readonly<Record<ScriptStyle, string>> = {
 export function PageControl({
   page,
   onPage,
+  setup,
   zoom,
   onZoom,
   pages,
@@ -107,6 +111,8 @@ export function PageControl({
             for every item in the project.
           </p>
         </div>
+
+        {setup && <PageSetupFields value={setup.value} onChange={setup.onChange} />}
 
         {script && (
           <div className="grid gap-2">

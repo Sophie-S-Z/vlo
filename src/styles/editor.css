@@ -931,6 +931,45 @@ html[data-calm='true'] .vlo-fill-shimmer {
   font-variant-numeric: tabular-nums;
 }
 
+/* With page numbers at the top right, the number of the next page sits below the line. */
+.vlo-page-number[data-place='top'] {
+  top: 0.35rem;
+  bottom: auto;
+}
+
+/* The header and footer lines (Phase 19, Task F3), in the middle of the top and bottom margins. */
+.vlo-page-line {
+  position: absolute;
+  inset-inline: 0;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+  font-size: calc(9pt * var(--vlo-zoom, 1));
+  color: var(--muted);
+}
+
+.vlo-page-line[data-page-line='bottom'] {
+  transform: translateY(50%);
+}
+
+.vlo-page-line-number {
+  margin-inline-start: auto;
+  padding-inline-start: 1em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* At the foot of the page the number is in the center, so the text keeps to the left half. */
+.vlo-page-line[data-page-line='bottom'] > .truncate {
+  max-width: calc(50% - 1.5em);
+}
+
+.vlo-page-line[data-page-line='bottom'] > .vlo-page-line-number {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vlo-page-lines {
     transition: none;
@@ -1384,7 +1423,9 @@ html[data-vlo-typing] [data-vlo-keyboard-bar] [data-vlo-toolbar] {
     visibility: hidden;
     margin: 0;
   }
-  html[data-vlo-printing] [data-vlo-print-root] :is(.vlo-page-lines, .vlo-page-end, .vlo-page-number) {
+  html[data-vlo-printing]
+    [data-vlo-print-root]
+    :is(.vlo-page-lines, .vlo-page-end, .vlo-page-number, .vlo-page-line) {
     display: none;
   }
   html[data-vlo-printing] [data-vlo-print-root] :is(.vlo-sheet, .vlo-scene-page) {
