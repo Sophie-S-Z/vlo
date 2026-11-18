@@ -79,7 +79,7 @@ export function AppShell() {
             to="/"
             data-tip="Your library"
             data-tip-align="start"
-            className="vlo-tip font-display text-2xl font-semibold text-text no-underline [font-variation-settings:'SOFT'_50,'opsz'_72]"
+            className="vlo-tip font-display text-2xl font-semibold text-text no-underline"
           >
             Vlo
           </NavLink>

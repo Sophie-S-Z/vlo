@@ -65,6 +65,7 @@ describe('vercel.json', () => {
       'X-Content-Type-Options': 'nosniff',
       'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
       'Cross-Origin-Opener-Policy': 'same-origin',
+      'Strict-Transport-Security': 'max-age=63072000',
     });
   });
 

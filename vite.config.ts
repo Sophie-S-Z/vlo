@@ -32,12 +32,11 @@ function productionHeaders(supabase: string): Record<string, string> {
 }
 
 /**
- * The interface fonts, which every page needs and the service worker installs: Fraunces, Newsreader, Inter
- * and JetBrains Mono as `styles/index.css` imports them, and MathLive's KaTeX fonts. Every other font file
- * is a writing font that loads on first use.
+ * The interface fonts, which every page needs and the service worker installs: Newsreader, Familjen
+ * Grotesk and IBM Plex Mono as `styles/index.css` imports them, and MathLive's KaTeX fonts. Every
+ * other font file is a writing font that loads on first use.
  */
-const APP_FONT =
-  /^(newsreader-|fraunces-.+-full-normal|inter-.+-opsz-normal|jetbrains-mono-.+-400-normal|KaTeX_)/;
+const APP_FONT = /^(newsreader-|familjen-grotesk-.+-wght-normal|ibm-plex-mono-.+-400-normal|KaTeX_)/;
 
 function isWritingFont(name: string): boolean {
   return /\.(woff2?)$/.test(name) && !APP_FONT.test(name);

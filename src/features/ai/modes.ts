@@ -13,7 +13,7 @@ export const MODE_INFO: Record<AiMode, { label: string; summary: string }> = {
   pen: {
     label: 'Pen',
     summary:
-      'No AI. Vlo loads no AI code, and sends nothing unless you press "Check the web too" in Insights.',
+      'No AI. Vlo loads no AI code, and sends nothing unless you press “Check the web too” in Insights.',
   },
   reader: {
     label: 'Reader',
@@ -33,7 +33,7 @@ export function changesFor(
   if (mode === 'pen')
     return [
       'The Assistant panel closes, and Vlo stops loading its AI code for this project.',
-      'Vlo sends nothing unless you press "Check the web too" in Insights. The network log shows each request from before.',
+      'Vlo sends nothing unless you press “Check the web too” in Insights. The network log shows each request from before.',
       'Text that the AI wrote keeps its mark.',
     ];
   const lines = [

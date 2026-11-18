@@ -55,7 +55,7 @@ export function GrammarSettings({ onAnnounce }: { onAnnounce: (text: string) => 
         </label>
         <p id={`${id}-word-hint`} className={error ? 'text-sm text-accent-text' : 'text-sm text-muted'}>
           {error ||
-            'The check knows these words, and the names in each Codex. "Add to dictionary" on a mark adds a word too.'}
+            'The check knows these words, and the names in each Codex. “Add to dictionary” on a mark adds a word too.'}
         </p>
         <div className="flex gap-2">
           <Input

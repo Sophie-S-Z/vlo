@@ -4,10 +4,12 @@
   /* Shadows take the Ink hue, not plain black, and stack a tight contact shadow over a soft lift. */
   --shadow-hover: 0 1px 2px rgb(11 14 20 / 0.06), 0 8px 24px -6px rgb(11 14 20 / 0.16);
   --ease-reveal: cubic-bezier(0.215, 0.61, 0.355, 1); /* GSAP power3.out */
-  --font-display: 'Fraunces Variable', Georgia, serif;
+  /* Two families and one mono, none of them a common default. Newsreader sets both the headings and the
+     manuscript, so the headings cost no extra file. */
+  --font-display: 'Newsreader Variable', Georgia, serif;
   --font-manuscript: 'Newsreader Variable', Georgia, serif;
-  --font-ui: 'Inter Variable', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-ui: 'Familjen Grotesk Variable', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 /* Calm mode and the system reduced-motion setting stop all CSS motion. `none` (not a zero duration) leaves

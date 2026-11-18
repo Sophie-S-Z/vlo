@@ -196,7 +196,7 @@ export function ProjectLayout({
       {small && assistant !== undefined && (
         <Dialog open={showAssistant} onOpenChange={(open) => onAssistantOpen?.(open)}>
           <DialogContent
-            className="top-auto bottom-0 left-0 max-h-[85dvh] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-t-[var(--radius-card)] border-x-0 border-b-0"
+            className="top-auto bottom-0 left-0 max-h-[85dvh] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-t-[var(--radius-card)] border-x-0 border-b-0 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
             onCloseAutoFocus={onSheetCloseAutoFocus}
           >
             <DialogTitle className="sr-only">Assistant</DialogTitle>

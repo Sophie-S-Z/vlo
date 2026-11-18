@@ -529,7 +529,7 @@ const ALL: readonly Structure[] = [
     items: [
       page(
         'The topic',
-        'The title of the list, in a straight face. "Top ten signs that your cat is a spy."',
+        'The title of the list, in a straight face. “Top ten signs that your cat is a spy.”',
         5,
         30,
       ),

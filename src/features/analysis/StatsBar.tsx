@@ -133,7 +133,7 @@ export function StatsBar({ editor, kind }: StatsBarProps) {
 
   return (
     <div
-      className="vlo-stats-bar sticky bottom-0 z-10 mt-6 flex items-center justify-between gap-2 border-t border-rule bg-bg/95 py-1.5 text-xs text-muted"
+      className="vlo-stats-bar sticky bottom-0 z-10 mt-6 flex items-center justify-between gap-2 border-t border-rule bg-bg/95 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] text-xs text-muted"
       role="group"
       aria-label="Writing statistics"
     >

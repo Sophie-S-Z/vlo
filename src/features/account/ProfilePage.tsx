@@ -12,7 +12,7 @@ import { readSession, type AccountSession } from './session';
  * preview shows where each one appears, from the words in the form as the writer types.
  */
 
-const CAPTION = 'text-xs font-medium tracking-[0.14em] text-muted uppercase';
+const CAPTION = 'text-sm text-muted';
 
 function Preview({ draft }: { draft: Profile }) {
   const name = greetingName(draft);

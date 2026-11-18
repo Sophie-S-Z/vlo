@@ -87,7 +87,7 @@ function Tile({
   return (
     <div className="grid content-start gap-1 border-t border-rule pt-3">
       <dt className="text-sm text-muted">{label}</dt>
-      <dd className="font-display text-3xl font-semibold tabular-nums sm:text-4xl">
+      <dd className="font-display text-title font-semibold tabular-nums">
         {typeof value === 'number' ? <CountUp value={value} /> : value}
       </dd>
       {children && <dd>{children}</dd>}

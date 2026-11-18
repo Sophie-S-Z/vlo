@@ -4,6 +4,23 @@ Last update: 2026-11-18
 
 ## Done
 
+- Polish pass from the product owner's design notes (2026-11-18):
+  - Interface fonts: Familjen Grotesk for the interface, Newsreader for the headings as well as the text,
+    and IBM Plex Mono 400 for code and keys. Inter, Fraunces and JetBrains Mono stay as writing fonts that
+    load on first use. The service worker installs about 550 KB less font data.
+  - Headlines grow with the window between two sizes (`text-title`, `text-hero`, `text-wordmark`), so they
+    do not jump at a breakpoint.
+  - Menus, popovers and dialogs keep their instant close. An exit animation keeps the old menu on the page
+    for its length, and Radix gives focus back to its trigger only at the end. A second menu that opens in
+    that time then loses the focus and closes.
+  - The page reaches under a notch or a home bar (`viewport-fit=cover`), and the body and the bars at the
+    bottom of the screen keep clear of it.
+  - Removed the all-caps captions on the profile page. Curly quotes in the help text and the interface.
+    Link underlines sit 0.2em under the text. Images in a shared reader load as they come into view.
+  - `Strict-Transport-Security` on every response.
+  - Known open items: the live database does not have the index of migration 0014. Supabase Auth has
+    leaked password protection off.
+
 - Phase 19, Part F: links, tables and page setup (2026-11-18, `docs/plans/phase-19.md`):
   - Links between items: "[[" or Insert, Link to an item lists the items and their headings. A link shows
     the current title of its item. A click opens the item, and Ctrl-click opens it beside. Links here in

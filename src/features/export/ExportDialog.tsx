@@ -112,7 +112,7 @@ const FORMATS: {
 /** Where a web copy goes (F52). A blog editor takes rich text, and AO3's HTML field takes the HTML. */
 const WEB_TARGETS: { id: WebTarget; label: string }[] = [
   { id: 'blog', label: 'Substack, Medium or a blog' },
-  { id: 'ao3', label: "AO3, in the work's HTML field" },
+  { id: 'ao3', label: 'AO3, in the work’s HTML field' },
 ];
 
 type ScopeChoice = 'item' | 'folder' | 'project' | 'sequence';

@@ -52,10 +52,7 @@ export function ProfileSetupPage() {
   return (
     <div className="grain flex min-h-dvh flex-col items-center px-4">
       <main className="flex w-full max-w-sm flex-1 flex-col justify-center py-12">
-        <p
-          aria-hidden="true"
-          className="text-center font-display text-5xl font-semibold leading-none [font-variation-settings:'SOFT'_100,'opsz'_144]"
-        >
+        <p aria-hidden="true" className="text-center font-display text-5xl font-semibold leading-none">
           Vlo
         </p>
         <div aria-hidden="true" className="mx-auto mt-6 h-px w-16 bg-text" />

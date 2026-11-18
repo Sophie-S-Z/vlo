@@ -350,9 +350,7 @@ export function SeriesPage() {
     <section className="grid gap-8">
       <header className="grid gap-1">
         <p className="text-sm text-muted">Series</p>
-        <h1 className="font-display text-3xl font-semibold [overflow-wrap:anywhere] sm:text-4xl">
-          {series.title}
-        </h1>
+        <h1 className="font-display text-title font-semibold [overflow-wrap:anywhere]">{series.title}</h1>
         <p className="tabular-nums text-muted">
           {books.length === 1 ? '1 book' : `${String(books.length)} books`}
           {sameUnit && `, ${formatWords(total, unit)}`}
