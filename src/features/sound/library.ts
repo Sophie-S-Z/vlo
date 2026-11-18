@@ -13,7 +13,7 @@ export type AudioFileInfo = Omit<AudioFile, 'data'>;
 const PROBE_MS = 8000;
 
 /** Resolves when this browser can play the file, or rejects with a message for the writer. */
-export function probeAudio(file: Blob, name: string): Promise<number> {
+function probeAudio(file: Blob, name: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const audio = new Audio();

@@ -31,17 +31,12 @@ import {
 } from './codex';
 import { CodexChanges } from './CodexChanges';
 import { CodexMatrix } from './CodexMatrix';
+import { problemText, SAVE_FAILED } from '@/lib/problem';
 
 /*
  * The Codex screen (roadmap F42, plan Task H5): the entries by kind, the open entry, and the mentions of
  * each entry in the text. The address keeps the open entry (`entry=<id>`).
  */
-
-const SAVE_FAILED = 'Vlo could not save that change on this device.';
-
-function problemText(problem: unknown): string {
-  return problem instanceof RangeError ? problem.message : SAVE_FAILED;
-}
 
 function KindSelect({
   id,

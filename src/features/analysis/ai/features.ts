@@ -9,7 +9,7 @@ import { findTells, tellCounts, TELL_GROUPS, type Tell, type TellGroup } from '.
  */
 
 /** Common words whose rates mark a writer's style (stylometry). */
-export const FUNCTION_WORDS = [
+const FUNCTION_WORDS = [
   'the',
   'a',
   'an',
@@ -156,7 +156,7 @@ export const FEATURE_NAMES: readonly string[] = [
 ];
 
 /** The fewest words that the model scores. Shorter texts give a guess that is too noisy to show. */
-export const MIN_WORDS = 40;
+const MIN_WORDS = 40;
 
 export interface FeatureInput {
   text: string;

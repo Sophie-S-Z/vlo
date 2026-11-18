@@ -225,7 +225,7 @@ export function change(now: number, before: number): number | null {
 }
 
 /** Days in a row with words, up to today. A day with no words yet today does not break the run. */
-export function writingStreak(days: readonly OwnerDay[]): number {
+function writingStreak(days: readonly OwnerDay[]): number {
   let run = 0;
   for (let i = days.length - 1; i >= 0; i--) {
     if ((days[i]?.words ?? 0) > 0) run++;

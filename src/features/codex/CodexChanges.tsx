@@ -5,6 +5,7 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { deleteChange, MAX_CHANGE_TEXT, placesOf, saveChange, type ReadingItem } from './codex';
+import { problemText, SAVE_FAILED } from '@/lib/problem';
 
 /*
  * The changes of a Codex entry at scenes (F65, plan Task N1), such as "Loses her left eye". A change holds
@@ -13,9 +14,6 @@ import { deleteChange, MAX_CHANGE_TEXT, placesOf, saveChange, type ReadingItem }
  */
 
 const SELECT = 'min-h-11 rounded-md border border-rule bg-bg px-2 text-sm text-text pointer-fine:min-h-9';
-const SAVE_FAILED = 'Vlo could not save that change on this device.';
-
-const problemText = (problem: unknown) => (problem instanceof RangeError ? problem.message : SAVE_FAILED);
 
 function ChangeForm({
   entryId,

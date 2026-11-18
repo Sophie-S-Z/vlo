@@ -19,7 +19,7 @@ import type { EditorForm } from '@/features/library/templates';
  */
 
 /** The pause after a change before the bar counts again, in ms. */
-export const BAR_DELAY_MS = 700;
+const BAR_DELAY_MS = 700;
 
 const numbers = new Intl.NumberFormat();
 

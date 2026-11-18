@@ -3,6 +3,7 @@ import { db, touchProject, type Item, type LifeStage } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderAfterLast, orderBetween, sortByOrder } from '@/lib/order';
 import { compareDates, isDate } from './dates';
+import { requiredText } from '@/lib/problem';
 
 /*
  * Memory Timeline data (spec 8.2, plan Task C4): the date, themes and life stage of each memory, and the
@@ -91,11 +92,7 @@ export function byTheme(memories: readonly Item[]): { theme: string | null; memo
   return columns;
 }
 
-function cleanName(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed === '') throw new RangeError('A life stage needs a name.');
-  return trimmed;
-}
+const cleanName = (name: string) => requiredText(name, 'A life stage needs a name.');
 
 function checkSpan(start: string, end: string): void {
   if (compareDates(end, start) < 0) throw new RangeError('A life stage must end after it starts.');

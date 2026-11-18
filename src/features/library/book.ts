@@ -1,11 +1,5 @@
 import type { Project, Template } from '@/lib/db';
-
-/** FNV-1a: the same seed always gives the same number. */
-export function hash(seed: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < seed.length; i += 1) h = Math.imul(h ^ seed.charCodeAt(i), 0x01000193);
-  return h >>> 0;
-}
+import { hash } from '@/lib/ids';
 
 /** Book cloths. Each pairs a spine color with the ink of its lettering and a foil for its bands. */
 const CLOTHS = [

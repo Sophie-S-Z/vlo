@@ -10,6 +10,7 @@ import { deleteItemDoc } from '@/lib/itemDocName';
 import { dropBook } from '@/features/series/series';
 import { byline, readProfile } from '@/features/account/profile';
 import { cleanTemplates, misfits, projectDef, TEMPLATES, type StarterItem } from './templates';
+import { requiredText } from '@/lib/problem';
 
 export interface NewProjectInput {
   title: string;
@@ -20,11 +21,7 @@ export interface NewProjectInput {
   structures?: Partial<Record<Template, string>>;
 }
 
-function cleanTitle(title: string): string {
-  const trimmed = title.trim();
-  if (trimmed === '') throw new Error('A project needs a title.');
-  return trimmed;
-}
+const cleanTitle = (title: string) => requiredText(title, 'A project needs a title.');
 
 /** A new project row with the default settings, for a new project or an import. */
 export function newProject(input: NewProjectInput, now: number): Project {

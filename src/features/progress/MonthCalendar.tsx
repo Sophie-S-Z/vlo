@@ -10,6 +10,7 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { MAX_TARGET, setGoals } from './progress';
 import { DAY_NAME, DAY_SHORT, dayKey, WEEK, weekdayOf } from './streaks';
+import { problemText } from '@/lib/problem';
 
 /*
  * The month challenge (roadmap F60, plan Task K7): a target for the words of one month, and a calendar
@@ -39,11 +40,7 @@ export function MonthCalendar({ project }: { project: Project }) {
         setError('');
       },
       (problem: unknown) => {
-        setError(
-          problem instanceof RangeError
-            ? problem.message
-            : 'Vlo could not save the challenge on this device.',
-        );
+        setError(problemText(problem, 'Vlo could not save the challenge on this device.'));
       },
     );
   };

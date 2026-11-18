@@ -22,6 +22,7 @@ import {
 } from './reader';
 import { passagesOf, type Source } from './retrieve';
 import type { EditorForm } from '@/features/library/templates';
+import { problemText } from '@/lib/problem';
 
 /*
  * The request that leaves for an AI engine (spec section 10, architecture review finding 3). The privacy
@@ -116,8 +117,7 @@ export async function buildAiRequest(input: RequestInput): Promise<BuiltRequest>
   } catch (problem) {
     return {
       ok: false,
-      message:
-        problem instanceof RangeError ? problem.message : 'Vlo could not read the text for this request.',
+      message: problemText(problem, 'Vlo could not read the text for this request.'),
     };
   }
 
@@ -147,7 +147,7 @@ export async function buildAiRequest(input: RequestInput): Promise<BuiltRequest>
     } catch (problem) {
       return {
         ok: false,
-        message: problem instanceof RangeError ? problem.message : 'This request is too long.',
+        message: problemText(problem, 'This request is too long.'),
       };
     }
   }

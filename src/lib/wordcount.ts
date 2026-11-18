@@ -59,6 +59,21 @@ export function countWords(text: string, language?: string): number {
   return count;
 }
 
+/** Silent reading speed for prose, in words a minute. */
+export const READING_WPM = 238;
+/** Speaking speed for a reading out loud, in words a minute. */
+export const SPEAKING_WPM = 150;
+
+let graphemes: Intl.Segmenter | undefined;
+
+/** Counts characters as a reader sees them (grapheme clusters), without line breaks. */
+export function countGraphemes(text: string): number {
+  graphemes ??= new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  let count = 0;
+  for (const part of graphemes.segment(text)) if (part.segment !== '\n') count += 1;
+  return count;
+}
+
 /** Counts lines that hold any non-space text, as poem line counts do. */
 export function countLines(text: string): number {
   let count = 0;

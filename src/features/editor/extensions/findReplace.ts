@@ -43,7 +43,7 @@ export const MAX_MATCHES = 5000;
 
 export const EMPTY_QUERY: FindQuery = { text: '', caseSensitive: false, wholeWord: false, pattern: false };
 
-export const findKey = new PluginKey<FindState>('findReplace');
+const findKey = new PluginKey<FindState>('findReplace');
 
 type FindMeta =
   { type: 'query'; query: FindQuery; from: number } | { type: 'current'; index: number } | { type: 'clear' };

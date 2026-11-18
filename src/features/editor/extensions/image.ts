@@ -13,7 +13,6 @@ import {
   cleanImageWidth,
   IMAGE,
   IMAGE_ALIGNS,
-  IMAGE_WIDTHS,
   imageAttrs,
   type ImageAlign,
   type ImageAttrs,
@@ -38,7 +37,7 @@ import { moveBlocks } from './moveBlocks';
  * and a file dropped or pasted goes in at the pointer or the caret.
  */
 
-export { cleanImageAlign, cleanImageText, cleanImageWidth, IMAGE_ALIGNS, IMAGE_WIDTHS, imageAttrs };
+export { IMAGE_ALIGNS, imageAttrs };
 export type { ImageAlign, ImageAttrs, ImageWidth };
 
 declare module '@tiptap/core' {

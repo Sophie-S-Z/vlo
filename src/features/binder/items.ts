@@ -3,12 +3,9 @@ import { db, MAX_ITEM_TARGET, touchProject, type Item, type ItemKind } from '@/l
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { orderAfterLast } from '@/lib/order';
+import { requiredText } from '@/lib/problem';
 
-function cleanTitle(title: string): string {
-  const trimmed = title.trim();
-  if (trimmed === '') throw new Error('An item needs a title.');
-  return trimmed;
-}
+const cleanTitle = (title: string) => requiredText(title, 'An item needs a title.');
 
 /** "Scene 3" when the project already has two scenes. */
 export async function nextTitle(projectId: string, kind: ItemKind, label: string): Promise<string> {

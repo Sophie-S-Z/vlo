@@ -10,6 +10,7 @@ import { Label } from '@/ui/label';
 import { cn } from '@/ui/cn';
 import { DATE_HINT, formatDate, isDate } from './dates';
 import { addStage, cleanThemes, deleteStage, moveStage, setMemory, updateStage } from './memories';
+import { problemText } from '@/lib/problem';
 
 /* The Memory Timeline's forms: a memory's date, stage and themes, and the life stages (plan Task C4). */
 
@@ -256,7 +257,7 @@ export function LifeStagesDialog({
       setEnd('');
       setError(null);
     } catch (reason) {
-      setError(reason instanceof RangeError ? reason.message : SAVE_FAILED);
+      setError(problemText(reason, SAVE_FAILED));
     }
   }
 
@@ -386,7 +387,7 @@ function StageRow({
         onSaved(`Saved the life stage ${(patch.name ?? stage.name).trim()}.`);
       },
       (reason: unknown) => {
-        setError(reason instanceof RangeError ? reason.message : SAVE_FAILED);
+        setError(problemText(reason, SAVE_FAILED));
         setName(stage.name);
         setStart(stage.start);
         setEnd(stage.end);

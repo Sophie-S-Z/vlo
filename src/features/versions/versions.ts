@@ -20,7 +20,7 @@ import type { EditorForm } from '@/features/library/templates';
  * snapshot restore does, so every mark stays and a snapshot holds the text from before.
  */
 
-export const MAIN = 'Main';
+const MAIN = 'Main';
 export const BEFORE_SWITCH = 'Before a switch of version';
 export const BEFORE_TAKE = 'Before Use this';
 

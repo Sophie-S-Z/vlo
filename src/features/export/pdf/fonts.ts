@@ -22,7 +22,7 @@ interface FontFiles {
 
 export const PDF_FONTS: Readonly<Record<string, FontFiles>> = list.fonts;
 
-export const MATH_FONT = 'noto-sans-math';
+const MATH_FONT = 'noto-sans-math';
 
 /** Reads a font file: a path under public/, such as "fonts/lora/regular.ttf". */
 export type LoadFile = (path: string) => Promise<Uint8Array>;

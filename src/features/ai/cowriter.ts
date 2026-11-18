@@ -36,7 +36,7 @@ export interface CowriterContext {
 }
 
 /** The end of the text, cut to whole words within `budget` tokens. */
-export function fitTail(text: string, budget: number): string {
+function fitTail(text: string, budget: number): string {
   if (estimateTokens(text) <= budget) return text;
   const slice = text.slice(text.length - budget * 4);
   const start = slice.search(/\s/);

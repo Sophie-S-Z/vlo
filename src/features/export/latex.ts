@@ -8,7 +8,7 @@ import { cellParagraphs, type Block, type ExportDoc, type Run } from './model';
 export type LatexToMathml = (latex: string) => string;
 
 /** True when any block or run of the export is an equation. */
-export function hasMath(doc: ExportDoc): boolean {
+function hasMath(doc: ExportDoc): boolean {
   const inRuns = (runs: readonly Run[]) => runs.some((r) => r.type === 'math');
   const visit = (blocks: readonly Block[]): boolean =>
     blocks.some((block) => {

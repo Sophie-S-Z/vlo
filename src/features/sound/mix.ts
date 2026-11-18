@@ -87,7 +87,7 @@ const NATURE_IDS = new Set<string>(NATURE.map((n) => n.id));
 const MUSIC_SOURCES = new Set<string>([...Object.keys(MOOD_LABELS), 'own', 'off']);
 
 /** A volume from 0 to 1, or the fallback for anything else. */
-export function cleanVolume(value: unknown, fallback: number): number {
+function cleanVolume(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
 }
 

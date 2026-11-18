@@ -53,7 +53,7 @@ export interface Rhymes {
 const MAX_RHYMES = 60;
 
 /** WordNet writes an apostrophe as ’, and its words are in lower case. */
-export function fold(word: string): string {
+function fold(word: string): string {
   return word.trim().toLowerCase().replace(/['‘]/g, '’');
 }
 

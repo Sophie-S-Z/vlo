@@ -14,6 +14,7 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { deleteResearch, formatSize, MAX_RESEARCH_NAME, renameResearch, researchView } from './research';
+import { problemText } from '@/lib/problem';
 
 /*
  * The research view (roadmap F41, plan Task H6). An image, a PDF or an audio file shows from a blob: URL,
@@ -69,7 +70,7 @@ export function ResearchView({ file, onDeleted }: { file: ResearchFile; onDelete
                   setError('');
                 },
                 (problem: unknown) => {
-                  setError(problem instanceof RangeError ? problem.message : 'Vlo could not save the name.');
+                  setError(problemText(problem, 'Vlo could not save the name.'));
                   input.value = file.name;
                 },
               );

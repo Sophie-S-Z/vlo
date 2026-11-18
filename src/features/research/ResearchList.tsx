@@ -19,6 +19,7 @@ import {
   researchView,
   type ResearchView,
 } from './research';
+import { problemText } from '@/lib/problem';
 
 /*
  * The Research section at the end of the binder (roadmap F41, plan Task H6). Add files takes images, PDFs,
@@ -45,11 +46,7 @@ function ClippingForm({ projectId, onAdded }: { projectId: string; onAdded: (fil
       onSubmit={(event) => {
         event.preventDefault();
         addClipping(projectId, name, text, url).then(onAdded, (problem: unknown) => {
-          setError(
-            problem instanceof RangeError
-              ? problem.message
-              : 'Vlo could not save the clipping on this device.',
-          );
+          setError(problemText(problem, 'Vlo could not save the clipping on this device.'));
         });
       }}
     >

@@ -15,6 +15,7 @@ import {
   todayIso,
   type SubmissionDraft,
 } from './submissions';
+import { problemText } from '@/lib/problem';
 
 /*
  * The form that logs or changes a submission (spec 8.4, plan Task C8). It sits on the page above the
@@ -31,12 +32,6 @@ export interface SubmissionFormProps {
   editing: Submission | null;
   onSave: (draft: SubmissionDraft, followUpDays: number) => Promise<void>;
   onCancel: () => void;
-}
-
-function problemText(problem: unknown): string {
-  return problem instanceof RangeError
-    ? problem.message
-    : 'Vlo could not save the submission on this device.';
 }
 
 export function SubmissionForm({ project, pieces, venues, editing, onSave, onCancel }: SubmissionFormProps) {
@@ -96,7 +91,7 @@ export function SubmissionForm({ project, pieces, venues, editing, onSave, onCan
           },
           (problem: unknown) => {
             setSaving(false);
-            setError(problemText(problem));
+            setError(problemText(problem, 'Vlo could not save the submission on this device.'));
             errorRef.current?.focus();
           },
         );

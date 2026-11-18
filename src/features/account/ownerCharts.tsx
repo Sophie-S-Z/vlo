@@ -22,7 +22,7 @@ export const dayText = (iso: string | null) =>
     : 'Never';
 
 /** A clean top for a y axis at or over `max`: 1, 2 or 5 times a power of ten. */
-export function niceTop(max: number): number {
+function niceTop(max: number): number {
   if (max <= 4) return Math.max(1, Math.ceil(max));
   const power = 10 ** Math.floor(Math.log10(max));
   return [2, 5, 10].map((f) => f * power).find((v) => v >= max) ?? 10 * power;

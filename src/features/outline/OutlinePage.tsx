@@ -19,6 +19,7 @@ import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { LabelsDialog } from './LabelsDialog';
 import { labelOf, orderForMove, outlineRows, setItemLabel } from './outline';
+import { SAVE_FAILED } from '@/lib/problem';
 
 /*
  * The Outline view (roadmap F40, plan Task H1). Table shows every binder item with its synopsis, status,
@@ -27,7 +28,6 @@ import { labelOf, orderForMove, outlineRows, setItemLabel } from './outline';
  */
 
 const STATUSES = Object.keys(STATUS_LABEL) as Status[];
-const SAVE_FAILED = 'Vlo could not save that change on this device.';
 
 /** A small color dot for a label. Its name always shows next to it, so color is never the only sign. */
 function LabelDot({ label }: { label: Label }) {

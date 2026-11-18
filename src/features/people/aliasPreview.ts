@@ -11,7 +11,7 @@ import { getNames, subscribeNames } from './nameStore';
  * each unmarked real name. The text does not change, so the switch never touches the document.
  */
 
-export const aliasPreviewKey = new PluginKey<PreviewState>('vloAliasPreview');
+const aliasPreviewKey = new PluginKey<PreviewState>('vloAliasPreview');
 
 interface PreviewState {
   show: boolean;

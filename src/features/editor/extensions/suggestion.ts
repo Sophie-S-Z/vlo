@@ -16,14 +16,6 @@ import { getTracking } from '../trackingStore';
 import { KEEP_AI_MARKS } from './aiOrigin';
 import { SKIP_TRACKING, SUGGESTION, type ChangeKind, type SuggestionAttrs } from '../format/suggestion';
 
-export {
-  SKIP_TRACKING,
-  SUGGESTION,
-  acceptedDoc,
-  type ChangeKind,
-  type SuggestionAttrs,
-} from '../format/suggestion';
-
 /*
  * Track changes (roadmap F44, plan Task I1 and decision R1). A suggestion is a mark on the words, as a
  * comment is, so the save, tab sync, snapshots, backups and imports carry it with no table of its own.

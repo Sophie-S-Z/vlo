@@ -28,7 +28,7 @@ import {
  */
 
 /** The looks that Vlo offers. The first is the look of a new writer. */
-export const PAGE_LOOKS: readonly SavedLook[] = [
+const PAGE_LOOKS: readonly SavedLook[] = [
   { name: 'Vlo', pageWidth: 100, paragraphs: 'spaced', screenFont: null, lineHeight: 1.7 },
   { name: 'Book', pageWidth: 64, paragraphs: 'indented', screenFont: null, lineHeight: 1.7 },
   { name: 'Manuscript', pageWidth: 68, paragraphs: 'indented', screenFont: 'courier-prime', lineHeight: 2.3 },

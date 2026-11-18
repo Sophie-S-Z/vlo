@@ -19,7 +19,7 @@ export interface TokenStat {
 }
 
 /** A window needs this many scored tokens for a score. */
-export const MIN_TOKENS = 40;
+const MIN_TOKENS = 40;
 /** The whole text needs this many scored tokens for an overall result. */
 export const MIN_REPORT_TOKENS = 100;
 
@@ -139,7 +139,7 @@ export interface DeepReport {
   calibration: Calibration;
 }
 
-export function bandOf(score: number, cuts: Calibration['cuts']): DeepBand {
+function bandOf(score: number, cuts: Calibration['cuts']): DeepBand {
   return score >= cuts.many ? 'many' : score >= cuts.some ? 'some' : 'few';
 }
 
@@ -165,9 +165,9 @@ export function piecesOf(text: string): SentencePiece[] {
 }
 
 /** Most tokens that one block reads with one context. */
-export const BLOCK_TOKENS = 512;
+const BLOCK_TOKENS = 512;
 /** Most tokens that the check reads in one text, about 1,100 words. */
-export const MAX_TOKENS = 1536;
+const MAX_TOKENS = 1536;
 
 /**
  * Groups the sentences into blocks of at most BLOCK_TOKENS, then keeps blocks spread over the whole text

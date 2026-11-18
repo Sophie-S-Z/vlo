@@ -16,7 +16,7 @@ import type { PdfOptions, PdfResult } from './pdf';
 
 const INCH = 72;
 /** The height of one line: 6 lines to the inch. */
-export const LINE = 12;
+const LINE = 12;
 /** The width of one Courier character at 12 pt: 10 characters to the inch. */
 export const CHAR = 7.2;
 export const PAGE_LINES = 55;
@@ -63,7 +63,7 @@ const STAGE: Readonly<Record<ScriptRole, Column>> = {
   transition: at(1.5, 60, { align: 'right' }),
 };
 
-export const COLUMNS: Readonly<Record<ScriptStyle, Readonly<Record<ScriptRole, Column>>>> = {
+const COLUMNS: Readonly<Record<ScriptStyle, Readonly<Record<ScriptRole, Column>>>> = {
   screenplay: SCREENPLAY,
   stage: STAGE,
 };

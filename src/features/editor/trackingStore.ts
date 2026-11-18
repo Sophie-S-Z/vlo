@@ -69,7 +69,7 @@ export async function setMode(mode: EditMode): Promise<void> {
   if (on !== state.on) await saveTracking({ on });
 }
 
-export function subscribeTracking(listener: () => void): () => void {
+function subscribeTracking(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

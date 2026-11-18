@@ -10,7 +10,7 @@ import type { PresetId } from './engine/presets';
  */
 
 export const ITERATIONS = 600_000;
-export const LOCK_AFTER = 3;
+const LOCK_AFTER = 3;
 export const LOCK_MS = 30_000;
 export const MIN_PASSPHRASE = 8;
 

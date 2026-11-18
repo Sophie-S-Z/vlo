@@ -5,6 +5,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { addToSeries, makeSeries, MAX_SERIES_TITLE } from './series';
+import { problemText } from '@/lib/problem';
 
 /* "Add to a series" in the Library (F59): a new series with this book first, or the end of a series. */
 
@@ -58,9 +59,7 @@ function SeriesForm({
       else await addToSeries(choice, project.id);
       onDone();
     } catch (problem) {
-      setError(
-        problem instanceof RangeError ? problem.message : 'Vlo could not save the series on this device.',
-      );
+      setError(problemText(problem, 'Vlo could not save the series on this device.'));
     }
   };
   return (

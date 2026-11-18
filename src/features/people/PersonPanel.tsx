@@ -6,6 +6,7 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { problemText } from '@/lib/problem';
 
 /*
  * "Mark as person" (spec 8.2, plan Task C5). The writer picks the person that the selected text names,
@@ -48,9 +49,7 @@ export function PersonPanel({ editor, onDone }: { editor: Editor; onDone: () => 
       const person = await addPerson(projectId, '', [{ real, alias }]);
       mark(person.id);
     } catch (problem) {
-      setError(
-        problem instanceof RangeError ? problem.message : 'Vlo could not save the person on this device.',
-      );
+      setError(problemText(problem, 'Vlo could not save the person on this device.'));
     }
   };
 

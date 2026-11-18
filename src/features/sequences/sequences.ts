@@ -3,6 +3,7 @@ import { flattenTree } from '@/features/binder/tree';
 import { clock } from '@/lib/clock';
 import { db, touchProject, type Item, type Sequence } from '@/lib/db';
 import { newId } from '@/lib/ids';
+import { requiredText } from '@/lib/problem';
 
 /*
  * The Collection Sequencer data (spec 8.3, plan Task C6, US08). A poetry collection keeps many named orders
@@ -59,8 +60,7 @@ export function useSequences(projectId: string): Sequence[] | undefined {
 }
 
 function cleanName(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed === '') throw new RangeError('Type a name for the order.');
+  const trimmed = requiredText(name, 'Type a name for the order.');
   if (trimmed.length > MAX_SEQUENCE_NAME)
     throw new RangeError(`A name can have up to ${String(MAX_SEQUENCE_NAME)} characters.`);
   return trimmed;

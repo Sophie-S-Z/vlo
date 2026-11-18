@@ -20,9 +20,9 @@ import {
  */
 
 /** The typing pause before the page-end lines come back. */
-export const PAGE_LINES_PAUSE_MS = 600;
+const PAGE_LINES_PAUSE_MS = 600;
 /** The name of the performance measure for each page-end measure. */
-export const PAGE_LINES_MEASURE = 'vlo-page-lines';
+const PAGE_LINES_MEASURE = 'vlo-page-lines';
 
 /** Blocks that move whole to the next page. Every other block can split between two lines. */
 const WHOLE = '[data-math-block], [data-scene-break], [data-page-break], hr, img, figure';

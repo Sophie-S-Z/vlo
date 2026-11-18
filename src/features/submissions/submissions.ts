@@ -30,7 +30,7 @@ export const DEFAULT_FOLLOW_UP = 90;
 export const MAX_FOLLOW_UP = 3650;
 export const MAX_VENUE = 120;
 export const MAX_NOTES = 2000;
-export const DELETED_PIECE = 'Deleted piece';
+const DELETED_PIECE = 'Deleted piece';
 
 const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -52,7 +52,7 @@ function dayNumber(value: string): number | null {
   return time / 86_400_000;
 }
 
-export function isIsoDate(value: string): boolean {
+function isIsoDate(value: string): boolean {
   return dayNumber(value) !== null;
 }
 
@@ -64,7 +64,7 @@ export function daysBetween(from: string, to: string): number {
 }
 
 /** The key of a venue for its follow-up days: "Agni" and " agni " are the same venue. */
-export function venueKey(venue: string): string {
+function venueKey(venue: string): string {
   return venue.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
@@ -142,7 +142,7 @@ export interface SubmissionDraft {
 }
 
 /** Checks and trims a draft. Each refusal is a RangeError with a message for the writer. */
-export function cleanDraft(draft: SubmissionDraft): Omit<Submission, 'id' | 'projectId'> {
+function cleanDraft(draft: SubmissionDraft): Omit<Submission, 'id' | 'projectId'> {
   const itemIds = [...new Set(draft.itemIds)];
   if (itemIds.length === 0) throw new RangeError('Choose at least one piece.');
   const venue = draft.venue.trim().replace(/\s+/g, ' ');

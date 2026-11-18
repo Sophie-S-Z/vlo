@@ -4,8 +4,8 @@
  */
 
 export const GRID = 8;
-export const MIN_SCALE = 0.1;
-export const MAX_SCALE = 4;
+const MIN_SCALE = 0.1;
+const MAX_SCALE = 4;
 /** The size of a card on the board, in board pixels at 100 %. */
 export const CARD_WIDTH = 208;
 export const CARD_HEIGHT = 128;
@@ -32,7 +32,7 @@ export function snap(value: number, grid = GRID): number {
   return Math.round(value / grid) * grid || 0;
 }
 
-export function clampScale(scale: number): number {
+function clampScale(scale: number): number {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
 }
 
@@ -112,7 +112,7 @@ export function threadPath(from: Point, to: Point): string {
  */
 export const TAU = 325;
 /** A throw slower than this (pixels per millisecond) does not glide. */
-export const MIN_THROW = 0.2;
+const MIN_THROW = 0.2;
 
 /** Where a card thrown from `at` with `velocity` (board pixels per millisecond) comes to rest. */
 export function glideEnd(at: Point, velocity: Point): Point {

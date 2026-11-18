@@ -40,7 +40,7 @@ export function flattenTree(items: readonly Item[]): FlatNode[] {
 }
 
 /** True when the template lets `kind` sit under `parent` (or at the top level for null). */
-export function allowedUnder(template: TemplateDef, parent: Item | null, kind: ItemKind): boolean {
+function allowedUnder(template: TemplateDef, parent: Item | null, kind: ItemKind): boolean {
   return (template.childKinds[parent?.kind ?? 'root'] ?? []).includes(kind);
 }
 

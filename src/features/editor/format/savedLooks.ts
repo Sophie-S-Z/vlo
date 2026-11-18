@@ -4,7 +4,7 @@ import { parseFill, type TextFill } from './fill';
 /* Fills the writer saved by name in the gradient editor, kept on this device. */
 
 const KEY = 'vlo:saved-looks';
-export const MAX_SAVED_LOOKS = 24;
+const MAX_SAVED_LOOKS = 24;
 
 export interface SavedLook {
   name: string;

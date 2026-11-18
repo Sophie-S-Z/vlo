@@ -42,7 +42,7 @@ const CARD_ORDER: readonly Template[] = [
 ];
 
 /** The template that a new project starts with. */
-export const SUGGESTED_TEMPLATE: Template = 'novel';
+const SUGGESTED_TEMPLATE: Template = 'novel';
 
 export interface TemplatePick {
   /** The picked templates, in `TEMPLATE_ORDER`. Empty until the writer picks one, or after the last goes. */

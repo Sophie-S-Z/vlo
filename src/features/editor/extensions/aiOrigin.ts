@@ -216,7 +216,7 @@ export interface Join {
 }
 
 /** A slice of marked text for the draft, open at both ends so it joins the blocks at the cursor. */
-export function draftSlice(
+function draftSlice(
   schema: Schema,
   text: string,
   kind: EditorForm,

@@ -11,8 +11,8 @@ import { vloFetch } from '@/lib/net';
  * publishes it.
  */
 
-export const WPCOM_HOST = 'public-api.wordpress.com';
-export const WPCOM_CHANNEL = 'vlo-wpcom';
+const WPCOM_HOST = 'public-api.wordpress.com';
+const WPCOM_CHANNEL = 'vlo-wpcom';
 
 export interface WpcomToken {
   token: string;
@@ -33,7 +33,7 @@ export function wpcomClientId(): string {
 }
 
 /** The page that WordPress.com sends the writer back to. The app registers this address. */
-export function wpcomRedirect(): string {
+function wpcomRedirect(): string {
   return new URL(`${import.meta.env.BASE_URL}wpcom-callback.html`, globalThis.location.origin).href;
 }
 
@@ -68,7 +68,7 @@ export function heldToken(now = clock.now()): WpcomToken | null {
   return held && held.expiresAt > now + 60_000 ? held : null;
 }
 
-export function forgetToken(): void {
+function forgetToken(): void {
   held = null;
 }
 
