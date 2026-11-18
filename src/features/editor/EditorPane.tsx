@@ -177,8 +177,7 @@ export function EditorPane({
       onPause: async () => {
         const doc = latest.current;
         if (!doc) return;
-        const { text, body } = docParts(doc, kind);
-        await writeItemText(target, text, kind, body, languageNow.current);
+        await writeItemText(target, docParts(doc, kind), kind, languageNow.current);
       },
       onState: setSave,
     });

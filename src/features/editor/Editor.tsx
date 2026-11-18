@@ -33,7 +33,7 @@ import { poemExtensions } from './extensions/poem';
 import { CraftLabels } from '@/features/craft/CraftLabels';
 import { CraftSwitch } from '@/features/craft/craftSwitch';
 import type { PoemForm } from '@/features/craft/forms';
-import { proseExtensions } from './extensions/prose';
+import { proseExtensions, type LinkOptions } from './extensions/prose';
 import { scriptExtensions } from './extensions/script';
 import { SlashMenu } from './extensions/slashMenu';
 import { SmartPunctuation } from './extensions/smartPunctuation';
@@ -56,6 +56,8 @@ import { ReadAloudBar } from './toolbar/ReadAloudBar';
 import { SelectionMenu } from './toolbar/SelectionMenu';
 import { SlashMenuList } from './toolbar/SlashMenuList';
 import { MentionMenuList } from './toolbar/MentionMenuList';
+import { LinkMenuList } from './toolbar/LinkMenuList';
+import { takeLinkAnchor } from '@/features/links/linkStore';
 import { CodexCompletion } from './extensions/codexCompletion';
 import { CursorNote } from './CursorNote';
 import { Toolbar } from './toolbar/Toolbar';
@@ -119,7 +121,7 @@ const EXTENSIONS = {
   prose: proseExtensions,
   poem: (doc: Y.Doc) => poemExtensions(doc, { tabSpaces: 4 }),
   script: scriptExtensions,
-} satisfies Record<EditorForm, (doc: Y.Doc) => AnyExtension[]>;
+} satisfies Record<EditorForm, (doc: Y.Doc, links: LinkOptions) => AnyExtension[]>;
 
 /**
  * The editor element's attributes. A rename passes a new label. The browser's spell check stays off while
@@ -189,6 +191,7 @@ export function Editor({
   const helpId = useId();
   const listId = `${useId()}-tools`;
   const mentionListId = `${useId()}-names`;
+  const linkListId = `${useId()}-links`;
   const writing = useWritingPrefs();
   const smart = kind === 'poem' ? writing.smartPoems : writing.smartProse;
   // The style check's word lists are English. A project with no language is English.
@@ -199,7 +202,7 @@ export function Editor({
   const editor = useEditor(
     {
       extensions: [
-        ...EXTENSIONS[kind](doc),
+        ...EXTENSIONS[kind](doc, { itemId: itemId ?? null, listId: linkListId }),
         ...(smart ? [SmartPunctuation] : []),
         ...(kind === 'script'
           ? []
@@ -299,8 +302,10 @@ export function Editor({
   // language, leaves the focus where it was, so a writer in the details panel stays there.
   const focused = useRef(focusOnOpen);
   useEffect(() => {
-    // The item opens at the writer's last place on this device (Task A2), else at the end of the text.
-    if (focused.current) {
+    // A link to a heading opens its item at the heading (Phase 19, Task F1). Else the item opens at the
+    // writer's last place on this device (Task A2), else at the end of the text.
+    const linked = itemId !== undefined && takeLinkAnchor(itemId, editor);
+    if (focused.current && !linked) {
       if (itemId !== undefined && restorePlace(itemId, editor)) {
         editor.commands.focus();
         requestAnimationFrame(() => {
@@ -456,6 +461,7 @@ export function Editor({
       <SelectionMenu editor={editor} form={kind} templates={templates} />
       <SlashMenuList editor={editor} listId={listId} />
       <MentionMenuList editor={editor} listId={mentionListId} />
+      {kind === 'prose' && <LinkMenuList editor={editor} listId={linkListId} />}
       <PanelHost
         editor={editor}
         form={kind}

@@ -5,6 +5,7 @@ import Superscript from '@tiptap/extension-superscript';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { cleanFontValue, fontStack, type FontValue } from '../format/fonts';
+import { cleanAnchor } from '../format/itemLink';
 import { cleanStyleId } from '../format/paragraphStyles';
 import { swatchVar } from '../format/palette';
 import { TextFillMark } from './textFill';
@@ -61,7 +62,7 @@ function isLineSpacing(value: number): value is LineSpacing {
   return (LINE_SPACINGS as readonly number[]).includes(value);
 }
 
-/** Line spacing, first-line indent, drop caps and the paragraph style, as attributes on text blocks. */
+/** Line spacing, first-line indent, drop caps, the paragraph style and the heading anchor, as block attributes. */
 export const BlockStyle = Extension.create({
   name: 'blockStyle',
 
@@ -106,6 +107,22 @@ export const BlockStyle = Extension.create({
             renderHTML: (attributes) => {
               const id = cleanStyleId(attributes.styleId);
               return id === null ? {} : { 'data-style': id };
+            },
+          },
+        },
+      },
+      {
+        // The anchor that a link to the heading names (Phase 19, Task F1). The second part of a split
+        // heading gets no copy of it.
+        types: ['heading'],
+        attributes: {
+          anchor: {
+            default: null,
+            keepOnSplit: false,
+            parseHTML: (element) => cleanAnchor(element.dataset.anchor),
+            renderHTML: (attributes) => {
+              const anchor = cleanAnchor(attributes.anchor);
+              return anchor === null ? {} : { 'data-anchor': anchor };
             },
           },
         },

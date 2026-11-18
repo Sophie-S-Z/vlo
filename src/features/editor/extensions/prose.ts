@@ -20,9 +20,22 @@ import { TextCaseCommands } from './textCase';
 import { SceneBreak } from './sceneBreak';
 import { Cite } from './cite';
 import { ImageNode } from './image';
+import { ItemLink } from './itemLink';
 
-/** The prose schema for scenes, memories and notes. Collaboration keeps undo history, so UndoRedo is off. */
-export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
+/** What the links of an editor need: its item, and the id of the "[[" list. */
+export interface LinkOptions {
+  itemId: string | null;
+  listId: string;
+}
+
+/**
+ * The prose schema for scenes, memories and notes. Collaboration keeps undo history, so UndoRedo is off.
+ * `links` names the editor's item for its links to items.
+ */
+export function proseExtensions(
+  ydoc: Y.Doc,
+  links: LinkOptions = { itemId: null, listId: 'vlo-item-links' },
+): AnyExtension[] {
   return [
     StarterKit.configure({
       heading: { levels: [2, 3, 4] },
@@ -51,6 +64,7 @@ export function proseExtensions(ydoc: Y.Doc): AnyExtension[] {
     MathInline,
     MathBlock,
     Cite,
+    ItemLink.configure(links),
     ImageNode,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),

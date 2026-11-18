@@ -45,9 +45,10 @@ function opensAt(state: EditorState, pos: number): boolean {
 }
 
 /**
- * A menu that a trigger character opens: "/" for the tools, "@" for the Codex and the items (Phase 19,
- * Task D4). More letters filter it. Arrow keys move, Enter or Tab chooses, and Escape closes the list and
- * keeps the trigger. The editor keeps focus the whole time, and aria-activedescendant names the choice.
+ * A menu that a trigger opens: "/" for the tools, "@" for the Codex and the items (Phase 19, Task D4),
+ * and "[[" for links to items and headings (Task F1). More letters filter it. Arrow keys move, Enter or
+ * Tab chooses, and Escape closes the list and keeps the trigger. The editor keeps focus the whole time,
+ * and aria-activedescendant names the choice.
  */
 export function menuPlugin<T>(options: {
   key: PluginKey<MenuState<T>>;
@@ -79,8 +80,8 @@ export function menuPlugin<T>(options: {
         const $trigger = next.doc.resolve(from);
         const $head = selection.$head;
         if ($head.parent !== $trigger.parent) return shut;
-        if (next.doc.textBetween(from, from + 1) !== trigger) return shut;
-        const query = next.doc.textBetween(from + 1, selection.from, '\n', '￼');
+        if (next.doc.textBetween(from, from + trigger.length) !== trigger) return shut;
+        const query = next.doc.textBetween(from + trigger.length, selection.from, '\n', '￼');
         if (query.length > MAX_QUERY || /^\s/.test(query) || query.includes('\n')) return shut;
         const matches = query === prev.query && prev.from !== null ? prev.matches : items(query);
         // A space after a query that matches nothing means the writer is typing prose.
@@ -95,9 +96,13 @@ export function menuPlugin<T>(options: {
     },
     props: {
       handleTextInput(view, from, to, text) {
-        if (text !== trigger || from !== to || !editor.isEditable || !enabled()) return false;
-        if (!opensAt(view.state, from)) return false;
-        view.dispatch(view.state.tr.insertText(trigger, from, to).setMeta(key, { open: from }));
+        // A trigger of two characters, such as "[[", opens on its last one.
+        const lead = trigger.slice(0, -1);
+        const start = from - lead.length;
+        if (text !== trigger.slice(-1) || from !== to || !editor.isEditable || !enabled()) return false;
+        if (start < 0 || view.state.doc.textBetween(start, from, undefined, '￼') !== lead) return false;
+        if (!opensAt(view.state, start)) return false;
+        view.dispatch(view.state.tr.insertText(text, from, to).setMeta(key, { open: start }));
         return true;
       },
       handleKeyDown(view, event) {
@@ -178,7 +183,7 @@ export const SlashMenu = Extension.create<SlashOptions>({
   },
 });
 
-/** Removes the trigger and the query, and runs the choice. */
+/** Removes the trigger and the query, and runs the choice. The query ends at the caret. */
 export function chooseFromMenu<T>(
   view: EditorView,
   key: PluginKey<MenuState<T>>,
@@ -187,7 +192,6 @@ export function chooseFromMenu<T>(
   onChoose: (item: T) => void,
 ): void {
   if (state.from === null) return;
-  const end = state.from + 1 + state.query.length;
-  view.dispatch(view.state.tr.delete(state.from, end).setMeta(key, { close: true }));
+  view.dispatch(view.state.tr.delete(state.from, view.state.selection.from).setMeta(key, { close: true }));
   onChoose(item);
 }

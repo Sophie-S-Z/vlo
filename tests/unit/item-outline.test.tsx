@@ -5,7 +5,7 @@ import { afterEach, beforeAll, expect, test, vi } from 'vitest';
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { scriptExtensions } from '@/features/editor/extensions/script';
 import { OutlineRail } from '@/features/editor/ItemOutline';
-import { activeEntry, goToEntry, outlineOf } from '@/features/editor/itemOutline';
+import { activeEntry, goToBlock, outlineOf } from '@/features/editor/itemOutline';
 import { CommandMenu } from '@/features/project/CommandMenu';
 import { db, type Project } from '@/lib/db';
 
@@ -75,10 +75,10 @@ test('a go-to puts the caret in the heading, or after the scene break, and the c
   const entries = outlineOf(editor.state.doc);
   const [, dock, , scene] = entries;
   if (!dock || !scene) throw new Error('The outline is missing an entry.');
-  goToEntry(editor, dock);
+  goToBlock(editor, dock.pos);
   expect(editor.state.selection.$head.parent.textContent).toBe('The dock');
   expect(activeEntry(entries, editor.state.selection.head)).toBe(1);
-  goToEntry(editor, scene);
+  goToBlock(editor, scene.pos);
   expect(editor.state.selection.$head.parent.textContent).toBe('Morning came.');
   expect(activeEntry(entries, editor.state.selection.head)).toBe(3);
 });

@@ -643,7 +643,7 @@ describe('pull', () => {
         const doc = docFromUpdate(await readItemUpdate('s1'));
         insert(doc, 12, ' More.');
         await writeItemUpdate('s1', encodeDoc(doc), now);
-        await writeItemText({ id: 's1', projectId: 'p1' }, 'The harbour. More.', 'prose');
+        await writeItemText({ id: 's1', projectId: 'p1' }, { text: 'The harbour. More.' }, 'prose');
       }
       return call(name, args);
     });
@@ -660,7 +660,7 @@ describe('pull', () => {
     now = 2000;
     await syncOnce();
     now = 3000;
-    await writeItemText({ id: 's1', projectId: 'p1' }, 'The harbour.', 'prose');
+    await writeItemText({ id: 's1', projectId: 'p1' }, { text: 'The harbour.' }, 'prose');
     // The other device deleted the folder and its scene after it saw their rows of time 1000.
     await fromOther(
       'rows:p1',

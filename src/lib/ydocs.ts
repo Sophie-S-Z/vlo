@@ -157,3 +157,47 @@ export function docFromUpdate(update: Uint8Array): Y.Doc {
   Y.applyUpdate(doc, update);
   return doc;
 }
+
+function remapIn(
+  node: Y.XmlFragment | Y.XmlElement,
+  nodeName: string,
+  attribute: string,
+  next: (old: string) => string,
+): boolean {
+  let changed = false;
+  for (const child of node.toArray()) {
+    if (!(child instanceof Y.XmlElement)) continue;
+    if (child.nodeName === nodeName) {
+      const old = child.getAttribute(attribute) as unknown;
+      if (typeof old === 'string' && next(old) !== old) {
+        child.setAttribute(attribute, next(old));
+        changed = true;
+      }
+    }
+    if (remapIn(child, nodeName, attribute, next)) changed = true;
+  }
+  return changed;
+}
+
+/**
+ * The update with an attribute of each node of one type moved to a new value, for a copy of a project,
+ * such as the id of each image. The same update when no value changes.
+ */
+export function remapNodeAttribute(
+  update: Uint8Array,
+  nodeName: string,
+  attribute: string,
+  next: (old: string) => string,
+): Uint8Array {
+  const doc = new Y.Doc();
+  try {
+    Y.applyUpdate(doc, update);
+    const result = { changed: false };
+    doc.transact(() => {
+      result.changed = remapIn(doc.getXmlFragment(YFRAGMENT), nodeName, attribute, next);
+    });
+    return result.changed ? Y.encodeStateAsUpdate(doc) : update;
+  } finally {
+    doc.destroy();
+  }
+}

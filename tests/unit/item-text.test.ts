@@ -26,7 +26,7 @@ test('writeItemText stores the text, the word count and the project change time'
   const { project, firstItemId } = await createProject({ title: 'Debt', templates: ['novel'] });
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
-  await writeItemText(item, "Mira's ledger was wet. It was 1994.", 'prose');
+  await writeItemText(item, { text: "Mira's ledger was wet. It was 1994." }, 'prose');
   expect((await db.itemTexts.get(firstItemId))?.text).toBe("Mira's ledger was wet. It was 1994.");
   expect((await db.items.get(firstItemId))?.wordCount).toBe(7);
   expect((await db.items.get(firstItemId))?.lineCount).toBeUndefined();
@@ -39,7 +39,7 @@ test('a Japanese item stores characters, and a language change counts every item
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   const body = '東京へ行く。Vlo は便利';
-  await writeItemText(item, `${body}\n\nNotes\n1. 注意`, 'prose', body, 'ja');
+  await writeItemText(item, { text: `${body}\n\nNotes\n1. 注意`, body }, 'prose', 'ja');
   expect((await db.items.get(firstItemId))?.wordCount).toBe(9);
 
   // Today's count started at 4 characters, so the writer added 5 today.
@@ -65,7 +65,7 @@ test('writeItemText counts lines for poems', async () => {
   const { firstItemId } = await createProject({ title: 'Salt', templates: ['poetry'] });
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
-  await writeItemText(item, 'Salt on the sill.\n    The tide goes out\n\nI keep\n', 'poem');
+  await writeItemText(item, { text: 'Salt on the sill.\n    The tide goes out\n\nI keep\n' }, 'poem');
   expect(await db.items.get(firstItemId)).toMatchObject({ wordCount: 10, lineCount: 3 });
 });
 
@@ -74,7 +74,7 @@ test('writeItemText does nothing for a deleted item', async () => {
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   await db.items.delete(firstItemId);
-  await writeItemText(item, 'gone', 'poem');
+  await writeItemText(item, { text: 'gone' }, 'poem');
   expect(await db.itemTexts.get(firstItemId)).toBeUndefined();
 });
 
@@ -97,20 +97,20 @@ test('writeItemText adds the net change in words to the day', async () => {
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   const today = dayKey(Date.now());
-  await writeItemText(item, 'one two three four five', 'prose');
+  await writeItemText(item, { text: 'one two three four five' }, 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({ [today]: 5 });
-  await writeItemText(item, 'one two three', 'prose');
+  await writeItemText(item, { text: 'one two three' }, 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({ [today]: 3 });
   // The same text again adds nothing.
-  await writeItemText(item, 'one two three', 'prose');
+  await writeItemText(item, { text: 'one two three' }, 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({ [today]: 3 });
-  await writeItemText(item, '', 'prose');
+  await writeItemText(item, { text: '' }, 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({});
   // Words that were there before today count against today, so a cut and a paste add nothing.
   await db.items.update(item.id, { wordCount: 4 });
-  await writeItemText(item, '', 'prose');
+  await writeItemText(item, { text: '' }, 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({ [today]: -4 });
-  await writeItemText(item, 'one two three four', 'prose');
+  await writeItemText(item, { text: 'one two three four' }, 'prose');
   expect((await db.projects.get(project.id))?.settings.wordsByDay).toEqual({});
 });
 
@@ -119,7 +119,7 @@ test('refreshItemText brings a copy that missed the last words up to date, and k
   const item = await db.items.get(firstItemId);
   if (!item) throw new Error('no item');
   // The tab closed in the save pause: the copy has the first sentence only.
-  await writeItemText(item, 'The rain came.', 'prose');
+  await writeItemText(item, { text: 'The rain came.' }, 'prose');
   const editor = new Editor({ extensions: proseExtensions(new Y.Doc()) });
 
   // An editor that has not drawn its document yet leaves the copy alone.

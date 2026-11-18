@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName } from 'pdf-lib';
 import { bookMargins, gutterFor, isNumbered, TRIM_POINTS } from '@/features/book/book';
 import type { TextFill } from '@/features/editor/format/fill';
 import { fontLabel } from '@/features/editor/format/fonts';
@@ -9,6 +9,7 @@ import type { BookSettings } from '@/lib/db';
 import {
   footnotesOf,
   imageStandIn,
+  linkPlace,
   paragraphStyleOf,
   repeatsTitle,
   runsText,
@@ -76,6 +77,8 @@ interface Paint {
   underline: boolean;
   strike: boolean;
   link?: string;
+  /** The place of the file that a link to an item or a heading goes to (Phase 19, Task F1). */
+  goTo?: string;
   fill?: TextFill;
   /** The same object for every piece of one styled run, so a gradient spans the whole run on a line. */
   fillId?: object;
@@ -125,6 +128,8 @@ interface Row {
   recto?: boolean;
   /** The id of the section that starts with this row, for the contents page. */
   mark?: string;
+  /** The places that start at this row, for links between items: a section id or a heading anchor. */
+  places?: string[];
   /** The place of a body line in its paragraph, for widow and orphan control. */
   para?: { line: number; lines: number };
   /** The distance from the row's top to its baseline. */
@@ -280,11 +285,12 @@ class Layout {
   private paint(style: RunStyle): Paint {
     const plain = this.settings.manuscript;
     return {
-      color: plain ? INK : style.link ? LINK_BLUE : style.color ? rgbOf(style.color) : INK,
+      color: plain ? INK : style.link || style.to ? LINK_BLUE : style.color ? rgbOf(style.color) : INK,
       ...(style.highlight && !plain ? { highlight: rgbOf(style.highlight) } : {}),
-      underline: style.underline === true || (style.link !== undefined && !plain),
+      underline: style.underline === true || ((style.link !== undefined || style.to !== undefined) && !plain),
       strike: style.strike === true,
       ...(style.link ? { link: style.link } : {}),
+      ...(style.to ? { goTo: linkPlace(style.to) } : {}),
       ...(style.fill && !plain ? { fill: style.fill, fillId: style.fill } : {}),
     };
   }
@@ -650,6 +656,7 @@ class Layout {
         });
         const first = rows[0];
         if (first) {
+          if (block.anchor) first.places = [block.anchor];
           first.spaceBefore = manuscript
             ? leading(textSize, spacing)
             : ([30, 24, 16, 12, 12][block.level - 1] ?? 12) * scale;
@@ -985,6 +992,7 @@ function drawText(
   if (paint.underline) d.rect(x, y - size * 0.12, atom.width, thickness, lineColor);
   if (paint.strike) d.rect(x, y + size * 0.27, atom.width, thickness, lineColor);
   if (paint.link && !atom.space) d.link(x, y - down, atom.width, up + down, paint.link);
+  if (paint.goTo && !atom.space) d.goTo(x, y - down, atom.width, up + down, paint.goTo);
 }
 
 function drawLine(
@@ -1044,6 +1052,8 @@ export interface LaidOutPdf {
   /** Draws one page, with its page number and running head. */
   drawPage: (index: number, sink: Sink) => void;
   drawnStyles: DrawnStyle[];
+  /** The page and the top of each place that a link between items can go to. */
+  places: ReadonlyMap<string, { page: number; top: number }>;
 }
 
 interface ContentsEntry {
@@ -1287,6 +1297,7 @@ async function layOutOnce(
     const blocks = section.blocks.filter((block) => !repeatsTitle(doc, section, block));
     const sectionRows = await layout.blocks(blocks, { left: 0, right: 0 }, section.form === null);
     const first = sectionRows[0];
+    if (first) first.places = [section.id, ...(first.places ?? [])];
     if (first && book) {
       first.mark = section.id;
       // The text starts on a right-hand page, and each poem on a page of its own.
@@ -1376,6 +1387,11 @@ async function layOutOnce(
   if (book && pages.length % 2 === 1) pages.push({ rows: [], notes: [], notesHeight: 0 });
   const kept = book ? pages : pages.filter((page, index) => index === 0 || page.rows.length > 0);
   for (const [id, index] of markPages) folios.set(id, index - bodyPage + 1);
+  const places = new Map<string, { page: number; top: number }>();
+  kept.forEach((page, index) => {
+    for (const { row, top } of page.rows)
+      for (const name of row.places ?? []) if (!places.has(name)) places.set(name, { page: index, top });
+  });
 
   const plain = await layout.face(bodyFont, false, false);
   const italic = await layout.face(bodyFont, false, true);
@@ -1432,6 +1448,7 @@ async function layOutOnce(
     drawPage,
     drawnStyles: layout.drawnStyles,
     gutter: book ? gutterFor(pagesGuess) : 0,
+    places,
   };
 }
 
@@ -1455,6 +1472,18 @@ export async function layOutPdf(doc: ExportDoc, options: PdfOptions, pdf: PDFDoc
   return laid;
 }
 
+/** The named places of the file, so a link between items opens the page of its item or heading. */
+function addPlaces(pdf: PDFDocument, places: LaidOutPdf['places']): void {
+  if (places.size === 0) return;
+  const { context } = pdf;
+  const dests = context.obj({});
+  for (const [name, { page, top }] of places) {
+    const ref = pdf.getPage(page).ref;
+    dests.set(PDFName.of(name), context.obj([ref, 'XYZ', null, top, null]));
+  }
+  pdf.catalog.set(PDFName.of('Dests'), dests);
+}
+
 /** The PDF file of an export. */
 export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfResult> {
   if (doc.script) return toScriptPdf(doc, doc.script, options);
@@ -1463,6 +1492,7 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
   laid.pages.forEach((_, index) => {
     laid.drawPage(index, new Drawer(pdf, pdf.addPage([...laid.size])));
   });
+  addPlaces(pdf, laid.places);
   const manuscript = doc.book ? undefined : options.manuscript;
   pdf.setTitle(doc.title);
   pdf.setLanguage(doc.language);

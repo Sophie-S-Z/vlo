@@ -69,7 +69,7 @@ export const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     ],
     menus: {
       insert: [
-        { label: 'Notes', tools: ['footnote'] },
+        { label: 'Notes and links', tools: ['footnote', 'item-link'] },
         { label: 'Media', tools: ['image', 'math', 'math-block'] },
         { label: 'Breaks and characters', tools: ['scene-break', 'page-break', 'characters'] },
       ],

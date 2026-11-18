@@ -276,4 +276,17 @@ export class Drawer implements Sink {
     });
     this.page.node.addAnnot(context.register(annot));
   }
+
+  /** A link over a box, to a named place of the file. The file's `Dests` names each place. */
+  goTo(x: number, y: number, width: number, height: number, place: string): void {
+    const { context } = this.pdf;
+    const annot = context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [x, y, x + width, y + height],
+      Border: [0, 0, 0],
+      Dest: PDFName.of(place),
+    });
+    this.page.node.addAnnot(context.register(annot));
+  }
 }

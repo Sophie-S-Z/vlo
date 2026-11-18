@@ -5,8 +5,11 @@ import { DEFAULT_FONT } from '@/features/editor/format/fonts';
 import { stylesOf } from '@/features/editor/format/paragraphStyles';
 import { inText, listTitle, reference, sortReferences } from '@/features/cite/styles';
 import type { BookSettings, CiteStyle, Item, Project, Source } from '@/lib/db';
+import { linkLabel, shownTitle } from '@/features/editor/format/itemLink';
 import {
+  headingsIn,
   runsOf,
+  runsText,
   textBlocks,
   type Block,
   type ExportDoc,
@@ -139,6 +142,32 @@ function citeSections(
   return { missing, cited: cited.size > 0 ? [...cited] : null };
 }
 
+/**
+ * Gives each link to an item its current title (Phase 19, Task F1), and the heading after it when the
+ * export holds the heading. A link keeps its target only when the export holds it, so the text is plain
+ * otherwise. A link to a deleted item keeps the title that it had.
+ */
+function linkSections(sections: readonly ExportSection[], items: readonly Item[]): void {
+  const titles = new Map(items.map((item) => [item.id, item.title]));
+  const held = new Map(
+    sections.map((s) => [
+      s.id,
+      new Map(headingsIn(s.blocks).flatMap((h) => (h.anchor ? [[h.anchor, runsText(h.runs)] as const] : []))),
+    ]),
+  );
+  for (const run of sections.flatMap((s) => runsOf(s.blocks))) {
+    if (run.type !== 'text' || !run.style.to) continue;
+    const { item, heading } = run.style.to;
+    const title = titles.get(item);
+    const headings = held.get(item);
+    const headingText = heading === undefined ? undefined : headings?.get(heading);
+    if (title !== undefined && (heading === undefined || headings !== undefined))
+      run.text = linkLabel(shownTitle(title), headingText);
+    if (!headings) delete run.style.to;
+    else if (heading !== undefined && headingText === undefined) run.style.to = { item };
+  }
+}
+
 /** The id of the place that a References page keeps for the list, until the list is known. */
 const REFERENCES_SLOT = 'references-slot';
 
@@ -223,6 +252,7 @@ export function buildExportDoc({
       : (scoped?.title ?? project.title);
   const language = cleanLanguage(project.settings.language) ?? DEFAULT_LANGUAGE;
   const style = project.settings.citeStyle ?? 'apa';
+  linkSections(sections, items);
   const cites = sources ? citeSections(sections, sources, style) : null;
   const slot = sections.findIndex((s) => s.id === REFERENCES_SLOT);
   if (slot >= 0) {

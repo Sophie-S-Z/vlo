@@ -32,6 +32,8 @@ export interface Sink {
   line: (points: readonly [number, number][], width: number, color: Rgb) => void;
   shape: (points: readonly [number, number][], color: Rgb) => void;
   link: (x: number, y: number, width: number, height: number, url: string) => void;
+  /** A link over a box to a named place of the file, such as the start of an item (Phase 19, Task F1). */
+  goTo: (x: number, y: number, width: number, height: number, place: string) => void;
   /** An image with its lower left corner at (x, y). */
   image: (image: PlacedImage, x: number, y: number, width: number, height: number) => void;
 }
@@ -60,6 +62,9 @@ export function shifted(sink: Sink, dx: number): Sink {
     },
     link: (x, y, width, height, url) => {
       sink.link(x + dx, y, width, height, url);
+    },
+    goTo: (x, y, width, height, place) => {
+      sink.goTo(x + dx, y, width, height, place);
     },
     image: (image, x, y, width, height) => {
       sink.image(image, x + dx, y, width, height);

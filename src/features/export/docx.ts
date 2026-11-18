@@ -15,6 +15,7 @@ import {
   ImageRun,
   HeadingLevel,
   InsertedTextRun,
+  InternalHyperlink,
   LevelFormat,
   LineRuleType,
   Math as MathBlock,
@@ -46,12 +47,14 @@ import {
   bookmarkName,
   boxedItems,
   imageStandIn,
+  linkPlace,
   repeatsTitle,
   runsOf,
   type Align,
   type Block,
   type ExportDoc,
   type ExportImage,
+  type HeadingBlock,
   type ImageBlock,
   type Run,
   type RunStyle,
@@ -240,7 +243,8 @@ function commentLengths(blocks: readonly Block[]): Map<string, number> {
 }
 
 /**
- * A text run as Word parts: a tracked change if it has one, in a link if it has one, and in its comment's
+ * A text run as Word parts: a tracked change if it has one, in a web link or a link to a bookmark of the
+ * file (Phase 19, Task F1) if it has one, and in its comment's
  * range if it has one. A comment's range starts with its first run and ends after its last run in the
  * section, so it can hold more than one paragraph.
  */
@@ -259,6 +263,8 @@ function textParts(run: TextRunModel, ctx: Context, extra: IRunOptions = {}): Pa
     part = change.kind === 'insert' ? new InsertedTextRun(tracked) : new DeletedTextRun(tracked);
   }
   if (run.style.link) part = new ExternalHyperlink({ link: run.style.link, children: [part] });
+  else if (run.style.to)
+    part = new InternalHyperlink({ anchor: bookmarkName(linkPlace(run.style.to)), children: [part] });
   const comment = run.comment;
   if (!comment) return [part];
   const out: ParagraphChild[] = [];
@@ -291,6 +297,12 @@ function textParts(run: TextRunModel, ctx: Context, extra: IRunOptions = {}): Pa
   return out;
 }
 
+/** The parts of a heading, in a bookmark when a link names it (Phase 19, Task F1). */
+function headingParts(block: HeadingBlock, ctx: Context): ParagraphChild[] {
+  const children = inline(block.runs, ctx);
+  return block.anchor ? [new Bookmark({ id: bookmarkName(block.anchor), children })] : children;
+}
+
 function runOptions(style: RunStyle, ctx: Context): IRunOptions {
   const font = wordFontName(style.font);
   let fillStyle: string | undefined;
@@ -312,7 +324,7 @@ function runOptions(style: RunStyle, ctx: Context): IRunOptions {
       : {}),
     ...(font ? { font } : {}),
     ...(style.size !== undefined ? { size: Math.round(TEXT_SIZE * style.size) } : {}),
-    ...(fillStyle ? { style: fillStyle } : style.link ? { style: 'Hyperlink' } : {}),
+    ...(fillStyle ? { style: fillStyle } : style.link || style.to ? { style: 'Hyperlink' } : {}),
   };
 }
 
@@ -444,7 +456,7 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
               ? { pageBreakBefore: true, spacing: { before: ctx.chapterDrop, after: DOUBLE } }
               : {}),
             ...(indent ? { indent } : {}),
-            children: inline(block.runs, ctx),
+            children: headingParts(block, ctx),
           }),
         ];
       }
@@ -454,7 +466,7 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
           ...(block.align ? { alignment: ALIGNMENT[block.align] } : {}),
           ...(indent ? { indent } : {}),
           ...numbering,
-          children: inline(block.runs, ctx),
+          children: headingParts(block, ctx),
         }),
       ];
     case 'sceneBreak':

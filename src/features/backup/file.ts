@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 import { isPoemForm } from '@/features/craft/forms';
 import { isDate } from '@/features/timeline/dates';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
+import { cleanAnchor, cleanItemId } from '@/features/editor/format/itemLink';
 import { cleanParagraphStyles } from '@/features/editor/format/paragraphStyles';
 import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
@@ -83,13 +84,14 @@ import type {
  * and the guide, the word range, the role and the working title switch of a section (Phase 17). A version 14
  * file can also hold the word target of an item (`target`, Phase 19); an older build keeps the row and skips
  * the target. Version 15 adds the Comedy template. Version 16 adds the paragraph styles of the project
- * (`settings.paragraphStyles`, Phase 19, Task E2). Vlo still reads versions 1 to 15.
+ * (`settings.paragraphStyles`, Phase 19, Task E2). Version 17 adds the links between items in the text and
+ * the `links` and `headings` of each text copy (Phase 19, Task F1). Vlo still reads versions 1 to 16.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 16;
+export const BACKUP_VERSION = 17;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -407,6 +409,22 @@ function isWordRange(value: unknown): boolean {
   return ok(range.min) && ok(range.max) && Object.keys(range).every((k) => k === 'min' || k === 'max');
 }
 
+/** The links of a text copy (Phase 19, Task F1): item ids, and headings with a text and an anchor. */
+function isLinkIndex({ links, headings }: Json): boolean {
+  const linksOk =
+    links === undefined || (Array.isArray(links) && links.every((l) => cleanItemId(l) !== null));
+  const headingsOk =
+    headings === undefined ||
+    (Array.isArray(headings) &&
+      headings.every(
+        (h) =>
+          isObject(h) &&
+          typeof h.text === 'string' &&
+          (h.anchor === undefined || cleanAnchor(h.anchor) !== null),
+      ));
+  return linksOk && headingsOk;
+}
+
 function checkItems(rows: Json[], projectId: string): Item[] {
   const ids = new Set<string>();
   for (const row of rows) {
@@ -573,6 +591,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     if (!itemIds.has(id(row, 'itemId', 'A text copy'))) fail(`${DAMAGED} A text copy has no item.`);
     text(row, 'text', 'A text copy');
     count(row, 'updatedAt', 'A text copy');
+    if (!isLinkIndex(row)) fail(`${DAMAGED} A text copy has wrong links.`);
   });
   const views = checkViews(manifest, project.id, itemIds);
   const stageIds = new Set(views.lifeStages.map((stage) => stage.id));

@@ -33,6 +33,11 @@ export interface RunStyle {
   play?: true;
   /** A web address for a link. */
   link?: string;
+  /**
+   * A link to an item of the export by its section id, and to a heading of it by its anchor (Phase 19,
+   * Task F1). The build keeps it only when the export holds the target, so the text is plain otherwise.
+   */
+  to?: { item: string; heading?: string };
 }
 
 /** A waiting suggestion on a text, kept only by a Word export with tracked changes (F45). */
@@ -107,6 +112,8 @@ export interface HeadingBlock {
   level: 1 | 2 | 3 | 4 | 5;
   runs: Run[];
   align?: Align;
+  /** The anchor that a link to the heading names (Phase 19, Task F1). */
+  anchor?: string;
 }
 
 export interface ListBlock {
@@ -304,6 +311,21 @@ export function textBlocks(body: string): ParagraphBlock[] {
           { type: 'text', text: line, style: {} },
         ]),
     }));
+}
+
+/** The headings of some blocks, in reading order, with those in lists and quotes. */
+export function headingsIn(blocks: readonly Block[]): HeadingBlock[] {
+  return blocks.flatMap((block): HeadingBlock[] => {
+    if (block.type === 'heading') return [block];
+    if (block.type === 'list') return block.items.flatMap(headingsIn);
+    if (block.type === 'quote') return headingsIn(block.blocks);
+    return [];
+  });
+}
+
+/** The name of the place that a link to an item or a heading goes to, in a format with links in the file. */
+export function linkPlace(to: NonNullable<RunStyle['to']>): string {
+  return to.heading ?? to.item;
 }
 
 /** Every run of some blocks, in reading order. */

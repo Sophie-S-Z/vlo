@@ -6,7 +6,7 @@ import type { Backup } from '@/features/backup/file';
 import { poemExtensions } from '@/features/editor/extensions/poem';
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { scriptExtensions } from '@/features/editor/extensions/script';
-import { docBody, docText } from '@/features/editor/itemText';
+import { docParts, indexFields } from '@/features/editor/itemText';
 import { parsePoemText, poemDataToJSON } from '@/features/editor/poemText';
 import { newProject } from '@/features/library/projects';
 import { importTextKind, projectDef, type EditorForm } from '@/features/library/templates';
@@ -158,10 +158,16 @@ export function toBackup(source: ImportSource, templates: readonly Template[], n
         const ydoc = prosemirrorJSONToYDoc(editorSchemas[form], doc.toJSON(), YFRAGMENT);
         updates.set(item.id, Y.encodeStateAsUpdate(ydoc));
         ydoc.destroy();
-        const counted = docBody(doc, form);
-        item.wordCount = countWords(counted);
-        if (form === 'poem') item.lineCount = countLines(counted);
-        itemTexts.push({ itemId: item.id, projectId: project.id, text: docText(doc, form), updatedAt: now });
+        const { text, body, index } = docParts(doc, form);
+        item.wordCount = countWords(body);
+        if (form === 'poem') item.lineCount = countLines(body);
+        itemTexts.push({
+          itemId: item.id,
+          projectId: project.id,
+          text,
+          updatedAt: now,
+          ...indexFields(index),
+        });
       }
       items.push(item);
       add(node.children, item.id);

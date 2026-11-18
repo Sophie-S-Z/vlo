@@ -1,5 +1,6 @@
 import { Dexie, type Table } from 'dexie';
 import type { PoemForm } from '@/features/craft/forms';
+import type { HeadingRef } from '@/features/editor/format/itemLink';
 import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
 import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
 import { LIBRARY } from './library';
@@ -532,6 +533,10 @@ export interface ItemText {
   projectId: string;
   text: string;
   updatedAt: number;
+  /** The items that the text links to (Phase 19, Task F1). None when it links to no item. */
+  links?: string[];
+  /** The headings of the text, for the link list. None when it has no heading. */
+  headings?: HeadingRef[];
 }
 
 /** A music file the writer added (plan decision 10). It stays on this device and plays from a blob: URL. */

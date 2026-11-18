@@ -405,6 +405,27 @@ html[data-hide-text][data-hide-keep]
   text-underline-offset: 0.2em;
 }
 
+/* A link to an item (Phase 19, Task F1): the accent color with a dotted line, so it reads apart from a web
+   link. A link to a deleted item is quiet: muted, with a line through it. */
+.vlo-manuscript .vlo-item-link {
+  color: var(--accent-text);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.vlo-manuscript .vlo-item-link.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 0.2em;
+}
+
+.vlo-manuscript .vlo-item-link-broken {
+  color: var(--muted);
+  text-decoration: line-through;
+  cursor: default;
+}
+
 .vlo-manuscript .vlo-math-pending,
 .vlo-manuscript .vlo-math-error {
   font-family: var(--font-mono);

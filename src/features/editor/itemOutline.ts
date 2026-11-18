@@ -69,11 +69,11 @@ export function activeEntry(entries: readonly OutlineEntry[], pos: number): numb
   return entries.findLastIndex((entry) => entry.pos <= pos);
 }
 
-/** Puts the caret at the start of the section and scrolls it near the top of the window. */
-export function goToEntry(editor: Editor, entry: OutlineEntry): void {
+/** Puts the caret at the start of the block at `at` and scrolls it near the top of the window. */
+export function goToBlock(editor: Editor, start: number): void {
   if (editor.isDestroyed) return;
   const { doc, tr } = editor.state;
-  const pos = Math.min(entry.pos, doc.content.size);
+  const pos = Math.min(start, doc.content.size);
   const node = doc.nodeAt(pos);
   // The caret goes into a heading, and after a scene break, which holds no text.
   const at = node && !node.isAtom ? pos + 1 : pos + (node?.nodeSize ?? 0);

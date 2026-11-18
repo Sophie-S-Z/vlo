@@ -33,7 +33,7 @@ test('Insert, Format and Review hold every tool in named groups, and each runs i
   test.skip(isMobile, 'Phones show the same groups in the More menu.');
   await newNovel(page);
   for (const [menu, groups] of [
-    ['Insert', ['Notes', 'Media', 'Breaks and characters']],
+    ['Insert', ['Notes and links', 'Media', 'Breaks and characters']],
     ['Format', ['Text', 'Paragraph', 'Paragraph styles', 'Clear']],
     ['Review', ['Find', 'Listen and speak', 'Checks', 'Show', 'Help']],
   ] as const) {

@@ -12,6 +12,8 @@ import type { BookSettings } from '@/lib/db';
 import {
   imageNames,
   boxedItems,
+  headingsIn,
+  linkPlace,
   paragraphStyleOf,
   imageStandIn,
   repeatsTitle,
@@ -158,6 +160,10 @@ function runStyle(
   return css;
 }
 
+/** The start of the address of a link to an item, until its file is known. */
+const LINK_PLACE = 'vlo-place:';
+const LINK_HREF = new RegExp(`href="${LINK_PLACE}([A-Za-z0-9-]+)"`, 'g');
+
 interface Context {
   /** The notes of the current file, to write as asides at its end. */
   notes: { number: number; note: NoteContent }[];
@@ -229,6 +235,9 @@ function inline(book: Book, runs: readonly Run[], ctx: Context): string {
     }
     if (style.highlight) html = `<mark style="background-color: ${style.highlight}">${html}</mark>`;
     if (style.link) html = `<a href="${xmlText(style.link)}">${html}</a>`;
+    // A link to an item or a heading names its place, and the file and id replace the name once each
+    // file is known (Phase 19, Task F1).
+    else if (style.to) html = `<a href="${LINK_PLACE}${linkPlace(style.to)}">${html}</a>`;
     out += html;
   }
   return out;
@@ -280,7 +289,8 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
     case 'heading': {
       const tag = `h${String(block.level)}`;
       const body = inline(book, block.runs, { ...ctx, bold: true });
-      return `<${tag}${alignStyle(block.align)}>${body}</${tag}>`;
+      const id = block.anchor ? ` id="${block.anchor}"` : '';
+      return `<${tag}${id}${alignStyle(block.align)}>${body}</${tag}>`;
     }
     case 'sceneBreak': {
       const kind = book.doc.book?.sceneBreak;
@@ -374,6 +384,8 @@ function chapters(book: Book): Chapter[] {
   let opening = false;
   let current: Chapter | null = null;
   let notes: { number: number; note: NoteContent }[] = [];
+  /** The file and the id of each item and each linked heading, for the links between items. */
+  const places = new Map<string, string>();
   const close = () => {
     if (!current) return;
     if (notes.length > 0) {
@@ -430,8 +442,16 @@ function chapters(book: Book): Chapter[] {
     const html = blocksHtml(book, blocks, ctx);
     if (html.includes('<math ')) file.math = true;
     file.body += `<section id="${sectionId}" class="${section.form ?? 'folder'}">\n${number}${html}\n</section>\n`;
+    const name = file.file.slice('text/'.length);
+    places.set(section.id, `${name}#${sectionId}`);
+    for (const h of headingsIn(blocks)) if (h.anchor) places.set(h.anchor, `${name}#${h.anchor}`);
   });
   close();
+  for (const chapter of out)
+    chapter.body = chapter.body.replace(
+      LINK_HREF,
+      (_, place: string) => `href="${places.get(place) ?? '#'}"`,
+    );
   return out;
 }
 

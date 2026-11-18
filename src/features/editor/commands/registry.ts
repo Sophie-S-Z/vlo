@@ -78,6 +78,7 @@ import {
   type LucideIcon,
   WandSparkles,
   X,
+  FileSymlink,
 } from 'lucide-react';
 import type { Template } from '@/lib/db';
 import { craftOf, setCraftLabels } from '@/features/craft/craftStore';
@@ -85,6 +86,7 @@ import { craftItemOf } from '@/features/craft/craftSwitch';
 import { showsAliases } from '@/features/people/aliasPreview';
 import { getNames, setShowAliases } from '@/features/people/nameStore';
 import { getCodex, setShowCodexNames } from '@/features/codex/codexStore';
+import { getLinks } from '@/features/links/linkStore';
 import { getWritingPrefs, setWritingPrefs, SPACING, type SpacingKey } from '../writingPrefs';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { ROLE_LABELS, SCRIPT_LINE, SCRIPT_ROLES, type ScriptRole } from '../scriptRoles';
@@ -512,6 +514,19 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     selection: true,
     isActive: (e) => e.isActive('link'),
+  },
+  {
+    kind: 'run',
+    id: 'item-link',
+    label: 'Link to an item',
+    icon: FileSymlink,
+    group: 'insert',
+    forms: PROSE,
+    keywords: ['internal link', 'wiki link', 'cross reference', 'backlink', '[['],
+    slash: true,
+    // Types "[[", which opens the list of items and headings.
+    run: (e) => e.commands.openLinkList(),
+    isEnabled: (e) => e.isEditable && getLinks().projectId !== null,
   },
   // The elements of a script (F63). The toolbar's style menu, the / menu and the command menu list them.
   ...SCRIPT_ROLES.map((role): RunCommand => ({

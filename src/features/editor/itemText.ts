@@ -1,9 +1,11 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { addWordsToDay, dayKey } from '@/features/progress/streaks';
 import { clock } from '@/lib/clock';
-import { db, type Item } from '@/lib/db';
+import { db, type Item, type ItemText } from '@/lib/db';
 import { countLines, countWords } from '@/lib/wordcount';
+import { noteLinkIndex } from '@/features/links/linkStore';
 import { FOOTNOTE } from './extensions/footnote';
+import { linkIndexOf, type LinkIndex } from './format/itemLink';
 import { notesBlock, parseNote, type NoteContent } from './format/notes';
 import { acceptedDoc } from './format/suggestion';
 import { leafText } from './leafText';
@@ -42,36 +44,59 @@ export function docText(doc: ProseMirrorNode, kind: EditorForm): string {
   return docParts(doc, kind).text;
 }
 
-/** The plain text of `docText` and the writing of `docBody`, from one pass over the accepted document. */
-export function docParts(source: ProseMirrorNode, kind: EditorForm): { text: string; body: string } {
+/** What a save of an item keeps: the plain text, the writing that the counts cover, and its links. */
+export interface TextParts {
+  text: string;
+  /** The writing without its notes. The whole text when absent. */
+  body?: string;
+  index?: LinkIndex;
+}
+
+/** The plain text of `docText`, the writing of `docBody` and the links, from the accepted document. */
+export function docParts(source: ProseMirrorNode, kind: EditorForm): Required<TextParts> {
   const doc = acceptedDoc(source);
   const body = bodyOf(doc, kind);
+  const index = linkIndexOf(doc);
   const notes = notesBlock(docNotes(doc));
-  if (notes === '') return { text: body, body };
-  if (kind === 'poem') return { text: `${body}\n${notes}\n`, body };
-  return { text: body === '' ? notes : `${body}\n\n${notes}`, body };
+  if (notes === '') return { text: body, body, index };
+  if (kind === 'poem') return { text: `${body}\n${notes}\n`, body, index };
+  return { text: body === '' ? notes : `${body}\n\n${notes}`, body, index };
+}
+
+/** The link fields of a text copy. An item with no link and no heading keeps neither field. */
+export function indexFields(index: LinkIndex | undefined): Pick<ItemText, 'links' | 'headings'> {
+  return {
+    ...(index?.links.length ? { links: index.links } : {}),
+    ...(index?.headings.length ? { headings: index.headings } : {}),
+  };
 }
 
 /**
- * Stores the plain-text copy of an item (for search and readable backups, ADR 0003), its word count,
- * its line count for poems, the project's last change time, and the change in words for today. `counted`
- * is the part that the counts cover: the writing without its notes. `language` sets the count unit (F38).
+ * Stores the plain-text copy of an item (for search and readable backups, ADR 0003) with its links, its
+ * word count, its line count for poems, the project's last change time, and the change in words for
+ * today. `body` is the part that the counts cover: the writing without its notes. `language` sets the
+ * count unit (F38).
  */
 export async function writeItemText(
   item: Pick<Item, 'id' | 'projectId'>,
-  text: string,
+  { text, body = text, index }: TextParts,
   kind: EditorForm,
-  counted: string = text,
   language?: string,
 ): Promise<void> {
   const now = clock.now();
-  const wordCount = countWords(counted, language);
-  const lineCount = kind === 'poem' ? countLines(counted) : undefined;
-  await db.transaction('rw', [db.itemTexts, db.items, db.projects], async () => {
+  const wordCount = countWords(body, language);
+  const lineCount = kind === 'poem' ? countLines(body) : undefined;
+  const saved = await db.transaction('rw', [db.itemTexts, db.items, db.projects], async () => {
     // The item may have been deleted while the writer paused.
     const before = await db.items.get(item.id);
-    if (!before) return;
-    await db.itemTexts.put({ itemId: item.id, projectId: item.projectId, text, updatedAt: now });
+    if (!before) return false;
+    await db.itemTexts.put({
+      itemId: item.id,
+      projectId: item.projectId,
+      text,
+      updatedAt: now,
+      ...indexFields(index),
+    });
     await db.items.update(item.id, {
       wordCount,
       ...(lineCount === undefined ? {} : { lineCount }),
@@ -90,7 +115,9 @@ export async function writeItemText(
             wordsByDay: addWordsToDay(project.settings.wordsByDay ?? {}, dayKey(now), added),
           };
       });
+    return true;
   });
+  if (saved && index) noteLinkIndex(item.projectId, item.id, index);
 }
 
 /**
@@ -103,9 +130,9 @@ export async function refreshItemText(
   kind: EditorForm,
   language?: string,
 ): Promise<void> {
-  const { text, body } = docParts(doc, kind);
+  const parts = docParts(doc, kind);
   // An empty editor can be one that has not drawn its document yet, so it never replaces a stored copy.
-  if (text === '') return;
+  if (parts.text === '') return;
   const stored = await db.itemTexts.get(item.id);
-  if (stored?.text !== text) await writeItemText(item, text, kind, body, language);
+  if (stored?.text !== parts.text) await writeItemText(item, parts, kind, language);
 }
