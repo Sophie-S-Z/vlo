@@ -2,6 +2,7 @@ import { flattenTree } from '@/features/binder/tree';
 import { cleanLanguage, DEFAULT_LANGUAGE } from '@/lib/language';
 import { projectDef } from '@/features/library/templates';
 import { DEFAULT_FONT } from '@/features/editor/format/fonts';
+import { stylesOf } from '@/features/editor/format/paragraphStyles';
 import { inText, listTitle, reference, sortReferences } from '@/features/cite/styles';
 import type { BookSettings, CiteStyle, Item, Project, Source } from '@/lib/db';
 import {
@@ -243,5 +244,6 @@ export function buildExportDoc({
     ...(book ? { book } : {}),
     ...(isScript(sections) ? { script: project.settings.scriptStyle ?? 'screenplay' } : {}),
     ...(cites?.missing ? { missingSources: cites.missing } : {}),
+    styles: stylesOf(project.settings.paragraphStyles),
   };
 }

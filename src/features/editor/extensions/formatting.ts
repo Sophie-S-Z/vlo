@@ -5,6 +5,7 @@ import Superscript from '@tiptap/extension-superscript';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { cleanFontValue, fontStack, type FontValue } from '../format/fonts';
+import { cleanStyleId } from '../format/paragraphStyles';
 import { swatchVar } from '../format/palette';
 import { TextFillMark } from './textFill';
 import { TypePlayMark } from './typePlay';
@@ -40,6 +41,8 @@ declare module '@tiptap/core' {
       toggleFirstLineIndent: () => ReturnType;
       /** Turns a drop cap on or off for the paragraph at the cursor. */
       toggleDropCap: () => ReturnType;
+      /** Gives each selected block a paragraph style (Phase 19, Task E2). Null returns to body text. */
+      setParagraphStyle: (id: string | null) => ReturnType;
     };
     fontChoice: {
       /** Sets the font of the selection: a Vlo font id, or "local:" and an installed font's name. */
@@ -58,7 +61,7 @@ function isLineSpacing(value: number): value is LineSpacing {
   return (LINE_SPACINGS as readonly number[]).includes(value);
 }
 
-/** Line spacing, first-line indent and drop caps, as attributes on paragraphs and headings. */
+/** Line spacing, first-line indent, drop caps and the paragraph style, as attributes on text blocks. */
 export const BlockStyle = Extension.create({
   name: 'blockStyle',
 
@@ -97,6 +100,14 @@ export const BlockStyle = Extension.create({
             parseHTML: (element) => element.dataset.dropCap === 'true',
             renderHTML: (attributes) => (attributes.dropCap ? { 'data-drop-cap': 'true' } : {}),
           },
+          styleId: {
+            default: null,
+            parseHTML: (element) => cleanStyleId(element.dataset.style),
+            renderHTML: (attributes) => {
+              const id = cleanStyleId(attributes.styleId);
+              return id === null ? {} : { 'data-style': id };
+            },
+          },
         },
       },
     ];
@@ -118,6 +129,14 @@ export const BlockStyle = Extension.create({
         () =>
         ({ editor, commands }) =>
           commands.updateAttributes('paragraph', { dropCap: !editor.getAttributes('paragraph').dropCap }),
+      // A heading becomes a paragraph first. setParagraph on a paragraph would take it out of its list.
+      setParagraphStyle:
+        (id) =>
+        ({ editor, chain }) => {
+          const next = chain();
+          if (editor.isActive('heading')) next.setParagraph();
+          return next.updateAttributes('paragraph', { styleId: id }).run();
+        },
     };
   },
 });

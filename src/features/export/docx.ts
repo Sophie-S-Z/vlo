@@ -28,6 +28,7 @@ import {
   TabStopType,
   TextRun,
   type ICommentOptions,
+  type IParagraphStyleOptions,
   type IRunOptions,
   type NumberingDefinition,
   type ParagraphChild,
@@ -36,6 +37,7 @@ import JSZip from 'jszip';
 import type { TextFill } from '@/features/editor/format/fill';
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
+import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
 import { textDirection } from '@/lib/language';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manuscript';
@@ -158,6 +160,8 @@ interface Context {
   textHeight: number;
   /** The images so far, for the name that Word shows in its Selection Pane. */
   imageCount: number;
+  /** The Word style id of each paragraph style of the project (Phase 19, Task E2). */
+  styleIds: ReadonlyMap<string, string>;
 }
 
 /** An italic run of plain text. */
@@ -392,8 +396,10 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
           }),
         ];
       }
+      const style = block.style === undefined ? undefined : ctx.styleIds.get(block.style);
       const options = {
         ...numbering,
+        ...(style ? { style } : {}),
         ...(block.align ? { alignment: ALIGNMENT[block.align] } : {}),
         ...(block.lineSpacing !== undefined
           ? { spacing: { line: Math.round(EM * block.lineSpacing), lineRule: LineRuleType.AUTO } }
@@ -584,8 +590,42 @@ function languageStyle(language: string) {
   };
 }
 
-/** The heading, run and paragraph styles: Vlo's look, or plain 12 pt text for standard manuscript format. */
-function styles(font: string, manuscript: boolean, language: string) {
+/** The Word id of a paragraph style. */
+function wordStyleId(id: string): string {
+  return `VloStyle-${id}`;
+}
+
+/** A paragraph style of the project as a real Word paragraph style, which Word lists by its name. */
+function wordStyle(style: ParagraphStyle): IParagraphStyleOptions {
+  const font = wordFontName(style.font);
+  const twips = (em: number) => Math.round(em * EM);
+  const spacing = {
+    ...(style.before !== undefined ? { before: twips(style.before) } : {}),
+    ...(style.after !== undefined ? { after: twips(style.after) } : {}),
+  };
+  return {
+    id: wordStyleId(style.id),
+    name: style.name,
+    basedOn: 'Normal',
+    quickFormat: true,
+    run: {
+      ...(font ? { font } : {}),
+      ...(style.size !== undefined ? { size: Math.round(TEXT_SIZE * style.size) } : {}),
+      ...(style.italic ? { italics: true } : {}),
+    },
+    paragraph: {
+      ...(style.align ? { alignment: ALIGNMENT[style.align] } : {}),
+      ...(style.indent !== undefined ? { indent: { left: twips(style.indent) } } : {}),
+      ...(Object.keys(spacing).length > 0 ? { spacing } : {}),
+    },
+  };
+}
+
+/**
+ * The heading, run and paragraph styles: Vlo's look with the project's paragraph styles, or plain 12 pt
+ * text for standard manuscript format.
+ */
+function styles(font: string, manuscript: boolean, language: string, own: readonly ParagraphStyle[]) {
   const ink = '1F1D1B';
   const lang = languageStyle(language);
   if (manuscript) {
@@ -657,6 +697,7 @@ function styles(font: string, manuscript: boolean, language: string) {
         basedOn: 'Normal',
         paragraph: { spacing: { after: 0, line: 276 } },
       },
+      ...own.map(wordStyle),
     ],
   };
 }
@@ -727,6 +768,8 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     textWidth,
     textHeight,
     imageCount: 0,
+    // Standard manuscript format keeps one plain look, so it has no paragraph styles.
+    styleIds: new Map(setup ? [] : (doc.styles ?? []).map((s) => [s.id, wordStyleId(s.id)])),
   };
   const font = wordFontName(doc.font) ?? 'Newsreader';
 
@@ -769,7 +812,7 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
   const document = new Document({
     title: doc.title,
     ...(setup ? { creator: setup.name } : doc.author ? { creator: doc.author } : {}),
-    styles: styles(font, setup !== undefined, doc.language),
+    styles: styles(font, setup !== undefined, doc.language, setup ? [] : (doc.styles ?? [])),
     numbering: { config: numberingConfig(doc) },
     ...(ctx.comments.length > 0 ? { comments: { children: ctx.comments } } : {}),
     sections: [

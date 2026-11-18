@@ -20,6 +20,7 @@ import {
   CaseSensitive,
   CaseUpper,
   Clapperboard,
+  CopyPlus,
   ClipboardType,
   Drum,
   Heading2,
@@ -53,8 +54,10 @@ import {
   Quote,
   Replace,
   Redo2,
+  RefreshCw,
   RemoveFormatting,
   Sigma,
+  SlidersHorizontal,
   Speech,
   SpellCheck,
   SpellCheck2,
@@ -93,6 +96,10 @@ import { getGrammarPrefs, setGrammarOn } from '@/features/grammar/grammarPrefs';
 import { canShowPartsOfSpeech } from '../extensions/partsOfSpeech';
 import { getPosPrefs, setPosOn } from '@/features/pos/posPrefs';
 import { rimshot } from '../rimshot';
+import { getWriterTools } from '../writerTools';
+import type { ParagraphStyle } from '../format/paragraphStyles';
+import { findStyle, getParagraphStyles } from '../format/paragraphStyleStore';
+import { styleAt, updateStyleToMatch } from '../paragraphStyleTools';
 import { changesOf } from '../extensions/suggestion';
 import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
@@ -129,6 +136,8 @@ export type PanelId =
   | 'cite'
   | 'image'
   | 'thesaurus'
+  | 'style-new'
+  | 'style-edit'
   | 'shortcuts';
 
 export type CommandGroup =
@@ -527,8 +536,9 @@ export const COMMANDS: readonly EditorCommand[] = [
     keys: 'Mod-Alt-0',
     keywords: ['paragraph', 'normal', 'plain'],
     slash: true,
-    run: (e) => e.commands.setParagraph(),
-    isActive: (e) => e.isActive('paragraph'),
+    // Body text has no paragraph style.
+    run: (e) => e.chain().setParagraph().updateAttributes('paragraph', { styleId: null }).run(),
+    isActive: (e) => e.isActive('paragraph') && findStyle(e.getAttributes('paragraph').styleId) === undefined,
   },
   {
     kind: 'run',
@@ -741,6 +751,42 @@ export const COMMANDS: readonly EditorCommand[] = [
     slash: true,
     run: (e) => e.commands.toggleDropCap(),
     isActive: (e) => e.getAttributes('paragraph').dropCap === true,
+  },
+  {
+    kind: 'run',
+    id: 'style-update',
+    label: 'Update the style to match',
+    icon: RefreshCw,
+    group: 'paragraph',
+    forms: PROSE,
+    keywords: ['paragraph style', 'redefine style', 'match selection'],
+    slash: true,
+    run: updateStyleToMatch,
+    isEnabled: (e) => styleAt(e) !== undefined,
+  },
+  {
+    kind: 'panel',
+    id: 'style-new',
+    label: 'New style from this paragraph',
+    icon: CopyPlus,
+    group: 'paragraph',
+    forms: PROSE,
+    keywords: ['paragraph style', 'create style', 'save style'],
+    slash: true,
+    panel: 'style-new',
+    isEnabled: (e) => e.isActive('paragraph') || e.isActive('heading'),
+  },
+  {
+    kind: 'panel',
+    id: 'style-edit',
+    label: 'Change this style',
+    icon: SlidersHorizontal,
+    group: 'paragraph',
+    forms: PROSE,
+    keywords: ['paragraph style', 'modify style', 'rename style', 'delete style'],
+    slash: true,
+    panel: 'style-edit',
+    isEnabled: (e) => styleAt(e) !== undefined,
   },
   {
     kind: 'run',
@@ -1316,6 +1362,11 @@ export const COMMANDS: readonly EditorCommand[] = [
 
 const byId = new Map(COMMANDS.map((c) => [c.id, c]));
 
+/** The command with this id, or undefined, for an id from storage. */
+export function findCommand(id: string): EditorCommand | undefined {
+  return byId.get(id);
+}
+
 /** The command with this id. Throws for an unknown id, so a typo fails in tests and not for a writer. */
 export function command(id: string): EditorCommand {
   const found = byId.get(id);
@@ -1323,14 +1374,40 @@ export function command(id: string): EditorCommand {
   return found;
 }
 
+/** The command's key now: the writer's own key (Phase 19, Task E1), else Vlo's. Undefined for no key. */
+export function keysOf(cmd: EditorCommand, own = getWriterTools().keys): string | undefined {
+  const key = own[cmd.id];
+  return key === undefined ? cmd.keys : key || undefined;
+}
+
 /** True when a project of these templates offers the command: one of them is enough. */
 export function offeredIn(cmd: EditorCommand, templates: readonly Template[] | undefined): boolean {
   return cmd.templates === undefined || (templates?.some((t) => cmd.templates?.includes(t)) ?? false);
 }
 
-/** The commands that this form offers in a project of these templates, in registry order. */
+/** The tool that gives the selected paragraphs a style of the open project (Phase 19, Task E2). */
+export function styleCommand(style: ParagraphStyle): RunCommand {
+  return {
+    kind: 'run',
+    id: `paragraph-style:${style.id}`,
+    label: style.name,
+    icon: Pilcrow,
+    group: 'block',
+    forms: PROSE,
+    keywords: ['paragraph style', 'style'],
+    slash: true,
+    run: (e) => e.commands.setParagraphStyle(style.id),
+    isActive: (e) => e.isActive('paragraph', { styleId: style.id }),
+  };
+}
+
+/**
+ * The commands that this form offers in a project of these templates, in registry order. Prose ends with
+ * the open project's paragraph styles.
+ */
 export function commandsFor(form: EditorForm, templates?: readonly Template[]): EditorCommand[] {
-  return COMMANDS.filter((c) => c.forms.includes(form) && offeredIn(c, templates));
+  const own = COMMANDS.filter((c) => c.forms.includes(form) && offeredIn(c, templates));
+  return form === 'prose' ? [...own, ...getParagraphStyles().map(styleCommand)] : own;
 }
 
 /** True when `query` finds the command by its label or a keyword. Every query word must match. */

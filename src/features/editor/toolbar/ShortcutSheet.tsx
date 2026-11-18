@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import { shortcutLabel } from '../commands/keys';
-import { GROUP_LABELS, commandsFor, type CommandGroup, type EditorForm } from '../commands/registry';
+import { GROUP_LABELS, commandsFor, keysOf, type CommandGroup, type EditorForm } from '../commands/registry';
+import { useWriterTools } from '../writerTools';
 
 /* Mod-/ lists every shortcut. Format keys come from the command registry, so this sheet never drifts. */
 
@@ -59,11 +60,13 @@ function Table({ title, rows }: { title: string; rows: readonly Row[] }) {
 }
 
 export function ShortcutSheet({ form }: { form: EditorForm }) {
+  const own = useWriterTools().keys;
   const groups = new Map<CommandGroup, Row[]>();
   for (const cmd of commandsFor(form)) {
-    if (!cmd.keys) continue;
+    const keys = keysOf(cmd, own);
+    if (!keys) continue;
     const rows = groups.get(cmd.group) ?? [];
-    rows.push({ keys: cmd.keys, action: cmd.label });
+    rows.push({ keys, action: cmd.label });
     groups.set(cmd.group, rows);
   }
   return (

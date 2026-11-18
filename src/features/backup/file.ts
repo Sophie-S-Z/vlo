@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 import { isPoemForm } from '@/features/craft/forms';
 import { isDate } from '@/features/timeline/dates';
 import { DOC_SCHEMA, docSchema } from '@/features/editor/docSchema';
+import { cleanParagraphStyles } from '@/features/editor/format/paragraphStyles';
 import { BOOK_TEXTS } from '@/features/book/book';
 import { buildExportDoc, exportFileName } from '@/features/export/build';
 import { toMarkdown } from '@/features/export/markdown';
@@ -81,13 +82,14 @@ import type {
  * images in the text (`images`, Phase 16). Version 14 adds the Essay, Article and Research paper templates
  * and the guide, the word range, the role and the working title switch of a section (Phase 17). A version 14
  * file can also hold the word target of an item (`target`, Phase 19); an older build keeps the row and skips
- * the target. Version 15 adds the Comedy template. Vlo still reads versions 1 to 14.
+ * the target. Version 15 adds the Comedy template. Version 16 adds the paragraph styles of the project
+ * (`settings.paragraphStyles`, Phase 19, Task E2). Vlo still reads versions 1 to 15.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
 
 export const BACKUP_FORMAT = 'vlo-backup';
 /** Raise it when the file layout changes in a way that an older build cannot read. */
-export const BACKUP_VERSION = 15;
+export const BACKUP_VERSION = 16;
 export const BACKUP_EXTENSION = '.vlo.zip';
 
 export type MusicInfo = Omit<AudioFile, 'data'>;
@@ -373,6 +375,12 @@ function checkProject(value: unknown): Project {
       typeof book.contents === 'boolean' &&
       BOOK_TEXTS.every((key) => typeof book[key] === 'string' && book[key].length <= MAX_BOOK_TEXT)
     )
+  )
+    fail(`${DAMAGED} The project settings are wrong.`);
+  const styles: unknown = settings.paragraphStyles;
+  if (
+    styles !== undefined &&
+    (!Array.isArray(styles) || cleanParagraphStyles(styles)?.length !== styles.length)
   )
     fail(`${DAMAGED} The project settings are wrong.`);
   const followUp = settings.followUpDays;

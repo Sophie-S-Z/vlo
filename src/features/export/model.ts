@@ -4,6 +4,7 @@ import type { ScriptRole } from '@/features/editor/scriptRoles';
 import type { BookSettings, ScriptStyle } from '@/lib/db';
 import type { EditorForm } from '@/features/library/templates';
 import type { ImageAlign, ImageWidth } from '@/features/images/attrs';
+import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
 
 /*
  * The export tree (plan Part B). Every exporter reads this one tree, never the editor or the Yjs
@@ -96,6 +97,8 @@ export interface ParagraphBlock {
   dropCap?: true;
   /** The element of a script line (F63). The text of a capital role is in capitals already. */
   role?: ScriptRole;
+  /** The id of its paragraph style in `ExportDoc.styles` (Phase 19, Task E2). */
+  style?: string;
 }
 
 export interface HeadingBlock {
@@ -215,6 +218,13 @@ export interface ExportDoc {
   missingSources?: number;
   /** The bytes of each image in the text, by id (Phase 16). An image with no entry is not on this device. */
   images?: Readonly<Record<string, ExportImage>>;
+  /** The project's paragraph styles (Phase 19, Task E2). Word, PDF and EPUB use them. */
+  styles?: readonly ParagraphStyle[];
+}
+
+/** The paragraph style of a block, or undefined for body text or a style that the project no longer has. */
+export function paragraphStyleOf(doc: ExportDoc, block: ParagraphBlock): ParagraphStyle | undefined {
+  return block.style === undefined ? undefined : doc.styles?.find((s) => s.id === block.style);
 }
 
 /** The image blocks of some blocks, in reading order. */
