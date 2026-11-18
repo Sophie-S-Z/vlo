@@ -23,7 +23,7 @@ export function AppShell() {
   const mainRef = useRef<HTMLElement>(null);
   // The project screen has up to three columns, so it uses the full window width.
   const wide = useMatch('/p/:projectId') !== null;
-  const width = wide ? 'max-w-[110rem]' : 'max-w-5xl';
+  const width = wide ? 'max-w-none' : 'max-w-5xl';
   const { pathname } = useLocation();
   const firstPath = useRef(true);
   // A screen's code loads on its first visit. While it loads, a line at the top shows that Vlo is working.

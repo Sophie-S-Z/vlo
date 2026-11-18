@@ -101,9 +101,9 @@ export interface SavedLook extends PageLook {
 export const MAX_LOOKS = 6;
 export const MAX_LOOK_NAME = 40;
 export const PAGE_WIDTH_MIN = 56;
-export const PAGE_WIDTH_MAX = 120;
+export const PAGE_WIDTH_MAX = 160;
 export const PAGE_WIDTH_STEP = 2;
-const PAGE_WIDTH_DEFAULT = 80;
+const PAGE_WIDTH_DEFAULT = 100;
 /** The page width from before Phase 19, when the details panel kept it under its own key. */
 const OLD_WIDTH_KEY = 'vlo:pageWidth';
 
