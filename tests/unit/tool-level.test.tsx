@@ -62,8 +62,8 @@ describe.each<EditorForm>(['prose', 'poem'])('the %s toolbar', (form) => {
       (name) => !reachable.has(name) && !/^(Text style|Mode):|^(Insert|Format|Review)$/.test(name),
     );
     expect(missing).toEqual([]);
-    expect(full.more.at(-1)).toBe('Show fewer tools');
-    expect(simple.more.at(-1)).toBe('Show all tools');
+    expect(full.more.slice(-2)).toEqual(['Show fewer tools', 'Customize toolbar']);
+    expect(simple.more.slice(-2)).toEqual(['Show all tools', 'Customize toolbar']);
   });
 });
 

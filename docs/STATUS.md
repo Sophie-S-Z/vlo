@@ -14,7 +14,25 @@ Last update: 2026-11-18
   - AI modes are off on each device until the writer turns on Offer AI modes in Settings, under AI. Until
     then the mode dialog offers Pen only, and says where to turn the modes on. A project that is in an AI
     mode keeps its mode and can go back to Pen. Co-writer is now Drafting; the stored value stays
-    `cowriter`, so backups and sync need no change. AI policy version 3 and privacy version 20.
+    `cowriter`, so backups and sync need no change. AI policy version 3 and privacy version 21.
+
+- Phase 19, Part E: the writer's own tools (2026-11-18, `docs/plans/phase-19.md`, ADR 0013, migration 0015):
+  - Customize toolbar (at the end of Insert, Format, Review and More tools) pins any tool of the form on
+    the toolbar, in the writer's order, by drag or by the arrows. A pinned tool stays in its menu. A phone
+    shows the first four pinned tools, and the More menu lists the others. Reset puts Vlo's tools back.
+  - Settings, Keyboard gives a tool a new key, takes a key away, or puts Vlo's key back. A key that another
+    tool or the browser uses asks first. The menus, the / menu and the shortcut sheet show the writer's keys.
+  - The toolbar and the keys stay on the device (`vlo:writer-tools`) and go with the account: migration
+    0015 adds the closed `writer_settings` table and its two calls, and the newer copy wins. Privacy
+    version 20.
+  - Paragraph styles with names: each project starts with Epigraph, Letter, Text message, Song lyrics and
+    Sign. A style has a name, a font, a size, an alignment, an indent, the space before and after, and
+    italic. The Text style menu, Format, Paragraph styles, the block handle, the / menu and the command
+    menu apply a style. Change this style, Update the style to match and New style from this paragraph
+    work as in Word, and each paragraph with the style follows a change. A format that the writer gives a
+    paragraph directly wins. Document schema 14, backup 16.
+  - Word exports write real Word paragraph styles with the same names. PDF, EPUB and the book layout use
+    the style values. Standard manuscript format and Markdown keep the text only.
 
 - Leaderboard, comedy and spacing (2026-11-17, ADR 0012, migration 0013), from the product owner's ask:
   - `/leaderboard`: the signed-in writers who wrote the most words today, this week, this month and this

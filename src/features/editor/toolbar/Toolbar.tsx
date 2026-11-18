@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Toolbar as ToolbarPrimitive } from 'radix-ui';
-import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/ui/cn';
 import {
   DropdownMenu,
@@ -25,17 +25,38 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
-import { shortcutLabel } from '../commands/keys';
 import { focusText, getPanelRequest, runCommand, type PanelAnchor } from '../commands/editorBus';
 import type { Template } from '@/lib/db';
-import { command, commandsFor, type EditorCommand, type EditorForm } from '../commands/registry';
+import {
+  command,
+  commandsFor,
+  keysOf,
+  styleCommand,
+  type EditorCommand,
+  type EditorForm,
+} from '../commands/registry';
+import { useParagraphStyles } from '../format/paragraphStyleStore';
 import { MAX_HANGING_EM } from '../extensions/poem';
-import { SCRIPT_ROLES } from '../scriptRoles';
 import { modeOf, setMode, useTracking, type EditMode } from '../trackingStore';
 import { setWritingPrefs, useWritingPrefs } from '../writingPrefs';
-import { ToolButton, toolClass } from './ToolButton';
+import { useWriterTools } from '../writerTools';
+import {
+  LAYOUTS,
+  MENU_IDS,
+  MENU_LABELS,
+  pinnableTools,
+  pinnedSegments,
+  withOwnTools,
+  type MenuId,
+  type Section,
+  type Segment,
+} from './toolbarLayout';
+import { KeyHint, ToolButton, toolClass } from './ToolButton';
 import { NO_STATE, useCommandState, type CommandState } from './useCommandState';
 
 /*
@@ -48,184 +69,21 @@ import { NO_STATE, useCommandState, type CommandState } from './useCommandState'
  * Focus mode hides the bar (data-chrome).
  */
 
-interface Segment {
-  /** Tools shown as buttons. */
-  tools: readonly string[];
-  /** Under 640 px these buttons hide and show in the More menu instead. */
-  wide?: boolean;
-}
-
-/** A named group of tools in a menu. */
-interface Section {
-  label: string;
-  tools: readonly string[];
-}
-
-type MenuId = 'insert' | 'format' | 'review';
-
-interface Layout {
-  /** The block style menu. */
-  blockMenu: readonly string[];
-  segments: readonly Segment[];
-  menus: Readonly<Record<MenuId, readonly Section[]>>;
-}
-
-const FIND: Section = { label: 'Find', tools: ['find', 'replace'] };
-const WORDS: Section = { label: 'Words', tools: ['thesaurus'] };
-const LISTEN: Section = { label: 'Listen and speak', tools: ['read-aloud', 'speak'] };
-const CHECKS: Section = {
-  label: 'Checks',
-  tools: ['grammar-check', 'style-check', 'continuity-check', 'track-changes'],
-};
-const COMMENTS: Section = {
-  label: 'Comments and changes',
-  tools: ['all-comments', 'accept-all-changes', 'reject-all-changes'],
-};
-const SHOW: Section = { label: 'Show', tools: ['show-ai-text', 'show-codex-names', 'parts-of-speech'] };
-const HELP: Section = { label: 'Help', tools: ['print', 'shortcuts'] };
-const REVIEW: readonly Section[] = [FIND, WORDS, LISTEN, CHECKS, COMMENTS, SHOW, HELP];
-/** Prose keeps Spacing with its paragraph tools. A poem and a script have no paragraph tools. */
-const SPACE: Section = { label: 'Spacing', tools: ['spacing'] };
-/** Change case, in every form. Shift-F3 steps through the same cases. */
-const CASE: Section = { label: 'Case', tools: ['case-upper', 'case-lower', 'case-title', 'case-sentence'] };
-
-const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
-  prose: {
-    blockMenu: [
-      'paragraph',
-      'heading-2',
-      'heading-3',
-      'heading-4',
-      'quote',
-      'bullets',
-      'numbers',
-      'checklist',
-    ],
-    segments: [
-      { tools: ['undo', 'redo'] },
-      { tools: ['bold', 'italic'] },
-      { tools: ['link', 'comment'], wide: true },
-    ],
-    menus: {
-      insert: [
-        { label: 'Notes', tools: ['footnote'] },
-        { label: 'Media', tools: ['image', 'math', 'math-block'] },
-        { label: 'Breaks and characters', tools: ['scene-break', 'page-break', 'characters'] },
-      ],
-      format: [
-        {
-          label: 'Text',
-          tools: [
-            'underline',
-            'strike',
-            'font',
-            'size',
-            'type-play',
-            'color',
-            'highlight',
-            'gradient',
-            'superscript',
-            'subscript',
-            'paint-format',
-          ],
-        },
-        CASE,
-        {
-          label: 'Paragraph',
-          tools: [
-            'align-left',
-            'align-center',
-            'align-right',
-            'align-justify',
-            'spacing',
-            'first-line-indent',
-            'drop-cap',
-          ],
-        },
-        { label: 'Clear', tools: ['clear'] },
-      ],
-      review: REVIEW,
-    },
-  },
-  poem: {
-    blockMenu: [],
-    segments: [
-      { tools: ['undo', 'redo'] },
-      { tools: ['bold', 'italic'], wide: true },
-      { tools: ['comment'], wide: true },
-    ],
-    menus: {
-      insert: [
-        { label: 'Notes', tools: ['footnote'] },
-        { label: 'Media', tools: ['math'] },
-        { label: 'Characters', tools: ['characters'] },
-      ],
-      format: [
-        {
-          label: 'Text',
-          tools: [
-            'underline',
-            'strike',
-            'font',
-            'size',
-            'type-play',
-            'color',
-            'highlight',
-            'gradient',
-            'superscript',
-            'subscript',
-            'paint-format',
-          ],
-        },
-        CASE,
-        SPACE,
-        { label: 'Clear', tools: ['clear'] },
-      ],
-      review: REVIEW,
-    },
-  },
-  script: {
-    blockMenu: SCRIPT_ROLES.map((role) => `role-${role}`),
-    segments: [
-      { tools: ['undo', 'redo'] },
-      { tools: ['bold', 'italic'] },
-      { tools: ['comment'], wide: true },
-    ],
-    menus: {
-      insert: [{ label: 'Characters', tools: ['characters'] }],
-      format: [{ label: 'Text', tools: ['underline'] }, CASE, SPACE, { label: 'Clear', tools: ['clear'] }],
-      review: REVIEW,
-    },
-  },
-};
-
-const MENU_LABELS: Readonly<Record<MenuId, string>> = {
-  insert: 'Insert',
-  format: 'Format',
-  review: 'Review',
-};
-const MENU_IDS: readonly MenuId[] = ['insert', 'format', 'review'];
-
 const MODES: readonly { value: EditMode; label: string; icon: LucideIcon; hint: string }[] = [
   { value: 'editing', label: 'Editing', icon: PenLine, hint: 'Change the text directly' },
   { value: 'suggesting', label: 'Suggesting', icon: FilePenLine, hint: 'Each change waits for Accept' },
   { value: 'viewing', label: 'Viewing', icon: Eye, hint: 'Read the text with no changes' },
 ];
 
+const CustomizeToolbar = lazy(async () => ({
+  default: (await import('./CustomizeToolbar')).CustomizeToolbar,
+}));
+
 /** Phones show no separators: the phone tools then fit one row at 360 px. */
 function Separator({ className }: { className?: string }) {
   return (
     <ToolbarPrimitive.Separator className={cn('mx-0.5 h-6 w-px shrink-0 bg-rule max-sm:hidden', className)} />
   );
-}
-
-/** The menus with each tool of this template only, such as the private-name tools of a memoir. */
-function withOwnTools(menus: Layout['menus'], own: readonly EditorCommand[]): Layout['menus'] {
-  const insert = own.filter((c) => c.group === 'insert').map((c) => c.id);
-  const review = own.filter((c) => c.group !== 'insert').map((c) => c.id);
-  const add = (sections: readonly Section[], tools: string[]) =>
-    tools.length > 0 ? [...sections, { label: 'For this project', tools }] : sections;
-  return { insert: add(menus.insert, insert), format: menus.format, review: add(menus.review, review) };
 }
 
 /** The formatting toolbar. */
@@ -250,19 +108,21 @@ export function Toolbar({
       ),
     [layout, kind, templates],
   );
-  const all = useMemo(() => {
-    const ids = [
-      ...layout.blockMenu,
-      ...layout.segments.flatMap((s) => s.tools),
-      ...MENU_IDS.flatMap((id) => menus[id].flatMap((s) => s.tools)),
-      ...(kind === 'poem' ? ['hang-less', 'hang-more'] : []),
-    ];
-    return ids.map(command);
-  }, [layout, menus, kind]);
+  const own = useWriterTools();
+  const pinnable = useMemo(() => pinnableTools(kind, menus), [kind, menus]);
+  const all = useMemo(
+    () => [...pinnable, ...(kind === 'poem' ? ['hang-less', 'hang-more'] : [])].map(command),
+    [pinnable, kind],
+  );
+  const shown = useMemo(
+    () => (own.toolbar ? pinnedSegments(own.toolbar, new Set(pinnable)) : layout.segments),
+    [own.toolbar, pinnable, layout],
+  );
+  const [customizing, setCustomizing] = useState(false);
   const state = useCommandState(editor, all);
   const at = (id: string) => state[id] ?? NO_STATE;
   // A tool chosen from a menu runs after the menu has closed and given focus back.
-  const pending = useRef<EditorCommand | null>(null);
+  const pending = useRef<EditorCommand | 'customize' | null>(null);
 
   const run = (cmd: EditorCommand, anchor: PanelAnchor) => {
     runCommand(editor, cmd, anchor);
@@ -271,7 +131,11 @@ export function Toolbar({
     const next = pending.current;
     pending.current = null;
     event.preventDefault();
-    if (next) run(next, anchor ?? 'caret');
+    if (next === 'customize') {
+      // The dialog gives focus back to the menu button when it closes.
+      anchor?.focus();
+      setCustomizing(true);
+    } else if (next) run(next, anchor ?? 'caret');
     // A menu closed with no choice gives focus back to the text, unless a panel is open.
     else if (getPanelRequest()?.editor !== editor) focusText(editor);
   };
@@ -286,10 +150,16 @@ export function Toolbar({
     }
   };
 
+  // A paragraph with a style names its style, as in Word.
+  const styles = useParagraphStyles();
+  const styleId = useStyleId(editor, kind);
+  const style = styles.find((s) => s.id === styleId);
   const blockLabel =
-    layout.blockMenu.map(command).find((c) => at(c.id).active)?.label ?? command('paragraph').label;
-  const wideTools = layout.segments.filter((s) => s.wide).flatMap((s) => s.tools);
-  const segments = simple ? layout.segments.filter((s) => !s.wide) : layout.segments;
+    style?.name ??
+    layout.blockMenu.map(command).find((c) => at(c.id).active)?.label ??
+    command('paragraph').label;
+  const wideTools = shown.filter((s) => s.wide).flatMap((s) => s.tools);
+  const segments = simple ? shown.filter((s) => !s.wide) : shown;
 
   const menuItem = (id: string) => {
     const cmd = command(id);
@@ -299,11 +169,7 @@ export function Toolbar({
       <>
         <Icon aria-hidden="true" className="size-4 text-muted" />
         <span className="flex-1">{cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label}</span>
-        {cmd.keys && (
-          <span aria-hidden="true" className="tabular-nums text-xs text-muted">
-            {shortcutLabel(cmd.keys)}
-          </span>
-        )}
+        <KeyHint keys={keysOf(cmd, own.keys)} />
       </>
     );
     // Every tool waits until the menu has closed and given focus back. A tool that opens a panel, such as
@@ -323,12 +189,32 @@ export function Toolbar({
     );
   };
 
+  /** One item for each paragraph style of the project, checked at the paragraph that has it. */
+  const styleItems = () =>
+    styles.map((s) => (
+      <DropdownMenuCheckboxItem
+        key={s.id}
+        checked={s.id === styleId}
+        onSelect={() => {
+          pending.current = styleCommand(s);
+        }}
+      >
+        {s.name}
+      </DropdownMenuCheckboxItem>
+    ));
+
   const sections = (list: readonly Section[]) =>
     list.map((section, i) => (
       <Fragment key={section.label}>
         {i > 0 && <DropdownMenuSeparator />}
         <DropdownMenuGroup aria-label={section.label}>
           <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+          {section.styles && styles.length > 0 && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="pl-9">Apply a style</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent aria-label="Paragraph styles">{styleItems()}</DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
           {section.tools.map((id) => menuItem(id))}
         </DropdownMenuGroup>
       </Fragment>
@@ -355,6 +241,17 @@ export function Toolbar({
     );
   const ModeIcon = MODES.find((m) => m.value === mode)?.icon ?? PenLine;
   const modeLabel = MODES.find((m) => m.value === mode)?.label ?? 'Editing';
+
+  const customizeItem = (
+    <DropdownMenuItem
+      className="pl-9"
+      onSelect={() => {
+        pending.current = 'customize';
+      }}
+    >
+      Customize toolbar…
+    </DropdownMenuItem>
+  );
 
   const levelSwitch = (
     <DropdownMenuItem
@@ -390,12 +287,22 @@ export function Toolbar({
               label={`Text style: ${blockLabel}`}
               title="Text style"
               triggerClass="w-auto gap-1 px-2 text-sm text-text pointer-fine:w-auto"
+              contentClass="max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
               onClose={(event) => {
                 closeMenu(event, null);
               }}
               editor={editor}
             >
               {layout.blockMenu.map((id) => menuItem(id))}
+              {kind === 'prose' && styles.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup aria-label="Paragraph styles">
+                    <DropdownMenuLabel>Paragraph styles</DropdownMenuLabel>
+                    {styleItems()}
+                  </DropdownMenuGroup>
+                </>
+              )}
             </ToolMenu>
           </>
         )}
@@ -449,12 +356,9 @@ export function Toolbar({
                 editor={editor}
               >
                 {sections(menus[id])}
-                {id === 'review' && (
-                  <>
-                    <DropdownMenuSeparator />
-                    {levelSwitch}
-                  </>
-                )}
+                <DropdownMenuSeparator />
+                {id === 'review' && levelSwitch}
+                {customizeItem}
               </ToolMenu>
             ))}
             {modeChoices && (
@@ -523,6 +427,7 @@ export function Toolbar({
             </>
           )}
           {levelSwitch}
+          {customizeItem}
         </ToolMenu>
         {/* Only while a phone keyboard is open (phoneTyping.ts): the bar sits on the keyboard. */}
         <ToolbarPrimitive.Button
@@ -540,6 +445,11 @@ export function Toolbar({
           <KeyboardOff aria-hidden="true" className="size-4" />
         </ToolbarPrimitive.Button>
       </ToolbarPrimitive.Root>
+      {customizing && (
+        <Suspense fallback={null}>
+          <CustomizeToolbar open onOpenChange={setCustomizing} tools={pinnable} />
+        </Suspense>
+      )}
       {kind === 'poem' && (
         <p role="status" className="sr-only">
           {hangMessage}
@@ -634,6 +544,18 @@ function SegmentButtons({
       ))}
     </>
   );
+}
+
+/** The paragraph style id at the cursor in prose, or null. */
+function useStyleId(editor: Editor, kind: EditorForm): string | null {
+  return useEditorState({
+    editor,
+    selector: ({ editor: e }) => {
+      if (kind !== 'prose' || !e.isActive('paragraph')) return null;
+      const id: unknown = e.getAttributes('paragraph').styleId;
+      return typeof id === 'string' ? id : null;
+    },
+  });
 }
 
 /** The hanging indent of the line at the cursor, for the readout. */

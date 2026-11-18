@@ -6,7 +6,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 /*
  * Phase 18 Task A1 (decisions A1 to A7): migrations 0008, 0009 (the live owner page), 0010 (places), 0011
- * (profiles), 0012 (feedback guards), 0013 (the leaderboard) and 0014 (the comment index) in PGlite. The app calls each function through
+ * (profiles), 0012 (feedback guards), 0013 (the leaderboard), 0014 (the comment index) and 0015 (the writer's
+ * settings) in PGlite. The app calls each function through
  * PostgREST as the anon role, or as the authenticated role with the account in the JWT. Here a small
  * `auth` schema stands in for Supabase Auth: `auth.uid()` reads the `sub` claim, as Supabase does.
  */
@@ -26,6 +27,7 @@ const MIGRATIONS = [
   '0012_feedback_guards.sql',
   '0013_leaderboard.sql',
   '0014_comment_index.sql',
+  '0015_writer_settings.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -422,6 +424,38 @@ describe('profiles (migration 0011)', () => {
     ]);
     await as(BOB, 'select public.delete_my_account()');
     expect((await db.query('select 1 from profiles')).rows).toHaveLength(0);
+  });
+});
+
+const putSettings = (who: string, settings: unknown, at: number) =>
+  as<{ saved: boolean }>(who, 'select public.writer_settings_put($1::jsonb, $2) as saved', [
+    JSON.stringify(settings),
+    at,
+  ]);
+
+describe("the writer's settings (migration 0015)", () => {
+  test('an account keeps its own settings, and an older copy never replaces a newer one', async () => {
+    const toolbar = { toolbar: ['bold', 'italic'], keys: { bold: 'Mod-Shift-b' } };
+    expect(await putSettings(ALICE, toolbar, 200)).toEqual([{ saved: true }]);
+    expect(await as(ALICE, 'select settings, changed_at from public.writer_settings_get()')).toEqual([
+      { settings: toolbar, changed_at: 200 },
+    ]);
+    expect(await as(BOB, 'select * from public.writer_settings_get()')).toEqual([]);
+    expect(await putSettings(ALICE, { toolbar: null, keys: {} }, 100)).toEqual([{ saved: false }]);
+    expect(await putSettings(ALICE, { toolbar: null, keys: {} }, 300)).toEqual([{ saved: true }]);
+    expect(await as(ALICE, 'select settings from public.writer_settings_get()')).toEqual([
+      { settings: { toolbar: null, keys: {} } },
+    ]);
+  });
+
+  test('refuses a value that is not an object, a large value and the anon role, and goes with the account', async () => {
+    await expect(putSettings(ALICE, ['bold'], 1)).rejects.toThrow('bad settings');
+    await expect(putSettings(ALICE, { x: 'y'.repeat(16000) }, 1)).rejects.toThrow('bad settings');
+    await expect(putSettings(ALICE, {}, -1)).rejects.toThrow('bad time');
+    await expect(putSettings('anon', {}, 1)).rejects.toThrow(/permission denied/);
+    await putSettings(BOB, {}, 1);
+    await as(BOB, 'select public.delete_my_account()');
+    expect((await db.query('select 1 from writer_settings')).rows).toHaveLength(0);
   });
 });
 

@@ -34,12 +34,13 @@ test('Insert, Format and Review hold every tool in named groups, and each runs i
   await newNovel(page);
   for (const [menu, groups] of [
     ['Insert', ['Notes', 'Media', 'Breaks and characters']],
-    ['Format', ['Text', 'Paragraph', 'Clear']],
+    ['Format', ['Text', 'Paragraph', 'Paragraph styles', 'Clear']],
     ['Review', ['Find', 'Listen and speak', 'Checks', 'Show', 'Help']],
   ] as const) {
     await toolbar(page).getByRole('button', { name: menu, exact: true }).click();
     const open = page.getByRole('menu');
-    for (const group of groups) await expect(open.getByRole('group', { name: group })).toBeVisible();
+    for (const group of groups)
+      await expect(open.getByRole('group', { name: group, exact: true })).toBeVisible();
     expect(await seriousIssues(page)).toEqual([]);
     await page.keyboard.press('Escape');
     await expect(open).toBeHidden();

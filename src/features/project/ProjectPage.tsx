@@ -12,7 +12,8 @@ import { cardTransitionName, FROM_CARD } from '@/features/board/useBoard';
 import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { runCommand, showCommentOnOpen, useActiveEditor } from '@/features/editor/commands/editorBus';
 import { shortcutLabel } from '@/features/editor/commands/keys';
-import { commandsFor } from '@/features/editor/commands/registry';
+import { commandsFor, keysOf } from '@/features/editor/commands/registry';
+import { openParagraphStyles } from '@/features/editor/format/paragraphStyleStore';
 import { EditorPane } from '@/features/editor/EditorPane';
 import { goToEntry, outlineOf } from '@/features/editor/itemOutline';
 import { wordsToday } from '@/features/editor/stats/stats';
@@ -282,12 +283,18 @@ export function ProjectPage() {
   useEffect(() => {
     setProjectTracking(projectId, tracking);
   }, [projectId, tracking]);
+  // The paragraph styles (Phase 19, Task E2) belong to the project, so every item follows a change.
+  const paragraphStyles = state.status === 'ready' ? state.project.settings.paragraphStyles : undefined;
+  useEffect(() => {
+    openParagraphStyles(projectId, paragraphStyles);
+  }, [projectId, paragraphStyles]);
   useEffect(
     () => () => {
       resetNames();
       resetCodex();
       resetSources();
       resetTracking();
+      openParagraphStyles(null, undefined);
     },
     [projectId],
   );
@@ -807,16 +814,19 @@ export function ProjectPage() {
         }))
       : []),
     ...(activeEditor
-      ? commandsFor(activeEditor.form, project.templates).map((cmd): CommandAction => ({
-          id: cmd.id,
-          label: cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label,
-          group: 'format',
-          ...(cmd.keywords ? { keywords: cmd.keywords } : {}),
-          ...(cmd.keys ? { hint: shortcutLabel(cmd.keys) } : {}),
-          run: () => {
-            afterMenu.current = () => runCommand(activeEditor.editor, cmd, 'caret');
-          },
-        }))
+      ? commandsFor(activeEditor.form, project.templates).map((cmd): CommandAction => {
+          const keys = keysOf(cmd);
+          return {
+            id: cmd.id,
+            label: cmd.kind === 'panel' ? `${cmd.label}…` : cmd.label,
+            group: 'format',
+            ...(cmd.keywords ? { keywords: cmd.keywords } : {}),
+            ...(keys ? { hint: shortcutLabel(keys) } : {}),
+            run: () => {
+              afterMenu.current = () => runCommand(activeEditor.editor, cmd, 'caret');
+            },
+          };
+        })
       : []),
   ];
 

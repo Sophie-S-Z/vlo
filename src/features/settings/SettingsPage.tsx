@@ -28,6 +28,14 @@ const DevicesSection = lazy(async () => ({
   default: (await import('@/features/sync/DevicesSection')).DevicesSection,
 }));
 
+// The toolbar and key settings load the tool list, so they load when Settings opens.
+const ToolbarSettings = lazy(async () => ({
+  default: (await import('./KeyboardSettings')).ToolbarSettings,
+}));
+const KeyboardSettings = lazy(async () => ({
+  default: (await import('./KeyboardSettings')).KeyboardSettings,
+}));
+
 /** The plain themes, as rows. The atmospheres follow as pictures. */
 const PLAIN_THEMES: readonly ThemeChoice[] = [
   'system',
@@ -285,6 +293,18 @@ export function SettingsPage() {
               </Button>
             </div>
           </div>
+        </Section>
+
+        <Section title="Toolbar" id="toolbar">
+          <Suspense fallback={null}>
+            <ToolbarSettings />
+          </Suspense>
+        </Section>
+
+        <Section title="Keyboard" id="keyboard">
+          <Suspense fallback={null}>
+            <KeyboardSettings onAnnounce={setAnnouncement} />
+          </Suspense>
         </Section>
 
         <Section title="Spelling and grammar" id="grammar">

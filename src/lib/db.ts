@@ -1,5 +1,6 @@
 import { Dexie, type Table } from 'dexie';
 import type { PoemForm } from '@/features/craft/forms';
+import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
 import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
 import { LIBRARY } from './library';
 import { recountItems } from './wordcount';
@@ -67,6 +68,8 @@ export interface Project {
     citeStyle?: CiteStyle;
     /** The continuity marks that the writer kept with "Not a problem" (F66). None when absent. */
     continuity?: ContinuityKept;
+    /** The paragraph styles (Phase 19, Task E2). The default styles when absent. */
+    paragraphStyles?: ParagraphStyle[];
   };
 }
 
