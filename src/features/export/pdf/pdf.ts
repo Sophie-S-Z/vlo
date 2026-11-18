@@ -9,6 +9,7 @@ import type { BookSettings } from '@/lib/db';
 import {
   footnotesOf,
   imageStandIn,
+  paragraphStyleOf,
   repeatsTitle,
   runsText,
   textBlocks,
@@ -18,6 +19,7 @@ import {
   type ExportImage,
   type HeadingBlock,
   type ImageBlock,
+  type ParagraphBlock,
   type Run,
   type RunStyle,
 } from '../model';
@@ -184,12 +186,14 @@ class Layout {
   /** True until the first block after a chapter opening, for its drop cap. */
   private afterOpening = false;
   private chapters = 0;
+  /** The space that the last paragraph's style asks for below it (Phase 19, Task E2). */
+  private after = 0;
 
   private readonly images: Readonly<Record<string, ExportImage>>;
 
   constructor(
     private readonly fonts: FontSet,
-    doc: ExportDoc,
+    private readonly doc: ExportDoc,
     private readonly settings: Settings,
     private readonly toMathml: LatexToMathml,
     private readonly bodyFont: string,
@@ -556,10 +560,18 @@ class Layout {
     return rows;
   }
 
+  /** The paragraph style of a block. Standard manuscript format keeps one plain look, with no styles. */
+  private styleOf(block: ParagraphBlock) {
+    return this.settings.manuscript ? undefined : paragraphStyleOf(this.doc, block);
+  }
+
   async block(block: Block, place: { left: number; right: number }, folder: boolean): Promise<Row[]> {
     const opening = this.afterOpening;
     this.afterOpening = false;
     const rows = await this.blockRows(block, place, folder, opening);
+    const [first] = rows;
+    if (first) first.spaceBefore = Math.max(first.spaceBefore, this.after);
+    this.after = block.type === 'paragraph' ? (this.styleOf(block)?.after ?? 0) * this.settings.textSize : 0;
     this.last = block.type;
     return rows;
   }
@@ -580,6 +592,8 @@ class Layout {
     };
     switch (block.type) {
       case 'paragraph': {
+        // A paragraph style sets the font, size, italic, alignment, left indent and space before.
+        const style = this.styleOf(block);
         // A book indents each paragraph that follows a paragraph, and justifies its lines.
         const indent = block.hanging
           ? 0
@@ -593,18 +607,24 @@ class Layout {
                 ? 2 * textSize
                 : 0;
         const rows = await this.paragraph(block.runs, {
-          left: place.left,
+          left: place.left + (style?.indent ?? 0) * textSize,
           right: place.right,
-          align: manuscript ? undefined : (block.align ?? (book ? 'justify' : undefined)),
+          align: manuscript ? undefined : (block.align ?? style?.align ?? (book ? 'justify' : undefined)),
           spacing: manuscript ? spacing : (block.lineSpacing ?? spacing),
           firstIndent: indent,
           // A reference list entry hangs by half an inch, as the citation styles ask.
           ...(block.hanging ? { hanging: 36 / textSize } : {}),
           dropCap: !manuscript && (block.dropCap === true || (opening && book?.dropCaps === true)),
-          base: body,
+          base: style
+            ? {
+                font: style.font ?? this.bodyFont,
+                size: textSize * (style.size ?? 1),
+                italic: style.italic === true,
+              }
+            : body,
         });
         if (book) keepLines(rows);
-        return withGap(rows, paragraphGap);
+        return withGap(rows, Math.max(paragraphGap, (style?.before ?? 0) * textSize));
       }
       case 'heading': {
         if (book && folder) {

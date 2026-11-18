@@ -46,6 +46,10 @@ const SpeakPanel = lazy(async () => ({ default: (await import('@/features/voice/
 const ThesaurusPanel = lazy(async () => ({
   default: (await import('@/features/thesaurus/ThesaurusPanel')).ThesaurusPanel,
 }));
+// And the form of a paragraph style (Phase 19, Task E2).
+const ParagraphStyleDialog = lazy(async () => ({
+  default: (await import('./panels/ParagraphStyleDialog')).ParagraphStyleDialog,
+}));
 // And the image panel (Phase 16).
 const ImagePanel = lazy(async () => ({ default: (await import('@/features/images/ImagePanel')).ImagePanel }));
 
@@ -92,6 +96,8 @@ function PanelBody({
     case 'memory':
     case 'image':
     case 'comments':
+    case 'style-new':
+    case 'style-edit':
       return null;
     case 'font':
       return <FontPanel editor={editor} />;
@@ -172,6 +178,8 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   cite: 'Cite a source',
   image: 'Image',
   thesaurus: 'Thesaurus',
+  'style-new': 'New paragraph style',
+  'style-edit': 'Paragraph style',
 };
 
 /** MathLive's symbol keyboard and menus sit outside the panel, and a press there keeps the panel open. */
@@ -180,7 +188,7 @@ function inMathLiveUi(target: EventTarget | null): boolean {
 }
 
 /** The panels that open as a dialog, not as a popover. */
-const DIALOGS: readonly PanelId[] = ['shortcuts', 'memory', 'image', 'comments'];
+const DIALOGS: readonly PanelId[] = ['shortcuts', 'memory', 'image', 'comments', 'style-new', 'style-edit'];
 
 /**
  * Shows the panel any tool surface asked for: a popover at its button or the caret, the shortcut sheet, or
@@ -202,6 +210,7 @@ export function PanelHost({
   const popover = mine && !DIALOGS.includes(mine.panel) ? mine : null;
   const anchor = useMemo(() => (popover ? measurable(editor, popover.anchor) : null), [editor, popover]);
   const keyboard = useMathKeyboard();
+  const styleMode = mine?.panel === 'style-new' ? 'new' : mine?.panel === 'style-edit' ? 'edit' : null;
 
   // The selected text stays marked while the panel has focus, so the writer sees what the panel changes.
   useEffect(() => {
@@ -360,6 +369,32 @@ export function PanelHost({
             </div>
             <Suspense fallback={<p className="text-sm text-muted">Loading the image panel.</p>}>
               <ImagePanel editor={editor} projectId={item?.projectId ?? null} onDone={closePanel} />
+            </Suspense>
+          </DialogContent>
+        )}
+      </Dialog>
+      <Dialog
+        open={styleMode !== null}
+        onOpenChange={(open) => {
+          if (!open) closePanel();
+        }}
+      >
+        {styleMode !== null && (
+          <DialogContent className="max-w-lg" onCloseAutoFocus={backToText}>
+            <DialogClose asChild>
+              <Button variant="ghost" aria-label="Close" className="absolute top-4 right-4 px-3">
+                <X aria-hidden="true" className="size-4" />
+              </Button>
+            </DialogClose>
+            <div className="grid gap-1 pr-10">
+              <DialogTitle>{styleMode === 'new' ? 'New paragraph style' : 'Change this style'}</DialogTitle>
+              <DialogDescription>
+                Every paragraph with this style in the project follows a change. A format that you give a
+                paragraph directly stays on that paragraph.
+              </DialogDescription>
+            </div>
+            <Suspense fallback={<p className="text-sm text-muted">Loading the style.</p>}>
+              <ParagraphStyleDialog editor={editor} mode={styleMode} onDone={closePanel} />
             </Suspense>
           </DialogContent>
         )}

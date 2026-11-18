@@ -13,6 +13,7 @@ import { STATUS_LABEL } from '@/features/binder/BinderItem';
 import { runCommand, showCommentOnOpen, useActiveEditor } from '@/features/editor/commands/editorBus';
 import { shortcutLabel } from '@/features/editor/commands/keys';
 import { commandsFor, keysOf } from '@/features/editor/commands/registry';
+import { openParagraphStyles } from '@/features/editor/format/paragraphStyleStore';
 import { EditorPane } from '@/features/editor/EditorPane';
 import { goToEntry, outlineOf } from '@/features/editor/itemOutline';
 import { wordsToday } from '@/features/editor/stats/stats';
@@ -282,12 +283,18 @@ export function ProjectPage() {
   useEffect(() => {
     setProjectTracking(projectId, tracking);
   }, [projectId, tracking]);
+  // The paragraph styles (Phase 19, Task E2) belong to the project, so every item follows a change.
+  const paragraphStyles = state.status === 'ready' ? state.project.settings.paragraphStyles : undefined;
+  useEffect(() => {
+    openParagraphStyles(projectId, paragraphStyles);
+  }, [projectId, paragraphStyles]);
   useEffect(
     () => () => {
       resetNames();
       resetCodex();
       resetSources();
       resetTracking();
+      openParagraphStyles(null, undefined);
     },
     [projectId],
   );

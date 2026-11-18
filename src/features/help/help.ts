@@ -169,6 +169,16 @@ export const HELP = {
       ],
     },
     {
+      title: 'Give paragraphs a style',
+      steps: [
+        'A prose project starts with five paragraph styles: Epigraph, Letter, Text message, Song lyrics and Sign.',
+        'Put the cursor in a paragraph, open the Text style menu, and choose a style. Format, Paragraph styles, the block handle, the / menu and the command menu (Ctrl+K) list the styles too.',
+        'To change a style, choose Format, then Change this style. Set the name, the font, the size, the alignment, the indent, the space before and after, and italic. Each paragraph with the style changes with it.',
+        'Format a paragraph directly, then choose Update the style to match: the style takes the alignment, italic, font and size of that paragraph. New style from this paragraph makes a style from its look.',
+        'Word exports get real Word styles with the same names. PDF, EPUB and the book layout use the style values. Markdown keeps only the text.',
+      ],
+    },
+    {
       title: 'See the parts of speech',
       steps: [
         'In an English item, choose Review, then Show parts of speech. Nouns, verbs, adjectives, adverbs and conjunctions each get a color and a line of their own.',

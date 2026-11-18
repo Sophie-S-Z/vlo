@@ -18,6 +18,8 @@ export interface Segment {
 export interface Section {
   label: string;
   tools: readonly string[];
+  /** The section starts with the project's paragraph styles (Phase 19, Task E2). */
+  styles?: true;
 }
 
 export type MenuId = 'insert' | 'format' | 'review';
@@ -101,6 +103,7 @@ export const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
             'drop-cap',
           ],
         },
+        { label: 'Paragraph styles', tools: ['style-update', 'style-edit', 'style-new'], styles: true },
         { label: 'Clear', tools: ['clear'] },
       ],
       review: REVIEW,

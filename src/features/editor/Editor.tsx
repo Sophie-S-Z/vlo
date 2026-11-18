@@ -143,11 +143,13 @@ function editorAttributes(
   };
 }
 
-/** Tools for the / menu: label matches first, then keyword matches, each in registry order. */
+/**
+ * Tools for the / menu: label matches first, then keyword matches, each in registry order. The list is
+ * read at each query, so a new paragraph style shows at once.
+ */
 function slashItems(kind: EditorProps['kind'], templates: readonly Template[] | undefined) {
-  const tools = commandsFor(kind, templates).filter((c) => c.slash);
   return (query: string): EditorCommand[] => {
-    const found = tools.filter((c) => matchesCommand(c, query));
+    const found = commandsFor(kind, templates).filter((c) => c.slash && matchesCommand(c, query));
     const q = query.trim().toLowerCase();
     if (q === '') return found;
     const byLabel = found.filter((c) => c.label.toLowerCase().includes(q));

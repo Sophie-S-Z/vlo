@@ -25,11 +25,22 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/ui/dropdown-menu';
 import { focusText, getPanelRequest, runCommand, type PanelAnchor } from '../commands/editorBus';
 import type { Template } from '@/lib/db';
-import { command, commandsFor, keysOf, type EditorCommand, type EditorForm } from '../commands/registry';
+import {
+  command,
+  commandsFor,
+  keysOf,
+  styleCommand,
+  type EditorCommand,
+  type EditorForm,
+} from '../commands/registry';
+import { useParagraphStyles } from '../format/paragraphStyleStore';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { modeOf, setMode, useTracking, type EditMode } from '../trackingStore';
 import { setWritingPrefs, useWritingPrefs } from '../writingPrefs';
@@ -139,8 +150,14 @@ export function Toolbar({
     }
   };
 
+  // A paragraph with a style names its style, as in Word.
+  const styles = useParagraphStyles();
+  const styleId = useStyleId(editor, kind);
+  const style = styles.find((s) => s.id === styleId);
   const blockLabel =
-    layout.blockMenu.map(command).find((c) => at(c.id).active)?.label ?? command('paragraph').label;
+    style?.name ??
+    layout.blockMenu.map(command).find((c) => at(c.id).active)?.label ??
+    command('paragraph').label;
   const wideTools = shown.filter((s) => s.wide).flatMap((s) => s.tools);
   const segments = simple ? shown.filter((s) => !s.wide) : shown;
 
@@ -172,12 +189,32 @@ export function Toolbar({
     );
   };
 
+  /** One item for each paragraph style of the project, checked at the paragraph that has it. */
+  const styleItems = () =>
+    styles.map((s) => (
+      <DropdownMenuCheckboxItem
+        key={s.id}
+        checked={s.id === styleId}
+        onSelect={() => {
+          pending.current = styleCommand(s);
+        }}
+      >
+        {s.name}
+      </DropdownMenuCheckboxItem>
+    ));
+
   const sections = (list: readonly Section[]) =>
     list.map((section, i) => (
       <Fragment key={section.label}>
         {i > 0 && <DropdownMenuSeparator />}
         <DropdownMenuGroup aria-label={section.label}>
           <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+          {section.styles && styles.length > 0 && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="pl-9">Apply a style</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent aria-label="Paragraph styles">{styleItems()}</DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
           {section.tools.map((id) => menuItem(id))}
         </DropdownMenuGroup>
       </Fragment>
@@ -250,12 +287,22 @@ export function Toolbar({
               label={`Text style: ${blockLabel}`}
               title="Text style"
               triggerClass="w-auto gap-1 px-2 text-sm text-text pointer-fine:w-auto"
+              contentClass="max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto"
               onClose={(event) => {
                 closeMenu(event, null);
               }}
               editor={editor}
             >
               {layout.blockMenu.map((id) => menuItem(id))}
+              {kind === 'prose' && styles.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup aria-label="Paragraph styles">
+                    <DropdownMenuLabel>Paragraph styles</DropdownMenuLabel>
+                    {styleItems()}
+                  </DropdownMenuGroup>
+                </>
+              )}
             </ToolMenu>
           </>
         )}
@@ -497,6 +544,18 @@ function SegmentButtons({
       ))}
     </>
   );
+}
+
+/** The paragraph style id at the cursor in prose, or null. */
+function useStyleId(editor: Editor, kind: EditorForm): string | null {
+  return useEditorState({
+    editor,
+    selector: ({ editor: e }) => {
+      if (kind !== 'prose' || !e.isActive('paragraph')) return null;
+      const id: unknown = e.getAttributes('paragraph').styleId;
+      return typeof id === 'string' ? id : null;
+    },
+  });
 }
 
 /** The hanging indent of the line at the cursor, for the readout. */
