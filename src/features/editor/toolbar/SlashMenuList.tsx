@@ -1,9 +1,9 @@
 import type { Editor } from '@tiptap/core';
 import { runCommand } from '../commands/editorBus';
-import { shortcutLabel } from '../commands/keys';
-import { GROUP_LABELS } from '../commands/registry';
+import { GROUP_LABELS, keysOf } from '../commands/registry';
 import { slashKey } from '../extensions/slashMenu';
 import { MenuList } from './MenuList';
+import { KeyHint } from './ToolButton';
 
 /** The list the / menu shows. The editor keeps focus; the extension handles the keys. */
 export function SlashMenuList({ editor, listId }: { editor: Editor; listId: string }) {
@@ -41,11 +41,7 @@ export function SlashMenuList({ editor, listId }: { editor: Editor; listId: stri
               <Icon aria-hidden="true" className="size-4 shrink-0 text-muted" />
             )}
             <span className="flex-1">{cmd.label}</span>
-            {cmd.keys && (
-              <span aria-hidden="true" className="tabular-nums text-xs text-muted">
-                {shortcutLabel(cmd.keys)}
-              </span>
-            )}
+            <KeyHint keys={keysOf(cmd)} />
           </>
         );
       }}

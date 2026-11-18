@@ -24,6 +24,7 @@ import { commandsFor, matchesCommand, type EditorCommand } from './commands/regi
 import { CaretBlock } from './extensions/caretBlock';
 import { ClickBelow } from './extensions/clickBelow';
 import { HeldSelection, ToolKeys } from './extensions/editorTools';
+import { WriterKeys } from './extensions/writerKeys';
 import { FindReplace } from './extensions/findReplace';
 import { ImageInput } from './extensions/image';
 import { ChangesList } from './ChangesList';
@@ -230,6 +231,7 @@ export function Editor({
             openFind(e, field);
           },
         }),
+        WriterKeys.configure({ form: kind, templates }),
         ToolKeys.configure({
           onShortcuts: (e) => {
             openPanel({ editor: e, panel: 'shortcuts', anchor: 'caret' });

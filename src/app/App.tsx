@@ -36,11 +36,21 @@ export function App() {
       .catch(() => undefined);
   }, [signedIn, syncing]);
   // The profile can change on another device, so the copy here follows the server as Vlo opens (ADR 0011).
+  // The toolbar and the keys follow the account too (ADR 0013).
   useEffect(() => {
     if (!signedIn) return;
     void import('@/features/account/profileServer')
       .then(({ refreshProfile }) => refreshProfile())
       .catch(() => undefined);
+    let stop: (() => void) | undefined;
+    let ended = false;
+    void import('@/features/account/writerToolsServer').then(({ followWriterTools }) => {
+      if (!ended) stop = followWriterTools();
+    });
+    return () => {
+      ended = true;
+      stop?.();
+    };
   }, [signedIn]);
   // Persistent storage: Vlo asks again at start, and at once after an install, because Chrome and Safari
   // often grant it to an installed app.

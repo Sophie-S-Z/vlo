@@ -93,6 +93,7 @@ import { getGrammarPrefs, setGrammarOn } from '@/features/grammar/grammarPrefs';
 import { canShowPartsOfSpeech } from '../extensions/partsOfSpeech';
 import { getPosPrefs, setPosOn } from '@/features/pos/posPrefs';
 import { rimshot } from '../rimshot';
+import { getWriterTools } from '../writerTools';
 import { changesOf } from '../extensions/suggestion';
 import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
@@ -1316,11 +1317,22 @@ export const COMMANDS: readonly EditorCommand[] = [
 
 const byId = new Map(COMMANDS.map((c) => [c.id, c]));
 
+/** The command with this id, or undefined, for an id from storage. */
+export function findCommand(id: string): EditorCommand | undefined {
+  return byId.get(id);
+}
+
 /** The command with this id. Throws for an unknown id, so a typo fails in tests and not for a writer. */
 export function command(id: string): EditorCommand {
   const found = byId.get(id);
   if (!found) throw new Error(`No editor command "${id}".`);
   return found;
+}
+
+/** The command's key now: the writer's own key (Phase 19, Task E1), else Vlo's. Undefined for no key. */
+export function keysOf(cmd: EditorCommand, own = getWriterTools().keys): string | undefined {
+  const key = own[cmd.id];
+  return key === undefined ? cmd.keys : key || undefined;
 }
 
 /** True when a project of these templates offers the command: one of them is enough. */
