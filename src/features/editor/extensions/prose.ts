@@ -21,6 +21,7 @@ import { SceneBreak } from './sceneBreak';
 import { Cite } from './cite';
 import { ImageNode } from './image';
 import { ItemLink } from './itemLink';
+import { Tables } from './table';
 
 /** What the links of an editor need: its item, and the id of the "[[" list. */
 export interface LinkOptions {
@@ -66,6 +67,7 @@ export function proseExtensions(
     Cite,
     ItemLink.configure(links),
     ImageNode,
+    ...Tables,
     EscapeTab,
     Collaboration.configure({ document: ydoc, field: YFRAGMENT }),
   ];

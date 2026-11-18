@@ -168,7 +168,7 @@ describe('web page export', () => {
 });
 
 describe('web page import', () => {
-  test('keeps the text and leaves out menus, scripts, pictures and tables', () => {
+  test('keeps the text and the tables, and leaves out menus, scripts and pictures', () => {
     const { nodes, skipped } = readHtml(
       'post.html',
       `<html><head><title>Salt Year</title><script>alert(1)</script></head><body>
@@ -181,10 +181,10 @@ describe('web page import', () => {
     );
     expect(titles(nodes)).toEqual(['The ledger', 'The key']);
     expect(nodes[0]?.text?.html).toBe(
-      '<p>Mira <b>counted</b> the coins.</p><p>She <i>slept</i>.</p><div data-scene-break=""></div>',
+      '<p>Mira <b>counted</b> the coins.</p><p>She <i>slept</i>.</p><div data-scene-break=""></div><table><tbody><tr><td>Coins</td></tr></tbody></table>',
     );
     expect(nodes[1]?.text?.html).toBe('<ul><li>One</li></ul><p>  a<br>  b</p>');
-    expect(skipped).toEqual(['1 picture', '1 table']);
+    expect(skipped).toEqual(['1 picture']);
     expect(JSON.stringify(nodes)).not.toMatch(/alert|Home|Copyright/);
   });
 

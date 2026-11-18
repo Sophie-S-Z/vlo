@@ -182,6 +182,102 @@ export interface ExportImage {
   data: Uint8Array;
 }
 
+/** A cell of a table (Phase 19, Task F2). A cell holds paragraphs only, as the editor allows. */
+export interface TableCell {
+  paragraphs: ParagraphBlock[];
+  header: boolean;
+  colspan: number;
+  rowspan: number;
+}
+
+/**
+ * A table. Each row lists its own cells, as HTML does: a cell that spans rows takes its place in the rows
+ * under it, which list no cell there.
+ */
+export interface TableBlock {
+  type: 'table';
+  rows: TableCell[][];
+  /** The share of the table width of each column. The shares add up to 1. */
+  widths: number[];
+}
+
+/** How many rows at the top of a table hold header cells only. Word and HTML repeat them on each page. */
+export function headerRows(block: TableBlock): number {
+  const n = block.rows.findIndex((cells) => !cells.every((cell) => cell.header));
+  return n === -1 ? block.rows.length : n;
+}
+
+/** A cell with the row and the column of its top left corner, from 0. */
+export interface PlacedCell {
+  cell: TableCell;
+  row: number;
+  column: number;
+}
+
+/** Each cell of a table at its place in the grid, row by row. */
+export function placedCells(block: TableBlock): PlacedCell[] {
+  const taken = new Set<string>();
+  const out: PlacedCell[] = [];
+  block.rows.forEach((cells, row) => {
+    let column = 0;
+    for (const cell of cells) {
+      while (taken.has(`${String(row)},${String(column)}`)) column += 1;
+      out.push({ cell, row, column });
+      for (let r = row; r < row + cell.rowspan; r += 1)
+        for (let c = column; c < column + cell.colspan; c += 1) taken.add(`${String(r)},${String(c)}`);
+      column += cell.colspan;
+    }
+  });
+  return out;
+}
+
+/** The cell that covers each place of a table's grid, row by row. A place that no cell covers is empty. */
+export function cellGrid(block: TableBlock): (PlacedCell | undefined)[][] {
+  const grid: (PlacedCell | undefined)[][] = block.rows.map(() => block.widths.map(() => undefined));
+  for (const placed of placedCells(block))
+    for (let r = placed.row; r < placed.row + placed.cell.rowspan; r += 1)
+      for (let c = placed.column; c < placed.column + placed.cell.colspan; c += 1) {
+        const line = grid[r];
+        if (line && c < line.length) line[c] = placed;
+      }
+  return grid;
+}
+
+/** The paragraphs of every cell of a table, row by row. */
+export function cellParagraphs(block: TableBlock): ParagraphBlock[] {
+  return block.rows.flatMap((cells) => cells.flatMap((cell) => cell.paragraphs));
+}
+
+/** The runs of a cell, with a line break between its paragraphs. */
+export function cellRuns(cell: TableCell): Run[] {
+  return cell.paragraphs.flatMap((p, i): Run[] => (i === 0 ? p.runs : [{ type: 'break' }, ...p.runs]));
+}
+
+/** The paragraphs of a cell, in bold for a header cell, for a format that has no header cell of its own. */
+export function headerParagraphs(cell: TableCell): ParagraphBlock[] {
+  if (!cell.header) return cell.paragraphs;
+  return cell.paragraphs.map((p) => ({
+    ...p,
+    runs: p.runs.map((run) =>
+      run.type === 'text' || run.type === 'math' ? { ...run, style: { ...run.style, bold: true } } : run,
+    ),
+  }));
+}
+
+/**
+ * A table as plain paragraphs, one for each row, with " | " between its cells, for a format with no
+ * tables.
+ */
+export function tableParagraphs(block: TableBlock): ParagraphBlock[] {
+  return block.rows.map((cells) => ({
+    type: 'paragraph',
+    runs: cells.flatMap((cell, i): Run[] => [
+      ...(i > 0 ? [{ type: 'text', text: ' | ', style: {} } as const] : []),
+      ...cellRuns(cell),
+    ]),
+  }));
+}
+
 export type Block =
   | ParagraphBlock
   | HeadingBlock
@@ -192,7 +288,8 @@ export type Block =
   /** A page break (Phase 19): the next block starts a new page in a format with pages. */
   | { type: 'pageBreak' }
   | { type: 'math'; latex: string }
-  | ImageBlock;
+  | ImageBlock
+  | TableBlock;
 
 export type ExportForm = EditorForm;
 
@@ -341,6 +438,8 @@ export function runsOf(blocks: readonly Block[]): Run[] {
         return runsOf(block.blocks);
       case 'stanza':
         return block.lines.flatMap((line) => line.runs);
+      case 'table':
+        return runsOf(cellParagraphs(block));
       default:
         return [];
     }

@@ -6,7 +6,15 @@
  */
 
 import { countUnit, countWords } from '@/lib/wordcount';
-import { imageStandIn, type Block, type ExportDoc, type Run, type RunStyle } from './model';
+import {
+  cellParagraphs,
+  imageStandIn,
+  type Block,
+  type ExportDoc,
+  type ParagraphBlock,
+  type Run,
+  type RunStyle,
+} from './model';
 
 export interface ManuscriptDetails {
   /** The writer's name as it goes on the first page and the byline. */
@@ -73,6 +81,7 @@ export function exportWords(doc: ExportDoc): number {
       if (block.type === 'paragraph' || block.type === 'heading') runs(block.runs);
       else if (block.type === 'list') block.items.forEach(visit);
       else if (block.type === 'quote') visit(block.blocks);
+      else if (block.type === 'table') visit(cellParagraphs(block));
       else if (block.type === 'stanza') {
         for (const line of block.lines) runs(line.runs);
       }
@@ -112,6 +121,19 @@ function plainBlocks(blocks: readonly Block[]): Block[] {
         return { ...block, items: block.items.map(plainBlocks) };
       case 'quote':
         return { type: 'quote', blocks: plainBlocks(block.blocks) };
+      case 'table':
+        return {
+          ...block,
+          rows: block.rows.map((cells) =>
+            cells.map((cell) => ({
+              ...cell,
+              paragraphs: cell.paragraphs.map((p): ParagraphBlock => ({
+                type: 'paragraph',
+                runs: plainRuns(p.runs),
+              })),
+            })),
+          ),
+        };
       case 'stanza':
         return {
           type: 'stanza',

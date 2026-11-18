@@ -26,8 +26,13 @@ import {
   Paragraph,
   ShadingType,
   Tab,
+  Table,
+  TableCell,
+  TableLayoutType,
+  TableRow,
   TabStopType,
   TextRun,
+  WidthType,
   type ICommentOptions,
   type IParagraphStyleOptions,
   type IRunOptions,
@@ -46,6 +51,8 @@ import { parseMathml } from './mathml';
 import {
   bookmarkName,
   boxedItems,
+  headerParagraphs,
+  headerRows,
   imageStandIn,
   linkPlace,
   repeatsTitle,
@@ -58,6 +65,7 @@ import {
   type ImageBlock,
   type Run,
   type RunStyle,
+  type TableBlock,
 } from './model';
 import { ommlOf } from './omml';
 
@@ -389,7 +397,10 @@ function splitDropCap(runs: readonly Run[]): { letter: TextRunModel; rest: Run[]
   };
 }
 
-function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] {
+/** A part of the body: a paragraph or a table. */
+type Part = Paragraph | Table;
+
+function blockParagraphs(block: Block, place: Place, ctx: Context): Part[] {
   const indent = place.left > 0 ? { left: place.left } : undefined;
   const numbering = place.numbering ? { numbering: place.numbering } : {};
   switch (block.type) {
@@ -490,6 +501,8 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
       ];
     case 'image':
       return imageParagraphs(block, place, ctx);
+    case 'table':
+      return [wordTable(block, place, ctx)];
     case 'quote':
       return blocksParagraphs(block.blocks, { ...place, left: place.left + STEP }, ctx);
     case 'list': {
@@ -524,8 +537,8 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
   }
 }
 
-function blocksParagraphs(blocks: readonly Block[], place: Place, ctx: Context): Paragraph[] {
-  const out: Paragraph[] = [];
+function blocksParagraphs(blocks: readonly Block[], place: Place, ctx: Context): Part[] {
+  const out: Part[] = [];
   blocks.forEach((block, i) => {
     // An empty paragraph separates two stanzas, so the poem keeps its breaks in every reader.
     if (block.type === 'stanza' && blocks[i - 1]?.type === 'stanza') {
@@ -534,6 +547,41 @@ function blocksParagraphs(blocks: readonly Block[], place: Place, ctx: Context):
     out.push(...blockParagraphs(block, place, ctx));
   });
   return out;
+}
+
+/**
+ * A Word table (Phase 19, Task F2) at the text's indent, with the column widths of the editor. A header row
+ * repeats at the top of each page.
+ */
+function wordTable(block: TableBlock, place: Place, ctx: Context): Table {
+  const width = ctx.textWidth - place.left;
+  const columns = block.widths.map((share) => Math.round(share * width));
+  const heads = headerRows(block);
+  let column = 0;
+  return new Table({
+    width: { size: width, type: WidthType.DXA },
+    columnWidths: columns,
+    layout: TableLayoutType.FIXED,
+    ...(place.left > 0 ? { indent: { size: place.left, type: WidthType.DXA } } : {}),
+    rows: block.rows.map((cells, r) => {
+      column = 0;
+      return new TableRow({
+        tableHeader: r < heads,
+        children: cells.map((cell) => {
+          const size = columns.slice(column, column + cell.colspan).reduce((sum, w) => sum + w, 0);
+          column += cell.colspan;
+          const paragraphs = blocksParagraphs(headerParagraphs(cell), { left: 0 }, ctx);
+          return new TableCell({
+            width: { size, type: WidthType.DXA },
+            ...(cell.colspan > 1 ? { columnSpan: cell.colspan } : {}),
+            ...(cell.rowspan > 1 ? { rowSpan: cell.rowspan } : {}),
+            // Word needs a paragraph in each cell.
+            children: paragraphs.length > 0 ? paragraphs : [new Paragraph({ children: [] })],
+          });
+        }),
+      });
+    }),
+  });
 }
 
 /** The list definitions: one bullet list, and one numbered list for each first number in the export. */
@@ -785,7 +833,7 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
   };
   const font = wordFontName(doc.font) ?? 'Newsreader';
 
-  const children: Paragraph[] = [];
+  const children: Part[] = [];
   if (setup) {
     children.push(...manuscriptOpening(doc, setup, textWidth, textHeight));
   } else if (doc.title !== '') {
@@ -815,9 +863,12 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     if (setup && index === 0 && section.form !== null) {
       children.push(new Paragraph({ children: [new PageBreak()] }));
     }
+    // The bookmark needs a paragraph, so a section that starts with a table gets an empty one first.
+    if (paragraphs[0] instanceof Table) paragraphs.unshift(new Paragraph({ children: [] }));
+    const first = paragraphs[0];
     const mark = new Bookmark({ id: bookmarkName(section.id), children: [] });
     // docx types addRunToFront for runs, but it puts any part of a paragraph before the first run.
-    paragraphs[0]?.addRunToFront(mark.end as never).addRunToFront(mark.start as never);
+    if (first instanceof Paragraph) first.addRunToFront(mark.end as never).addRunToFront(mark.start as never);
     children.push(...paragraphs);
   }
 

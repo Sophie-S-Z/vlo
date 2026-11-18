@@ -17,6 +17,7 @@ import {
   proseUpdate,
   RICH_PROSE,
   singleDoc,
+  TABLE_PROSE,
 } from './export-fixtures';
 
 /*
@@ -142,5 +143,16 @@ describe.runIf(hasLibreOffice)('Word export in LibreOffice', () => {
     expect(content).toContain('Boats in the harbour');
     expect(content).toContain('The harbour at dawn');
     expect(content).toContain('[Image: A lost photo]');
+  }, 180_000);
+
+  test('LibreOffice opens a table with its header row and its merged cells (Phase 19, Task F2)', async () => {
+    writeFileSync(join(dir, 'table.docx'), await toDocx(singleDoc(TABLE_PROSE, 'prose')));
+    convert([join(dir, 'table.docx')], 'odt');
+    const odt = await JSZip.loadAsync(readFileSync(join(dir, 'table.odt')));
+    const content = (await odt.file('content.xml')?.async('string')) ?? '';
+    expect(content).toContain('<table:table-header-rows>');
+    expect(content).toContain('table:number-columns-spanned="2"');
+    expect(content).toContain('table:number-rows-spanned="2"');
+    for (const word of ['Name', 'Mira', 'Hull', 'Leith', 'High']) expect(content).toContain(word);
   }, 180_000);
 });

@@ -25,6 +25,8 @@ import {
   type PoemLine,
   type Run,
   type RunStyle,
+  type TableBlock,
+  type TableCell,
   type TextChange,
   type TextComment,
 } from './model';
@@ -379,11 +381,62 @@ function proseBlocks(content: JSONContent[] | undefined, notes: NoteCounter, rev
         if (image.id !== '') blocks.push({ type: 'image', ...image });
         break;
       }
+      case 'table': {
+        const table = tableBlock(node, notes, review);
+        if (table) blocks.push(table);
+        break;
+      }
       default:
         break;
     }
   }
   return blocks;
+}
+
+/** The span of a cell: a whole number from 1 to 64, or 1. */
+function span(value: unknown): number {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, 64) : 1;
+}
+
+/** The width that a column with no width of its own takes, in pixels, as the editor's text width shares it. */
+const TEXT_WIDTH = 640;
+const MIN_COLUMN = 48;
+
+/** A table (Phase 19, Task F2), or null for a table with no cells. */
+function tableBlock(node: JSONContent, notes: NoteCounter, review: ExportReview): TableBlock | null {
+  const rows = (node.content ?? [])
+    .filter((row) => row.type === 'tableRow')
+    .map((row) =>
+      (row.content ?? []).filter((cell) => cell.type === 'tableCell' || cell.type === 'tableHeader'),
+    )
+    .filter((cells) => cells.length > 0);
+  const first = rows[0];
+  if (!first) return null;
+  // The first row holds every column, since no cell above it spans into it.
+  const sizes = first.flatMap((cell) => {
+    const widths: unknown = cell.attrs?.colwidth;
+    return Array.from({ length: span(cell.attrs?.colspan) }, (_, i) => {
+      const width = Array.isArray(widths) ? Number(widths[i]) : NaN;
+      return Number.isFinite(width) && width > 0 ? width : null;
+    });
+  });
+  const known = sizes.reduce<number>((sum, w) => sum + (w ?? 0), 0);
+  const open = sizes.filter((w) => w === null).length;
+  const share = open === 0 ? 0 : Math.max((TEXT_WIDTH - known) / open, MIN_COLUMN);
+  const total = known + share * open;
+  return {
+    type: 'table',
+    rows: rows.map((cells) =>
+      cells.map((cell): TableCell => ({
+        paragraphs: proseBlocks(cell.content, notes, review).filter((b) => b.type === 'paragraph'),
+        header: cell.type === 'tableHeader',
+        colspan: span(cell.attrs?.colspan),
+        rowspan: span(cell.attrs?.rowspan),
+      })),
+    ),
+    widths: sizes.map((w) => (w ?? share) / total),
+  };
 }
 
 function poemBlocks(content: JSONContent[] | undefined, notes: NoteCounter, review: ExportReview): Block[] {

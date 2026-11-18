@@ -25,6 +25,7 @@ import {
   type RunStyle,
 } from './model';
 import { fontPaths, PDF_FONTS, type FontStyle, type LoadFile } from './pdf/fonts';
+import { tableHtml } from './htmlTable';
 import { xmlText } from './xml';
 
 /*
@@ -310,6 +311,8 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
       const role = block.decorative ? ' role="presentation"' : '';
       return `<figure class="image align-${block.align}" style="width: ${String(block.width)}%"><img src="${xmlText(book.imageSrc(block.id, name))}" alt="${alt}"${role}/>${caption}</figure>`;
     }
+    case 'table':
+      return tableHtml(block, (cell) => blocksHtml(book, cell.paragraphs, ctx), true);
     case 'quote':
       return `<blockquote>${blocksHtml(book, block.blocks, ctx)}</blockquote>`;
     case 'list': {
@@ -484,6 +487,11 @@ figure.image img { display: block; width: 100%; height: auto; max-height: 90vh; 
 figure.image figcaption { margin-top: 0.4em; font-size: 0.85em; font-style: italic; text-align: center; }
 .image-missing { text-align: center; font-style: italic; text-indent: 0; }
 code.latex { font-family: monospace; }
+table { width: 100%; margin: 1em 0; border-collapse: collapse; table-layout: fixed; }
+th, td { padding: 0.25em 0.4em; border: 1px solid #999; vertical-align: top; text-align: left; }
+th p, td p { margin: 0; text-indent: 0; }
+thead { display: table-header-group; }
+[dir="rtl"] th, [dir="rtl"] td { text-align: right; }
 blockquote { margin: 0 0 0.8em 1.5em; }
 .stanza { margin: 0 0 1.2em; }
 .stanza p.line { margin: 0; white-space: pre-wrap; }

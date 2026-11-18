@@ -3,6 +3,7 @@ import { parseMathml, type MathNode } from '@/features/export/mathml';
 import {
   boxedItems,
   imageStandIn,
+  tableParagraphs,
   type Align,
   type Block,
   type ExportDoc,
@@ -243,13 +244,22 @@ function runsOf(runs: readonly Run[], toMathml: LatexToMathml): ShareRun[] {
   });
 }
 
-/** The share blocks of some blocks. A reader has no pages, so a page break stays out. */
+/**
+ * The share blocks of some blocks. A reader has no pages, so a page break stays out. A table reads as one
+ * line for each row (Phase 19, Task F2).
+ */
 function blocksOf(blocks: readonly Block[], toMathml: LatexToMathml, images: SharedImages): ShareBlock[] {
-  return blocks.flatMap((b) => (b.type === 'pageBreak' ? [] : [blockOf(b, toMathml, images)]));
+  return blocks.flatMap((b) =>
+    b.type === 'pageBreak'
+      ? []
+      : b.type === 'table'
+        ? tableParagraphs(b).map((p) => blockOf(p, toMathml, images))
+        : [blockOf(b, toMathml, images)],
+  );
 }
 
 function blockOf(
-  block: Exclude<Block, { type: 'pageBreak' }>,
+  block: Exclude<Block, { type: 'pageBreak' | 'table' }>,
   toMathml: LatexToMathml,
   images: SharedImages,
 ): ShareBlock {

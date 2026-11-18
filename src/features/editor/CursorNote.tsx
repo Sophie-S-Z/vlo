@@ -12,6 +12,7 @@ import { linkAt, targetOf, unlink } from './extensions/itemLink';
 import { linkText } from './format/itemLink';
 import { continuityNoteAt } from './extensions/continuityCheck';
 import { styleNoteAt } from './extensions/styleCheck';
+import { cellPlace } from './extensions/table';
 import {
   canCheckGrammar,
   getGrammarStatus,
@@ -53,7 +54,8 @@ const grammarText = (lint: GrammarLint) => `${lint.kind}: ${lint.message.replace
  * region stays in the page, so a screen reader reads each new line. A Codex entry shows as it is at the
  * open item (F65). A continuity mark has "Not a problem", which keeps it in the project. A spelling or
  * grammar mark has its fixes, "Add to dictionary", "Ignore" and "Turn off this rule". A link to an item
- * (Task F1) has "Open", "Open beside" and "Remove link".
+ * (Task F1) has "Open", "Open beside" and "Remove link". In a table (Task F2), the line gives the row and the
+ * column of the caret.
  */
 export function CursorNote({ editor, itemId }: { editor: Editor; itemId: string | undefined }) {
   const [problem, setProblem] = useState('');
@@ -97,7 +99,16 @@ export function CursorNote({ editor, itemId }: { editor: Editor; itemId: string 
     const style = styleNoteAt(state);
     if (style) return { ...NO_NOTE, text: styleReason(style.kind, style.text, style.use) };
     const found = codexEntryAt(state);
-    if (!found) return NO_NOTE;
+    if (!found) {
+      // In a table, the line says where the caret is, so a screen reader hears the row and column.
+      const place = cellPlace(state);
+      return place
+        ? {
+            ...NO_NOTE,
+            text: `Table, row ${String(place.row)} of ${String(place.rows)}, column ${String(place.column)} of ${String(place.columns)}.`,
+          }
+        : NO_NOTE;
+    }
     const entry = itemId === undefined ? found : entryAt(found, codex.places, itemId);
     const kind = CODEX_KINDS.find((k) => k.id === entry.kind)?.label ?? '';
     return {

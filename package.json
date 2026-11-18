@@ -70,6 +70,7 @@
     "@tiptap/extension-node-range": "3.32.2",
     "@tiptap/extension-subscript": "3.32.2",
     "@tiptap/extension-superscript": "3.32.2",
+    "@tiptap/extension-table": "3.32.2",
     "@tiptap/extension-text-align": "3.32.2",
     "@tiptap/extension-text-style": "3.32.2",
     "@tiptap/extension-typography": "3.32.2",

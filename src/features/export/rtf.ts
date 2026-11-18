@@ -1,12 +1,23 @@
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { NoteContent } from '@/features/editor/format/notes';
-import { imageStandIn, repeatsTitle, type Block, type ExportDoc, type Run } from './model';
+import {
+  cellGrid,
+  headerParagraphs,
+  headerRows,
+  imageStandIn,
+  repeatsTitle,
+  type Block,
+  type ExportDoc,
+  type Run,
+  type TableBlock,
+} from './model';
 
 /*
  * RTF export (.rtf). Word, Pages, TextEdit, LibreOffice, Scrivener and most writing apps open it. The file
  * keeps bold, italic, underline, strike, superscript, subscript, links, alignment, line spacing, indents,
  * lists, quotes, footnotes and images. Each heading has its outline level, so Word and Vlo read it as a
- * heading. Each stanza is one paragraph with a line break after each line, so every space stays.
+ * heading. Each stanza is one paragraph with a line break after each line, so every space stays. A table
+ * keeps its column widths and its merged cells (Phase 19, Task F2).
  */
 
 /** Twips: 1440 to the inch. 12 pt text is 24 half-points. */
@@ -88,6 +99,38 @@ function hex(bytes: Uint8Array): string {
   return out;
 }
 
+const BORDERS = ['t', 'l', 'b', 'r'].map((side) => `\\clbrdr${side}\\brdrs\\brdrw10`).join('');
+
+/**
+ * An RTF table. A cell that spans columns is one wide cell. A cell that spans rows starts with \clvmgf, and
+ * the rows under it have an empty \clvmrg cell in its place.
+ */
+function tableRtf(block: TableBlock, left: number, ctx: Context): string {
+  const width = ctx.width - left;
+  const edges = block.widths.map((_, i) =>
+    Math.round(left + width * block.widths.slice(0, i + 1).reduce((sum, w) => sum + w, 0)),
+  );
+  const heads = headerRows(block);
+  return cellGrid(block)
+    .map((line, r) => {
+      let props = `\\trowd\\trgaph108\\trleft${String(left)}${r < heads ? '\\trhdr' : ''}`;
+      let cells = '';
+      line.forEach((placed, c) => {
+        if (placed?.column !== c) return;
+        const { cell } = placed;
+        const top = placed.row === r;
+        const merge = cell.rowspan > 1 ? (top ? '\\clvmgf' : '\\clvmrg') : '';
+        const edge = edges[Math.min(c + cell.colspan, edges.length) - 1] ?? left + width;
+        props += `${merge}${BORDERS}\\cellx${String(edge)}`;
+        const paragraphs = top ? headerParagraphs(cell) : [];
+        const body = paragraphs.map((p) => `{${inline(p.runs)}}`).join('\\par ');
+        cells += `\\pard\\intbl\\plain\\f0\\fs${String(TEXT_SIZE)} ${body}\\cell\n`;
+      });
+      return `${props}\n${cells}\\row\n`;
+    })
+    .join('');
+}
+
 function blockRtf(block: Block, left: number, ctx: Context): string {
   const indent = left > 0 ? `\\li${String(left)}` : '';
   switch (block.type) {
@@ -120,6 +163,9 @@ function blockRtf(block: Block, left: number, ctx: Context): string {
       const caption = block.caption === '' ? '' : paragraph('\\qc', `{\\i ${rtfText(block.caption)}}`);
       return paragraph('\\qc\\keepn', pict) + caption;
     }
+    case 'table':
+      // \\pard ends the table, so the next paragraph is outside it.
+      return `${tableRtf(block, left, ctx)}\\pard\n`;
     case 'quote':
       return block.blocks.map((b) => blockRtf(b, left + STEP, ctx)).join('');
     case 'list':

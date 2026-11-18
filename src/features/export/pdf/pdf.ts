@@ -8,7 +8,10 @@ import { headerText, roundedWords, type ManuscriptSetup } from '../manuscript';
 import type { BookSettings } from '@/lib/db';
 import {
   footnotesOf,
+  headerParagraphs,
+  headerRows,
   imageStandIn,
+  placedCells,
   linkPlace,
   paragraphStyleOf,
   repeatsTitle,
@@ -23,6 +26,7 @@ import {
   type ParagraphBlock,
   type Run,
   type RunStyle,
+  type TableBlock,
 } from '../model';
 import { Drawer, INK, rgbOf, type Rgb } from './draw';
 import { FontSet, type Face, type LoadFile } from './fonts';
@@ -70,6 +74,7 @@ const TEXT_SIZE = 12;
 const BOOK_TEXT_SIZE = 11;
 const LINK_BLUE = rgbOf('#2f5d8a');
 const MUTED = rgbOf('#5c5751');
+const HEADER_FILL = rgbOf('#efece8');
 
 interface Paint {
   color: Rgb;
@@ -256,6 +261,85 @@ class Layout {
       },
       ...caption,
     ];
+  }
+
+  /**
+   * A table (Phase 19, Task F2). Each table row is one row of the page, so a page never cuts through a
+   * table row. The header rows stay with the row under them, and a cell that spans rows keeps those rows
+   * on one page. A header cell is bold on a light fill.
+   */
+  private async tableRows(block: TableBlock, place: { left: number; right: number }): Promise<Row[]> {
+    const { textWidth, textSize, spacing, manuscript, blockGap } = this.settings;
+    const avail = textWidth - place.left - place.right;
+    const edges = block.widths.reduce<number[]>(
+      (out, share) => [...out, (out.at(-1) ?? place.left) + share * avail],
+      [place.left],
+    );
+    const pad = textSize * 0.35;
+    const lineSpacing = manuscript ? spacing : 1.15;
+    const base: Base = { font: this.bodyFont, size: textSize };
+    const cells: { header: boolean; row: number; rows: number; x: number; width: number; content: Row[] }[] =
+      [];
+    for (const { cell, row, column } of placedCells(block)) {
+      const x = edges[column] ?? place.left;
+      const right = edges[Math.min(column + cell.colspan, block.widths.length)] ?? place.left + avail;
+      const content: Row[] = [];
+      for (const p of headerParagraphs(cell)) {
+        const rows = await this.paragraph(p.runs, {
+          left: x + pad,
+          right: textWidth - right + pad,
+          align: p.align,
+          spacing: lineSpacing,
+          base,
+        });
+        content.push(...(rows.length > 0 ? rows : [this.blankRow(lineSpacing)]));
+      }
+      cells.push({ header: cell.header, row, rows: cell.rowspan, x, width: right - x, content });
+    }
+    const tall = (c: (typeof cells)[number]) => heightOf(c.content) + 2 * pad;
+    const heights = block.rows.map((_, r) =>
+      Math.max(
+        leading(textSize, lineSpacing) + 2 * pad,
+        ...cells.filter((c) => c.row === r && c.rows === 1).map(tall),
+      ),
+    );
+    // A cell that spans rows makes the last of its rows taller when it needs the room.
+    for (const c of cells.filter((cell) => cell.rows > 1)) {
+      const last = Math.min(c.row + c.rows, heights.length) - 1;
+      const room = heights.slice(c.row, last + 1).reduce((total, h) => total + h, 0);
+      heights[last] = (heights[last] ?? 0) + Math.max(0, tall(c) - room);
+    }
+    const heads = headerRows(block);
+    return block.rows.map((_, r): Row => {
+      const starting = cells.filter((c) => c.row === r);
+      const keep = r < heads || cells.some((c) => c.row <= r && c.row + c.rows - 1 > r);
+      return {
+        height: heights[r] ?? 0,
+        spaceBefore: r === 0 ? blockGap : 0,
+        ...(keep ? { keepWithNext: true } : {}),
+        notes: starting.flatMap((c) => c.content.flatMap((row) => row.notes)),
+        draw: (d, top) => {
+          for (const c of starting) {
+            const h = heights.slice(c.row, c.row + c.rows).reduce((total, v) => total + v, 0);
+            if (c.header && !manuscript) d.rect(c.x, top - h, c.width, h, HEADER_FILL);
+            const box: [number, number][] = [
+              [c.x, top],
+              [c.x + c.width, top],
+              [c.x + c.width, top - h],
+              [c.x, top - h],
+              [c.x, top],
+            ];
+            d.line(box, 0.6, MUTED);
+            let y = top - pad;
+            c.content.forEach((row, i) => {
+              if (i > 0) y -= row.spaceBefore;
+              row.draw(d, y);
+              y -= row.height;
+            });
+          }
+        },
+      };
+    });
   }
 
   async face(font: string | undefined, bold: boolean, italic: boolean): Promise<Face> {
@@ -710,6 +794,8 @@ class Layout {
       }
       case 'image':
         return this.imageRows(block, place);
+      case 'table':
+        return this.tableRows(block, place);
       case 'quote': {
         const inner = { left: place.left + 24, right: place.right + 24 };
         this.last = 'quote';

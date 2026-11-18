@@ -1,4 +1,4 @@
-import type { Block, ExportDoc, ExportSection, Run } from './model';
+import { cellParagraphs, type Block, type ExportDoc, type ExportSection, type Run } from './model';
 
 /*
  * The AI provenance page (spec F26, plan decision P8). An export option adds a last section that lists
@@ -43,6 +43,7 @@ function countBlocks(
     if (block.type === 'paragraph') countRuns(block.runs, into, models);
     else if (block.type === 'list') for (const item of block.items) countBlocks(item, into, models);
     else if (block.type === 'quote') countBlocks(block.blocks, into, models);
+    else if (block.type === 'table') countBlocks(cellParagraphs(block), into, models);
     else if (block.type === 'stanza') for (const line of block.lines) countRuns(line.runs, into, models);
     // Headings count only when the writer wrote them in the text (levels 3 and 4).
     else if (block.type === 'heading' && block.level >= 3) countRuns(block.runs, into, models);

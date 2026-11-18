@@ -6,12 +6,14 @@ import {
   footnotesOf,
   imageStandIn,
   repeatsTitle,
+  tableParagraphs,
   type Block,
   type ExportDoc,
   type ImageBlock,
   type Run,
   type RunStyle,
 } from './model';
+import { tableHtml } from './htmlTable';
 import { xmlText } from './xml';
 
 /*
@@ -127,6 +129,8 @@ function blockHtml(block: Block, options: Required<WebOptions>): string {
       const caption = block.caption === '' ? '' : `<figcaption>${xmlText(block.caption)}</figcaption>`;
       return `<figure><img src="${src}" alt="${xmlText(alt)}" style="width:${String(block.width)}%">${caption}</figure>`;
     }
+    case 'table':
+      return tableHtml(block, (cell) => cell.paragraphs.map((b) => blockHtml(b, options)).join(''), false);
     case 'quote':
       return `<blockquote>${block.blocks.map((b) => blockHtml(b, options)).join('')}</blockquote>`;
     case 'list': {
@@ -208,6 +212,10 @@ function blockText(block: Block, nbsp: boolean): string {
       return `$$${block.latex}$$`;
     case 'image':
       return imageStandIn(block);
+    case 'table':
+      return tableParagraphs(block)
+        .map((b) => blockText(b, nbsp))
+        .join('\n');
     case 'quote':
       return block.blocks.map((b) => blockText(b, nbsp)).join('\n\n');
     case 'list':

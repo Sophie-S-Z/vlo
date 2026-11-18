@@ -426,6 +426,66 @@ html[data-hide-text][data-hide-keep]
   cursor: default;
 }
 
+/* Tables (Phase 19, Task F2). A wide table scrolls on its own line, so a phone keeps the page width. A drag on
+   a column edge sets its width, and selected cells take the accent tint. */
+.vlo-prose .tableWrapper {
+  margin-block: 1em;
+  overflow-x: auto;
+}
+
+.vlo-prose table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.vlo-prose td,
+.vlo-prose th {
+  position: relative;
+  min-width: 3em;
+  padding: 0.35em 0.6em;
+  border: 1px solid var(--rule);
+  vertical-align: top;
+  box-sizing: border-box;
+}
+
+.vlo-prose th {
+  font-weight: 600;
+  text-align: start;
+  background: color-mix(in oklab, var(--rule) 30%, transparent);
+}
+
+.vlo-prose td > p,
+.vlo-prose th > p {
+  margin: 0;
+  text-indent: 0;
+}
+
+.vlo-prose .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  pointer-events: none;
+}
+
+.vlo-prose .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.vlo-prose.resize-cursor,
+.vlo-prose .resize-cursor {
+  cursor: col-resize;
+}
+
 .vlo-manuscript .vlo-math-pending,
 .vlo-manuscript .vlo-math-error {
   font-family: var(--font-mono);

@@ -194,14 +194,14 @@ describe('readers', () => {
     );
   });
 
-  test('Word: headings split the file, marks and footnotes stay, and the table is in the summary', async () => {
+  test('Word: headings split the file, and marks, footnotes and the table stay', async () => {
     const { nodes, skipped } = await readDocx('Salt Year.docx', await docxBytes());
-    expect(skipped).toEqual(['1 table']);
+    expect(skipped).toEqual([]);
     const [part] = nodes;
     expect(part?.title).toBe('Chapter One');
     expect(part?.children?.map((c) => c.title)).toEqual(['The ledger', 'The key']);
     expect(part?.children?.[0]?.text?.html).toBe(
-      '<p><strong>Mira</strong> counted the coins <em>twice</em><sup data-footnote="" data-note="&quot;Forty short.&quot;"></sup>.</p>',
+      '<p><strong>Mira</strong> counted the coins <em>twice</em><sup data-footnote="" data-note="&quot;Forty short.&quot;"></sup>.</p><table><tbody><tr><td><p>Coins</p></td></tr></tbody></table>',
     );
     expect(part?.children?.[1]?.text?.html).toBe('<p><u>Rosa</u><s> left</s><br>at dawn.</p>');
   });
