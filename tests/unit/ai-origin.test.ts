@@ -79,7 +79,7 @@ describe('draft blocks', () => {
   });
 });
 
-describe('Insert (Co-writer)', () => {
+describe('Insert (Drafting)', () => {
   test('adds a sentence at the cursor with the mark, and one Undo removes all of it', () => {
     const { editor } = mount('prose', '<p>She waited. Then the door.</p>');
     editor.commands.setTextSelection(posOf(editor, ' Then'));

@@ -183,11 +183,11 @@ test.describe('on a phone', () => {
       .getByRole('dialog', { name: 'New project' })
       .getByRole('button', { name: 'Create project' })
       .click();
-    // Co-writer adds the Assistant, so the row has more icons than the screen is wide.
+    // Drafting adds the Assistant, so the row has more icons than the screen is wide.
     await page.getByRole('button', { name: /^AI mode: / }).click();
     const mode = page.getByRole('dialog', { name: 'AI mode' });
-    await mode.getByRole('radio', { name: /^Co-writer/ }).click();
-    await mode.getByRole('button', { name: 'Switch to Co-writer mode' }).click();
+    await mode.getByRole('radio', { name: /^Drafting/ }).click();
+    await mode.getByRole('button', { name: 'Switch to Drafting mode' }).click();
     await expect(mode).toHaveCount(0);
 
     const boxes = await Promise.all(

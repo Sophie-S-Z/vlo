@@ -8,8 +8,8 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 18,
-  date: '2026-11-17',
+  version: 19,
+  date: '2026-11-18',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
@@ -25,13 +25,13 @@ export const PRIVACY = {
   leaves: {
     ai: {
       title: 'AI requests',
-      when: 'Only in a project in Reader or Co-writer mode, after you press the button that sends a request or loads the model list of a provider.',
+      when: 'Only in a project in Reader or Drafting mode, after you press the button that sends a request or loads the model list of a provider.',
       sends:
         'The text of the request, which Vlo shows you before it goes unless you turned that off, and the provider key. The Reader panel also sends the Codex notes of the names in its text. In a memoir, the aliases replace the real names when that switch is on. A local server on this computer keeps the text on the device.',
     },
     'model-download': {
       title: 'In-browser model files',
-      when: 'Only in a project in Reader or Co-writer mode, when you load an in-browser model for the Assistant or the deep AI check. In any mode, when you download a speech model for Turn into text or Speak to write, or the natural voices for Read aloud.',
+      when: 'Only in a project in Reader or Drafting mode, when you load an in-browser model for the Assistant or the deep AI check. In any mode, when you download a speech model for Turn into text or Speak to write, or the natural voices for Read aloud.',
       sends: 'Requests for the model files. No text or audio goes with them.',
     },
     share: {

@@ -20,7 +20,7 @@ export const MODE_INFO: Record<AiMode, { label: string; summary: string }> = {
     summary: 'AI reads and gives notes in a side panel. It never writes your text.',
   },
   cowriter: {
-    label: 'Co-writer',
+    label: 'Drafting',
     summary: 'AI can also draft when you ask. You choose what goes in, and Vlo marks it.',
   },
 };

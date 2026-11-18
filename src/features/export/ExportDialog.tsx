@@ -195,7 +195,7 @@ export function ExportDialog({
   );
   const [bookLayout, setBookLayout] = useState(book !== undefined);
   const [safe, setSafe] = useState(hasTemplate(project, 'memoir'));
-  // A project with AI text, or in Co-writer mode, can add the AI provenance page (F26).
+  // A project with AI text, or in Drafting mode, can add the AI provenance page (F26).
   const offersProvenance = project.aiMode === 'cowriter' || project.settings.aiInsertedAt !== undefined;
   const [provenance, setProvenance] = useState(project.settings.aiInsertedAt !== undefined);
   const [manuscript, setManuscript] = useState<ManuscriptSettings>(() => startingManuscript(project));

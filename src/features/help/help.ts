@@ -446,10 +446,11 @@ export const HELP = {
       title: 'Choose an AI mode',
       steps: [
         'Each project starts in Pen mode. Pen mode loads no AI code, and it sends nothing unless you press "Check the web too" in Insights.',
-        'Choose the AI mode button to switch a project to Reader or Co-writer mode.',
-        'Reader mode gives feedback in the side panel only. Co-writer mode can draft words, and marks them.',
-        'The deep AI check in Insights needs Reader or Co-writer mode too, because it loads a language model.',
+        'AI modes are off at first. To use them, turn on Offer AI modes in Settings, under AI. Then choose the AI mode button (Pen) to switch a project to Reader or Drafting mode.',
+        'Reader mode gives feedback in the side panel only. Drafting mode writes a draft in the panel when you ask. Insert puts it in your text, and Vlo marks each AI word.',
+        'The deep AI check in Insights needs Reader or Drafting mode too, because it loads a language model.',
         'Before each request, Vlo shows the exact text and where it goes. The network log lists each request.',
+        'The authorship record counts each AI word, so you can show how much of the work is your own.',
       ],
     },
     {

@@ -1,8 +1,19 @@
 # Vlo status
 
-Last update: 2026-11-17
+Last update: 2026-11-18
 
 ## Done
+
+- Beta feedback: a wider page, a guide and AI by choice (2026-11-18):
+  - The text is 80 characters wide at first, not 68, and the width goes to 120. Page look has a Wide look
+    that fills the screen. A width that a writer chose stays.
+  - A getting-started guide in six plain steps replaces the tip line above the text. Back, Next, Done and
+    Close move through it or hide it, and Settings, Writing, shows it again. It never takes the focus.
+  - The stats bar shows the words and the reading time at first. The welcome names the authorship record.
+  - AI modes are off on each device until the writer turns on Offer AI modes in Settings, under AI. Until
+    then the mode dialog offers Pen only, and says where to turn the modes on. A project that is in an AI
+    mode keeps its mode and can go back to Pen. Co-writer is now Drafting; the stored value stays
+    `cowriter`, so backups and sync need no change. AI policy version 3 and privacy version 19.
 
 - Leaderboard, comedy and spacing (2026-11-17, ADR 0012, migration 0013), from the product owner's ask:
   - `/leaderboard`: the signed-in writers who wrote the most words today, this week, this month and this

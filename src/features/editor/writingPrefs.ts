@@ -40,6 +40,8 @@ export interface WritingPrefs {
   looks: SavedLook[];
   /** The item outline (Phase 19, Task B1) stays open in the margin, where the window has room for it. */
   outline: boolean;
+  /** The mode dialog offers Reader and Drafting next to Pen. Off, so Vlo is a pen until the writer opts in. */
+  aiModes: boolean;
 }
 
 export type ParagraphLook = 'spaced' | 'indented' | 'airy';
@@ -112,6 +114,7 @@ export const WRITING_DEFAULTS: WritingPrefs = {
   screenFont: null,
   looks: [],
   outline: false,
+  aiModes: false,
 };
 
 /** A page width in the range, on a step; anything else gives null. */
@@ -200,6 +203,7 @@ function load(): WritingPrefs {
     screenFont: value.screenFont === undefined ? null : cleanFontValue(value.screenFont),
     looks: cleanLooks(value.looks),
     outline: value.outline === true,
+    aiModes: value.aiModes === true,
   };
 }
 

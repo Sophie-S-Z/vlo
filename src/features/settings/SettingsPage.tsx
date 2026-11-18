@@ -275,6 +275,18 @@ export function SettingsPage() {
           </div>
         </Section>
 
+        <Section title="AI" id="ai">
+          <SettingSwitch
+            label="Offer AI modes"
+            hint="Off at first, so every project stays in Pen mode with no AI. On, the AI mode button of a project offers Reader and Drafting too. Vlo marks each AI word and counts it in the authorship record."
+            checked={writing.aiModes}
+            onChange={(on) => {
+              setWritingPrefs({ aiModes: on });
+              setAnnouncement(on ? 'AI modes on.' : 'AI modes off.');
+            }}
+          />
+        </Section>
+
         <Section title="Speech to text">
           <SpeechSettings onAnnounce={setAnnouncement} />
         </Section>

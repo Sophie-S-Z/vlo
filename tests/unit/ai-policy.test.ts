@@ -17,8 +17,8 @@ describe('AI policy', () => {
   });
 
   it('matches docs/ai-policy.md, with the same version and date', () => {
-    expect(doc).toContain(`Version ${String(AI_POLICY.version)}, 8 November 2026.`);
-    expect(AI_POLICY.date).toBe('2026-11-08');
+    expect(doc).toContain(`Version ${String(AI_POLICY.version)}, 18 November 2026.`);
+    expect(AI_POLICY.date).toBe('2026-11-18');
     for (const statement of AI_POLICY.statements) {
       expect(doc).toContain(`**${statement.title}** ${statement.detail}`);
     }

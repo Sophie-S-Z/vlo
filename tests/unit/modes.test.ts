@@ -50,7 +50,7 @@ describe('changesFor', () => {
     expect(lines).not.toContain('alias');
   });
 
-  it('says that Co-writer marks each AI word, and that a memoir sends aliases', () => {
+  it('says that Drafting marks each AI word, and that a memoir sends aliases', () => {
     const lines = changesFor('cowriter', { templates: ['memoir'], aliasAiRequests: true }).join(' ');
     expect(lines).toContain('marks each AI word');
     expect(lines).toContain('aliases, never real names');
@@ -63,7 +63,7 @@ describe('changesFor', () => {
   });
 
   it('has a label for each mode', () => {
-    expect(MODES.map((m) => MODE_INFO[m].label)).toEqual(['Pen', 'Reader', 'Co-writer']);
+    expect(MODES.map((m) => MODE_INFO[m].label)).toEqual(['Pen', 'Reader', 'Drafting']);
   });
 });
 
