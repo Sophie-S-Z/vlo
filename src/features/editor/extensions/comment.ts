@@ -3,7 +3,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { clock } from '@/lib/clock';
 import { newId } from '@/lib/ids';
-import { openPanel } from '../commands/editorBus';
+import { openPanel, showCommentCard } from '../commands/editorBus';
 import { COMMENT, repliesOf, type CommentReply } from '../format/comment';
 
 /*
@@ -124,24 +124,6 @@ function rangesOf(doc: ProseMirrorNode, id: string): Range[] {
     return false;
   });
   return out;
-}
-
-/**
- * The margin of an editor that shows comment cards, so the Comment tool on a comment's words goes to its
- * card. The function gives false when the margin has no card for the comment.
- */
-const cardFocus = new WeakMap<Editor, (id: string) => boolean>();
-
-export function setCardFocus(editor: Editor, focus: ((id: string) => boolean) | null): void {
-  if (focus) cardFocus.set(editor, focus);
-  else cardFocus.delete(editor);
-}
-
-/** Opens the thread at the caret: its card in the margin, or else the Comment panel. */
-export function openThread(editor: Editor): void {
-  const current = commentAt(editor.state);
-  if (current && cardFocus.get(editor)?.(current.id)) return;
-  openPanel({ editor, panel: 'comment', anchor: 'caret' });
 }
 
 /**
@@ -279,7 +261,7 @@ export const CommentMark = Mark.create({
   addKeyboardShortcuts() {
     return {
       'Mod-Alt-m': ({ editor }) => {
-        openThread(editor);
+        if (!showCommentCard(editor)) openPanel({ editor, panel: 'comment', anchor: 'caret' });
         return true;
       },
       'Mod-Alt-Shift-a': ({ editor }) => {

@@ -5,6 +5,7 @@ import { CODEX_KINDS } from '@/features/codex/codex';
 import { getCodex } from '@/features/codex/codexStore';
 import { getLinks } from '@/features/links/linkStore';
 import { ITEM_LINK } from '../format/itemLink';
+import { NODE_MARK } from '../textMap';
 import { getWritingPrefs } from '../writingPrefs';
 import { insertLink } from './itemLink';
 import { menuPlugin, type MenuState } from './slashMenu';
@@ -18,7 +19,7 @@ import { menuPlugin, type MenuState } from './slashMenu';
  */
 
 /** The letters that a name needs before its completion shows. */
-export const MIN_LETTERS = 3;
+const MIN_LETTERS = 3;
 /** The completion shows after this pause in typing. */
 export const COMPLETION_PAUSE_MS = 300;
 /** The most names that the @ list shows. */
@@ -64,11 +65,18 @@ const on = () => getWritingPrefs().codexCompletion && getCodex().projectId !== n
 function completionAt(state: EditorState): Completion | null {
   const { selection } = state;
   if (!selection.empty || !selection.$from.parent.isTextblock) return null;
+  // The open @ list owns Tab and the arrows.
+  if (mentionKey.getState(state)?.from != null) return null;
   const { parent, parentOffset } = selection.$from;
-  const after = parent.textBetween(parentOffset, Math.min(parentOffset + 1, parent.content.size), '', '￼');
+  const after = parent.textBetween(
+    parentOffset,
+    Math.min(parentOffset + 1, parent.content.size),
+    '',
+    NODE_MARK,
+  );
   // A completion never splits a word.
   if (/[\p{L}\p{N}]/u.test(after)) return null;
-  const word = LAST_WORD.exec(parent.textBetween(0, parentOffset, '', '￼'))?.[0];
+  const word = LAST_WORD.exec(parent.textBetween(0, parentOffset, '', NODE_MARK))?.[0];
   if (word === undefined) return null;
   const names = getCodex().entries.flatMap((entry) => [entry.name, ...entry.aliases]);
   const name = completionFor(word, names);

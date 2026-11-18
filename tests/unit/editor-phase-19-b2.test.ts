@@ -156,6 +156,18 @@ describe('paint format', () => {
     expect(paintKey.getState(editor.state)).toBeNull();
   });
 
+  test('a Shift key that comes up outside the text does not hold the brush back', () => {
+    const editor = editorOn('<p><strong>Bold</strong> plain words</p>');
+    editor.commands.setTextSelection(2);
+    editor.commands.paintFormat();
+    const shift = new KeyboardEvent('keydown', { key: 'Shift' });
+    editor.view.someProp('handleKeyDown', (f) => f(editor.view, shift));
+    // Shift comes up in a dialog, so the text sees only the blur.
+    editor.view.dom.dispatchEvent(new FocusEvent('blur'));
+    editor.commands.setTextSelection({ from: 6, to: 11 });
+    expect(tree(editor.getJSON())).toContain('{bold:plain}');
+  });
+
   test('Escape puts the brush away', () => {
     const editor = editorOn('<p><strong>Bold</strong> plain</p>');
     editor.commands.setTextSelection(2);

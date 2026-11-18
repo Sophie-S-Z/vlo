@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { dayKey } from '@/features/progress/streaks';
 import { clock } from '@/lib/clock';
-import { db, type Project, type Submission, type SubmissionStatus } from '@/lib/db';
+import { db, touchProject, type Project, type Submission, type SubmissionStatus } from '@/lib/db';
 import { newId } from '@/lib/ids';
 
 /*
@@ -177,15 +177,11 @@ export function useSubmissions(projectId: string): Submission[] | undefined {
   );
 }
 
-async function touch(projectId: string): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: clock.now() });
-}
-
 export async function addSubmission(projectId: string, draft: SubmissionDraft): Promise<Submission> {
   const row: Submission = { id: newId(), projectId, ...cleanDraft(draft) };
   await db.transaction('rw', db.submissions, db.projects, async () => {
     await db.submissions.add(row);
-    await touch(projectId);
+    await touchProject(projectId);
   });
   return row;
 }
@@ -197,7 +193,7 @@ export async function updateSubmission(id: string, draft: SubmissionDraft): Prom
     if (!row) return;
     // A put, so a reply date or note that the writer cleared goes away.
     await db.submissions.put({ id, projectId: row.projectId, ...clean });
-    await touch(row.projectId);
+    await touchProject(row.projectId);
   });
 }
 
@@ -206,7 +202,7 @@ export async function setSubmissionStatus(id: string, status: SubmissionStatus):
     const row = await db.submissions.get(id);
     if (!row) return;
     await db.submissions.update(id, { status });
-    await touch(row.projectId);
+    await touchProject(row.projectId);
   });
 }
 
@@ -216,7 +212,7 @@ export async function deleteSubmission(id: string): Promise<Submission | undefin
     const row = await db.submissions.get(id);
     if (!row) return undefined;
     await db.submissions.delete(id);
-    await touch(row.projectId);
+    await touchProject(row.projectId);
     return row;
   });
 }
@@ -224,7 +220,7 @@ export async function deleteSubmission(id: string): Promise<Submission | undefin
 export async function restoreSubmission(row: Submission): Promise<void> {
   await db.transaction('rw', db.submissions, db.projects, async () => {
     await db.submissions.put(row);
-    await touch(row.projectId);
+    await touchProject(row.projectId);
   });
 }
 

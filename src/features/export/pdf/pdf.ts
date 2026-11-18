@@ -661,9 +661,11 @@ class Layout {
   async block(block: Block, place: { left: number; right: number }, folder: boolean): Promise<Row[]> {
     const opening = this.afterOpening;
     this.afterOpening = false;
+    // The space after the block before. A quote or a list lays out its own blocks, which change `after`.
+    const before = this.after;
     const rows = await this.blockRows(block, place, folder, opening);
     const [first] = rows;
-    if (first) first.spaceBefore = Math.max(first.spaceBefore, this.after);
+    if (first) first.spaceBefore = Math.max(first.spaceBefore, before);
     this.after = block.type === 'paragraph' ? (this.styleOf(block)?.after ?? 0) * this.settings.textSize : 0;
     this.last = block.type;
     return rows;

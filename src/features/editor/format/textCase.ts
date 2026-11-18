@@ -40,7 +40,7 @@ const SHORT_WORDS = new Set([
   'with',
 ]);
 
-const WORD = /[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}]+)*/gu;
+export const WORD = /[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}]+)*/gu;
 /** The text before a sentence: a ".", "!" or "?", its closing quotes, a space, and any opening quotes. */
 const SENTENCE_END = /[.!?]['"’”)\]]*\s+['"‘“([]*$/u;
 const LETTER = /[\p{L}\p{N}]/u;

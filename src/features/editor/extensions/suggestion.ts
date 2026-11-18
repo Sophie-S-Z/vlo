@@ -1,4 +1,4 @@
-import { Mark } from '@tiptap/core';
+import { Mark, type Editor } from '@tiptap/core';
 import {
   Fragment,
   Slice,
@@ -51,6 +51,18 @@ export interface ChangeEntry extends SuggestionAttrs {
   to: number;
   /** The words of the change. */
   text: string;
+}
+
+/** "Inserted", or "Deleted by Ada" for a change from an editor. */
+export const changeLabel = (change: Pick<ChangeEntry, 'kind' | 'by'>) =>
+  `${change.kind === 'insert' ? 'Inserted' : 'Deleted'}${change.by ? ` by ${change.by}` : ''}`;
+
+/** Selects the words of a change, and scrolls to them. */
+export function selectChange(editor: Editor, change: Pick<ChangeEntry, 'from' | 'to'>): void {
+  const { doc } = editor.state;
+  editor.view.dispatch(
+    editor.state.tr.setSelection(TextSelection.create(doc, change.from, change.to)).scrollIntoView(),
+  );
 }
 
 const attrsOf = (mark: ProseMirrorMark): SuggestionAttrs => mark.attrs as SuggestionAttrs;

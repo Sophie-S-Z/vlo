@@ -148,6 +148,12 @@ describe('the table in each export', () => {
     expect([...xml.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => Number(m[1]))).toEqual([
       2925, 3218, 3218,
     ]);
+    // Each cell has the width of the columns that it spans.
+    const cellWidths = [
+      ...xml.matchAll(/<w:tcW w:type="dxa" w:w="(\d+)"\/>|<w:tcW w:w="(\d+)" w:type="dxa"\/>/g),
+    ].map((m) => Number(m[1] ?? m[2]));
+    expect(cellWidths.length).toBeGreaterThan(0);
+    for (const w of cellWidths) expect([2925, 3218, 6436, 6143]).toContain(w);
     // Header cells are bold.
     expect(/<w:tc>.*?<w:b\/>.*?Name/s.test(xml)).toBe(true);
   });
@@ -236,7 +242,69 @@ describe('the table in each export', () => {
   });
 });
 
+test('a row that merged cells cover goes, and the cells above stop spanning it', () => {
+  const cell = (text: string, rowspan = 1) => ({
+    type: 'tableCell',
+    attrs: { colspan: 1, rowspan, colwidth: null },
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+  });
+  const doc = singleDoc(
+    {
+      type: 'doc',
+      content: [
+        {
+          type: 'table',
+          content: [
+            { type: 'tableRow', content: [cell('Mira', 2), cell('Hull', 2)] },
+            { type: 'tableRow', content: [] },
+            { type: 'tableRow', content: [cell('Leith'), cell('High')] },
+          ],
+        },
+      ],
+    },
+    'prose',
+  );
+  const table = tableOf(doc);
+  expect(table?.rows.map((cells) => cells.map((c) => c.rowspan))).toEqual([
+    [1, 1],
+    [1, 1],
+  ]);
+});
+
 describe('a table in an import', () => {
+  test('a Word row of merged cells only leaves the next row in its place', async () => {
+    const { Document, Packer, Paragraph, Table, TableCell, TableRow, VerticalMergeType } =
+      await import('docx');
+    const cell = (text: string, merge?: (typeof VerticalMergeType)[keyof typeof VerticalMergeType]) =>
+      new TableCell({ children: [new Paragraph(text)], ...(merge ? { verticalMerge: merge } : {}) });
+    const word = new Document({
+      sections: [
+        {
+          children: [
+            new Table({
+              rows: [
+                new TableRow({
+                  children: [
+                    cell('Mira', VerticalMergeType.RESTART),
+                    cell('Hull', VerticalMergeType.RESTART),
+                  ],
+                }),
+                new TableRow({
+                  children: [cell('', VerticalMergeType.CONTINUE), cell('', VerticalMergeType.CONTINUE)],
+                }),
+                new TableRow({ children: [cell('Leith'), cell('High')] }),
+              ],
+            }),
+          ],
+        },
+      ],
+    });
+    const { nodes } = await readDocx('merged.docx', new Uint8Array(await Packer.toArrayBuffer(word)));
+    expect(nodes[0]?.text?.html).toContain(
+      '<tbody><tr><td><p>Mira</p></td><td><p>Hull</p></td></tr><tr><td><p>Leith</p></td><td><p>High</p></td></tr></tbody>',
+    );
+  });
+
   test("Vlo's Word table comes back with its header row and its merged cells", async () => {
     const { nodes, skipped } = await readDocx('crew.docx', await toDocx(tableDoc()));
     expect(skipped).toEqual([]);

@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { flattenTree } from '@/features/binder/tree';
 import { clock } from '@/lib/clock';
-import { db, type Item, type Sequence } from '@/lib/db';
+import { db, touchProject, type Item, type Sequence } from '@/lib/db';
 import { newId } from '@/lib/ids';
 
 /*
@@ -66,10 +66,6 @@ function cleanName(name: string): string {
   return trimmed;
 }
 
-async function touch(projectId: string): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: clock.now() });
-}
-
 /** Adds an order that starts with the poems in binder order. */
 export async function addSequence(projectId: string, name: string): Promise<Sequence> {
   const clean = cleanName(name);
@@ -83,7 +79,7 @@ export async function addSequence(projectId: string, name: string): Promise<Sequ
       createdAt: clock.now(),
     };
     await db.sequences.add(sequence);
-    await touch(projectId);
+    await touchProject(projectId);
     return sequence;
   });
 }
@@ -96,7 +92,7 @@ export async function copySequence(id: string, name: string): Promise<Sequence |
     if (!source) return undefined;
     const copy: Sequence = { ...source, id: newId(), name: clean, createdAt: clock.now() };
     await db.sequences.add(copy);
-    await touch(source.projectId);
+    await touchProject(source.projectId);
     return copy;
   });
 }
@@ -107,7 +103,7 @@ export async function renameSequence(id: string, name: string): Promise<void> {
     const sequence = await db.sequences.get(id);
     if (!sequence) return;
     await db.sequences.update(id, { name: clean });
-    await touch(sequence.projectId);
+    await touchProject(sequence.projectId);
   });
 }
 
@@ -117,7 +113,7 @@ export async function setSequenceOrder(id: string, itemIds: readonly string[]): 
     const sequence = await db.sequences.get(id);
     if (!sequence) return;
     await db.sequences.update(id, { itemIds: [...new Set(itemIds)] });
-    await touch(sequence.projectId);
+    await touchProject(sequence.projectId);
   });
 }
 
@@ -127,7 +123,7 @@ export async function deleteSequence(id: string): Promise<Sequence | undefined> 
     const sequence = await db.sequences.get(id);
     if (!sequence) return undefined;
     await db.sequences.delete(id);
-    await touch(sequence.projectId);
+    await touchProject(sequence.projectId);
     return sequence;
   });
 }
@@ -135,6 +131,6 @@ export async function deleteSequence(id: string): Promise<Sequence | undefined> 
 export async function restoreSequence(sequence: Sequence): Promise<void> {
   await db.transaction('rw', db.sequences, db.projects, async () => {
     await db.sequences.put(sequence);
-    await touch(sequence.projectId);
+    await touchProject(sequence.projectId);
   });
 }

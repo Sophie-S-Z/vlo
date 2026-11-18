@@ -24,6 +24,7 @@ import { folderOf, type ExportScope } from './build';
 import type { FontSwap } from './fontCheck';
 import type { ExportFormat } from './notices';
 import type { ExportFile, ExportRequest } from './run';
+import type { WebTarget } from './web';
 import { RecordDownload } from '@/features/authorship/RecordDownload';
 import { ExportJob, readOwnFonts, saveFile } from './startExport';
 import { recordError, recordFeature } from '@/features/usage/usage';
@@ -109,8 +110,6 @@ const FORMATS: {
 ];
 
 /** Where a web copy goes (F52). A blog editor takes rich text, and AO3's HTML field takes the HTML. */
-type WebTarget = 'blog' | 'ao3';
-
 const WEB_TARGETS: { id: WebTarget; label: string }[] = [
   { id: 'blog', label: 'Substack, Medium or a blog' },
   { id: 'ao3', label: "AO3, in the work's HTML field" },

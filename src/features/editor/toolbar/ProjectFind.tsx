@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/ui/button';
 import { showWordsOnOpen } from '../commands/editorBus';
-import type { FindQuery } from '../extensions/findReplace';
+import { findWords, type FindQuery } from '../extensions/findReplace';
 import { findInProject, replaceInProject, type ProjectHit } from '../projectFind';
 
 /*
@@ -88,6 +88,12 @@ export function ProjectFind({ editor, itemId, projectId, language, query, replac
                 className="grid w-full gap-0.5 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent"
                 onClick={() => {
                   const first = hit.lines[0];
+                  // The item is open here already, so its editor shows the words at once.
+                  if (hit.item.id === itemId) {
+                    const match = first && findWords(editor.state.doc, first.match, first.block);
+                    if (match) editor.chain().focus().setTextSelection(match).scrollIntoView().run();
+                    return;
+                  }
                   if (first) showWordsOnOpen(hit.item.id, first.match, first.block);
                   void navigate(`/p/${projectId}?${new URLSearchParams({ item: hit.item.id }).toString()}`);
                 }}

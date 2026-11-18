@@ -1,31 +1,12 @@
 import type { Editor } from '@tiptap/core';
-import { TextSelection } from '@tiptap/pm/state';
 import { useEditorState } from '@tiptap/react';
 import { useId } from 'react';
 import type { Pass } from '@/lib/db';
 import { Button } from '@/ui/button';
 import { focusText } from './commands/editorBus';
-import { changesOf, type ChangeEntry } from './extensions/suggestion';
+import { changeLabel, changesOf, selectChange } from './extensions/suggestion';
+import { shortQuote } from './ThreadCard';
 import { PASSES, saveTracking, useTracking } from './trackingStore';
-
-/** The longest quote of a change's words in the list. */
-const QUOTE_CHARS = 60;
-
-function shortQuote(text: string): string {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  return clean.length > QUOTE_CHARS ? `${clean.slice(0, QUOTE_CHARS - 1).trimEnd()}…` : clean;
-}
-
-const what = (change: Pick<ChangeEntry, 'kind' | 'by'>) =>
-  `${change.kind === 'insert' ? 'Inserted' : 'Deleted'}${change.by ? ` by ${change.by}` : ''}`;
-
-function select(editor: Editor, change: ChangeEntry): void {
-  const { doc } = editor.state;
-  editor.view.dispatch(
-    editor.state.tr.setSelection(TextSelection.create(doc, change.from, change.to)).scrollIntoView(),
-  );
-  focusText(editor);
-}
 
 /**
  * Track changes for the open item, under the text (F44, decision R1): the switch's pass, and each waiting
@@ -94,20 +75,21 @@ export function ChangesList({ editor, inMargin }: { editor: Editor; inMargin: bo
                 <button
                   type="button"
                   onClick={() => {
-                    select(editor, change);
+                    selectChange(editor, change);
+                    focusText(editor);
                   }}
                   className="min-h-11 flex-1 rounded-md px-2 py-1 text-left text-sm hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent"
                 >
                   <span className="flex items-center gap-2 text-muted">
                     <span className="vlo-pass-swatch" data-pass={change.pass} aria-hidden="true" />
-                    {what(change)}, pass {change.pass}
+                    {changeLabel(change)}, pass {change.pass}
                   </span>
                   <span className="block [overflow-wrap:anywhere]">“{quote}”</span>
                 </button>
                 <Button
                   variant="ghost"
                   className="shrink-0"
-                  aria-label={`Accept: ${what(change)} “${quote}”`}
+                  aria-label={`Accept: ${changeLabel(change)} “${quote}”`}
                   onClick={() => {
                     editor.commands.acceptChange(change.id);
                   }}
@@ -117,7 +99,7 @@ export function ChangesList({ editor, inMargin }: { editor: Editor; inMargin: bo
                 <Button
                   variant="ghost"
                   className="shrink-0"
-                  aria-label={`Reject: ${what(change)} “${quote}”`}
+                  aria-label={`Reject: ${changeLabel(change)} “${quote}”`}
                   onClick={() => {
                     editor.commands.rejectChange(change.id);
                   }}

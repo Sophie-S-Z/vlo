@@ -33,7 +33,7 @@ const HEADING_SIZES: Readonly<Record<1 | 2 | 3 | 4 | 5, number>> = { 1: 40, 2: 3
 const ALIGN = { left: '\\ql', center: '\\qc', right: '\\qr', justify: '\\qj' } as const;
 
 /** The text in RTF: the control characters are escaped, and each character past ASCII is a \uN. */
-export function rtfText(text: string): string {
+function rtfText(text: string): string {
   let out = '';
   for (let i = 0; i < text.length; i += 1) {
     const code = text.charCodeAt(i);

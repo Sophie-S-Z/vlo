@@ -95,7 +95,7 @@ export function TextShortcutSettings({ onAnnounce }: { onAnnounce: (text: string
             );
             return;
           }
-          if (shortcuts.length >= MAX_SHORTCUTS) {
+          if (shortcuts.length >= MAX_SHORTCUTS && !shortcuts.some((s) => s.from === shortcut.from)) {
             setError(`You have ${String(MAX_SHORTCUTS)} shortcuts. Remove one first.`);
             return;
           }

@@ -134,4 +134,16 @@ describe('the @ list', () => {
     expect(editor.state.doc.textContent).toBe('Then Marigold');
     expect(completionKey.getState(editor.state)).toBeNull();
   });
+
+  test('while the list is open, no faint completion shows, so Tab stays with the list', async () => {
+    const editor = mount();
+    editor.commands.insertContent('Then ');
+    const { from } = editor.state.selection;
+    editor.view.someProp('handleTextInput', (f) =>
+      f(editor.view, from, from, '@', () => editor.state.tr.insertText('@', from, from)),
+    );
+    await typeAndPause(editor, 'Mari');
+    expect(mentionKey.getState(editor.state)?.from).not.toBeNull();
+    expect(ghost(editor)).toBeNull();
+  });
 });

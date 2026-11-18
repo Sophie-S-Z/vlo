@@ -1,7 +1,8 @@
 import { Extension } from '@tiptap/core';
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
-import { caseCharacters, nextCase, type TextCase } from '../format/textCase';
+import { caseCharacters, nextCase, WORD, type TextCase } from '../format/textCase';
+import { NODE_MARK } from '../textMap';
 
 /*
  * Change case (Phase 19, Task B2) for every editor. A command changes the selection, or the word at the
@@ -19,16 +20,12 @@ declare module '@tiptap/core' {
   }
 }
 
-/** A leaf inside a line, such as a footnote reference, stands for one character in the text. */
-const LEAF = '￼';
-const WORD_AT = /[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}]+)*/gu;
-
 /** The selection, or the word at the caret. Null when the caret is in no word. */
 export function wordRange(state: EditorState): { from: number; to: number } | null {
   const { from, to, empty, $from } = state.selection;
   if (!empty) return { from, to };
-  const text = $from.parent.textBetween(0, $from.parent.content.size, undefined, LEAF);
-  const word = [...text.matchAll(WORD_AT)].find(
+  const text = $from.parent.textBetween(0, $from.parent.content.size, undefined, NODE_MARK);
+  const word = [...text.matchAll(WORD)].find(
     (m) => m.index <= $from.parentOffset && $from.parentOffset <= m.index + m[0].length,
   );
   return word ? { from: $from.start() + word.index, to: $from.start() + word.index + word[0].length } : null;
@@ -54,7 +51,7 @@ function piecesOf(doc: ProseMirrorNode, from: number, to: number, rule: TextCase
     const start = Math.max(from, pos + 1);
     const end = Math.min(to, pos + line.nodeSize - 1);
     // One rule over the whole line, so title case knows the first and the last word.
-    const chars = caseCharacters(doc.textBetween(start, end, undefined, LEAF), rule, language);
+    const chars = caseCharacters(doc.textBetween(start, end, undefined, NODE_MARK), rule, language);
     let index = 0;
     doc.nodesBetween(start, end, (node, at) => {
       if (!node.isInline) return true;

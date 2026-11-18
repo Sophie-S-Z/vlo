@@ -26,7 +26,7 @@ export interface BlockCheckState {
   decorations: DecorationSet;
 }
 
-export interface BlockCheckOptions<T extends BlockMark> {
+interface BlockCheckOptions<T extends BlockMark> {
   key: PluginKey<BlockCheckState>;
   isOn: () => boolean;
   /** The marks show after this pause in typing. */
@@ -46,7 +46,7 @@ export interface BlockCheckOptions<T extends BlockMark> {
 }
 
 /** The text blocks on the screen and the screens around it, in document order. */
-export function blocksNearView(view: EditorView): { node: ProseMirrorNode; pos: number }[] {
+function blocksNearView(view: EditorView): { node: ProseMirrorNode; pos: number }[] {
   const tops: { node: ProseMirrorNode; pos: number }[] = [];
   view.state.doc.forEach((node, pos) => tops.push({ node, pos }));
   const height = window.innerHeight;

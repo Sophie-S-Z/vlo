@@ -22,7 +22,7 @@ interface Target {
 }
 
 /** Puts the word in place of the target, or at the caret when the target changed or there is none. */
-export function replaceWord(editor: Editor, target: Target | null, word: string): void {
+function replaceWord(editor: Editor, target: Target | null, word: string): void {
   const { state } = editor;
   const same = target !== null && state.doc.textBetween(target.from, target.to) === target.text;
   // insertText keeps the marks that run across the replaced word, such as bold.

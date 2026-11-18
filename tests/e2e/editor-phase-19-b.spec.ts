@@ -135,4 +135,7 @@ test('find takes a pattern, gives its error, and finds in the whole project', as
   await expect(list.getByRole('button', { name: /Scene 1/ })).toBeVisible();
   await expect(bar.getByText('2 matches in 1 item')).toBeVisible();
   expect(await seriousIssues(page)).toEqual([]);
+  // The item is open already, so a press selects its first match at once.
+  await list.getByRole('button', { name: /Scene 1/ }).click();
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('harbour');
 });

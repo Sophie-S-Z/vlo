@@ -1,5 +1,5 @@
 import { clock } from '@/lib/clock';
-import { db, MAX_ITEM_TARGET, type Item, type ItemKind } from '@/lib/db';
+import { db, MAX_ITEM_TARGET, touchProject, type Item, type ItemKind } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { orderAfterLast } from '@/lib/order';
@@ -8,10 +8,6 @@ function cleanTitle(title: string): string {
   const trimmed = title.trim();
   if (trimmed === '') throw new Error('An item needs a title.');
   return trimmed;
-}
-
-async function touchProject(projectId: string, now: number): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: now });
 }
 
 /** "Scene 3" when the project already has two scenes. */

@@ -2,6 +2,7 @@ import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import type { EditorCommand } from '../commands/registry';
+import { NODE_MARK } from '../textMap';
 
 /*
  * The / menu. Typing "/" at the start of a block or after a space opens a list of tools. `menuPlugin`
@@ -17,9 +18,9 @@ export interface MenuState<T> {
   index: number;
 }
 
-export type SlashState = MenuState<EditorCommand>;
+type SlashState = MenuState<EditorCommand>;
 
-export interface SlashOptions {
+interface SlashOptions {
   /** The tools that match a query, in the order to show them. */
   items: (query: string) => readonly EditorCommand[];
   /** Runs the chosen tool after the "/" and the query are gone. */
@@ -40,7 +41,7 @@ function opensAt(state: EditorState, pos: number): boolean {
   const $pos = state.doc.resolve(pos);
   if (!$pos.parent.isTextblock) return false;
   if ($pos.parentOffset === 0) return true;
-  const before = $pos.parent.textBetween($pos.parentOffset - 1, $pos.parentOffset, undefined, '￼');
+  const before = $pos.parent.textBetween($pos.parentOffset - 1, $pos.parentOffset, undefined, NODE_MARK);
   return /\s/.test(before);
 }
 
@@ -81,7 +82,7 @@ export function menuPlugin<T>(options: {
         const $head = selection.$head;
         if ($head.parent !== $trigger.parent) return shut;
         if (next.doc.textBetween(from, from + trigger.length) !== trigger) return shut;
-        const query = next.doc.textBetween(from + trigger.length, selection.from, '\n', '￼');
+        const query = next.doc.textBetween(from + trigger.length, selection.from, '\n', NODE_MARK);
         if (query.length > MAX_QUERY || /^\s/.test(query) || query.includes('\n')) return shut;
         const matches = query === prev.query && prev.from !== null ? prev.matches : items(query);
         // A space after a query that matches nothing means the writer is typing prose.
@@ -100,7 +101,7 @@ export function menuPlugin<T>(options: {
         const lead = trigger.slice(0, -1);
         const start = from - lead.length;
         if (text !== trigger.slice(-1) || from !== to || !editor.isEditable || !enabled()) return false;
-        if (start < 0 || view.state.doc.textBetween(start, from, undefined, '￼') !== lead) return false;
+        if (start < 0 || view.state.doc.textBetween(start, from, undefined, NODE_MARK) !== lead) return false;
         if (!opensAt(view.state, start)) return false;
         view.dispatch(view.state.tr.insertText(text, from, to).setMeta(key, { open: start }));
         return true;

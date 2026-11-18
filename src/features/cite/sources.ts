@@ -1,6 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { clock } from '@/lib/clock';
-import { db, type Source, type SourceName, type SourceType } from '@/lib/db';
+import { db, touchProject, type Source, type SourceName, type SourceType } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { pageRange } from './styles';
 
@@ -408,10 +407,6 @@ export function useSources(projectId: string): Source[] | undefined {
   return useLiveQuery(() => sourcesFor(projectId), [projectId]);
 }
 
-async function touch(projectId: string): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: clock.now() });
-}
-
 function checkDraft(draft: SourceDraft): SourceDraft {
   const clean = cleanDraft(draft);
   if (clean.title === '') throw new RangeError('Type a title.');
@@ -436,7 +431,7 @@ export async function addSources(projectId: string, drafts: readonly SourceDraft
       return { ...fields, id: newId(), projectId, key: unique };
     });
     await db.sources.bulkAdd(added);
-    await touch(projectId);
+    await touchProject(projectId);
     return added;
   });
 }
@@ -448,7 +443,7 @@ export async function updateSource(id: string, draft: SourceDraft): Promise<void
     const source = await db.sources.get(id);
     if (!source) return;
     await db.sources.put({ ...fields, id, projectId: source.projectId, key: source.key });
-    await touch(source.projectId);
+    await touchProject(source.projectId);
   });
 }
 
@@ -458,7 +453,7 @@ export async function deleteSource(id: string): Promise<Source | undefined> {
     const source = await db.sources.get(id);
     if (!source) return undefined;
     await db.sources.delete(id);
-    await touch(source.projectId);
+    await touchProject(source.projectId);
     return source;
   });
 }
@@ -466,6 +461,6 @@ export async function deleteSource(id: string): Promise<Source | undefined> {
 export async function restoreSource(source: Source): Promise<void> {
   await db.transaction('rw', db.sources, db.projects, async () => {
     await db.sources.put(source);
-    await touch(source.projectId);
+    await touchProject(source.projectId);
   });
 }

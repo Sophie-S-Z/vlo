@@ -1,6 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { clock } from '@/lib/clock';
-import { db, type Person } from '@/lib/db';
+import { db, touchProject, type Person } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import type { NameVariant, PrivatePerson } from '@/lib/privacy';
 
@@ -77,10 +76,6 @@ async function takenNames(projectId: string, except: string | null): Promise<Set
   return new Set(people.filter((p) => p.id !== except).flatMap((p) => p.variants.map((v) => v.real)));
 }
 
-async function touch(projectId: string): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: clock.now() });
-}
-
 /** Adds a person. An empty label takes the first real name. */
 export async function addPerson(
   projectId: string,
@@ -91,7 +86,7 @@ export async function addPerson(
     const clean = cleanVariants(variants, await takenNames(projectId, null));
     const person: Person = { id: newId(), projectId, label: cleanLabel(label, clean), variants: clean };
     await db.people.add(person);
-    await touch(projectId);
+    await touchProject(projectId);
     return person;
   });
 }
@@ -109,7 +104,7 @@ export async function updatePerson(
         : cleanVariants(patch.variants, await takenNames(person.projectId, id));
     const label = patch.label === undefined ? person.label : cleanLabel(patch.label, variants);
     await db.people.update(id, { label, variants });
-    await touch(person.projectId);
+    await touchProject(person.projectId);
   });
 }
 
@@ -122,7 +117,7 @@ export async function deletePerson(id: string): Promise<Person | undefined> {
     const person = await db.people.get(id);
     if (!person) return undefined;
     await db.people.delete(id);
-    await touch(person.projectId);
+    await touchProject(person.projectId);
     return person;
   });
 }
@@ -140,7 +135,7 @@ export async function restorePerson(person: Person): Promise<string[]> {
       throw new RangeError(`Another person in this project has each name of ${person.label} now.`);
     }
     await db.people.put({ ...person, variants });
-    await touch(person.projectId);
+    await touchProject(person.projectId);
     return person.variants.filter((v) => taken.has(v.real)).map((v) => v.real);
   });
 }

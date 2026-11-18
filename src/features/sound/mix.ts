@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { safeStorage } from '@/app/preferences';
+import { localStore, useLocalStore } from '@/app/localStore';
 import type { SceneSound } from '../scenes/scenes';
 
 /*
@@ -128,41 +127,14 @@ export function natureLevels(settings: SoundSettings, scene: SceneSound | null, 
   return { ...settings.nature };
 }
 
-const KEY = 'vlo:sound';
-const listeners = new Set<() => void>();
+const store = localStore('vlo:sound', cleanSettings);
 
-function load(): SoundSettings {
-  try {
-    const raw = safeStorage()?.getItem(KEY);
-    return cleanSettings(raw ? JSON.parse(raw) : null);
-  } catch {
-    return cleanSettings(null);
-  }
-}
-
-let current = load();
-
-export function getSoundSettings(): SoundSettings {
-  return current;
-}
+export const getSoundSettings = store.get;
 
 export function setSoundSettings(change: Partial<SoundSettings>): void {
-  current = cleanSettings({ ...current, ...change });
-  try {
-    safeStorage()?.setItem(KEY, JSON.stringify(current));
-  } catch {
-    // Private windows can refuse storage. The settings still work until the page closes.
-  }
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  store.set(cleanSettings({ ...store.get(), ...change }));
 }
 
 export function useSoundSettings(): SoundSettings {
-  return useSyncExternalStore(subscribe, getSoundSettings, getSoundSettings);
+  return useLocalStore(store);
 }

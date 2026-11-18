@@ -145,10 +145,27 @@ export function focusText(editor: Editor): void {
 }
 
 /** Runs a registry command from any surface. Run commands act at once; panel commands open their panel. */
+/**
+ * The review margin of each editor that shows comment cards. Its function opens the card of the comment at
+ * the caret, with its reply field, or gives false when it has no card for it.
+ */
+const commentCards = new WeakMap<Editor, () => boolean>();
+
+export function setCommentCards(editor: Editor, show: (() => boolean) | null): void {
+  if (show) commentCards.set(editor, show);
+  else commentCards.delete(editor);
+}
+
+/** Opens the card of the comment at the caret in the margin. False when the margin cannot. */
+export function showCommentCard(editor: Editor): boolean {
+  return commentCards.get(editor)?.() ?? false;
+}
+
 export function runCommand(editor: Editor, cmd: EditorCommand, anchor: PanelAnchor = 'caret'): boolean {
   if (editor.isDestroyed) return false;
   if (cmd.kind === 'panel') {
-    openPanel({ editor, panel: cmd.panel, anchor });
+    // The Comment tool on a thread's words goes to its card in the margin, from every surface.
+    if (cmd.panel !== 'comment' || !showCommentCard(editor)) openPanel({ editor, panel: cmd.panel, anchor });
     return true;
   }
   focusText(editor);

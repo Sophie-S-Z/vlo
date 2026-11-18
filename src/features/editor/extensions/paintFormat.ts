@@ -133,8 +133,14 @@ export const PaintFormat = Extension.create({
             return true;
           },
           handleDOMEvents: {
-            mousedown: () => {
-              selecting = true;
+            mousedown: (_view, event) => {
+              // Only the main button selects. A right click's menu can take the mouseup.
+              selecting = event.button === 0;
+              return false;
+            },
+            // A Shift key that comes up outside the text, such as in a dialog, ends here.
+            blur: () => {
+              shift = false;
               return false;
             },
             keyup: (view, event) => {

@@ -1,3 +1,4 @@
+import { resetWriterTools } from '@/features/editor/writerTools';
 import { anonKey, rpc, sharingReady } from '@/features/share/rpc';
 import { clock } from '@/lib/clock';
 import { withLock } from '@/lib/lock';
@@ -298,6 +299,7 @@ export async function accountRpc<T>(name: Parameters<typeof rpc>[0], args: Recor
 export async function signOut(): Promise<void> {
   const session = await readSession();
   await forgetSession();
+  resetWriterTools();
   if (session) await auth('logout?scope=local', {}, session.accessToken).catch(() => undefined);
 }
 
@@ -305,4 +307,5 @@ export async function signOut(): Promise<void> {
 export async function deleteAccount(): Promise<void> {
   await accountRpc('delete_my_account');
   await forgetSession();
+  resetWriterTools();
 }

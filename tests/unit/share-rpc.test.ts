@@ -67,7 +67,8 @@ describe('rpc', () => {
       answer(400, { code: 'P0001', message });
       const failure = rpc('add_comment', {}, 'share');
       await expect(failure).rejects.toBeInstanceOf(ShareError);
-      await expect(failure).rejects.toMatchObject({ kind });
+      // The server's own words stay on the error, so a screen such as the owner page can say more.
+      await expect(failure).rejects.toMatchObject({ kind, reason: message });
     }
     vi.stubGlobal(
       'fetch',

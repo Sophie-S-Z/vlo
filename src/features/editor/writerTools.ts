@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { safeStorage } from '@/app/preferences';
+import { localStore, useLocalStore } from '@/app/localStore';
 import { clock } from '@/lib/clock';
 
 /*
@@ -17,14 +16,13 @@ export interface WriterTools {
   updatedAt: number;
 }
 
-const KEY = 'vlo:writer-tools';
 export const MAX_PINNED = 40;
 const MAX_KEYS = 200;
 const ID = /^[a-z0-9-]{1,40}$/;
 /** One or more modifiers and one key, or an F key, as the key recorder makes them. */
 const KEYS = /^(?:(?:Mod|Ctrl|Meta|Alt|Shift)-){0,4}(?:\S|F\d{1,2}|[A-Z][A-Za-z]{1,15})$/;
 
-export const NO_WRITER_TOOLS: WriterTools = { toolbar: null, keys: {}, updatedAt: 0 };
+const NO_WRITER_TOOLS: WriterTools = { toolbar: null, keys: {}, updatedAt: 0 };
 
 /** A copy with each part checked. A damaged part gives Vlo's own toolbar or keys. */
 export function cleanWriterTools(value: unknown): WriterTools {
@@ -44,49 +42,32 @@ export function cleanWriterTools(value: unknown): WriterTools {
   return { toolbar, keys, updatedAt };
 }
 
-function load(): WriterTools {
-  try {
-    return cleanWriterTools(JSON.parse(safeStorage()?.getItem(KEY) ?? 'null'));
-  } catch {
-    return NO_WRITER_TOOLS;
-  }
-}
+const store = localStore('vlo:writer-tools', cleanWriterTools);
 
-let current = load();
-const listeners = new Set<() => void>();
-
-function keep(next: WriterTools): void {
-  current = next;
-  try {
-    safeStorage()?.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // Private windows can refuse storage. The change then lasts until the page closes.
-  }
-  for (const listener of listeners) listener();
-}
-
-export function getWriterTools(): WriterTools {
-  return current;
-}
+export const getWriterTools = store.get;
+export const onWriterTools = store.subscribe;
 
 /** Changes the toolbar or the keys on this device. */
 export function setWriterTools(change: Partial<Pick<WriterTools, 'toolbar' | 'keys'>>): void {
-  keep(cleanWriterTools({ ...current, ...change, updatedAt: clock.now() }));
+  store.set(cleanWriterTools({ ...store.get(), ...change, updatedAt: clock.now() }));
 }
 
 /** Takes a copy from another device when it is newer than this one. Returns true when it did. */
 export function takeWriterTools(copy: unknown): boolean {
   const clean = cleanWriterTools(copy);
-  if (clean.updatedAt <= current.updatedAt) return false;
-  keep(clean);
+  if (clean.updatedAt <= store.get().updatedAt) return false;
+  store.set(clean);
   return true;
 }
 
-export function onWriterTools(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
+/**
+ * Gives this device Vlo's own toolbar and keys, as a writer signs out. The writer's copy stays with the
+ * account, so the next account that signs in here never takes it.
+ */
+export function resetWriterTools(): void {
+  store.set(NO_WRITER_TOOLS);
 }
 
 export function useWriterTools(): WriterTools {
-  return useSyncExternalStore(onWriterTools, getWriterTools, getWriterTools);
+  return useLocalStore(store);
 }
