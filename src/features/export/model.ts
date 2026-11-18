@@ -1,7 +1,7 @@
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { TextFill } from '@/features/editor/format/fill';
 import type { ScriptRole } from '@/features/editor/scriptRoles';
-import type { BookSettings, ScriptStyle } from '@/lib/db';
+import type { BookSettings, PageSetup, ScriptStyle } from '@/lib/db';
 import type { EditorForm } from '@/features/library/templates';
 import type { ImageAlign, ImageWidth } from '@/features/images/attrs';
 import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
@@ -33,6 +33,11 @@ export interface RunStyle {
   play?: true;
   /** A web address for a link. */
   link?: string;
+  /**
+   * A link to an item of the export by its section id, and to a heading of it by its anchor (Phase 19,
+   * Task F1). The build keeps it only when the export holds the target, so the text is plain otherwise.
+   */
+  to?: { item: string; heading?: string };
 }
 
 /** A waiting suggestion on a text, kept only by a Word export with tracked changes (F45). */
@@ -107,6 +112,8 @@ export interface HeadingBlock {
   level: 1 | 2 | 3 | 4 | 5;
   runs: Run[];
   align?: Align;
+  /** The anchor that a link to the heading names (Phase 19, Task F1). */
+  anchor?: string;
 }
 
 export interface ListBlock {
@@ -175,6 +182,102 @@ export interface ExportImage {
   data: Uint8Array;
 }
 
+/** A cell of a table (Phase 19, Task F2). A cell holds paragraphs only, as the editor allows. */
+export interface TableCell {
+  paragraphs: ParagraphBlock[];
+  header: boolean;
+  colspan: number;
+  rowspan: number;
+}
+
+/**
+ * A table. Each row lists its own cells, as HTML does: a cell that spans rows takes its place in the rows
+ * under it, which list no cell there.
+ */
+export interface TableBlock {
+  type: 'table';
+  rows: TableCell[][];
+  /** The share of the table width of each column. The shares add up to 1. */
+  widths: number[];
+}
+
+/** How many rows at the top of a table hold header cells only. Word and HTML repeat them on each page. */
+export function headerRows(block: TableBlock): number {
+  const n = block.rows.findIndex((cells) => !cells.every((cell) => cell.header));
+  return n === -1 ? block.rows.length : n;
+}
+
+/** A cell with the row and the column of its top left corner, from 0. */
+export interface PlacedCell {
+  cell: TableCell;
+  row: number;
+  column: number;
+}
+
+/** Each cell of a table at its place in the grid, row by row. */
+export function placedCells(block: TableBlock): PlacedCell[] {
+  const taken = new Set<string>();
+  const out: PlacedCell[] = [];
+  block.rows.forEach((cells, row) => {
+    let column = 0;
+    for (const cell of cells) {
+      while (taken.has(`${String(row)},${String(column)}`)) column += 1;
+      out.push({ cell, row, column });
+      for (let r = row; r < row + cell.rowspan; r += 1)
+        for (let c = column; c < column + cell.colspan; c += 1) taken.add(`${String(r)},${String(c)}`);
+      column += cell.colspan;
+    }
+  });
+  return out;
+}
+
+/** The cell that covers each place of a table's grid, row by row. A place that no cell covers is empty. */
+export function cellGrid(block: TableBlock): (PlacedCell | undefined)[][] {
+  const grid: (PlacedCell | undefined)[][] = block.rows.map(() => block.widths.map(() => undefined));
+  for (const placed of placedCells(block))
+    for (let r = placed.row; r < placed.row + placed.cell.rowspan; r += 1)
+      for (let c = placed.column; c < placed.column + placed.cell.colspan; c += 1) {
+        const line = grid[r];
+        if (line && c < line.length) line[c] = placed;
+      }
+  return grid;
+}
+
+/** The paragraphs of every cell of a table, row by row. */
+export function cellParagraphs(block: TableBlock): ParagraphBlock[] {
+  return block.rows.flatMap((cells) => cells.flatMap((cell) => cell.paragraphs));
+}
+
+/** The runs of a cell, with a line break between its paragraphs. */
+export function cellRuns(cell: TableCell): Run[] {
+  return cell.paragraphs.flatMap((p, i): Run[] => (i === 0 ? p.runs : [{ type: 'break' }, ...p.runs]));
+}
+
+/** The paragraphs of a cell, in bold for a header cell, for a format that has no header cell of its own. */
+export function headerParagraphs(cell: TableCell): ParagraphBlock[] {
+  if (!cell.header) return cell.paragraphs;
+  return cell.paragraphs.map((p) => ({
+    ...p,
+    runs: p.runs.map((run) =>
+      run.type === 'text' || run.type === 'math' ? { ...run, style: { ...run.style, bold: true } } : run,
+    ),
+  }));
+}
+
+/**
+ * A table as plain paragraphs, one for each row, with " | " between its cells, for a format with no
+ * tables.
+ */
+export function tableParagraphs(block: TableBlock): ParagraphBlock[] {
+  return block.rows.map((cells) => ({
+    type: 'paragraph',
+    runs: cells.flatMap((cell, i): Run[] => [
+      ...(i > 0 ? [{ type: 'text', text: ' | ', style: {} } as const] : []),
+      ...cellRuns(cell),
+    ]),
+  }));
+}
+
 export type Block =
   | ParagraphBlock
   | HeadingBlock
@@ -185,7 +288,8 @@ export type Block =
   /** A page break (Phase 19): the next block starts a new page in a format with pages. */
   | { type: 'pageBreak' }
   | { type: 'math'; latex: string }
-  | ImageBlock;
+  | ImageBlock
+  | TableBlock;
 
 export type ExportForm = EditorForm;
 
@@ -220,6 +324,31 @@ export interface ExportDoc {
   images?: Readonly<Record<string, ExportImage>>;
   /** The project's paragraph styles (Phase 19, Task E2). Word, PDF and EPUB use them. */
   styles?: readonly ParagraphStyle[];
+  /**
+   * The project's page setup (Phase 19, Task F3), with the project title for a page line that names it.
+   * The PDF, Word and RTF files read it, unless a book layout, standard manuscript format or a script
+   * gives the pages. The default page setup when absent.
+   */
+  page?: { setup: PageSetup; project: string };
+}
+
+/**
+ * The item title of each section that an "item" page line can show: a section that starts with a heading
+ * at level 2, such as a chapter or a titled item, as Word finds them with a STYLEREF field. A scene has no
+ * heading, so its pages show the title of its chapter.
+ */
+export function itemTitles(doc: ExportDoc): Map<string, string> {
+  return new Map(
+    doc.sections
+      .filter((s) => s.blocks[0]?.type === 'heading' && s.blocks[0].level === 2)
+      .map((s) => [s.id, s.title]),
+  );
+}
+
+/** The item title of an export of one section, which every page shows. Null for more sections. */
+export function singleItemTitle(doc: ExportDoc): string | null {
+  const [only, ...rest] = doc.sections;
+  return only && rest.length === 0 ? only.title || doc.title : null;
 }
 
 /** The paragraph style of a block, or undefined for body text or a style that the project no longer has. */
@@ -306,6 +435,21 @@ export function textBlocks(body: string): ParagraphBlock[] {
     }));
 }
 
+/** The headings of some blocks, in reading order, with those in lists and quotes. */
+export function headingsIn(blocks: readonly Block[]): HeadingBlock[] {
+  return blocks.flatMap((block): HeadingBlock[] => {
+    if (block.type === 'heading') return [block];
+    if (block.type === 'list') return block.items.flatMap(headingsIn);
+    if (block.type === 'quote') return headingsIn(block.blocks);
+    return [];
+  });
+}
+
+/** The name of the place that a link to an item or a heading goes to, in a format with links in the file. */
+export function linkPlace(to: NonNullable<RunStyle['to']>): string {
+  return to.heading ?? to.item;
+}
+
 /** Every run of some blocks, in reading order. */
 export function runsOf(blocks: readonly Block[]): Run[] {
   return blocks.flatMap((block): Run[] => {
@@ -319,6 +463,8 @@ export function runsOf(blocks: readonly Block[]): Run[] {
         return runsOf(block.blocks);
       case 'stanza':
         return block.lines.flatMap((line) => line.runs);
+      case 'table':
+        return runsOf(cellParagraphs(block));
       default:
         return [];
     }

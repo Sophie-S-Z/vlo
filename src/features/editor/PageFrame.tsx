@@ -1,12 +1,22 @@
 import type { Editor } from '@tiptap/core';
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { PageFormat } from '@/lib/db';
-import { pageBreaks, pageTextHeight, PAGE_SIZES, sheetZoom, type BlockBox } from './format/page';
+import type { PageFormat, PageSetup } from '@/lib/db';
+import {
+  pageBreaks,
+  pageTextHeight,
+  PAGE_SIZES,
+  sheetMargins,
+  sheetZoom,
+  type BlockBox,
+} from './format/page';
 
 /*
- * Page format (plan Task A7, decision 8). In Letter or A4 the text sits on one sheet with 1 inch margins.
- * After each typing pause Vlo measures the text and draws a line and a page number at each page end. The
- * lines sit outside ProseMirror, so they never touch the document. Pageless shows the text with no sheet.
+ * Page format (plan Task A7, decision 8). In Letter or A4 the text sits on one sheet with the margins of the
+ * page setup (Phase 19, Task F3). After each typing pause Vlo measures the text and draws a line at each page
+ * end, with the page number above it at the foot of a page, or below it at the top of the next page. The
+ * header line shows in the top margin of the first page, and the footer line in the bottom margin of the
+ * last page. The lines sit outside ProseMirror, so they never touch the document. Pageless shows the text
+ * with no sheet.
  */
 
 /** The typing pause before the page-end lines come back. */
@@ -27,6 +37,13 @@ function lineHeight(element: Element): number | null {
   return Number.isFinite(size) && size > 0 ? size * 1.2 : null;
 }
 
+/** The page setup of a sheet, with the text of its header line and footer line (empty for none). */
+export interface SheetSetup {
+  setup: PageSetup;
+  header: string;
+  footer: string;
+}
+
 function sameBreaks(a: readonly number[], b: readonly number[]): boolean {
   return a.length === b.length && a.every((v, i) => Math.abs(v - (b[i] ?? NaN)) < 0.5);
 }
@@ -34,6 +51,7 @@ function sameBreaks(a: readonly number[], b: readonly number[]): boolean {
 interface PageFrameProps {
   editor: Editor;
   format: PageFormat;
+  sheet: SheetSetup;
   /** The writer's page zoom in percent. */
   zoom: number;
   /** A value that changes when the text's layout can change outside the document, such as a new font. */
@@ -43,7 +61,15 @@ interface PageFrameProps {
   children: ReactNode;
 }
 
-export function PageFrame({ editor, format, zoom, layoutKey, onPages, children }: PageFrameProps) {
+export function PageFrame({
+  editor,
+  format,
+  sheet: { setup, header, footer },
+  zoom,
+  layoutKey,
+  onPages,
+  children,
+}: PageFrameProps) {
   const outer = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
   const lines = useRef<HTMLDivElement>(null);
@@ -54,6 +80,8 @@ export function PageFrame({ editor, format, zoom, layoutKey, onPages, children }
   const layout = size !== null && scale !== null ? { size, scale } : null;
   const sheet = layout !== null;
   const narrow = size !== null && available !== null && scale === null;
+  const margins = sheetMargins(setup);
+  const { top: marginTop, right: marginRight, bottom: marginBottom, left: marginLeft } = margins;
 
   useLayoutEffect(() => {
     const element = outer.current;
@@ -71,7 +99,7 @@ export function PageFrame({ editor, format, zoom, layoutKey, onPages, children }
   // A change to the text hides the lines at once. They come back after a typing pause.
   useEffect(() => {
     if (format === 'pageless' || scale === null) return;
-    const pageHeight = pageTextHeight(PAGE_SIZES[format]) * scale;
+    const pageHeight = pageTextHeight(PAGE_SIZES[format], { top: marginTop, bottom: marginBottom }) * scale;
     const measure = () => {
       const box = text.current;
       if (!box || editor.isDestroyed) return;
@@ -122,7 +150,7 @@ export function PageFrame({ editor, format, zoom, layoutKey, onPages, children }
       editor.off('transaction', onTransaction);
       document.fonts.removeEventListener('loadingdone', onFonts);
     };
-  }, [editor, format, scale, layoutKey]);
+  }, [editor, format, scale, layoutKey, marginTop, marginBottom]);
 
   const pages = sheet ? breaks.length + 1 : null;
   useEffect(() => {
@@ -130,18 +158,20 @@ export function PageFrame({ editor, format, zoom, layoutKey, onPages, children }
   }, [onPages, pages]);
 
   const lastBreak = breaks.at(-1) ?? 0;
+  const px = (value: number) => `${String(value * (layout?.scale ?? 1))}px`;
   const sheetStyle: CSSProperties | undefined = layout
     ? ({
         '--vlo-zoom': String(layout.scale),
-        width: `${String(layout.size.width * layout.scale)}px`,
-        padding: `${String(layout.size.margin * layout.scale)}px`,
+        width: px(layout.size.width),
+        padding: `${px(marginTop)} ${px(marginRight)} ${px(marginBottom)} ${px(marginLeft)}`,
       } as CSSProperties)
     : undefined;
   // The paper reaches the end of the last page.
   const textStyle: CSSProperties | undefined = layout
-    ? { minHeight: `${String(lastBreak + pageTextHeight(layout.size) * layout.scale)}px` }
+    ? { minHeight: `${String(lastBreak + pageTextHeight(layout.size, margins) * layout.scale)}px` }
     : undefined;
-  const margin = layout ? layout.size.margin * layout.scale : 0;
+  const { numbers } = setup;
+  const edges = { left: `-${px(marginLeft)}`, right: `-${px(marginRight)}` };
 
   return (
     <div
@@ -173,26 +203,65 @@ export function PageFrame({ editor, format, zoom, layoutKey, onPages, children }
           {children}
           {sheet && (
             <div ref={lines} aria-hidden="true" className="vlo-page-lines" data-stale="">
+              <PageLine
+                place="top"
+                style={{ top: `-${px(marginTop / 2)}` }}
+                text={header}
+                number={numbers === 'top-right' ? 1 : null}
+              />
               {breaks.map((top, i) => (
                 <div
                   key={i}
                   className="vlo-page-end"
                   data-page-end={String(i + 1)}
-                  style={{
-                    top: `${String(top)}px`,
-                    left: `${String(-margin)}px`,
-                    right: `${String(-margin)}px`,
-                  }}
+                  style={{ ...edges, top: `${String(top)}px` }}
                 >
-                  <span className="vlo-page-number" style={{ right: `${String(margin / 3)}px` }}>
-                    {i + 1}
-                  </span>
+                  {numbers !== 'none' && (
+                    <span
+                      className="vlo-page-number"
+                      data-place={numbers === 'top-right' ? 'top' : 'bottom'}
+                      style={{ right: px(marginRight / 3) }}
+                    >
+                      {numbers === 'top-right' ? i + 2 : i + 1}
+                    </span>
+                  )}
                 </div>
               ))}
+              <PageLine
+                place="bottom"
+                style={{ bottom: `-${px(marginBottom / 2)}` }}
+                text={footer}
+                number={numbers === 'bottom-center' ? breaks.length + 1 : null}
+              />
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The header line in the top margin of the first page, or the footer line in the bottom margin of the last
+ * page. The text starts at the left edge of the text, as in the exports. The number sits at the right of
+ * the header line, or in the center of the footer line.
+ */
+function PageLine({
+  place,
+  style,
+  text,
+  number,
+}: {
+  place: 'top' | 'bottom';
+  style: CSSProperties;
+  text: string;
+  number: number | null;
+}) {
+  if (text === '' && number === null) return null;
+  return (
+    <div className="vlo-page-line" data-page-line={place} style={style}>
+      <span className="truncate">{text}</span>
+      {number !== null && <span className="vlo-page-line-number">{number}</span>}
     </div>
   );
 }

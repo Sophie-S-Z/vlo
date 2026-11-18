@@ -1,5 +1,6 @@
 import { Dexie, type Table } from 'dexie';
 import type { PoemForm } from '@/features/craft/forms';
+import type { HeadingRef } from '@/features/editor/format/itemLink';
 import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
 import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
 import { LIBRARY } from './library';
@@ -38,6 +39,8 @@ export interface Project {
     font?: string;
     /** Pageless, or a sheet of Letter or A4 paper with page-end lines (plan decision 8). */
     page?: PageFormat;
+    /** The margins, page numbers and the lines at the top and foot of each page (Phase 19, Task F3). */
+    pageSetup?: PageSetup;
     /** The cozy scene around the page, or "none" (plan decision 11). */
     scene?: string;
     /** Standard manuscript format for exports of a novel: the switch and the writer's details. */
@@ -155,6 +158,26 @@ export interface Label {
 }
 
 export type PageFormat = 'pageless' | 'letter' | 'a4';
+
+/** The text of the line at the top or the foot of each page: none, a title, or the writer's own text. */
+export type PageLineKind = 'none' | 'project' | 'item' | 'own';
+
+/**
+ * Page setup (Phase 19, Task F3). The page on the screen, the PDF, the Word file and the RTF file use the
+ * same values. A book layout and standard manuscript format keep their own pages.
+ */
+export interface PageSetup {
+  margins: 'normal' | 'narrow' | 'wide' | 'custom';
+  /** The margins in inches, for "custom". */
+  custom?: { top: number; right: number; bottom: number; left: number };
+  /** The unit that the custom margins show in. Inches when absent. */
+  unit?: 'in' | 'mm';
+  numbers: 'none' | 'bottom-center' | 'top-right';
+  header: PageLineKind;
+  headerText?: string;
+  footer: PageLineKind;
+  footerText?: string;
+}
 
 /** A suggested length of a section, in words (Phase 17 decision M2). */
 export interface WordRange {
@@ -532,6 +555,10 @@ export interface ItemText {
   projectId: string;
   text: string;
   updatedAt: number;
+  /** The items that the text links to (Phase 19, Task F1). None when it links to no item. */
+  links?: string[];
+  /** The headings of the text, for the link list. None when it has no heading. */
+  headings?: HeadingRef[];
 }
 
 /** A music file the writer added (plan decision 10). It stays on this device and plays from a blob: URL. */

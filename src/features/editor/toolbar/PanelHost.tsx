@@ -27,6 +27,7 @@ import { LinkPanel } from './panels/LinkPanel';
 import { ReadAloudPanel } from './panels/ReadAloudPanel';
 import { SizePanel } from './panels/SizePanel';
 import { SpacingPanel } from './panels/SpacingPanel';
+import { TablePanel } from './panels/TablePanel';
 import { ShortcutSheet } from './ShortcutSheet';
 import { PersonPanel } from '@/features/people/PersonPanel';
 import { SourcesPanel } from '@/features/cite/SourcesPanel';
@@ -119,6 +120,8 @@ function PanelBody({
       return <SourcesPanel editor={editor} onDone={closePanel} />;
     case 'characters':
       return <CharactersPanel editor={editor} />;
+    case 'table':
+      return <TablePanel editor={editor} />;
     case 'footnote':
       return <FootnotePanel editor={editor} />;
     case 'read-aloud':
@@ -177,6 +180,7 @@ const PANEL_NAMES: Readonly<Record<PanelId, string>> = {
   comments: 'All comments',
   cite: 'Cite a source',
   image: 'Image',
+  table: 'Table',
   thesaurus: 'Thesaurus',
   'style-new': 'New paragraph style',
   'style-edit': 'Paragraph style',

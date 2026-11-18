@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import { clock } from '@/lib/clock';
 import { bytesBlob, bytesBuffer, db, type FileBytes, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
-import { readItemUpdates, YFRAGMENT } from '@/lib/ydocs';
+import { readItemUpdates, remapNodeAttribute, YFRAGMENT } from '@/lib/ydocs';
 import { clockKey, remoteTransaction } from '@/features/sync/clock';
 import { dropLater } from '@/features/sync/space';
 import type { ExportImage } from '@/features/export/model';
@@ -117,38 +117,9 @@ export function imageIdsIn(update: Uint8Array, out = new Set<string>()): Set<str
   return out;
 }
 
-function remapIn(node: Y.XmlFragment | Y.XmlElement, imageId: (old: string) => string): boolean {
-  let changed = false;
-  for (const child of node.toArray()) {
-    if (!(child instanceof Y.XmlElement)) continue;
-    if (child.nodeName === IMAGE) {
-      const old = child.getAttribute('id') as unknown;
-      if (typeof old === 'string') {
-        const next = imageId(old);
-        if (next !== old) {
-          child.setAttribute('id', next);
-          changed = true;
-        }
-      }
-    }
-    if (remapIn(child, imageId)) changed = true;
-  }
-  return changed;
-}
-
 /** The update with each image node moved to a new image id, for a copy of a project. */
 export function remapImageIds(update: Uint8Array, imageId: (old: string) => string): Uint8Array {
-  const doc = new Y.Doc();
-  try {
-    Y.applyUpdate(doc, update);
-    const result = { changed: false };
-    doc.transact(() => {
-      result.changed = remapIn(doc.getXmlFragment(YFRAGMENT), imageId);
-    });
-    return result.changed ? Y.encodeStateAsUpdate(doc) : update;
-  } finally {
-    doc.destroy();
-  }
+  return remapNodeAttribute(update, IMAGE, 'id', imageId);
 }
 
 /** The ids of every image that an item, a snapshot or a version of the project holds. */

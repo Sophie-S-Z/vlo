@@ -388,6 +388,16 @@ function mapBlocks(blocks: readonly Block[], on: RunHandlers): Block[] {
       case 'image':
         // The alt text and the caption are text of the export, so a name in them gets its alias.
         return { ...block, alt: on.text(block.alt), caption: on.text(block.caption) };
+      case 'table':
+        return {
+          ...block,
+          rows: block.rows.map((cells) =>
+            cells.map((cell) => ({
+              ...cell,
+              paragraphs: cell.paragraphs.map((p) => ({ ...p, runs: mapRuns(p.runs, on) })),
+            })),
+          ),
+        };
       default:
         return block;
     }

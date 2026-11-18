@@ -1,5 +1,6 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { CITE, citeText } from './format/cite';
+import { ITEM_LINK, linkText } from './format/itemLink';
 import { MATH_BLOCK, MATH_INLINE, mathText } from './format/math';
 
 /*
@@ -8,8 +9,8 @@ import { MATH_BLOCK, MATH_INLINE, mathText } from './format/math';
  */
 
 /**
- * A line break keeps words apart, a scene break is "#", an equation is its LaTeX between $ signs, and a
- * citation is its key, such as "[@marlow2019]".
+ * A line break keeps words apart, a scene break is "#", an equation is its LaTeX between $ signs, a
+ * citation is its key, such as "[@marlow2019]", and a link to an item is the title it had when it was made.
  */
 export function leafText(node: ProseMirrorNode): string {
   switch (node.type.name) {
@@ -23,6 +24,8 @@ export function leafText(node: ProseMirrorNode): string {
       return mathText(String(node.attrs.latex ?? ''), true);
     case CITE:
       return citeText(node.attrs);
+    case ITEM_LINK:
+      return linkText(node.attrs);
     default:
       return '';
   }

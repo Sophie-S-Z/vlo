@@ -22,7 +22,7 @@ export async function addPoem(projectId: string, title: string, text: string): P
   try {
     await writeItemUpdate(item.id, update, clock.now());
     const language = (await db.projects.get(projectId))?.settings.language;
-    await writeItemText(item, text, 'poem', text, language);
+    await writeItemText(item, { text }, 'poem', language);
   } catch (problem) {
     await db.items.delete(item.id);
     await deleteItemDoc(item.id).catch(() => undefined);

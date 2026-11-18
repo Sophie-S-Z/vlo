@@ -110,7 +110,7 @@ describe('the @ list', () => {
     setReadingOrder([{ item: item('i1', 'scene', 'The harbour at night'), book: '' }]);
     expect(mentionsFor('har')).toEqual([
       { id: 'e3', name: 'Harbour', kind: 'Place' },
-      { id: 'i1', name: 'The harbour at night', kind: 'Item' },
+      { id: 'i1', name: 'The harbour at night', kind: 'Item', item: true },
     ]);
     expect(mentionsFor('goldie').map((m) => m.name)).toEqual(['Marigold']);
   });

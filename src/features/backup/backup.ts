@@ -3,7 +3,8 @@ import { bytesBuffer, db, readViewRows, viewTables, VloDb, type Item, type Proje
 import { newId } from '@/lib/ids';
 import { deleteItemDoc } from '@/lib/itemDocName';
 import { recountItems } from '@/lib/wordcount';
-import { inBatches, readItemUpdates, writeItemUpdate } from '@/lib/ydocs';
+import { inBatches, readItemUpdates, remapNodeAttribute, writeItemUpdate } from '@/lib/ydocs';
+import { ITEM_LINK } from '@/features/editor/format/itemLink';
 import { deleteProject } from '@/features/library/projects';
 import { holdsText } from '@/features/library/templates';
 import { remapNameMarks } from '@/features/people/markAll';
@@ -154,13 +155,14 @@ function asCopy(source: Backup): Backup {
   const views = series ? { ...backup.views, codex: [...backup.views.codex, ...series.codex] } : backup.views;
   const copied = copyViews(views, projectId, itemId);
   // Each private-name mark in the text names a person by id, so it moves to the new id too. So does each
-  // image node, because an image row belongs to one project.
+  // image node, because an image row belongs to one project, and each link to an item (Phase 19, Task F1).
   const imageIds = new Map(backup.images.map((image) => [image.info.id, newId()]));
   const imageId = (old: string) => imageIds.get(old) ?? old;
-  const names = (update: Uint8Array) =>
-    backup.views.people.length === 0 ? update : remapNameMarks(update, copied.personId);
-  const marks = (update: Uint8Array) =>
-    imageIds.size === 0 ? names(update) : remapImageIds(names(update), imageId);
+  const marks = (update: Uint8Array) => {
+    const named = backup.views.people.length === 0 ? update : remapNameMarks(update, copied.personId);
+    const imaged = imageIds.size === 0 ? named : remapImageIds(named, imageId);
+    return remapNodeAttribute(imaged, ITEM_LINK, 'item', itemId);
+  };
   // A kept rule 2 mark (F66) names an entry and a scene by id, so it moves to the new ids too.
   const { settings } = backup.project;
   const scenes = (settings.continuity?.scenes ?? []).flatMap((key) => {
@@ -217,7 +219,12 @@ function asCopy(source: Backup): Backup {
       ...image,
       info: { ...image.info, id: imageId(image.info.id), projectId },
     })),
-    itemTexts: backup.itemTexts.map((t) => ({ ...t, projectId, itemId: itemId(t.itemId) })),
+    itemTexts: backup.itemTexts.map((t) => ({
+      ...t,
+      projectId,
+      itemId: itemId(t.itemId),
+      ...(t.links ? { links: t.links.map(itemId) } : {}),
+    })),
     updates: new Map([...backup.updates].map(([old, update]) => [itemId(old), marks(update)])),
     views: copied.views,
   };

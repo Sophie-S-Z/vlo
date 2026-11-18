@@ -78,6 +78,18 @@ import {
   type LucideIcon,
   WandSparkles,
   X,
+  FileSymlink,
+  BetweenHorizontalEnd,
+  BetweenHorizontalStart,
+  BetweenVerticalEnd,
+  BetweenVerticalStart,
+  Columns3,
+  Grid2x2X,
+  PanelTop,
+  Rows3,
+  Table,
+  TableCellsMerge,
+  TableCellsSplit,
 } from 'lucide-react';
 import type { Template } from '@/lib/db';
 import { craftOf, setCraftLabels } from '@/features/craft/craftStore';
@@ -85,6 +97,7 @@ import { craftItemOf } from '@/features/craft/craftSwitch';
 import { showsAliases } from '@/features/people/aliasPreview';
 import { getNames, setShowAliases } from '@/features/people/nameStore';
 import { getCodex, setShowCodexNames } from '@/features/codex/codexStore';
+import { getLinks } from '@/features/links/linkStore';
 import { getWritingPrefs, setWritingPrefs, SPACING, type SpacingKey } from '../writingPrefs';
 import { MAX_HANGING_EM } from '../extensions/poem';
 import { ROLE_LABELS, SCRIPT_LINE, SCRIPT_ROLES, type ScriptRole } from '../scriptRoles';
@@ -105,6 +118,7 @@ import { getTracking, saveTracking } from '../trackingStore';
 import { swatchVar } from '../format/palette';
 import { TEXT_CASES, type TextCase } from '../format/textCase';
 import { paintKey } from '../extensions/paintFormat';
+import { hasHeaderRow } from '../extensions/table';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
@@ -135,6 +149,7 @@ export type PanelId =
   | 'comments'
   | 'cite'
   | 'image'
+  | 'table'
   | 'thesaurus'
   | 'style-new'
   | 'style-edit'
@@ -150,6 +165,7 @@ export type CommandGroup =
   | 'indent'
   | 'move'
   | 'insert'
+  | 'table'
   | 'review'
   | 'names'
   | 'craft'
@@ -166,6 +182,7 @@ export const GROUP_LABELS: Readonly<Record<CommandGroup, string>> = {
   indent: 'Indent',
   move: 'Move',
   insert: 'Insert',
+  table: 'Table',
   review: 'Find and read aloud',
   names: 'Private names',
   craft: 'Craft',
@@ -252,6 +269,32 @@ const QUICK_CHARACTERS: readonly (readonly [string, string, string, readonly str
   ['degree', '°', 'Degree sign', ['temperature', 'angle']],
   ['copyright', '©', 'Copyright sign', ['rights']],
   ['nbsp', '\u00a0', 'Non-breaking space', ['space', 'nbsp', 'keep together']],
+];
+
+type TableCommand =
+  | 'addRowBefore'
+  | 'addRowAfter'
+  | 'addColumnBefore'
+  | 'addColumnAfter'
+  | 'deleteRow'
+  | 'deleteColumn'
+  | 'toggleHeaderRow'
+  | 'mergeCells'
+  | 'splitCell'
+  | 'deleteTable';
+
+/** The tools of a table: the id, the label, the icon, the TipTap command and more search words. */
+const TABLE_TOOLS: readonly (readonly [string, string, LucideIcon, TableCommand, readonly string[]])[] = [
+  ['table-row-above', 'Add row above', BetweenHorizontalStart, 'addRowBefore', ['insert row']],
+  ['table-row-below', 'Add row below', BetweenHorizontalEnd, 'addRowAfter', ['insert row']],
+  ['table-column-left', 'Add column left', BetweenVerticalStart, 'addColumnBefore', ['insert column']],
+  ['table-column-right', 'Add column right', BetweenVerticalEnd, 'addColumnAfter', ['insert column']],
+  ['table-delete-row', 'Delete row', Rows3, 'deleteRow', ['remove row']],
+  ['table-delete-column', 'Delete column', Columns3, 'deleteColumn', ['remove column']],
+  ['table-header-row', 'Header row', PanelTop, 'toggleHeaderRow', ['heading row', 'title row']],
+  ['table-merge', 'Merge cells', TableCellsMerge, 'mergeCells', ['join cells', 'combine']],
+  ['table-split', 'Split cell', TableCellsSplit, 'splitCell', ['unmerge']],
+  ['table-delete', 'Delete table', Grid2x2X, 'deleteTable', ['remove table']],
 ];
 
 const ROLE_ICONS: Readonly<Record<ScriptRole, LucideIcon>> = {
@@ -513,6 +556,44 @@ export const COMMANDS: readonly EditorCommand[] = [
     selection: true,
     isActive: (e) => e.isActive('link'),
   },
+  {
+    kind: 'run',
+    id: 'item-link',
+    label: 'Link to an item',
+    icon: FileSymlink,
+    group: 'insert',
+    forms: PROSE,
+    keywords: ['internal link', 'wiki link', 'cross reference', 'backlink', '[['],
+    slash: true,
+    // Types "[[", which opens the list of items and headings.
+    run: (e) => e.commands.openLinkList(),
+    isEnabled: (e) => e.isEditable && getLinks().projectId !== null,
+  },
+  {
+    kind: 'panel',
+    id: 'table',
+    label: 'Table',
+    icon: Table,
+    group: 'insert',
+    forms: PROSE,
+    keywords: ['grid', 'rows', 'columns', 'cells', 'spreadsheet'],
+    slash: true,
+    panel: 'table',
+    isEnabled: (e) => e.can().insertTable(),
+  },
+  // The tools of the caret's table (Task F2). Format > Table shows them only in a table.
+  ...TABLE_TOOLS.map(([id, label, icon, name, keywords]): RunCommand => ({
+    kind: 'run',
+    id,
+    label,
+    icon,
+    group: 'table',
+    forms: PROSE,
+    keywords: ['table', ...keywords],
+    run: (e) => e.commands[name](),
+    isEnabled: (e) => e.can()[name](),
+    ...(name === 'toggleHeaderRow' ? { isActive: (e: Editor) => hasHeaderRow(e.state) } : {}),
+  })),
   // The elements of a script (F63). The toolbar's style menu, the / menu and the command menu list them.
   ...SCRIPT_ROLES.map((role): RunCommand => ({
     kind: 'run',

@@ -8,6 +8,7 @@ import {
   Document,
   DropCapType,
   ExternalHyperlink,
+  Footer,
   FootnoteReferenceRun,
   FrameAnchorType,
   FrameWrap,
@@ -15,6 +16,7 @@ import {
   ImageRun,
   HeadingLevel,
   InsertedTextRun,
+  InternalHyperlink,
   LevelFormat,
   LineRuleType,
   Math as MathBlock,
@@ -24,9 +26,15 @@ import {
   PageNumber,
   Paragraph,
   ShadingType,
+  SimpleField,
   Tab,
+  Table,
+  TableCell,
+  TableLayoutType,
+  TableRow,
   TabStopType,
   TextRun,
+  WidthType,
   type ICommentOptions,
   type IParagraphStyleOptions,
   type IRunOptions,
@@ -36,8 +44,10 @@ import {
 import JSZip from 'jszip';
 import type { TextFill } from '@/features/editor/format/fill';
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
+import { DEFAULT_PAGE_SETUP, marginsOf, pageLineText } from '@/features/editor/format/pageSetup';
 import type { NoteContent } from '@/features/editor/format/notes';
 import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
+import type { PageLineKind, PageSetup } from '@/lib/db';
 import { textDirection } from '@/lib/language';
 import { mathmlFor, type LatexToMathml } from './latex';
 import { headerText, plainDoc, roundedWords, type ManuscriptSetup } from './manuscript';
@@ -45,16 +55,23 @@ import { parseMathml } from './mathml';
 import {
   bookmarkName,
   boxedItems,
+  headerParagraphs,
+  headerRows,
   imageStandIn,
+  itemTitles,
+  linkPlace,
   repeatsTitle,
   runsOf,
+  singleItemTitle,
   type Align,
   type Block,
   type ExportDoc,
   type ExportImage,
+  type HeadingBlock,
   type ImageBlock,
   type Run,
   type RunStyle,
+  type TableBlock,
 } from './model';
 import { ommlOf } from './omml';
 
@@ -240,7 +257,8 @@ function commentLengths(blocks: readonly Block[]): Map<string, number> {
 }
 
 /**
- * A text run as Word parts: a tracked change if it has one, in a link if it has one, and in its comment's
+ * A text run as Word parts: a tracked change if it has one, in a web link or a link to a bookmark of the
+ * file (Phase 19, Task F1) if it has one, and in its comment's
  * range if it has one. A comment's range starts with its first run and ends after its last run in the
  * section, so it can hold more than one paragraph.
  */
@@ -259,6 +277,8 @@ function textParts(run: TextRunModel, ctx: Context, extra: IRunOptions = {}): Pa
     part = change.kind === 'insert' ? new InsertedTextRun(tracked) : new DeletedTextRun(tracked);
   }
   if (run.style.link) part = new ExternalHyperlink({ link: run.style.link, children: [part] });
+  else if (run.style.to)
+    part = new InternalHyperlink({ anchor: bookmarkName(linkPlace(run.style.to)), children: [part] });
   const comment = run.comment;
   if (!comment) return [part];
   const out: ParagraphChild[] = [];
@@ -291,6 +311,12 @@ function textParts(run: TextRunModel, ctx: Context, extra: IRunOptions = {}): Pa
   return out;
 }
 
+/** The parts of a heading, in a bookmark when a link names it (Phase 19, Task F1). */
+function headingParts(block: HeadingBlock, ctx: Context): ParagraphChild[] {
+  const children = inline(block.runs, ctx);
+  return block.anchor ? [new Bookmark({ id: bookmarkName(block.anchor), children })] : children;
+}
+
 function runOptions(style: RunStyle, ctx: Context): IRunOptions {
   const font = wordFontName(style.font);
   let fillStyle: string | undefined;
@@ -312,7 +338,7 @@ function runOptions(style: RunStyle, ctx: Context): IRunOptions {
       : {}),
     ...(font ? { font } : {}),
     ...(style.size !== undefined ? { size: Math.round(TEXT_SIZE * style.size) } : {}),
-    ...(fillStyle ? { style: fillStyle } : style.link ? { style: 'Hyperlink' } : {}),
+    ...(fillStyle ? { style: fillStyle } : style.link || style.to ? { style: 'Hyperlink' } : {}),
   };
 }
 
@@ -377,7 +403,10 @@ function splitDropCap(runs: readonly Run[]): { letter: TextRunModel; rest: Run[]
   };
 }
 
-function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] {
+/** A part of the body: a paragraph or a table. */
+type Part = Paragraph | Table;
+
+function blockParagraphs(block: Block, place: Place, ctx: Context): Part[] {
   const indent = place.left > 0 ? { left: place.left } : undefined;
   const numbering = place.numbering ? { numbering: place.numbering } : {};
   switch (block.type) {
@@ -444,7 +473,7 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
               ? { pageBreakBefore: true, spacing: { before: ctx.chapterDrop, after: DOUBLE } }
               : {}),
             ...(indent ? { indent } : {}),
-            children: inline(block.runs, ctx),
+            children: headingParts(block, ctx),
           }),
         ];
       }
@@ -454,7 +483,7 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
           ...(block.align ? { alignment: ALIGNMENT[block.align] } : {}),
           ...(indent ? { indent } : {}),
           ...numbering,
-          children: inline(block.runs, ctx),
+          children: headingParts(block, ctx),
         }),
       ];
     case 'sceneBreak':
@@ -478,6 +507,8 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
       ];
     case 'image':
       return imageParagraphs(block, place, ctx);
+    case 'table':
+      return [wordTable(block, place, ctx)];
     case 'quote':
       return blocksParagraphs(block.blocks, { ...place, left: place.left + STEP }, ctx);
     case 'list': {
@@ -512,8 +543,8 @@ function blockParagraphs(block: Block, place: Place, ctx: Context): Paragraph[] 
   }
 }
 
-function blocksParagraphs(blocks: readonly Block[], place: Place, ctx: Context): Paragraph[] {
-  const out: Paragraph[] = [];
+function blocksParagraphs(blocks: readonly Block[], place: Place, ctx: Context): Part[] {
+  const out: Part[] = [];
   blocks.forEach((block, i) => {
     // An empty paragraph separates two stanzas, so the poem keeps its breaks in every reader.
     if (block.type === 'stanza' && blocks[i - 1]?.type === 'stanza') {
@@ -522,6 +553,41 @@ function blocksParagraphs(blocks: readonly Block[], place: Place, ctx: Context):
     out.push(...blockParagraphs(block, place, ctx));
   });
   return out;
+}
+
+/**
+ * A Word table (Phase 19, Task F2) at the text's indent, with the column widths of the editor. A header row
+ * repeats at the top of each page.
+ */
+function wordTable(block: TableBlock, place: Place, ctx: Context): Table {
+  const width = ctx.textWidth - place.left;
+  const columns = block.widths.map((share) => Math.round(share * width));
+  const heads = headerRows(block);
+  let column = 0;
+  return new Table({
+    width: { size: width, type: WidthType.DXA },
+    columnWidths: columns,
+    layout: TableLayoutType.FIXED,
+    ...(place.left > 0 ? { indent: { size: place.left, type: WidthType.DXA } } : {}),
+    rows: block.rows.map((cells, r) => {
+      column = 0;
+      return new TableRow({
+        tableHeader: r < heads,
+        children: cells.map((cell) => {
+          const size = columns.slice(column, column + cell.colspan).reduce((sum, w) => sum + w, 0);
+          column += cell.colspan;
+          const paragraphs = blocksParagraphs(headerParagraphs(cell), { left: 0 }, ctx);
+          return new TableCell({
+            width: { size, type: WidthType.DXA },
+            ...(cell.colspan > 1 ? { columnSpan: cell.colspan } : {}),
+            ...(cell.rowspan > 1 ? { rowSpan: cell.rowspan } : {}),
+            // Word needs a paragraph in each cell.
+            children: paragraphs.length > 0 ? paragraphs : [new Paragraph({ children: [] })],
+          });
+        }),
+      });
+    }),
+  });
 }
 
 /** The list definitions: one bullet list, and one numbered list for each first number in the export. */
@@ -697,9 +763,74 @@ function styles(font: string, manuscript: boolean, language: string, own: readon
         basedOn: 'Normal',
         paragraph: { spacing: { after: 0, line: 276 } },
       },
+      {
+        id: PAGE_LINE_STYLE,
+        name: 'Page Line',
+        basedOn: 'Normal',
+        run: { size: 20, color: '5C5751' },
+        paragraph: { spacing: { before: 0, after: 0, line: 240 } },
+      },
       ...own.map(wordStyle),
     ],
   };
+}
+
+/** The paragraph style of the header line and the footer line. */
+const PAGE_LINE_STYLE = 'VloPageLine';
+
+/**
+ * The header and the footer of the page setup (Phase 19, Task F3). Each line starts at the left edge of
+ * the text. The number sits at the right of the header, or in the center of the footer. An item line in an
+ * export of more items is a STYLEREF field, so Word shows the chapter or item title of each page.
+ */
+function pageSetupParts(doc: ExportDoc, setup: PageSetup, textWidth: number) {
+  const titles = [...itemTitles(doc).values()];
+  const single = singleItemTitle(doc);
+  const line = (kind: PageLineKind, own: string | undefined): ParagraphChild[] => {
+    const [first] = titles;
+    if (kind === 'item' && single === null && first !== undefined)
+      return [new SimpleField('STYLEREF "Heading 2"', first)];
+    const names = { project: doc.page?.project ?? doc.title, item: single ?? doc.title };
+    const text = pageLineText(kind, own, names);
+    return text === '' ? [] : [new TextRun(text)];
+  };
+  const number = new TextRun({ children: [new Tab(), PageNumber.CURRENT] });
+  const top = line(setup.header, setup.headerText);
+  const foot = line(setup.footer, setup.footerText);
+  const paragraph = (
+    children: ParagraphChild[],
+    tab: (typeof TabStopType)[keyof typeof TabStopType],
+    at: number,
+  ) => new Paragraph({ style: PAGE_LINE_STYLE, tabStops: [{ type: tab, position: at }], children });
+  const headers =
+    top.length > 0 || setup.numbers === 'top-right'
+      ? {
+          default: new Header({
+            children: [
+              paragraph(
+                [...top, ...(setup.numbers === 'top-right' ? [number] : [])],
+                TabStopType.RIGHT,
+                textWidth,
+              ),
+            ],
+          }),
+        }
+      : undefined;
+  const footers =
+    foot.length > 0 || setup.numbers === 'bottom-center'
+      ? {
+          default: new Footer({
+            children: [
+              paragraph(
+                [...foot, ...(setup.numbers === 'bottom-center' ? [number] : [])],
+                TabStopType.CENTER,
+                Math.round(textWidth / 2),
+              ),
+            ],
+          }),
+        }
+      : undefined;
+  return { ...(headers ? { headers } : {}), ...(footers ? { footers } : {}) };
 }
 
 /**
@@ -750,8 +881,17 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     doc.paper === 'a4'
       ? { width: 11906, height: 16838 }
       : { width: Math.round(8.5 * INCH), height: 11 * INCH };
-  const textWidth = page.width - 2 * INCH;
-  const textHeight = page.height - 2 * INCH;
+  // Standard manuscript format keeps 1 inch margins. Other exports take the project's page setup.
+  const pageSetup = setup ? undefined : (doc.page?.setup ?? DEFAULT_PAGE_SETUP);
+  const inches = marginsOf(pageSetup ?? DEFAULT_PAGE_SETUP);
+  const margin = {
+    top: Math.round(inches.top * INCH),
+    right: Math.round(inches.right * INCH),
+    bottom: Math.round(inches.bottom * INCH),
+    left: Math.round(inches.left * INCH),
+  };
+  const textWidth = page.width - margin.left - margin.right;
+  const textHeight = page.height - margin.top - margin.bottom;
   let list = 0;
   const ctx: Context = {
     fills: [],
@@ -773,7 +913,7 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
   };
   const font = wordFontName(doc.font) ?? 'Newsreader';
 
-  const children: Paragraph[] = [];
+  const children: Part[] = [];
   if (setup) {
     children.push(...manuscriptOpening(doc, setup, textWidth, textHeight));
   } else if (doc.title !== '') {
@@ -803,9 +943,12 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
     if (setup && index === 0 && section.form !== null) {
       children.push(new Paragraph({ children: [new PageBreak()] }));
     }
+    // The bookmark needs a paragraph, so a section that starts with a table gets an empty one first.
+    if (paragraphs[0] instanceof Table) paragraphs.unshift(new Paragraph({ children: [] }));
+    const first = paragraphs[0];
     const mark = new Bookmark({ id: bookmarkName(section.id), children: [] });
     // docx types addRunToFront for runs, but it puts any part of a paragraph before the first run.
-    paragraphs[0]?.addRunToFront(mark.end as never).addRunToFront(mark.start as never);
+    if (first instanceof Paragraph) first.addRunToFront(mark.end as never).addRunToFront(mark.start as never);
     children.push(...paragraphs);
   }
 
@@ -820,7 +963,8 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
         properties: {
           page: {
             size: page,
-            margin: { top: INCH, right: INCH, bottom: INCH, left: INCH, header: INCH / 2 },
+            // The header and the footer sit in the middle of their margins, as in the PDF.
+            margin: { ...margin, header: Math.round(margin.top / 2), footer: Math.round(margin.bottom / 2) },
             ...(setup ? { pageNumbers: { start: 0 } } : {}),
           },
           ...(setup ? { titlePage: true } : {}),
@@ -843,7 +987,9 @@ export async function toDocx(source: ExportDoc, options: DocxOptions = {}): Prom
                 }),
               },
             }
-          : {}),
+          : pageSetup
+            ? pageSetupParts(doc, pageSetup, textWidth)
+            : {}),
         children,
       },
     ],

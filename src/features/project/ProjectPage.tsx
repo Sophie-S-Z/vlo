@@ -3,7 +3,7 @@ import { BackupDialog } from '@/features/backup/BackupDialog';
 import { sweepImagesDaily } from '@/features/images/images';
 import { FOLDER_KEY } from '@/features/backup/folderKeys';
 import { Download, Search, Send, Share2 } from 'lucide-react';
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useMotionAllowed } from '@/app/PreferencesProvider';
 import { useMediaQuery } from '@/app/useMediaQuery';
@@ -14,8 +14,11 @@ import { runCommand, showCommentOnOpen, useActiveEditor } from '@/features/edito
 import { shortcutLabel } from '@/features/editor/commands/keys';
 import { commandsFor, keysOf } from '@/features/editor/commands/registry';
 import { openParagraphStyles } from '@/features/editor/format/paragraphStyleStore';
+import { openLinks, setLinkItems, setLinkOpener } from '@/features/links/linkStore';
+import { LinksHere } from '@/features/links/LinksHere';
+import { flattenTree } from '@/features/binder/tree';
 import { EditorPane } from '@/features/editor/EditorPane';
-import { goToEntry, outlineOf } from '@/features/editor/itemOutline';
+import { goToBlock, outlineOf } from '@/features/editor/itemOutline';
 import { wordsToday } from '@/features/editor/stats/stats';
 import { WritingStats } from '@/features/editor/stats/WritingStats';
 import { pause as stopSound } from '@/features/sound/controller';
@@ -288,6 +291,45 @@ export function ProjectPage() {
   useEffect(() => {
     openParagraphStyles(projectId, paragraphStyles);
   }, [projectId, paragraphStyles]);
+  // Links between items (Phase 19, Task F1) read the links of each text and the items that a link can open.
+  useEffect(() => {
+    void openLinks(projectId).catch(() => undefined);
+  }, [projectId]);
+  const linkable = useMemo(() => {
+    if (state.status !== 'ready') return null;
+    const def = projectDef(state.project);
+    return flattenTree(state.items)
+      .map((n) => n.item)
+      .filter((i) => def.editorKind(i.kind) !== null);
+  }, [state]);
+  useEffect(() => {
+    if (linkable) setLinkItems(linkable);
+  }, [linkable]);
+  // A link opens its item on the left, or beside it on a wide screen (F39).
+  useEffect(() => {
+    setLinkOpener({
+      open: (id) => {
+        setParams((prev) => {
+          const beside = prev.get('beside');
+          return beside !== null && beside !== id ? { item: id, beside } : { item: id };
+        });
+      },
+      ...(wide
+        ? {
+            beside: (id: string) => {
+              setParams((prev) => {
+                const main = prev.get('research') !== null ? 'research' : 'item';
+                const at = prev.get(main);
+                return at === null ? { beside: id } : { [main]: at, beside: id };
+              });
+            },
+          }
+        : {}),
+    });
+    return () => {
+      setLinkOpener(null);
+    };
+  }, [setParams, wide]);
   useEffect(
     () => () => {
       resetNames();
@@ -295,6 +337,7 @@ export function ProjectPage() {
       resetSources();
       resetTracking();
       openParagraphStyles(null, undefined);
+      void openLinks(null);
     },
     [projectId],
   );
@@ -808,7 +851,7 @@ export function ProjectPage() {
           hint: formatWords(entry.words, countUnit(project.settings.language)),
           run: () => {
             afterMenu.current = () => {
-              goToEntry(activeEditor.editor, entry);
+              goToBlock(activeEditor.editor, entry.pos);
             };
           },
         }))
@@ -987,6 +1030,7 @@ export function ProjectPage() {
                   </>
                 )}
               </dl>
+              {current && currentKind && <LinksHere itemId={current.id} />}
               {current && currentKind && (
                 <WritingStats
                   projectId={project.id}
@@ -1031,6 +1075,8 @@ export function ProjectPage() {
                         snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
                         font={project.settings.font}
                         page={project.settings.page}
+                        pageSetup={project.settings.pageSetup}
+                        projectTitle={project.title}
                         scene={project.settings.scene}
                         language={project.settings.language}
                         scriptStyle={project.settings.scriptStyle}
@@ -1064,6 +1110,8 @@ export function ProjectPage() {
                         snapshotEveryMinutes={project.settings.snapshotEveryMinutes}
                         font={project.settings.font}
                         page={project.settings.page}
+                        pageSetup={project.settings.pageSetup}
+                        projectTitle={project.title}
                         language={project.settings.language}
                         scriptStyle={project.settings.scriptStyle}
                         onSettings={changeSettings}

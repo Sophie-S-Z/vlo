@@ -204,21 +204,23 @@ export function Toolbar({
     ));
 
   const sections = (list: readonly Section[]) =>
-    list.map((section, i) => (
-      <Fragment key={section.label}>
-        {i > 0 && <DropdownMenuSeparator />}
-        <DropdownMenuGroup aria-label={section.label}>
-          <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
-          {section.styles && styles.length > 0 && (
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="pl-9">Apply a style</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent aria-label="Paragraph styles">{styleItems()}</DropdownMenuSubContent>
-            </DropdownMenuSub>
-          )}
-          {section.tools.map((id) => menuItem(id))}
-        </DropdownMenuGroup>
-      </Fragment>
-    ));
+    list
+      .filter((section) => !section.whenEnabled || section.tools.some((id) => at(id).enabled))
+      .map((section, i) => (
+        <Fragment key={section.label}>
+          {i > 0 && <DropdownMenuSeparator />}
+          <DropdownMenuGroup aria-label={section.label}>
+            <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+            {section.styles && styles.length > 0 && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="pl-9">Apply a style</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent aria-label="Paragraph styles">{styleItems()}</DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
+            {section.tools.map((id) => menuItem(id))}
+          </DropdownMenuGroup>
+        </Fragment>
+      ));
 
   const modeChoices =
     tracking.projectId === null ? null : (

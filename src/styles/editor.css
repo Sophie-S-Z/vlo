@@ -405,6 +405,87 @@ html[data-hide-text][data-hide-keep]
   text-underline-offset: 0.2em;
 }
 
+/* A link to an item (Phase 19, Task F1): the accent color with a dotted line, so it reads apart from a web
+   link. A link to a deleted item is quiet: muted, with a line through it. */
+.vlo-manuscript .vlo-item-link {
+  color: var(--accent-text);
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.vlo-manuscript .vlo-item-link.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 0.2em;
+}
+
+.vlo-manuscript .vlo-item-link-broken {
+  color: var(--muted);
+  text-decoration: line-through;
+  cursor: default;
+}
+
+/* Tables (Phase 19, Task F2). A wide table scrolls on its own line, so a phone keeps the page width. A drag on
+   a column edge sets its width, and selected cells take the accent tint. */
+.vlo-prose .tableWrapper {
+  margin-block: 1em;
+  overflow-x: auto;
+}
+
+.vlo-prose table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.vlo-prose td,
+.vlo-prose th {
+  position: relative;
+  min-width: 3em;
+  padding: 0.35em 0.6em;
+  border: 1px solid var(--rule);
+  vertical-align: top;
+  box-sizing: border-box;
+}
+
+.vlo-prose th {
+  font-weight: 600;
+  text-align: start;
+  background: color-mix(in oklab, var(--rule) 30%, transparent);
+}
+
+.vlo-prose td > p,
+.vlo-prose th > p {
+  margin: 0;
+  text-indent: 0;
+}
+
+.vlo-prose .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  pointer-events: none;
+}
+
+.vlo-prose .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.vlo-prose.resize-cursor,
+.vlo-prose .resize-cursor {
+  cursor: col-resize;
+}
+
 .vlo-manuscript .vlo-math-pending,
 .vlo-manuscript .vlo-math-error {
   font-family: var(--font-mono);
@@ -848,6 +929,45 @@ html[data-calm='true'] .vlo-fill-shimmer {
   font-size: 0.7rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* With page numbers at the top right, the number of the next page sits below the line. */
+.vlo-page-number[data-place='top'] {
+  top: 0.35rem;
+  bottom: auto;
+}
+
+/* The header and footer lines (Phase 19, Task F3), in the middle of the top and bottom margins. */
+.vlo-page-line {
+  position: absolute;
+  inset-inline: 0;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+  font-size: calc(9pt * var(--vlo-zoom, 1));
+  color: var(--muted);
+}
+
+.vlo-page-line[data-page-line='bottom'] {
+  transform: translateY(50%);
+}
+
+.vlo-page-line-number {
+  margin-inline-start: auto;
+  padding-inline-start: 1em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* At the foot of the page the number is in the center, so the text keeps to the left half. */
+.vlo-page-line[data-page-line='bottom'] > .truncate {
+  max-width: calc(50% - 1.5em);
+}
+
+.vlo-page-line[data-page-line='bottom'] > .vlo-page-line-number {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1303,7 +1423,9 @@ html[data-vlo-typing] [data-vlo-keyboard-bar] [data-vlo-toolbar] {
     visibility: hidden;
     margin: 0;
   }
-  html[data-vlo-printing] [data-vlo-print-root] :is(.vlo-page-lines, .vlo-page-end, .vlo-page-number) {
+  html[data-vlo-printing]
+    [data-vlo-print-root]
+    :is(.vlo-page-lines, .vlo-page-end, .vlo-page-number, .vlo-page-line) {
     display: none;
   }
   html[data-vlo-printing] [data-vlo-print-root] :is(.vlo-sheet, .vlo-scene-page) {

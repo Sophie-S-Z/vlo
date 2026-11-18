@@ -7,7 +7,7 @@ import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { ICON_BUTTON } from '@/ui/tip';
-import { activeEntry, goToEntry, outlineOf, type OutlineEntry } from './itemOutline';
+import { activeEntry, goToBlock, outlineOf, type OutlineEntry } from './itemOutline';
 import { setWritingPrefs, useWritingPrefs } from './writingPrefs';
 
 /*
@@ -133,7 +133,7 @@ export function OutlineRail({ editor, language }: OutlineProps) {
           active={active}
           language={language}
           onChoose={(entry) => {
-            if (editor) goToEntry(editor, entry);
+            if (editor) goToBlock(editor, entry.pos);
           }}
         />
       </div>
@@ -190,7 +190,7 @@ export function OutlineControl({ editor, language, room }: OutlineProps & { room
           onChoose={(entry) => {
             chose.current = true;
             setOpen(false);
-            if (editor) goToEntry(editor, entry);
+            if (editor) goToBlock(editor, entry.pos);
           }}
         />
       </PopoverContent>

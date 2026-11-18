@@ -3,13 +3,17 @@ import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { CODEX_KINDS } from '@/features/codex/codex';
 import { getCodex } from '@/features/codex/codexStore';
+import { getLinks } from '@/features/links/linkStore';
+import { ITEM_LINK } from '../format/itemLink';
 import { getWritingPrefs } from '../writingPrefs';
+import { insertLink } from './itemLink';
 import { menuPlugin, type MenuState } from './slashMenu';
 
 /*
  * Codex names as the writer types (Phase 19, Task D4). After three letters that start a Codex name or
  * alias, the rest of the name shows faintly after the caret, and Tab takes it. "@" lists the Codex entries
- * and the items, and a choice puts the name in the text. Both read only the writer's own Codex on the
+ * and the items, and a choice puts the name in the text. In prose, an item of the project becomes a link
+ * to it (Task F1). Both read only the writer's own Codex on the
  * device, so they work in every AI mode, Pen included.
  */
 
@@ -33,6 +37,8 @@ export interface Mention {
   name: string;
   /** What the name is, such as "Character" or "Item". */
   kind: string;
+  /** True for an item of the project, which makes a link in prose (Task F1). */
+  item?: true;
 }
 
 export const completionKey = new PluginKey<Completion | null>('vloCodexCompletion');
@@ -79,12 +85,16 @@ export function mentionsFor(query: string): Mention[] {
     .map((e) => ({ id: e.id, name: e.name, kind: kinds.get(e.kind) ?? 'Codex' }));
   const items = [...codex.titles]
     .filter(([, title]) => title.trim() !== '' && title.toLowerCase().includes(q))
-    .map(([id, title]) => ({ id, name: title, kind: 'Item' }));
+    .map(([id, title]): Mention => ({ id, name: title, kind: 'Item', item: true }));
   return [...entries, ...items].slice(0, MAX_MENTIONS);
 }
 
-/** Puts the chosen name at the caret, as plain text. */
+/** Puts the chosen name at the caret: a link for an item of the project in prose, else plain text. */
 export function insertMention(editor: Editor, mention: Mention): void {
+  if (mention.item && ITEM_LINK in editor.schema.nodes && getLinks().items.has(mention.id)) {
+    insertLink(editor, { item: mention.id, title: mention.name });
+    return;
+  }
   editor.chain().focus().insertContent({ type: 'text', text: mention.name }).run();
 }
 

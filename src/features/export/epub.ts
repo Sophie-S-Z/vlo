@@ -12,6 +12,8 @@ import type { BookSettings } from '@/lib/db';
 import {
   imageNames,
   boxedItems,
+  headingsIn,
+  linkPlace,
   paragraphStyleOf,
   imageStandIn,
   repeatsTitle,
@@ -23,6 +25,7 @@ import {
   type RunStyle,
 } from './model';
 import { fontPaths, PDF_FONTS, type FontStyle, type LoadFile } from './pdf/fonts';
+import { tableHtml } from './htmlTable';
 import { xmlText } from './xml';
 
 /*
@@ -158,6 +161,10 @@ function runStyle(
   return css;
 }
 
+/** The start of the address of a link to an item, until its file is known. */
+const LINK_PLACE = 'vlo-place:';
+const LINK_HREF = new RegExp(`href="${LINK_PLACE}([A-Za-z0-9-]+)"`, 'g');
+
 interface Context {
   /** The notes of the current file, to write as asides at its end. */
   notes: { number: number; note: NoteContent }[];
@@ -229,6 +236,9 @@ function inline(book: Book, runs: readonly Run[], ctx: Context): string {
     }
     if (style.highlight) html = `<mark style="background-color: ${style.highlight}">${html}</mark>`;
     if (style.link) html = `<a href="${xmlText(style.link)}">${html}</a>`;
+    // A link to an item or a heading names its place, and the file and id replace the name once each
+    // file is known (Phase 19, Task F1).
+    else if (style.to) html = `<a href="${LINK_PLACE}${linkPlace(style.to)}">${html}</a>`;
     out += html;
   }
   return out;
@@ -280,7 +290,8 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
     case 'heading': {
       const tag = `h${String(block.level)}`;
       const body = inline(book, block.runs, { ...ctx, bold: true });
-      return `<${tag}${alignStyle(block.align)}>${body}</${tag}>`;
+      const id = block.anchor ? ` id="${block.anchor}"` : '';
+      return `<${tag}${id}${alignStyle(block.align)}>${body}</${tag}>`;
     }
     case 'sceneBreak': {
       const kind = book.doc.book?.sceneBreak;
@@ -300,6 +311,8 @@ function blockHtml(book: Book, block: Block, ctx: Context): string {
       const role = block.decorative ? ' role="presentation"' : '';
       return `<figure class="image align-${block.align}" style="width: ${String(block.width)}%"><img src="${xmlText(book.imageSrc(block.id, name))}" alt="${alt}"${role}/>${caption}</figure>`;
     }
+    case 'table':
+      return tableHtml(block, (cell) => blocksHtml(book, cell.paragraphs, ctx), true);
     case 'quote':
       return `<blockquote>${blocksHtml(book, block.blocks, ctx)}</blockquote>`;
     case 'list': {
@@ -374,6 +387,8 @@ function chapters(book: Book): Chapter[] {
   let opening = false;
   let current: Chapter | null = null;
   let notes: { number: number; note: NoteContent }[] = [];
+  /** The file and the id of each item and each linked heading, for the links between items. */
+  const places = new Map<string, string>();
   const close = () => {
     if (!current) return;
     if (notes.length > 0) {
@@ -430,8 +445,16 @@ function chapters(book: Book): Chapter[] {
     const html = blocksHtml(book, blocks, ctx);
     if (html.includes('<math ')) file.math = true;
     file.body += `<section id="${sectionId}" class="${section.form ?? 'folder'}">\n${number}${html}\n</section>\n`;
+    const name = file.file.slice('text/'.length);
+    places.set(section.id, `${name}#${sectionId}`);
+    for (const h of headingsIn(blocks)) if (h.anchor) places.set(h.anchor, `${name}#${h.anchor}`);
   });
   close();
+  for (const chapter of out)
+    chapter.body = chapter.body.replace(
+      LINK_HREF,
+      (_, place: string) => `href="${places.get(place) ?? '#'}"`,
+    );
   return out;
 }
 
@@ -464,6 +487,11 @@ figure.image img { display: block; width: 100%; height: auto; max-height: 90vh; 
 figure.image figcaption { margin-top: 0.4em; font-size: 0.85em; font-style: italic; text-align: center; }
 .image-missing { text-align: center; font-style: italic; text-indent: 0; }
 code.latex { font-family: monospace; }
+table { width: 100%; margin: 1em 0; border-collapse: collapse; table-layout: fixed; }
+th, td { padding: 0.25em 0.4em; border: 1px solid #999; vertical-align: top; text-align: left; }
+th p, td p { margin: 0; text-indent: 0; }
+thead { display: table-header-group; }
+[dir="rtl"] th, [dir="rtl"] td { text-align: right; }
 blockquote { margin: 0 0 0.8em 1.5em; }
 .stanza { margin: 0 0 1.2em; }
 .stanza p.line { margin: 0; white-space: pre-wrap; }

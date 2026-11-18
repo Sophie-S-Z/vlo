@@ -1,4 +1,4 @@
-import type { Block, ExportDoc, Run } from './model';
+import { cellParagraphs, type Block, type ExportDoc, type Run } from './model';
 
 /*
  * LaTeX to MathML for the formats that carry equations. MathLive's server build converts with no page, so
@@ -22,6 +22,8 @@ export function hasMath(doc: ExportDoc): boolean {
           return block.items.some(visit);
         case 'quote':
           return visit(block.blocks);
+        case 'table':
+          return visit(cellParagraphs(block));
         case 'stanza':
           return block.lines.some((line) => inRuns(line.runs));
         default:

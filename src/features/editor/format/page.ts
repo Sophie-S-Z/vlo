@@ -1,8 +1,10 @@
-import type { PageFormat } from '@/lib/db';
+import type { PageFormat, PageSetup } from '@/lib/db';
+import { marginsOf, type Margins } from './pageSetup';
 
 /*
- * Page format (plan Task A7, decision 8). The text sits on one sheet with 1 inch margins. Page-end lines
- * mark where each page would end. The PDF export is the exact layout; the lines come close to it.
+ * Page format (plan Task A7, decision 8). The text sits on one sheet with the margins of the page setup
+ * (Phase 19, Task F3). Page-end lines mark where each page would end. The PDF export is the exact layout;
+ * the lines come close to it.
  */
 
 /** CSS pixels in one inch. */
@@ -14,13 +16,11 @@ export interface PageSize {
   /** Sheet width and height in CSS pixels. */
   width: number;
   height: number;
-  /** The margin on each side in CSS pixels. */
-  margin: number;
 }
 
 export const PAGE_SIZES: Readonly<Record<Exclude<PageFormat, 'pageless'>, PageSize>> = {
-  letter: { label: 'Letter', width: 8.5 * INCH, height: 11 * INCH, margin: INCH },
-  a4: { label: 'A4', width: 210 * MM, height: 297 * MM, margin: INCH },
+  letter: { label: 'Letter', width: 8.5 * INCH, height: 11 * INCH },
+  a4: { label: 'A4', width: 210 * MM, height: 297 * MM },
 };
 
 export const PAGE_FORMATS: readonly { value: PageFormat; label: string; hint: string }[] = [
@@ -33,9 +33,15 @@ export function cleanPageFormat(value: unknown): PageFormat {
   return value === 'letter' || value === 'a4' ? value : 'pageless';
 }
 
-/** The height of text that fits on one page. */
-export function pageTextHeight(size: PageSize): number {
-  return size.height - 2 * size.margin;
+/** The margins of a page setup in CSS pixels. */
+export function sheetMargins(setup: PageSetup): Margins {
+  const { top, right, bottom, left } = marginsOf(setup);
+  return { top: top * INCH, right: right * INCH, bottom: bottom * INCH, left: left * INCH };
+}
+
+/** The height of text that fits on one page, with margins in CSS pixels. */
+export function pageTextHeight(size: PageSize, margins: Pick<Margins, 'top' | 'bottom'>): number {
+  return size.height - margins.top - margins.bottom;
 }
 
 /** One block of text as the page measure sees it, in pixels from the top of the text. */

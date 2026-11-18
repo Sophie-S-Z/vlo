@@ -46,8 +46,9 @@ test('a Word file imports as a chapter with two scenes, with its marks, and the 
 }) => {
   await openImport(page);
   await pickFiles(page, 'Salt Year.docx', await docxBytes());
-  await expect(dialog(page).getByRole('status')).toContainText('Vlo found 2 texts with 9 words.');
-  await expect(dialog(page).getByRole('status')).toContainText('Vlo leaves out: 1 table.');
+  // The table comes in too (Phase 19, Task F2), so its word counts and nothing is left out.
+  await expect(dialog(page).getByRole('status')).toContainText('Vlo found 2 texts with 10 words.');
+  await expect(dialog(page).getByRole('status')).not.toContainText('Vlo leaves out');
   await expect(dialog(page).getByLabel('Title')).toHaveValue('Salt Year');
   expect(await seriousIssues(page)).toEqual([]);
   await dialog(page).getByRole('button', { name: 'Import', exact: true }).click();
@@ -64,6 +65,7 @@ test('a Word file imports as a chapter with two scenes, with its marks, and the 
   await expect(editor).toContainText('Mira counted the coins twice');
   await expect(editor.locator('strong')).toHaveText('Mira');
   await expect(editor.locator('sup[data-footnote]')).toHaveCount(1);
+  await expect(editor.locator('table td')).toHaveText('Coins');
 });
 
 test('a zipped Scrivener project imports its Draft in binder order', async ({ page, isMobile }) => {

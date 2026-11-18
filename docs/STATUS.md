@@ -4,6 +4,25 @@ Last update: 2026-11-18
 
 ## Done
 
+- Phase 19, Part F: links, tables and page setup (2026-11-18, `docs/plans/phase-19.md`):
+  - Links between items: "[[" or Insert, Link to an item lists the items and their headings. A link shows
+    the current title of its item. A click opens the item, and Ctrl-click opens it beside. Links here in
+    the details panel lists the items that link to the open item. PDF, Word and EPUB keep each link.
+    The link is an inline atom node, not the mark that the plan named, so it always shows the current
+    title. Document schema 15, backup 17.
+  - Tables in prose (`@tiptap/extension-table` 3.32.2, MIT): Insert, Table opens an 8 by 8 grid. Tab moves
+    between cells and adds a row in the last cell. Format, Table adds and deletes rows and columns, turns
+    the header row on and off, merges and splits cells, and deletes the table. A drag sets a column width.
+    A cell holds paragraphs, so a pasted list or quote in a cell stays in the cell. Word, PDF, EPUB, RTF
+    and Markdown keep each table with its widths and merged cells. Plain text, Fountain and Final Draft
+    put each row on one line.
+  - Page setup in the Page popover: Normal, Narrow, Wide or Custom margins (inches or millimeters), page
+    numbers at the bottom center, at the top right or nowhere, and a header line and a footer line with
+    the project title, the item title or the writer's own text. The page view, PDF, Word and RTF use the
+    same values. Word shows the item title of each page with a STYLEREF field. A book layout, standard
+    manuscript format and a script keep their own pages. The setup is in `settings.pageSetup`, which a
+    backup checks.
+
 - Beta feedback: a wider page, a guide and AI by choice (2026-11-18):
   - The text is 100 characters wide at first, not 68, and the width goes to 160. Page look has a Wide look
     that fills a large screen. The project screen uses the whole window width, so the margins beside the

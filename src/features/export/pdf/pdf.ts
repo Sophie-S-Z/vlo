@@ -1,17 +1,24 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName } from 'pdf-lib';
 import { bookMargins, gutterFor, isNumbered, TRIM_POINTS } from '@/features/book/book';
 import type { TextFill } from '@/features/editor/format/fill';
 import { fontLabel } from '@/features/editor/format/fonts';
+import { DEFAULT_PAGE_SETUP, marginsOf, pageLineText } from '@/features/editor/format/pageSetup';
 import type { NoteContent } from '@/features/editor/format/notes';
 import { mathmlFor, type LatexToMathml } from '../latex';
 import { headerText, roundedWords, type ManuscriptSetup } from '../manuscript';
-import type { BookSettings } from '@/lib/db';
+import type { BookSettings, PageSetup } from '@/lib/db';
 import {
   footnotesOf,
+  headerParagraphs,
+  headerRows,
   imageStandIn,
+  itemTitles,
+  placedCells,
+  linkPlace,
   paragraphStyleOf,
   repeatsTitle,
   runsText,
+  singleItemTitle,
   textBlocks,
   type Align,
   type Block,
@@ -22,6 +29,7 @@ import {
   type ParagraphBlock,
   type Run,
   type RunStyle,
+  type TableBlock,
 } from '../model';
 import { Drawer, INK, rgbOf, type Rgb } from './draw';
 import { FontSet, type Face, type LoadFile } from './fonts';
@@ -69,6 +77,7 @@ const TEXT_SIZE = 12;
 const BOOK_TEXT_SIZE = 11;
 const LINK_BLUE = rgbOf('#2f5d8a');
 const MUTED = rgbOf('#5c5751');
+const HEADER_FILL = rgbOf('#efece8');
 
 interface Paint {
   color: Rgb;
@@ -76,6 +85,8 @@ interface Paint {
   underline: boolean;
   strike: boolean;
   link?: string;
+  /** The place of the file that a link to an item or a heading goes to (Phase 19, Task F1). */
+  goTo?: string;
   fill?: TextFill;
   /** The same object for every piece of one styled run, so a gradient spans the whole run on a line. */
   fillId?: object;
@@ -125,6 +136,8 @@ interface Row {
   recto?: boolean;
   /** The id of the section that starts with this row, for the contents page. */
   mark?: string;
+  /** The places that start at this row, for links between items: a section id or a heading anchor. */
+  places?: string[];
   /** The place of a body line in its paragraph, for widow and orphan control. */
   para?: { line: number; lines: number };
   /** The distance from the row's top to its baseline. */
@@ -253,6 +266,85 @@ class Layout {
     ];
   }
 
+  /**
+   * A table (Phase 19, Task F2). Each table row is one row of the page, so a page never cuts through a
+   * table row. The header rows stay with the row under them, and a cell that spans rows keeps those rows
+   * on one page. A header cell is bold on a light fill.
+   */
+  private async tableRows(block: TableBlock, place: { left: number; right: number }): Promise<Row[]> {
+    const { textWidth, textSize, spacing, manuscript, blockGap } = this.settings;
+    const avail = textWidth - place.left - place.right;
+    const edges = block.widths.reduce<number[]>(
+      (out, share) => [...out, (out.at(-1) ?? place.left) + share * avail],
+      [place.left],
+    );
+    const pad = textSize * 0.35;
+    const lineSpacing = manuscript ? spacing : 1.15;
+    const base: Base = { font: this.bodyFont, size: textSize };
+    const cells: { header: boolean; row: number; rows: number; x: number; width: number; content: Row[] }[] =
+      [];
+    for (const { cell, row, column } of placedCells(block)) {
+      const x = edges[column] ?? place.left;
+      const right = edges[Math.min(column + cell.colspan, block.widths.length)] ?? place.left + avail;
+      const content: Row[] = [];
+      for (const p of headerParagraphs(cell)) {
+        const rows = await this.paragraph(p.runs, {
+          left: x + pad,
+          right: textWidth - right + pad,
+          align: p.align,
+          spacing: lineSpacing,
+          base,
+        });
+        content.push(...(rows.length > 0 ? rows : [this.blankRow(lineSpacing)]));
+      }
+      cells.push({ header: cell.header, row, rows: cell.rowspan, x, width: right - x, content });
+    }
+    const tall = (c: (typeof cells)[number]) => heightOf(c.content) + 2 * pad;
+    const heights = block.rows.map((_, r) =>
+      Math.max(
+        leading(textSize, lineSpacing) + 2 * pad,
+        ...cells.filter((c) => c.row === r && c.rows === 1).map(tall),
+      ),
+    );
+    // A cell that spans rows makes the last of its rows taller when it needs the room.
+    for (const c of cells.filter((cell) => cell.rows > 1)) {
+      const last = Math.min(c.row + c.rows, heights.length) - 1;
+      const room = heights.slice(c.row, last + 1).reduce((total, h) => total + h, 0);
+      heights[last] = (heights[last] ?? 0) + Math.max(0, tall(c) - room);
+    }
+    const heads = headerRows(block);
+    return block.rows.map((_, r): Row => {
+      const starting = cells.filter((c) => c.row === r);
+      const keep = r < heads || cells.some((c) => c.row <= r && c.row + c.rows - 1 > r);
+      return {
+        height: heights[r] ?? 0,
+        spaceBefore: r === 0 ? blockGap : 0,
+        ...(keep ? { keepWithNext: true } : {}),
+        notes: starting.flatMap((c) => c.content.flatMap((row) => row.notes)),
+        draw: (d, top) => {
+          for (const c of starting) {
+            const h = heights.slice(c.row, c.row + c.rows).reduce((total, v) => total + v, 0);
+            if (c.header && !manuscript) d.rect(c.x, top - h, c.width, h, HEADER_FILL);
+            const box: [number, number][] = [
+              [c.x, top],
+              [c.x + c.width, top],
+              [c.x + c.width, top - h],
+              [c.x, top - h],
+              [c.x, top],
+            ];
+            d.line(box, 0.6, MUTED);
+            let y = top - pad;
+            c.content.forEach((row, i) => {
+              if (i > 0) y -= row.spaceBefore;
+              row.draw(d, y);
+              y -= row.height;
+            });
+          }
+        },
+      };
+    });
+  }
+
   async face(font: string | undefined, bold: boolean, italic: boolean): Promise<Face> {
     const face = await this.fonts.face(font, bold, italic);
     const name = fontLabel(this.fonts.resolve(font));
@@ -280,11 +372,12 @@ class Layout {
   private paint(style: RunStyle): Paint {
     const plain = this.settings.manuscript;
     return {
-      color: plain ? INK : style.link ? LINK_BLUE : style.color ? rgbOf(style.color) : INK,
+      color: plain ? INK : style.link || style.to ? LINK_BLUE : style.color ? rgbOf(style.color) : INK,
       ...(style.highlight && !plain ? { highlight: rgbOf(style.highlight) } : {}),
-      underline: style.underline === true || (style.link !== undefined && !plain),
+      underline: style.underline === true || ((style.link !== undefined || style.to !== undefined) && !plain),
       strike: style.strike === true,
       ...(style.link ? { link: style.link } : {}),
+      ...(style.to ? { goTo: linkPlace(style.to) } : {}),
       ...(style.fill && !plain ? { fill: style.fill, fillId: style.fill } : {}),
     };
   }
@@ -650,6 +743,7 @@ class Layout {
         });
         const first = rows[0];
         if (first) {
+          if (block.anchor) first.places = [block.anchor];
           first.spaceBefore = manuscript
             ? leading(textSize, spacing)
             : ([30, 24, 16, 12, 12][block.level - 1] ?? 12) * scale;
@@ -703,6 +797,8 @@ class Layout {
       }
       case 'image':
         return this.imageRows(block, place);
+      case 'table':
+        return this.tableRows(block, place);
       case 'quote': {
         const inner = { left: place.left + 24, right: place.right + 24 };
         this.last = 'quote';
@@ -985,6 +1081,7 @@ function drawText(
   if (paint.underline) d.rect(x, y - size * 0.12, atom.width, thickness, lineColor);
   if (paint.strike) d.rect(x, y + size * 0.27, atom.width, thickness, lineColor);
   if (paint.link && !atom.space) d.link(x, y - down, atom.width, up + down, paint.link);
+  if (paint.goTo && !atom.space) d.goTo(x, y - down, atom.width, up + down, paint.goTo);
 }
 
 function drawLine(
@@ -1044,6 +1141,8 @@ export interface LaidOutPdf {
   /** Draws one page, with its page number and running head. */
   drawPage: (index: number, sink: Sink) => void;
   drawnStyles: DrawnStyle[];
+  /** The page and the top of each place that a link between items can go to. */
+  places: ReadonlyMap<string, { page: number; top: number }>;
 }
 
 interface ContentsEntry {
@@ -1166,6 +1265,42 @@ async function backMatter(layout: Layout, book: BookSettings): Promise<Row[]> {
   return rows;
 }
 
+/** A text cut with "…" so it fits a width. */
+function fitText(text: string, width: number, widthOf: (text: string) => number): string {
+  if (widthOf(text) <= width) return text;
+  let end = text.length;
+  while (end > 0 && widthOf(`${text.slice(0, end).trimEnd()}…`) > width) end -= 1;
+  return end > 0 ? `${text.slice(0, end).trimEnd()}…` : '';
+}
+
+/**
+ * The text of the header line and the footer line of each page. An item line shows the first item that
+ * starts on the page, or else the item that runs on from the page before, as a STYLEREF field in Word.
+ */
+function pageLinesOf(
+  doc: ExportDoc,
+  setup: PageSetup,
+  pages: readonly PageRows[],
+): { header: string; footer: string }[] {
+  const titles = itemTitles(doc);
+  let running = singleItemTitle(doc) ?? doc.title;
+  return pages.map((page) => {
+    let first: string | undefined;
+    for (const { row } of page.rows)
+      for (const name of row.places ?? []) {
+        const title = titles.get(name);
+        if (title === undefined) continue;
+        first ??= title;
+        running = title;
+      }
+    const names = { project: doc.page?.project ?? doc.title, item: first ?? running };
+    return {
+      header: pageLineText(setup.header, setup.headerText, names),
+      footer: pageLineText(setup.footer, setup.footerText, names),
+    };
+  });
+}
+
 /** One layout of every page. A book lays out again when its page count needs a wider gutter. */
 async function layOutOnce(
   doc: ExportDoc,
@@ -1177,9 +1312,14 @@ async function layOutOnce(
   const book = doc.book;
   const manuscript = book ? undefined : options.manuscript;
   const [pageWidth, pageHeight] = book ? TRIM_POINTS[book.trim] : POINTS[doc.paper];
+  // The page setup (Phase 19, Task F3) gives the margins, unless a book or a manuscript has its own.
+  const setup = book || manuscript ? undefined : (doc.page?.setup ?? DEFAULT_PAGE_SETUP);
+  const own = setup ? marginsOf(setup) : undefined;
   const margins = book
     ? bookMargins(pagesGuess)
-    : { inside: MARGIN, outside: MARGIN, top: MARGIN, bottom: MARGIN };
+    : own
+      ? { inside: own.left * 72, outside: own.right * 72, top: own.top * 72, bottom: own.bottom * 72 }
+      : { inside: MARGIN, outside: MARGIN, top: MARGIN, bottom: MARGIN };
   const bodyFont = manuscript?.typewriter ? 'courier-prime' : doc.font;
   const textSize = book ? BOOK_TEXT_SIZE : TEXT_SIZE;
   const spacing = manuscript ? 2 : book ? 1.2 : 1.15;
@@ -1287,6 +1427,7 @@ async function layOutOnce(
     const blocks = section.blocks.filter((block) => !repeatsTitle(doc, section, block));
     const sectionRows = await layout.blocks(blocks, { left: 0, right: 0 }, section.form === null);
     const first = sectionRows[0];
+    if (first) first.places = [section.id, ...(first.places ?? [])];
     if (first && book) {
       first.mark = section.id;
       // The text starts on a right-hand page, and each poem on a page of its own.
@@ -1376,10 +1517,16 @@ async function layOutOnce(
   if (book && pages.length % 2 === 1) pages.push({ rows: [], notes: [], notesHeight: 0 });
   const kept = book ? pages : pages.filter((page, index) => index === 0 || page.rows.length > 0);
   for (const [id, index] of markPages) folios.set(id, index - bodyPage + 1);
+  const places = new Map<string, { page: number; top: number }>();
+  kept.forEach((page, index) => {
+    for (const { row, top } of page.rows)
+      for (const name of row.places ?? []) if (!places.has(name)) places.set(name, { page: index, top });
+  });
 
   const plain = await layout.face(bodyFont, false, false);
   const italic = await layout.face(bodyFont, false, true);
   const header = manuscript ? headerText(manuscript.name, doc.title) : '';
+  const pageLines = setup ? pageLinesOf(doc, setup, kept) : [];
   const drawPage = (index: number, sink: Sink) => {
     const content = kept[index];
     if (!content) return;
@@ -1421,9 +1568,30 @@ async function layOutOnce(
         size: TEXT_SIZE,
         color: INK,
       });
-    } else {
-      const width = plain.font.widthOfTextAtSize(number, 10);
-      sink.text(number, (pageWidth - width) / 2, MARGIN / 2, { face: plain, size: 10, color: MUTED });
+      return;
+    }
+    if (!setup) return;
+    // The page lines start at the left edge of the text. The number sits at the right of the header line,
+    // or in the center of the footer line.
+    const lineSize = 10;
+    const style = { face: plain, size: lineSize, color: MUTED };
+    const widthOf = (text: string) => plain.font.widthOfTextAtSize(text, lineSize);
+    const numberWidth = widthOf(number);
+    const gap = lineSize;
+    const top = pageHeight - margins.top / 2;
+    const foot = margins.bottom / 2;
+    const lines = pageLines[index];
+    if (setup.numbers === 'top-right') d.text(number, settings.textWidth - numberWidth, top, style);
+    if (setup.numbers === 'bottom-center')
+      d.text(number, (settings.textWidth - numberWidth) / 2, foot, style);
+    if (lines?.header) {
+      const room = settings.textWidth - (setup.numbers === 'top-right' ? numberWidth + gap : 0);
+      d.text(fitText(lines.header, room, widthOf), 0, top, style);
+    }
+    if (lines?.footer) {
+      const room =
+        setup.numbers === 'bottom-center' ? (settings.textWidth - numberWidth) / 2 - gap : settings.textWidth;
+      d.text(fitText(lines.footer, room, widthOf), 0, foot, style);
     }
   };
   return {
@@ -1432,6 +1600,7 @@ async function layOutOnce(
     drawPage,
     drawnStyles: layout.drawnStyles,
     gutter: book ? gutterFor(pagesGuess) : 0,
+    places,
   };
 }
 
@@ -1455,6 +1624,18 @@ export async function layOutPdf(doc: ExportDoc, options: PdfOptions, pdf: PDFDoc
   return laid;
 }
 
+/** The named places of the file, so a link between items opens the page of its item or heading. */
+function addPlaces(pdf: PDFDocument, places: LaidOutPdf['places']): void {
+  if (places.size === 0) return;
+  const { context } = pdf;
+  const dests = context.obj({});
+  for (const [name, { page, top }] of places) {
+    const ref = pdf.getPage(page).ref;
+    dests.set(PDFName.of(name), context.obj([ref, 'XYZ', null, top, null]));
+  }
+  pdf.catalog.set(PDFName.of('Dests'), dests);
+}
+
 /** The PDF file of an export. */
 export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfResult> {
   if (doc.script) return toScriptPdf(doc, doc.script, options);
@@ -1463,6 +1644,7 @@ export async function toPdf(doc: ExportDoc, options: PdfOptions): Promise<PdfRes
   laid.pages.forEach((_, index) => {
     laid.drawPage(index, new Drawer(pdf, pdf.addPage([...laid.size])));
   });
+  addPlaces(pdf, laid.places);
   const manuscript = doc.book ? undefined : options.manuscript;
   pdf.setTitle(doc.title);
   pdf.setLanguage(doc.language);

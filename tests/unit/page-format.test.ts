@@ -5,10 +5,12 @@ import {
   MIN_SHEET_ZOOM,
   pageBreaks,
   pageTextHeight,
+  sheetMargins,
   PAGE_SIZES,
   sheetZoom,
   type BlockBox,
 } from '@/features/editor/format/page';
+import { DEFAULT_PAGE_SETUP } from '@/features/editor/format/pageSetup';
 
 /* Task A7: page format, page-end lines and page zoom. */
 
@@ -23,11 +25,14 @@ function paragraphs(counts: readonly number[], gap = 10, line = 20): BlockBox[] 
 }
 
 describe('page sizes', () => {
-  test('Letter and A4 have 1 inch margins in CSS pixels', () => {
-    expect(PAGE_SIZES.letter).toMatchObject({ width: 816, height: 1056, margin: 96 });
+  test('Letter and A4 have their sizes in CSS pixels, and the margins follow the page setup', () => {
+    expect(PAGE_SIZES.letter).toMatchObject({ width: 816, height: 1056 });
     expect(PAGE_SIZES.a4.width).toBeCloseTo(793.7, 1);
     expect(PAGE_SIZES.a4.height).toBeCloseTo(1122.5, 1);
-    expect(pageTextHeight(PAGE_SIZES.letter)).toBe(864);
+    expect(sheetMargins(DEFAULT_PAGE_SETUP)).toEqual({ top: 96, right: 96, bottom: 96, left: 96 });
+    expect(pageTextHeight(PAGE_SIZES.letter, sheetMargins(DEFAULT_PAGE_SETUP))).toBe(864);
+    const narrow = sheetMargins({ ...DEFAULT_PAGE_SETUP, margins: 'narrow' });
+    expect(pageTextHeight(PAGE_SIZES.letter, narrow)).toBe(960);
   });
 
   test('a stored page format is pageless unless it is Letter or A4', () => {

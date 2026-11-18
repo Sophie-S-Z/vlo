@@ -337,3 +337,44 @@ export function photoDoc(images: Record<string, ExportImage> = IMAGES): ExportDo
   );
   return { ...doc, images };
 }
+
+/* A table (Phase 19, Task F2). */
+
+const tablePara = (text: string): JSONContent => ({ type: 'paragraph', content: [{ type: 'text', text }] });
+const tableCell = (type: 'tableCell' | 'tableHeader', text: string, attrs: Record<string, unknown> = {}) => ({
+  type,
+  attrs: { colspan: 1, rowspan: 1, colwidth: null, ...attrs },
+  content: [tablePara(text)],
+});
+
+/**
+ * A header row of three, "Mira" down two rows, and "Hull" across two columns. The first column is 200 px
+ * wide, and the other two share the rest of the 640 px text width.
+ */
+export const TABLE_PROSE: JSONContent = {
+  type: 'doc',
+  content: [
+    tablePara('The crew.'),
+    {
+      type: 'table',
+      content: [
+        {
+          type: 'tableRow',
+          content: [
+            tableCell('tableHeader', 'Name', { colwidth: [200] }),
+            tableCell('tableHeader', 'Port'),
+            tableCell('tableHeader', 'Tide'),
+          ],
+        },
+        {
+          type: 'tableRow',
+          content: [
+            tableCell('tableCell', 'Mira', { rowspan: 2 }),
+            tableCell('tableCell', 'Hull', { colspan: 2 }),
+          ],
+        },
+        { type: 'tableRow', content: [tableCell('tableCell', 'Leith'), tableCell('tableCell', 'High')] },
+      ],
+    },
+  ],
+};

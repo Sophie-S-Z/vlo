@@ -1,10 +1,14 @@
 import type { NoteContent } from '@/features/editor/format/notes';
 import {
+  cellGrid,
+  cellRuns,
   footnotesOf,
+  headerRows,
   imageNames,
   imageStandIn,
   repeatsTitle,
   type Block,
+  type TableBlock,
   type ExportDoc,
   type Run,
   type RunStyle,
@@ -17,6 +21,7 @@ import {
  * Underline, highlight, superscript and subscript use the HTML tags that most Markdown readers show.
  * An image is `![alt](images/image-1.jpg)` with its caption in italics below it, and the export is then
  * a zip with the images folder (decision G5). An image that is not on the device stays as "[Image: ...]".
+ * A table is a pipe table (Phase 19, Task F2).
  */
 
 const NBSP = ' ';
@@ -49,11 +54,12 @@ function wrap(text: string, style: RunStyle): string {
   return lead + core + trail;
 }
 
-function inline(runs: readonly Run[], options: { poem: boolean }): string {
+/** A poem line joins its breaks with a space. A table cell keeps each break as an HTML break on one line. */
+function inline(runs: readonly Run[], options: { poem: boolean; cell?: true }): string {
   let out = '';
   for (const run of runs) {
     if (run.type === 'text') out += wrap(escapeMarkdown(run.text), run.style);
-    else if (run.type === 'break') out += options.poem ? ' ' : '\\\n';
+    else if (run.type === 'break') out += options.poem ? ' ' : options.cell ? '<br>' : '\\\n';
     else if (run.type === 'math') out += `$${run.latex}$`;
     else out += `[^${String(run.number)}]`;
   }
@@ -71,6 +77,27 @@ function poemLine(runs: readonly Run[]): string {
 
 /** The page break in Markdown: an HTML block, which Vlo's own import reads back as a page break. */
 export const PAGE_BREAK_HTML = '<div style="page-break-after: always"></div>';
+
+/**
+ * A pipe table, as GitHub, Pandoc and most Markdown readers take it. Markdown has no merged cells, so a
+ * merged cell keeps its text in its first place and leaves the others empty. Markdown needs a header row,
+ * so a table with none gets an empty one.
+ */
+function pipeTable(block: TableBlock): string {
+  const grid = cellGrid(block).map((line, r) =>
+    line.map((placed, c) =>
+      placed?.row === r && placed.column === c
+        ? inline(cellRuns(placed.cell), { poem: false, cell: true })
+        : '',
+    ),
+  );
+  const line = (cells: readonly string[]) => `| ${cells.join(' | ')} |`;
+  const rule = line(block.widths.map(() => '---'));
+  const [first = [], ...rest] = grid;
+  return headerRows(block) > 0
+    ? [line(first), rule, ...rest.map(line)].join('\n')
+    : [line(block.widths.map(() => '')), rule, ...grid.map(line)].join('\n');
+}
 
 function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth = 0, shift = 0): string {
   const indent = '   '.repeat(depth);
@@ -93,6 +120,8 @@ function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth =
       const image = `![${alt}](${path})`;
       return block.caption === '' ? image : `${image}\\\n*${escapeMarkdown(block.caption)}*`;
     }
+    case 'table':
+      return pipeTable(block);
     case 'quote':
       return block.blocks
         .map((b) => blockMarkdown(b, paths, 0, shift))

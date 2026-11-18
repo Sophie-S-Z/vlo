@@ -20,6 +20,8 @@ export interface Section {
   tools: readonly string[];
   /** The section starts with the project's paragraph styles (Phase 19, Task E2). */
   styles?: true;
+  /** The section shows only while one of its tools can act, as the table tools do in a table. */
+  whenEnabled?: true;
 }
 
 export type MenuId = 'insert' | 'format' | 'review';
@@ -69,11 +71,27 @@ export const LAYOUTS: Readonly<Record<EditorForm, Layout>> = {
     ],
     menus: {
       insert: [
-        { label: 'Notes', tools: ['footnote'] },
-        { label: 'Media', tools: ['image', 'math', 'math-block'] },
+        { label: 'Notes and links', tools: ['footnote', 'item-link'] },
+        { label: 'Tables and media', tools: ['table', 'image', 'math', 'math-block'] },
         { label: 'Breaks and characters', tools: ['scene-break', 'page-break', 'characters'] },
       ],
       format: [
+        {
+          label: 'Table',
+          whenEnabled: true,
+          tools: [
+            'table-row-above',
+            'table-row-below',
+            'table-column-left',
+            'table-column-right',
+            'table-delete-row',
+            'table-delete-column',
+            'table-header-row',
+            'table-merge',
+            'table-split',
+            'table-delete',
+          ],
+        },
         {
           label: 'Text',
           tools: [

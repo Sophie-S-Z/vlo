@@ -5,7 +5,7 @@ import { ImportError, type ImportNode } from './tree';
 /*
  * Word files (roadmap F34). Vlo reads word/document.xml with the browser's XML parser: paragraphs, the
  * Heading 1, Heading 2 and Title styles, bold, italic, underline, strike, superscript, subscript, tabs,
- * line breaks and footnotes. Tables and pictures are left out, and the summary says so.
+ * line breaks, footnotes and tables. Pictures are left out, and the summary says so.
  */
 
 export const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -115,17 +115,95 @@ function paragraphHtml(paragraph: Element, ctx: Context): string {
   return out;
 }
 
-/** The paragraphs of the body, with those inside content controls and other wrappers. */
-function bodyHtml(parent: Element, styles: ReadonlyMap<string, 1 | 2 | 3>, ctx: Context): string {
+interface Cell {
+  html: string;
+  colspan: number;
+  rowspan: number;
+  header: boolean;
+}
+
+/** A whole number of 1 or more from a Word value, or 1. */
+function count(value: string | null): number {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, 64) : 1;
+}
+
+/**
+ * A Word table as an HTML table, which the editor reads (Phase 19, Task F2). A cell keeps its span of
+ * columns (w:gridSpan), and a cell that Word merges down (w:vMerge) spans those rows. The cells of a header
+ * row (w:tblHeader) are header cells. A cell holds paragraphs only, so a table in a cell is left out.
+ */
+function tableHtml(table: Element, ctx: Context): string {
+  const rows: Cell[][] = [];
+  // The cell above each grid column that a merge down goes on from.
+  const above = new Map<number, Cell>();
+  for (const row of children(table, 'tr')) {
+    const props = child(row, 'trPr');
+    const header = on(child(props, 'tblHeader'));
+    // Word can leave grid columns empty at the start of a row.
+    let column = Math.min(Math.max(Math.trunc(Number(attr(child(props, 'gridBefore'), 'val')) || 0), 0), 64);
+    const cells: Cell[] = [];
+    for (const part of children(row, 'tc')) {
+      const cellProps = child(part, 'tcPr');
+      const colspan = count(attr(child(cellProps, 'gridSpan'), 'val'));
+      const merge = child(cellProps, 'vMerge');
+      const start = column;
+      column += colspan;
+      const from = above.get(start);
+      if (merge && attr(merge, 'val') !== 'restart' && from) {
+        from.rowspan += 1;
+        continue;
+      }
+      const cell: Cell = {
+        html: bodyHtml(part, new Map(), ctx, true) || '<p></p>',
+        colspan,
+        rowspan: 1,
+        header,
+      };
+      if (merge) above.set(start, cell);
+      else above.delete(start);
+      cells.push(cell);
+    }
+    if (cells.length > 0) rows.push(cells);
+  }
+  const html = rows
+    .map(
+      (cells) =>
+        `<tr>${cells
+          .map((cell) => {
+            const tag = cell.header ? 'th' : 'td';
+            const spans =
+              (cell.colspan > 1 ? ` colspan="${String(cell.colspan)}"` : '') +
+              (cell.rowspan > 1 ? ` rowspan="${String(cell.rowspan)}"` : '');
+            return `<${tag}${spans}>${cell.html}</${tag}>`;
+          })
+          .join('')}</tr>`,
+    )
+    .join('');
+  return html === '' ? '' : `<table><tbody>${html}</tbody></table>`;
+}
+
+/**
+ * The paragraphs and tables of the body, with those inside content controls and other wrappers. In a
+ * table cell, every paragraph is plain body text.
+ */
+function bodyHtml(
+  parent: Element,
+  styles: ReadonlyMap<string, 1 | 2 | 3>,
+  ctx: Context,
+  cell = false,
+): string {
   let html = '';
   for (const part of Array.from(parent.children)) {
     if (part.namespaceURI !== W) continue;
-    if (part.localName === 'tbl') skip(ctx, 'table');
-    else if (part.localName === 'p') {
+    if (part.localName === 'tbl') {
+      if (cell) skip(ctx, 'table');
+      else html += tableHtml(part, ctx);
+    } else if (part.localName === 'p') {
       const level = styles.get(attr(child(child(part, 'pPr'), 'pStyle'), 'val') ?? '');
       const tag = level === 1 ? 'h1' : level === 2 ? 'h2' : level === 3 ? 'h3' : 'p';
       html += `<${tag}>${paragraphHtml(part, ctx)}</${tag}>`;
-    } else if (container(part)) html += bodyHtml(part, styles, ctx);
+    } else if (container(part)) html += bodyHtml(part, styles, ctx, cell);
   }
   return html;
 }

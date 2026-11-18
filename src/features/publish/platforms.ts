@@ -60,6 +60,9 @@ export interface Platform {
 const IMAGES =
   'A paste takes no image. Each image stays as a line such as “[Image: …]”, so you can upload it there.';
 const NOTES_AT_END = 'Your footnotes become a numbered list at the end.';
+/** For a platform with no tables (Phase 19, Task F2). */
+const noTables = (name: string) =>
+  `${name} has no tables, so the words of each table cell come in as lines of text.`;
 
 /** Only two heading sizes, as in Medium: a part is the large one, and everything else the small one. */
 const twoSizes =
@@ -85,6 +88,7 @@ export const DEFAULT_PLATFORM: Platform = {
   changes: [
     'Substack has no centered text, so each line starts at the left.',
     `${NOTES_AT_END} To make Substack footnotes, use its footnote button.`,
+    noTables('Substack'),
     IMAGES,
   ],
 };
@@ -108,6 +112,7 @@ export const PLATFORMS: readonly Platform[] = [
     changes: [
       'Medium has two heading sizes. A part gets the large heading, and every other heading the small one.',
       'Medium keeps no underline, superscript or centered text.',
+      noTables('Medium'),
       NOTES_AT_END,
       IMAGES,
     ],
@@ -143,6 +148,7 @@ export const PLATFORMS: readonly Platform[] = [
     ],
     changes: [
       'Ghost has no centered text in a paste, so each line starts at the left.',
+      noTables('Ghost'),
       NOTES_AT_END,
       IMAGES,
     ],
@@ -177,6 +183,7 @@ export const PLATFORMS: readonly Platform[] = [
     ],
     changes: [
       'A LinkedIn article has two heading sizes. A part gets the large heading, and every other heading the small one.',
+      noTables('A LinkedIn article'),
       NOTES_AT_END,
       IMAGES,
     ],
@@ -195,6 +202,7 @@ export const PLATFORMS: readonly Platform[] = [
     ],
     changes: [
       'Tumblr has one heading size for a paste, so every heading looks the same.',
+      noTables('Tumblr'),
       NOTES_AT_END,
       IMAGES,
     ],
@@ -225,7 +233,12 @@ export const PLATFORMS: readonly Platform[] = [
       'Choose Copy the text, click the body of the part, and paste.',
       'Choose Save, then Publish when the part is ready.',
     ],
-    changes: ['Wattpad has no headings in a part. Each heading becomes a bold line.', NOTES_AT_END, IMAGES],
+    changes: [
+      'Wattpad has no headings in a part. Each heading becomes a bold line.',
+      noTables('Wattpad'),
+      NOTES_AT_END,
+      IMAGES,
+    ],
   },
   {
     id: 'royalroad',

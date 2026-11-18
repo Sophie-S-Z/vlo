@@ -55,8 +55,7 @@ export async function changeStoredDoc(
     open.doc.off('update', keep);
     await open.confirmSaved(clock.now());
     sendToTabs(item.id, Y.mergeUpdates(updates));
-    const { text, body } = docParts(tr.doc, form);
-    await writeItemText(item, text, form, body, language);
+    await writeItemText(item, docParts(tr.doc, form), form, language);
     return true;
   } finally {
     await open.close();

@@ -133,6 +133,10 @@ class SvgSink implements Sink {
     // A preview page is a picture, so a link has nothing to open.
   }
 
+  goTo(): void {
+    // The same holds for a link to a place of the file.
+  }
+
   image(image: PlacedImage, x: number, y: number, width: number, height: number): void {
     let href = addresses.get(image.source);
     if (href === undefined) {

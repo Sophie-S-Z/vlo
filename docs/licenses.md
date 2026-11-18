@@ -66,6 +66,7 @@ The thesaurus file (src/features/thesaurus/thesaurus.json) comes from Open Engli
 | @tiptap/extension-node-range | 3.32.2 | MIT | runtime |
 | @tiptap/extension-subscript | 3.32.2 | MIT | runtime |
 | @tiptap/extension-superscript | 3.32.2 | MIT | runtime |
+| @tiptap/extension-table | 3.32.2 | MIT | runtime |
 | @tiptap/extension-text-align | 3.32.2 | MIT | runtime |
 | @tiptap/extension-text-style | 3.32.2 | MIT | runtime |
 | @tiptap/extension-typography | 3.32.2 | MIT | runtime |

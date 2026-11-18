@@ -2,10 +2,11 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
-import { docParts, docText } from '@/features/editor/itemText';
+import { docParts, docText, indexFields } from '@/features/editor/itemText';
 import { dayStartKey } from '@/features/editor/stats/dayStart';
 import { sendToTabs } from '@/features/editor/tabSync';
 import { editorSchemas } from '@/features/import/tree';
+import { noteLinkIndex } from '@/features/links/linkStore';
 import { holdsText, projectDef } from '@/features/library/templates';
 import { rpc, ShareError, type RpcName } from '@/features/share/rpc';
 import { takeSnapshot } from '@/features/snapshots/snapshots';
@@ -380,7 +381,7 @@ async function applyText(blob: TextBlob): Promise<boolean> {
     await open.close();
   }
   // The other device counted these words on its own day, so this count does not add them to today.
-  const { text, body: counted } = docParts(doc, form);
+  const { text, body: counted, index } = docParts(doc, form);
   const { language } = project.settings;
   await remoteTransaction(db, [db.items, db.itemTexts], async () => {
     if (!(await db.items.get(item.id))) return;
@@ -389,12 +390,14 @@ async function applyText(blob: TextBlob): Promise<boolean> {
       projectId: item.projectId,
       text,
       updatedAt: clock.now(),
+      ...indexFields(index),
     });
     await db.items.update(item.id, {
       wordCount: countWords(counted, language),
       ...(form === 'poem' ? { lineCount: countLines(counted) } : {}),
     });
   });
+  noteLinkIndex(item.projectId, item.id, index);
   return true;
 }
 

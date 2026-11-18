@@ -3,8 +3,8 @@ import type { ImportNode } from './tree';
 
 /*
  * Web pages and the chapters of an EPUB (roadmap F34). Vlo keeps the blocks of the page: paragraphs,
- * headings, lists, quotes and rules. Menus, scripts, forms, title pages and tables of contents stay out.
- * Pictures, sound, video and tables stay out too, and the summary counts them. The headings move up, so
+ * headings, lists, quotes, rules and tables. Menus, scripts, forms, title pages and tables of contents stay
+ * out. Pictures, sound and video stay out too, and the summary counts them. The headings move up, so
  * the top level that the text uses is a Heading 1 and starts a folder, as in a Word file.
  */
 
@@ -69,7 +69,7 @@ export function htmlBlocks(body: Element, skipped: Skipped): HtmlBlock[] {
       const tag = node.tagName.toUpperCase();
       if (tag === 'TABLE') {
         flush();
-        count(skipped, 'table');
+        if (node.textContent.trim() !== '') out.push({ level: 0, html: node.outerHTML });
       } else if (tag === 'HR' || (tag === 'P' && SCENE_BREAK.test(node.textContent))) {
         flush();
         out.push({ level: 0, html: SCENE_BREAK_HTML });

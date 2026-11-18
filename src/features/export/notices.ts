@@ -1,6 +1,6 @@
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
 import type { FontSwap } from './fontCheck';
-import { paragraphStyleOf, type Block, type ExportDoc, type Run } from './model';
+import { cellParagraphs, paragraphStyleOf, type Block, type ExportDoc, type Run } from './model';
 
 /*
  * The export notice (plan decisions 5 to 7): each look that a format drops or draws in a simpler way, in
@@ -40,6 +40,9 @@ interface Looks {
   noAlt: string[];
   /** The number of images whose bytes are not on this device. */
   missingImages: number;
+  /** The text has a table (Phase 19, Task F2), and one with a merged cell. */
+  tables: boolean;
+  merged: boolean;
 }
 
 function scan(doc: ExportDoc): Looks {
@@ -57,6 +60,8 @@ function scan(doc: ExportDoc): Looks {
     images: 0,
     noAlt: [],
     missingImages: 0,
+    tables: false,
+    merged: false,
   };
   const runs = (list: readonly Run[]) => {
     for (const run of list) {
@@ -103,6 +108,12 @@ function scan(doc: ExportDoc): Looks {
           break;
         case 'quote':
           blocks(block.blocks);
+          break;
+        case 'table':
+          looks.tables = true;
+          if (block.rows.some((cells) => cells.some((c) => c.colspan > 1 || c.rowspan > 1)))
+            looks.merged = true;
+          blocks(cellParagraphs(block));
           break;
         case 'stanza':
           for (const line of block.lines) {
@@ -207,6 +218,32 @@ function imageNotices(looks: Looks, format: ExportFormat, manuscript: boolean): 
   return notices;
 }
 
+/** What the export does with the tables of the text (Phase 19, Task F2). */
+function tableNotices(looks: Looks, format: ExportFormat): string[] {
+  if (!looks.tables) return [];
+  switch (format) {
+    case 'text':
+    case 'fountain':
+    case 'fdx': {
+      const what =
+        format === 'text' ? 'A plain text file' : format === 'fdx' ? 'A Final Draft file' : 'Fountain';
+      return [`${what} has no tables. Each table row is one line, with “|” between its cells.`];
+    }
+    case 'web':
+      return [
+        'AO3 keeps tables. Medium and Substack have no tables, so the words of each table cell come in as lines of text.',
+      ];
+    case 'markdown':
+      return looks.merged
+        ? ['Markdown has no merged cells. A merged cell keeps its text in its first place.']
+        : [];
+    case 'pdf':
+      return ['The PDF shows a header row once, at the top of its table.'];
+    default:
+      return [];
+  }
+}
+
 /** The notices for one export, in the order the writer reads them. An empty list means nothing changes. */
 export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: NoticeExtras = {}): string[] {
   const looks = scan(doc);
@@ -219,6 +256,7 @@ export function exportNotices(doc: ExportDoc, format: ExportFormat, extras: Noti
         : `${String(missing)} citations name sources that this project does not have now. They show “[missing source]”.`,
     );
   notices.push(...imageNotices(looks, format, extras.manuscriptFont !== undefined));
+  notices.push(...tableNotices(looks, format));
   if (looks.play) {
     notices.push(
       'Type play stays in Vlo. The file keeps a heavy weight as bold, and draws the letters without their spacing, effects and motion.',

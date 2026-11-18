@@ -1,12 +1,27 @@
 import { localFontName, vloFont } from '@/features/editor/format/fonts';
+import { DEFAULT_PAGE_SETUP, marginsOf, pageLineText } from '@/features/editor/format/pageSetup';
 import type { NoteContent } from '@/features/editor/format/notes';
-import { imageStandIn, repeatsTitle, type Block, type ExportDoc, type Run } from './model';
+import {
+  cellGrid,
+  headerParagraphs,
+  headerRows,
+  imageStandIn,
+  repeatsTitle,
+  singleItemTitle,
+  type Block,
+  type ExportDoc,
+  type Run,
+  type TableBlock,
+} from './model';
 
 /*
  * RTF export (.rtf). Word, Pages, TextEdit, LibreOffice, Scrivener and most writing apps open it. The file
  * keeps bold, italic, underline, strike, superscript, subscript, links, alignment, line spacing, indents,
  * lists, quotes, footnotes and images. Each heading has its outline level, so Word and Vlo read it as a
- * heading. Each stanza is one paragraph with a line break after each line, so every space stays.
+ * heading. Each stanza is one paragraph with a line break after each line, so every space stays. A table
+ * keeps its column widths and its merged cells (Phase 19, Task F2). The margins, page numbers and page
+ * lines come from the page setup (Phase 19, Task F3). An item line shows the export title when the export
+ * holds more than one item, because RTF has no field that finds the title of each page.
  */
 
 /** Twips: 1440 to the inch. 12 pt text is 24 half-points. */
@@ -88,6 +103,38 @@ function hex(bytes: Uint8Array): string {
   return out;
 }
 
+const BORDERS = ['t', 'l', 'b', 'r'].map((side) => `\\clbrdr${side}\\brdrs\\brdrw10`).join('');
+
+/**
+ * An RTF table. A cell that spans columns is one wide cell. A cell that spans rows starts with \clvmgf, and
+ * the rows under it have an empty \clvmrg cell in its place.
+ */
+function tableRtf(block: TableBlock, left: number, ctx: Context): string {
+  const width = ctx.width - left;
+  const edges = block.widths.map((_, i) =>
+    Math.round(left + width * block.widths.slice(0, i + 1).reduce((sum, w) => sum + w, 0)),
+  );
+  const heads = headerRows(block);
+  return cellGrid(block)
+    .map((line, r) => {
+      let props = `\\trowd\\trgaph108\\trleft${String(left)}${r < heads ? '\\trhdr' : ''}`;
+      let cells = '';
+      line.forEach((placed, c) => {
+        if (placed?.column !== c) return;
+        const { cell } = placed;
+        const top = placed.row === r;
+        const merge = cell.rowspan > 1 ? (top ? '\\clvmgf' : '\\clvmrg') : '';
+        const edge = edges[Math.min(c + cell.colspan, edges.length) - 1] ?? left + width;
+        props += `${merge}${BORDERS}\\cellx${String(edge)}`;
+        const paragraphs = top ? headerParagraphs(cell) : [];
+        const body = paragraphs.map((p) => `{${inline(p.runs)}}`).join('\\par ');
+        cells += `\\pard\\intbl\\plain\\f0\\fs${String(TEXT_SIZE)} ${body}\\cell\n`;
+      });
+      return `${props}\n${cells}\\row\n`;
+    })
+    .join('');
+}
+
 function blockRtf(block: Block, left: number, ctx: Context): string {
   const indent = left > 0 ? `\\li${String(left)}` : '';
   switch (block.type) {
@@ -120,6 +167,9 @@ function blockRtf(block: Block, left: number, ctx: Context): string {
       const caption = block.caption === '' ? '' : paragraph('\\qc', `{\\i ${rtfText(block.caption)}}`);
       return paragraph('\\qc\\keepn', pict) + caption;
     }
+    case 'table':
+      // \\pard ends the table, so the next paragraph is outside it.
+      return `${tableRtf(block, left, ctx)}\\pard\n`;
     case 'quote':
       return block.blocks.map((b) => blockRtf(b, left + STEP, ctx)).join('');
     case 'list':
@@ -150,14 +200,48 @@ function blockRtf(block: Block, left: number, ctx: Context): string {
   }
 }
 
+const twips = (inches: number) => Math.round(inches * INCH);
+
+/** The page margins, the header and the footer of the page setup. */
+function pageSetupRtf(doc: ExportDoc, textWidth: number): string {
+  const setup = doc.page?.setup ?? DEFAULT_PAGE_SETUP;
+  const m = marginsOf(setup);
+  const [top, right, bottom, left] = [twips(m.top), twips(m.right), twips(m.bottom), twips(m.left)];
+  const names = { project: doc.page?.project ?? doc.title, item: singleItemTitle(doc) ?? doc.title };
+  // Each line starts at the left edge of the text. The number sits at the right of the header line, or in
+  // the center of the footer line.
+  const line = (group: string, text: string, number: boolean, tab: string) =>
+    text === '' && !number
+      ? ''
+      : `{\\${group}\\pard\\plain ${tab}\\fs20 ${rtfText(text)}${number ? '\\tab\\chpgn' : ''}\\par}`;
+  return [
+    `\\margl${String(left)}\\margr${String(right)}\\margt${String(top)}\\margb${String(bottom)}`,
+    `\\headery${String(Math.round(top / 2))}\\footery${String(Math.round(bottom / 2))}\n`,
+    line(
+      'header',
+      pageLineText(setup.header, setup.headerText, names),
+      setup.numbers === 'top-right',
+      `\\tqr\\tx${String(textWidth)}`,
+    ),
+    line(
+      'footer',
+      pageLineText(setup.footer, setup.footerText, names),
+      setup.numbers === 'bottom-center',
+      `\\tqc\\tx${String(Math.round(textWidth / 2))}`,
+    ),
+  ].join('');
+}
+
 export function toRtf(doc: ExportDoc): string {
   const [paperWidth, paperHeight] = doc.paper === 'a4' ? [11906, 16838] : [12240, 15840];
   const font = vloFont(doc.font)?.label ?? localFontName(doc.font) ?? 'Times New Roman';
-  const ctx: Context = { doc, width: paperWidth - 2 * INCH };
+  const { left, right } = marginsOf(doc.page?.setup ?? DEFAULT_PAGE_SETUP);
+  const ctx: Context = { doc, width: paperWidth - twips(left) - twips(right) };
   const parts = [
     `{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1{\\fonttbl{\\f0\\fnil ${rtfText(font)};}}`,
     `{\\info{\\title ${rtfText(doc.title)}}${doc.author ? `{\\author ${rtfText(doc.author)}}` : ''}}`,
-    `\\paperw${String(paperWidth)}\\paperh${String(paperHeight)}\\margl${String(INCH)}\\margr${String(INCH)}\\margt${String(INCH)}\\margb${String(INCH)}\\ftnbj\n`,
+    `\\paperw${String(paperWidth)}\\paperh${String(paperHeight)}\\ftnbj`,
+    pageSetupRtf(doc, ctx.width),
     // The title is a Heading 1, as the "#" line of a Markdown export.
     paragraph('\\qc\\outlinelevel0\\sa240\\b\\fs48', rtfText(doc.title)),
     ...(doc.author ? [paragraph('\\qc\\sa480', rtfText(doc.author))] : []),
