@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 30,
-  date: '2026-11-17',
+  version: 31,
+  date: '2026-11-18',
   guide: [
     {
       title: 'Start a project',
@@ -40,7 +40,7 @@ export const HELP = {
         'Press Ctrl+K (Cmd+K on a Mac), or choose Search, and type what you want: a tool such as Insights, History or Sound, a view such as the Codex, or an item.',
         'Type / in the text for headings, lists, footnotes, images, citations and more. Select words for a small menu of styles, links and comments.',
         'The More tab next to the views holds the Outline, the Codex, Feedback, Book, Submissions and Progress.',
-        'A tip line above the text names one of these ways at a time. Close it when you know them. Settings, Writing, can show the tips again.',
+        'A short guide above the text shows the basics, one step at a time. Close it when you know them. Settings, Writing, can show the guide again.',
       ],
     },
     {
@@ -57,7 +57,7 @@ export const HELP = {
       title: 'Make the page your own',
       steps: [
         'An item opens with the cursor where you left it.',
-        'In prose, choose Page look (next to the word count). Set the text width, the paragraphs, the line spacing and a screen font.',
+        'In prose, choose Page look (next to the word count). Set the text width, the paragraphs, the line spacing and a screen font. The Wide look fills the screen.',
         'A look changes this screen only. Choose Save this look to keep it with a name.',
         'Choose Word target to set the words for one item. A ring fills as you write, and the binder shows how far the item is.',
       ],

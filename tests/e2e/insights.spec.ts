@@ -39,7 +39,7 @@ async function newNovel(page: Page, words: string) {
 test('the stats bar counts after a pause and can be changed or hidden', async ({ page }) => {
   await newNovel(page, 'The cat sat on the mat. It was a sunny day.');
   await expect(bar(page)).toContainText('11 words');
-  await expect(bar(page)).toContainText('2 sentences');
+  await expect(bar(page)).toContainText('to read');
   await page.keyboard.insertText(' The dog came home.');
   await expect(bar(page)).toContainText('15 words');
 

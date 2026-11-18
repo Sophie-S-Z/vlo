@@ -8,7 +8,7 @@ import { Switch } from '@/ui/switch';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { Check } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { showTipsAgain, useTips } from '@/features/onboarding/Tips';
+import { showGuideAgain, useGuide } from '@/features/onboarding/Guide';
 import { ComfortSettings } from './ComfortSettings';
 import { StorageHealth } from './StorageHealth';
 import { FolderSave } from '@/features/backup/FolderSave';
@@ -83,7 +83,7 @@ function SettingSwitch({
 }
 
 export function SettingsPage() {
-  const tips = useTips();
+  const guide = useGuide();
   useDocumentTitle('Settings');
   const { prefs, resolvedTheme, setTheme, setCalm } = usePreferences();
   const motion = useMotionAllowed();
@@ -256,20 +256,20 @@ export function SettingsPage() {
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="grid gap-0.5">
-                <p className="text-sm font-medium">Tips</p>
+                <p className="text-sm font-medium">Getting-started guide</p>
                 <p className="text-sm text-muted">
-                  One line above the text names a way to the tools. Close it when you know them.
+                  A short guide above the text shows the basics, one step at a time.
                 </p>
               </div>
               <Button
                 variant="outline"
-                disabled={!tips.closed}
+                disabled={!guide.closed}
                 onClick={() => {
-                  showTipsAgain();
-                  setAnnouncement('The tips show again above the text.');
+                  showGuideAgain();
+                  setAnnouncement('The guide shows again above the text.');
                 }}
               >
-                Show the tips again
+                Show the guide again
               </Button>
             </div>
           </div>
