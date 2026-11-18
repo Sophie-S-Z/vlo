@@ -67,11 +67,13 @@ export function AccountDialog({
       }}
     >
       <DialogContent>
-        <DialogTitle>{account ? 'Edit this account' : 'Add an account'}</DialogTitle>
+        <DialogTitle className="[overflow-wrap:anywhere]">
+          {account ? `Edit ${account.name ?? account.email}` : 'Add an account'}
+        </DialogTitle>
         <DialogDescription>
           {account
-            ? 'A new email is the sign-in email from the next sign-in.'
-            : 'The writer signs in with this email and a code that Vlo sends at that time. Vlo sends no email now.'}
+            ? 'A new email works from the next sign-in.'
+            : 'They sign in with this email and a 6-digit code that Vlo sends at that time. Vlo sends nothing now.'}
         </DialogDescription>
         <form
           className="grid gap-4"
@@ -103,7 +105,7 @@ export function AccountDialog({
           </div>
           <div className="grid gap-1.5">
             <label htmlFor={`${id}-name`} className="text-sm">
-              {account?.name ? 'Name' : 'Name (you can leave it empty)'}
+              {account?.name ? 'Name' : 'Name (optional)'}
             </label>
             <Input
               id={`${id}-name`}
@@ -128,7 +130,7 @@ export function AccountDialog({
               </Button>
             </DialogClose>
             <Button type="submit" disabled={busy || !looksLikeEmail(email) || needsName}>
-              {account ? 'Save' : 'Add the account'}
+              {account ? 'Save changes' : 'Add account'}
             </Button>
           </div>
         </form>
@@ -174,18 +176,34 @@ export function DeleteAccountDialog({
       }}
     >
       <AlertDialogContent>
-        <AlertDialogTitle className="[overflow-wrap:anywhere]">Delete {account.email}?</AlertDialogTitle>
-        <AlertDialogDescription>
-          The server deletes the account and all that it keeps for it: the sign-in, the profile with its
-          photo, the settings, and the sync with every sealed copy. You cannot undo this.
-        </AlertDialogDescription>
-        <p className="text-sm">
-          The projects stay on the writer&apos;s devices. The daily counts and the feedback stay, with no
-          account. If the writer signs in with this email later, Vlo makes a new, empty account.
+        <AlertDialogTitle className="[overflow-wrap:anywhere]">
+          Delete {account.name ?? account.email}?
+        </AlertDialogTitle>
+        <AlertDialogDescription>You cannot undo this.</AlertDialogDescription>
+        <div className="grid gap-4 text-sm sm:grid-cols-2">
+          <div className="grid content-start gap-1">
+            <h3 className="font-medium">The server deletes</h3>
+            <ul className="grid list-disc gap-1 pl-5 marker:text-muted">
+              <li>The sign-in</li>
+              <li>The profile and photo</li>
+              <li>The toolbar and keys</li>
+              <li>The sync and every sealed copy</li>
+            </ul>
+          </div>
+          <div className="grid content-start gap-1">
+            <h3 className="font-medium">These stay</h3>
+            <ul className="grid list-disc gap-1 pl-5 marker:text-muted">
+              <li>The projects on their devices</li>
+              <li>The daily counts and feedback, with no account</li>
+            </ul>
+          </div>
+        </div>
+        <p className="text-sm text-muted">
+          If they sign in with this email later, Vlo makes a new, empty account.
         </p>
         <div className="grid gap-1.5">
-          <label htmlFor={id} className="text-sm">
-            Type the email to confirm
+          <label htmlFor={id} className="text-sm [overflow-wrap:anywhere]">
+            Type {account.email} to confirm
           </label>
           <Input
             id={id}
@@ -203,7 +221,7 @@ export function DeleteAccountDialog({
         )}
         <div className="flex flex-wrap justify-end gap-2">
           <AlertDialogCancel asChild>
-            <Button variant="ghost">Keep the account</Button>
+            <Button variant="ghost">Cancel</Button>
           </AlertDialogCancel>
           <Button
             disabled={busy || !matches}
@@ -211,7 +229,7 @@ export function DeleteAccountDialog({
               void remove();
             }}
           >
-            Delete the account
+            Delete account
           </Button>
         </div>
       </AlertDialogContent>
