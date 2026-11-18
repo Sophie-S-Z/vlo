@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { safeStorage } from '@/app/preferences';
+import { localStore, useLocalStore } from '@/app/localStore';
 
 /*
  * The stats bar under the writing, on this device: whether it shows, and which counts it shows. It is on,
@@ -39,12 +38,10 @@ export interface AnalysisPrefs {
   metrics: readonly Metric[];
 }
 
-const KEY = 'vlo:analysis';
 export const ANALYSIS_DEFAULTS: AnalysisPrefs = {
   bar: true,
   metrics: ['words', 'reading'],
 };
-const listeners = new Set<() => void>();
 
 export function cleanPrefs(raw: unknown): AnalysisPrefs {
   if (!raw || typeof raw !== 'object') return ANALYSIS_DEFAULTS;
@@ -55,37 +52,14 @@ export function cleanPrefs(raw: unknown): AnalysisPrefs {
   return { bar: typeof value.bar === 'boolean' ? value.bar : ANALYSIS_DEFAULTS.bar, metrics };
 }
 
-function load(): AnalysisPrefs {
-  try {
-    return cleanPrefs(JSON.parse(safeStorage()?.getItem(KEY) ?? 'null'));
-  } catch {
-    return ANALYSIS_DEFAULTS;
-  }
-}
+const store = localStore('vlo:analysis', cleanPrefs);
 
-let current = load();
-
-export function getAnalysisPrefs(): AnalysisPrefs {
-  return current;
-}
+export const getAnalysisPrefs = store.get;
 
 export function setAnalysisPrefs(change: Partial<AnalysisPrefs>): void {
-  current = cleanPrefs({ ...current, ...change });
-  try {
-    safeStorage()?.setItem(KEY, JSON.stringify(current));
-  } catch {
-    // Private windows can refuse storage. The choice still works until the page closes.
-  }
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  store.set(cleanPrefs({ ...store.get(), ...change }));
 }
 
 export function useAnalysisPrefs(): AnalysisPrefs {
-  return useSyncExternalStore(subscribe, getAnalysisPrefs, getAnalysisPrefs);
+  return useLocalStore(store);
 }

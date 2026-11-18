@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
 import { flattenTree } from '@/features/binder/tree';
-import { db, type CodexChange, type CodexEntry, type CodexKind, type Item } from '@/lib/db';
+import { db, touchProject, type CodexChange, type CodexEntry, type CodexKind, type Item } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderAfterLast, sortByOrder } from '@/lib/order';
 
@@ -71,8 +71,7 @@ export function cleanAliases(typed: string, name: string): string[] {
  */
 async function touch(ownerId: string): Promise<void> {
   const now = clock.now();
-  if ((await db.projects.update(ownerId, { updatedAt: now })) === 0)
-    await db.series.update(ownerId, { updatedAt: now });
+  if ((await touchProject(ownerId, now)) === 0) await db.series.update(ownerId, { updatedAt: now });
 }
 
 export async function addEntry(projectId: string, kind: CodexKind, name: string): Promise<CodexEntry> {

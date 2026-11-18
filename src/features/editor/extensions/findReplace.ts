@@ -87,7 +87,7 @@ export function patternError(query: FindQuery): string | null {
 }
 
 /** The text that replaces a match: the replacement, with $1, $<name>, $& and $$ for a pattern. */
-export function replacementText(template: string, match: FindMatch, query: FindQuery): string {
+function replacementText(template: string, match: FindMatch, query: FindQuery): string {
   if (!query.pattern) return template;
   return template.replace(/\$(\$|&|\d{1,2}|<([^>]*)>)/g, (all, token: string, name: string | undefined) => {
     if (token === '$') return '$';

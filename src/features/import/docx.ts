@@ -143,6 +143,8 @@ function tableHtml(table: Element, ctx: Context): string {
     // Word can leave grid columns empty at the start of a row.
     let column = Math.min(Math.max(Math.trunc(Number(attr(child(props, 'gridBefore'), 'val')) || 0), 0), 64);
     const cells: Cell[] = [];
+    // The cells above that a merge down in this row reaches.
+    const grown: Cell[] = [];
     for (const part of children(row, 'tc')) {
       const cellProps = child(part, 'tcPr');
       const colspan = count(attr(child(cellProps, 'gridSpan'), 'val'));
@@ -152,6 +154,7 @@ function tableHtml(table: Element, ctx: Context): string {
       const from = above.get(start);
       if (merge && attr(merge, 'val') !== 'restart' && from) {
         from.rowspan += 1;
+        grown.push(from);
         continue;
       }
       const cell: Cell = {
@@ -165,6 +168,8 @@ function tableHtml(table: Element, ctx: Context): string {
       cells.push(cell);
     }
     if (cells.length > 0) rows.push(cells);
+    // A row of merged cells only has no row in HTML, so the cells above do not reach into it.
+    else for (const cell of grown) cell.rowspan -= 1;
   }
   const html = rows
     .map(

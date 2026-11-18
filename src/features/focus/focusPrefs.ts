@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { safeStorage } from '@/app/preferences';
+import { localStore, useLocalStore } from '@/app/localStore';
 
 /** How Hide the text covers the words: a blur, or a bar over each line. */
 export type HideStyle = 'blur' | 'bars';
@@ -19,7 +18,6 @@ export interface FocusPrefs {
   hideKeep: boolean;
 }
 
-const KEY = 'vlo:focus';
 const DEFAULTS: FocusPrefs = {
   typewriter: false,
   dim: false,
@@ -28,60 +26,33 @@ const DEFAULTS: FocusPrefs = {
   hideStyle: 'blur',
   hideKeep: false,
 };
-const listeners = new Set<() => void>();
 
-function load(): FocusPrefs {
-  try {
-    const raw: unknown = JSON.parse(safeStorage()?.getItem(KEY) ?? 'null');
-    if (raw && typeof raw === 'object') {
-      const value = raw as Partial<Record<keyof FocusPrefs, unknown>>;
-      return {
-        typewriter: value.typewriter === true,
-        dim: value.dim === true,
-        dimScope: DIM_SCOPES.includes(value.dimScope as DimScope) ? (value.dimScope as DimScope) : 'line',
-        hide: value.hide === true,
-        hideStyle: HIDE_STYLES.includes(value.hideStyle as HideStyle)
-          ? (value.hideStyle as HideStyle)
-          : DEFAULTS.hideStyle,
-        hideKeep: value.hideKeep === true,
-      };
-    }
-  } catch {
-    // A damaged value falls back to the defaults.
-  }
-  return DEFAULTS;
-}
-
-let current = load();
-
-/** The focus switches on this device: typewriter scrolling, focus-line dimming and Hide the text. */
-export function getFocusPrefs(): FocusPrefs {
-  return current;
-}
-
-export function setFocusPrefs(change: Partial<FocusPrefs>): void {
-  current = { ...current, ...change };
-  try {
-    safeStorage()?.setItem(KEY, JSON.stringify(current));
-  } catch {
-    // Private windows can refuse storage. The switch still works until the page closes.
-  }
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
+function clean(raw: unknown): FocusPrefs {
+  if (!raw || typeof raw !== 'object') return DEFAULTS;
+  const value = raw as Partial<Record<keyof FocusPrefs, unknown>>;
+  return {
+    typewriter: value.typewriter === true,
+    dim: value.dim === true,
+    dimScope: DIM_SCOPES.includes(value.dimScope as DimScope) ? (value.dimScope as DimScope) : 'line',
+    hide: value.hide === true,
+    hideStyle: HIDE_STYLES.includes(value.hideStyle as HideStyle)
+      ? (value.hideStyle as HideStyle)
+      : DEFAULTS.hideStyle,
+    hideKeep: value.hideKeep === true,
   };
 }
 
-export function useFocusPrefs(): FocusPrefs {
-  return useSyncExternalStore(subscribe, getFocusPrefs, getFocusPrefs);
+const store = localStore('vlo:focus', clean);
+
+/** The focus switches on this device: typewriter scrolling, focus-line dimming and Hide the text. */
+export const getFocusPrefs = store.get;
+/** For tests: read the stored value again. */
+export const reloadFocusPrefs = store.reload;
+
+export function setFocusPrefs(change: Partial<FocusPrefs>): void {
+  store.set({ ...store.get(), ...change });
 }
 
-/** For tests: read the stored value again. */
-export function reloadFocusPrefs(): void {
-  current = load();
-  for (const listener of listeners) listener();
+export function useFocusPrefs(): FocusPrefs {
+  return useLocalStore(store);
 }

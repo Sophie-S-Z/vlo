@@ -14,7 +14,7 @@ import { blockCheckPlugin, type BlockCheckState } from './blockChecks';
 /** The colors show after this pause in typing. */
 export const POS_PAUSE_MS = 800;
 
-export const posKey = new PluginKey<BlockCheckState>('vloPartsOfSpeech');
+const posKey = new PluginKey<BlockCheckState>('vloPartsOfSpeech');
 
 /** True when this editor can show the parts of speech: an English item. */
 export function canShowPartsOfSpeech(state: EditorState): boolean {

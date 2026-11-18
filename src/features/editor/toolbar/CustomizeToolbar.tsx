@@ -23,7 +23,7 @@ import { Button } from '@/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/ui/dialog';
 import { Switch } from '@/ui/switch';
 import { command } from '../commands/registry';
-import { setWriterTools, useWriterTools } from '../writerTools';
+import { MAX_PINNED, setWriterTools, useWriterTools } from '../writerTools';
 import { DEFAULT_PINNED } from './toolbarLayout';
 
 /*
@@ -114,7 +114,7 @@ function PinnedRow({
   );
 }
 
-function OtherRow({ id, onPin }: { id: string; onPin: () => void }) {
+function OtherRow({ id, full, onPin }: { id: string; full: boolean; onPin: () => void }) {
   const cmd = command(id);
   const Icon = cmd.icon;
   const switchId = useId();
@@ -124,7 +124,7 @@ function OtherRow({ id, onPin }: { id: string; onPin: () => void }) {
       <label htmlFor={switchId} className="min-w-0 flex-1 cursor-pointer py-2.5 text-sm">
         {cmd.label}
       </label>
-      <Switch id={switchId} checked={false} onCheckedChange={onPin} className="mx-1" />
+      <Switch id={switchId} checked={false} disabled={full} onCheckedChange={onPin} className="mx-1" />
     </li>
   );
 }
@@ -222,11 +222,17 @@ export function CustomizeToolbar({
             <h3 id="other-tools" className="text-sm font-medium">
               In the menus only
             </h3>
+            {full.length >= MAX_PINNED && (
+              <p className="text-sm text-muted">
+                The toolbar holds {MAX_PINNED} tools. Unpin a tool to pin another one.
+              </p>
+            )}
             <ul aria-label="Tools in the menus only" className="grid divide-y divide-rule">
               {others.map((id) => (
                 <OtherRow
                   key={id}
                   id={id}
+                  full={full.length >= MAX_PINNED}
                   onPin={() => {
                     setWriterTools({ toolbar: [...full, id] });
                     setMessage(`${labelOf(id)} is on the toolbar, at the end.`);

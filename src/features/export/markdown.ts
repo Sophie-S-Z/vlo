@@ -76,7 +76,7 @@ function poemLine(runs: readonly Run[]): string {
 }
 
 /** The page break in Markdown: an HTML block, which Vlo's own import reads back as a page break. */
-export const PAGE_BREAK_HTML = '<div style="page-break-after: always"></div>';
+const PAGE_BREAK_HTML = '<div style="page-break-after: always"></div>';
 
 /**
  * A pipe table, as GitHub, Pandoc and most Markdown readers take it. Markdown has no merged cells, so a

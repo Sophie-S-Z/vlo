@@ -9,7 +9,7 @@ import { cleanPastedHtml, isEditorCopy } from '../format/cleanPaste';
  */
 
 /** The last clean paste: where it went, and the HTML that the app put on the clipboard. */
-export interface CleanedPaste {
+interface CleanedPaste {
   from: number;
   to: number;
   html: string;

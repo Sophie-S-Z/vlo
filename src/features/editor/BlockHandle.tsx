@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import DragHandle from '@tiptap/extension-drag-handle-react';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import { Copy, GripVertical, MoveDown, MoveUp, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -18,6 +18,9 @@ import { runCommand } from './commands/editorBus';
 import { COMMANDS, styleCommand } from './commands/registry';
 import { useParagraphStyles } from './format/paragraphStyleStore';
 import { IMAGE } from '@/features/images/attrs';
+import { newId } from '@/lib/ids';
+import { COMMENT } from './format/comment';
+import { SUGGESTION } from './format/suggestion';
 
 /*
  * The block handle (Phase 19, Task B3). It shows at the left of a prose block after the pointer moves, and
@@ -38,6 +41,32 @@ const TURN_INTO = [
 ]
   .map((id) => COMMANDS.find((cmd) => cmd.id === id))
   .filter((cmd) => cmd !== undefined);
+
+/**
+ * A copy of the block for Duplicate. A comment, a tracked change and a heading's link anchor each name one
+ * place, so the copy has no comment, a new id for each change, and no anchor.
+ */
+export function duplicateOf(block: ProseMirrorNode): ProseMirrorNode {
+  const ids = new Map<string, string>();
+  const marksOf = (marks: readonly Mark[]) =>
+    marks
+      .filter((mark) => mark.type.name !== COMMENT)
+      .map((mark) => {
+        if (mark.type.name !== SUGGESTION) return mark;
+        const old = String(mark.attrs.id);
+        const id = ids.get(old) ?? newId();
+        ids.set(old, id);
+        return mark.type.create({ ...mark.attrs, id });
+      });
+  const copy = (node: ProseMirrorNode): ProseMirrorNode => {
+    if (node.isText) return node.mark(marksOf(node.marks));
+    const content: ProseMirrorNode[] = [];
+    node.forEach((child) => content.push(copy(child)));
+    const attrs = 'anchor' in node.attrs ? { ...node.attrs, anchor: null } : node.attrs;
+    return node.type.create(attrs, content, marksOf(node.marks));
+  };
+  return copy(block);
+}
 
 /**
  * Keeps the handle on its block while the menu is open. The React handle adds only the plugin, with no
@@ -173,7 +202,7 @@ export function BlockHandle({ editor }: { editor: Editor }) {
                 editor
                   .chain()
                   .focus()
-                  .insertContentAt(block.pos + block.node.nodeSize, block.node)
+                  .insertContentAt(block.pos + block.node.nodeSize, duplicateOf(block.node))
                   .run();
               })}
             >

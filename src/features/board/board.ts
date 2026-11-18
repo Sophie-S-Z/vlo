@@ -1,5 +1,4 @@
-import { clock } from '@/lib/clock';
-import { db, type Card, type CardLink, type Item, type Thread } from '@/lib/db';
+import { db, touchProject, type Card, type CardLink, type Item, type Thread } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderAfterLast, orderBetween, sortByOrder } from '@/lib/order';
 import { CARD_HEIGHT, gridPlaces, snap } from './geometry';
@@ -33,10 +32,6 @@ export function threadStroke(color: string): string {
   return `color-mix(in oklab, ${hue} 70%, var(--text))`;
 }
 
-async function touch(projectId: string): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: clock.now() });
-}
-
 function cleanTitle(title: string): string {
   const trimmed = title.trim();
   if (trimmed === '') throw new Error('A card needs a title.');
@@ -59,7 +54,7 @@ export async function addCard(
   };
   await db.transaction('rw', db.cards, db.projects, async () => {
     await db.cards.add(row);
-    await touch(projectId);
+    await touchProject(projectId);
   });
   return row;
 }
@@ -84,7 +79,7 @@ export async function updateCard(
         if (patch.itemId === null) delete row.itemId;
         else if (patch.itemId !== undefined) row.itemId = patch.itemId;
       });
-    await touch(card.projectId);
+    await touchProject(card.projectId);
   });
 }
 
@@ -94,7 +89,7 @@ export async function moveCard(id: string, x: number, y: number): Promise<void> 
     const card = await db.cards.get(id);
     if (!card) return;
     await db.cards.update(id, { x: snap(x), y: snap(y) });
-    await touch(card.projectId);
+    await touchProject(card.projectId);
   });
 }
 
@@ -112,7 +107,7 @@ export async function nudgeCard(
     if (!card) return null;
     const at = { x: snap(card.x + dx), y: snap(card.y + dy) };
     await db.cards.update(id, at);
-    await touch(card.projectId);
+    await touchProject(card.projectId);
     return at;
   });
 }
@@ -133,7 +128,7 @@ export async function deleteCard(id: string): Promise<DeletedCard | null> {
     ];
     await db.cardLinks.bulkDelete(links.map((l) => l.id));
     await db.cards.delete(id);
-    await touch(card.projectId);
+    await touchProject(card.projectId);
     return { card, links };
   });
 }
@@ -153,7 +148,7 @@ export async function restoreCard(deleted: DeletedCard): Promise<void> {
         return rest;
       });
     await db.cardLinks.bulkPut(links);
-    await touch(deleted.card.projectId);
+    await touchProject(deleted.card.projectId);
   });
 }
 
@@ -181,7 +176,7 @@ export async function cardsFromScenes(projectId: string, scenesInOrder: readonly
         ...(scene.synopsis ? { note: scene.synopsis } : {}),
       })),
     );
-    await touch(projectId);
+    await touchProject(projectId);
     return missing.length;
   });
 }
@@ -203,7 +198,7 @@ export async function addThread(projectId: string, name: string, color: string):
       order: orderAfterLast(threads.map((t) => t.order)),
     };
     await db.threads.add(row);
-    await touch(projectId);
+    await touchProject(projectId);
     return row;
   });
 }
@@ -216,7 +211,7 @@ export async function updateThread(id: string, patch: { name?: string; color?: s
       ...(patch.name !== undefined ? { name: cleanName(patch.name) } : {}),
       ...(patch.color !== undefined ? { color: patch.color } : {}),
     });
-    await touch(thread.projectId);
+    await touchProject(thread.projectId);
   });
 }
 
@@ -233,7 +228,7 @@ export async function moveThread(id: string, step: -1 | 1): Promise<void> {
     const before = step === -1 ? (threads[target - 1]?.order ?? null) : (threads[target]?.order ?? null);
     const after = step === -1 ? (threads[target]?.order ?? null) : (threads[target + 1]?.order ?? null);
     await db.threads.update(id, { order: orderBetween(before, after) });
-    await touch(thread.projectId);
+    await touchProject(thread.projectId);
   });
 }
 
@@ -250,7 +245,7 @@ export async function deleteThread(id: string): Promise<void> {
         delete l.threadId;
       });
     await db.threads.delete(id);
-    await touch(thread.projectId);
+    await touchProject(thread.projectId);
   });
 }
 
@@ -292,7 +287,7 @@ export async function linkCards(
         ...(threadId === undefined ? {} : { threadId }),
       });
     }
-    await touch(projectId);
+    await touchProject(projectId);
   });
 }
 
@@ -321,7 +316,7 @@ export async function moveCardToThread(
     );
     if (moving.length > 0) {
       await db.cardLinks.bulkUpdate(moving.map((l) => ({ key: l.id, changes: { threadId: toThreadId } })));
-      await touch(card.projectId);
+      await touchProject(card.projectId);
       return moving.length;
     }
     if (linkTo === undefined || linkTo === cardId) throw new Error('Pick a card to link to on that thread.');
@@ -337,7 +332,7 @@ export async function moveCardToThread(
         toCardId: linkTo,
         threadId: toThreadId,
       });
-    await touch(card.projectId);
+    await touchProject(card.projectId);
     return 1;
   });
 }
@@ -347,6 +342,6 @@ export async function unlinkCards(linkId: string): Promise<void> {
     const link = await db.cardLinks.get(linkId);
     if (!link) return;
     await db.cardLinks.delete(linkId);
-    await touch(link.projectId);
+    await touchProject(link.projectId);
   });
 }

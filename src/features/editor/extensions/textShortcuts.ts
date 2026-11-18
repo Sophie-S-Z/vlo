@@ -12,9 +12,20 @@ import { getWritingPrefs, type WritingPrefs } from '../writingPrefs';
 const TRIGGER = /^[\s.,;:!?)\]}"”’]$/u;
 /** The last word before the trigger: it starts the line, or follows a space or an opening mark. */
 const LAST_WORD = /(?<=^|[\s"“‘([{])[^\s"“‘([{]+$/u;
+/** What may come just before a word. */
+const WORD_START = /[\s"“‘([{]/u;
+
+/** The writer's shortcut at the end of the text. It can hold an opening mark, such as "(c)". */
+function ownShortcutAt(text: string, prefs: Pick<WritingPrefs, 'shortcuts'>): string | undefined {
+  return prefs.shortcuts.find(({ on, from }) => {
+    if (!on || !text.endsWith(from)) return false;
+    const start = text.length - from.length;
+    return start === 0 || WORD_START.test(text.charAt(start - 1));
+  })?.from;
+}
 
 /** Common typos in English, each with its fix. A capital in the typo gives a capital in the fix. */
-export const TYPOS: Readonly<Record<string, string>> = {
+const TYPOS: Readonly<Record<string, string>> = {
   abotu: 'about',
   accomodate: 'accommodate',
   acheive: 'achieve',
@@ -103,8 +114,10 @@ export function shortcutFor(
   const own = prefs.shortcuts.find((s) => s.on && s.from === word);
   if (own) return own.to;
   if (!typos || !prefs.typoFixes) return null;
-  const fix = TYPOS[word.toLowerCase()];
-  if (fix === undefined) return null;
+  const key = word.toLowerCase();
+  // Only the list's own keys: "constructor" is not a typo.
+  if (!Object.hasOwn(TYPOS, key)) return null;
+  const fix = TYPOS[key] ?? '';
   return inCase(word, curly ? fix : fix.replaceAll('’', "'"));
 }
 
@@ -121,9 +134,11 @@ export const TextShortcuts = Extension.create<Options>({
       new InputRule({
         find: (text) => {
           if (!TRIGGER.test(text.slice(-1))) return null;
-          const word = LAST_WORD.exec(text.slice(0, -1))?.[0];
+          const before = text.slice(0, -1);
+          const prefs = getWritingPrefs();
+          const word = ownShortcutAt(before, prefs) ?? LAST_WORD.exec(before)?.[0];
           if (word === undefined) return null;
-          const replacement = shortcutFor(word, getWritingPrefs(), options);
+          const replacement = shortcutFor(word, prefs, options);
           if (replacement === null) return null;
           return {
             index: text.length - word.length - 1,

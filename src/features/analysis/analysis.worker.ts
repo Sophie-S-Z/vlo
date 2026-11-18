@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { answerCalls, loadOnce } from '@/lib/workerCall';
 import { checkAi, type AiReport } from './ai/detect';
 import {
   checkOriginality,
@@ -14,40 +15,19 @@ import type { EditorForm } from '@/features/library/templates';
  * and the originality check. The syllable counter loads with the first statistics request.
  */
 
-export type AnalysisRequest =
-  | { id: number; type: 'stats'; text: string; kind: EditorForm; language?: string | undefined }
-  | { id: number; type: 'ai'; text: string }
-  | { id: number; type: 'originality'; text: string; sources: Source[]; options: MatchOptions };
-
-export type AnalysisResult = FullStats | AiReport | OriginalityReport;
-
-export type AnalysisResponse = { id: number; result: AnalysisResult } | { id: number; error: string };
-
-declare const self: DedicatedWorkerGlobalScope;
-
-let syllables: Promise<(word: string) => number> | null = null;
-
-async function run(request: AnalysisRequest): Promise<AnalysisResult> {
-  if (request.type === 'stats') {
-    syllables ??= import('syllable').then((module) => module.syllable);
-    return fullStats(request.text, request.kind, await syllables, request.language);
-  }
-  if (request.type === 'ai') return checkAi(request.text);
-  return checkOriginality(request.text, request.sources, request.options);
+export interface AnalysisProtocol {
+  request:
+    | { type: 'stats'; text: string; kind: EditorForm; language?: string | undefined }
+    | { type: 'ai'; text: string }
+    | { type: 'originality'; text: string; sources: Source[]; options: MatchOptions };
+  result: FullStats | AiReport | OriginalityReport;
 }
 
-self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
-  const request = event.data;
-  run(request).then(
-    (result) => {
-      self.postMessage({ id: request.id, result } satisfies AnalysisResponse);
-    },
-    (problem: unknown) => {
-      if (request.type === 'stats') syllables = null;
-      self.postMessage({
-        id: request.id,
-        error: problem instanceof Error ? problem.message : 'The analysis stopped.',
-      } satisfies AnalysisResponse);
-    },
-  );
-};
+const loadSyllables = loadOnce(async () => (await import('syllable')).syllable);
+
+answerCalls<AnalysisProtocol>(async (request) => {
+  if (request.type === 'stats')
+    return fullStats(request.text, request.kind, await loadSyllables(), request.language);
+  if (request.type === 'ai') return checkAi(request.text);
+  return checkOriginality(request.text, request.sources, request.options);
+});

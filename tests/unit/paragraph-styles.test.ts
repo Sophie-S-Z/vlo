@@ -225,6 +225,34 @@ describe('exports', () => {
       expect(fonts).toMatch(/Inter/);
     },
   );
+
+  test.runIf(hasPoppler)(
+    'PDF: the space after a quote’s last paragraph does not move the quote’s first line',
+    async () => {
+      const gapAbove = async (lastStyle?: string) => {
+        const json: JSONContent = {
+          type: 'doc',
+          content: [
+            paragraph('Above.'),
+            { type: 'blockquote', content: [paragraph('Inside.'), paragraph('Closing.', lastStyle)] },
+          ],
+        };
+        const doc = buildExportDoc({
+          project: project('memoir'),
+          items: [item('i1', 'memory', 'The Kettle')],
+          scope: { kind: 'item', itemId: 'i1' },
+          updates: new Map([['i1', updateOf(json, 'prose')]]),
+        });
+        const path = join(dir, 'quote.pdf');
+        writeFileSync(path, (await toPdf(doc, { loadFile: loadPublicFile })).bytes);
+        const box = execFileSync('pdftotext', ['-bbox', path, '-'], { encoding: 'utf8' });
+        const yOf = (word: string) =>
+          Number(new RegExp(`<word [^>]*yMin="([\\d.]+)"[^>]*>${word}</word>`).exec(box)?.[1] ?? Number.NaN);
+        return yOf('Inside.') - yOf('Above.');
+      };
+      expect(await gapAbove('epigraph')).toBeCloseTo(await gapAbove(), 1);
+    },
+  );
 });
 
 describe('backup', () => {

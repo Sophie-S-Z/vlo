@@ -109,6 +109,8 @@ describe('keys', () => {
         true,
       ),
     ).toBe('Mod-Alt-b');
+    // On AZERTY the A key sits where QWERTY has Q. The editor reads the letter on the key, so the recorder does too.
+    expect(press('a', 'KeyQ', { ctrlKey: true })).toBe('Mod-a');
     expect(sameKeys('Mod-Shift-B', 'Shift-Mod-b')).toBe(true);
   });
 

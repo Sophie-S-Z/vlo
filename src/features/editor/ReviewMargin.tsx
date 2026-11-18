@@ -1,12 +1,11 @@
 import type { Editor } from '@tiptap/core';
-import { TextSelection } from '@tiptap/pm/state';
 import { MessageSquareText } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
-import { commentLink, focusText, openPanel } from './commands/editorBus';
-import { commentAt, commentsOf, selectComment, setCardFocus, type CommentEntry } from './extensions/comment';
-import { changesOf, type ChangeEntry } from './extensions/suggestion';
+import { commentLink, focusText, openPanel, setCommentCards } from './commands/editorBus';
+import { commentAt, commentsOf, selectComment, type CommentEntry } from './extensions/comment';
+import { changeLabel, changesOf, selectChange, type ChangeEntry } from './extensions/suggestion';
 import { shortQuote, ThreadCard } from './ThreadCard';
 
 /*
@@ -161,8 +160,9 @@ export function ReviewMargin({ editor, itemId, room }: ReviewMarginProps) {
   // The Comment tool on a thread's words goes to its card.
   useEffect(() => {
     if (!room) return;
-    setCardFocus(editor, (id) => {
-      if (!cardEls.current.has(`comment:${id}`)) return false;
+    setCommentCards(editor, () => {
+      const id = commentAt(editor.state)?.id;
+      if (id === undefined || !cardEls.current.has(`comment:${id}`)) return false;
       selectComment(editor, id);
       // The card opens at the next render, with its reply field.
       requestAnimationFrame(() => {
@@ -171,7 +171,7 @@ export function ReviewMargin({ editor, itemId, room }: ReviewMarginProps) {
       return true;
     });
     return () => {
-      setCardFocus(editor, null);
+      setCommentCards(editor, null);
     };
   }, [editor, room]);
 
@@ -310,16 +310,9 @@ export function ReviewMargin({ editor, itemId, room }: ReviewMarginProps) {
   );
 }
 
-function selectChange(editor: Editor, change: ChangeEntry): void {
-  const { doc } = editor.state;
-  editor.view.dispatch(
-    editor.state.tr.setSelection(TextSelection.create(doc, change.from, change.to)).scrollIntoView(),
-  );
-}
-
 /** A waiting change (Task C2): who made it, its pass color, its words, and Accept and Reject. */
 function ChangeCard({ editor, change }: { editor: Editor; change: ChangeEntry }) {
-  const what = `${change.kind === 'insert' ? 'Inserted' : 'Deleted'}${change.by ? ` by ${change.by}` : ''}`;
+  const what = changeLabel(change);
   const words = shortQuote(change.text);
   return (
     <article aria-label={`${what}: “${words}”`} className="grid gap-2 text-sm">

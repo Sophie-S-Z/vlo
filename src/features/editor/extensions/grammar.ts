@@ -24,7 +24,7 @@ interface GrammarSpec {
   lint: GrammarLint;
 }
 
-export const grammarKey = new PluginKey<BlockCheckState>('vloGrammar');
+const grammarKey = new PluginKey<BlockCheckState>('vloGrammar');
 
 /** True when this editor can check spelling and grammar: an English prose item. */
 export function canCheckGrammar(state: EditorState): boolean {

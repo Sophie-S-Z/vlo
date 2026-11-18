@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { safeStorage } from '@/app/preferences';
+import { localStore, useLocalStore } from '@/app/localStore';
 import { POS_KINDS, type PosKind } from './posTags';
 
 /*
@@ -13,40 +12,24 @@ export interface PosPrefs {
   off: readonly PosKind[];
 }
 
-const KEY = 'vlo:parts-of-speech';
 const KINDS = new Set<string>(POS_KINDS.map((k) => k.id));
 
-function load(): PosPrefs {
-  try {
-    const raw: unknown = JSON.parse(safeStorage()?.getItem(KEY) ?? 'null');
-    if (raw && typeof raw === 'object') {
-      const value = raw as Partial<Record<keyof PosPrefs, unknown>>;
-      const off = Array.isArray(value.off)
-        ? value.off.filter((k): k is PosKind => KINDS.has(k as string))
-        : [];
-      return { on: value.on === true, off: [...new Set(off)] };
-    }
-  } catch {
-    // A damaged value falls back to the defaults.
-  }
-  return { on: false, off: [] };
+function clean(raw: unknown): PosPrefs {
+  if (!raw || typeof raw !== 'object') return { on: false, off: [] };
+  const value = raw as Partial<Record<keyof PosPrefs, unknown>>;
+  const off = Array.isArray(value.off) ? value.off.filter((k): k is PosKind => KINDS.has(k as string)) : [];
+  return { on: value.on === true, off: [...new Set(off)] };
 }
 
-let current = load();
-const listeners = new Set<() => void>();
+const store = localStore('vlo:parts-of-speech', clean);
 
-export function getPosPrefs(): PosPrefs {
-  return current;
-}
+export const getPosPrefs = store.get;
+export const subscribePosPrefs = store.subscribe;
+/** For tests: read the stored value again. */
+export const reloadPosPrefs = store.reload;
 
 function set(change: Partial<PosPrefs>): void {
-  current = { ...current, ...change };
-  try {
-    safeStorage()?.setItem(KEY, JSON.stringify(current));
-  } catch {
-    // Private windows can refuse storage. The change still holds until the page closes.
-  }
-  for (const listener of listeners) listener();
+  store.set({ ...store.get(), ...change });
 }
 
 export function setPosOn(on: boolean): void {
@@ -55,22 +38,10 @@ export function setPosOn(on: boolean): void {
 
 /** Gives a kind of word its color, or takes it away. */
 export function setPosKindOn(kind: PosKind, on: boolean): void {
-  set({ off: on ? current.off.filter((k) => k !== kind) : [...new Set([...current.off, kind])] });
-}
-
-export function subscribePosPrefs(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  const { off } = store.get();
+  set({ off: on ? off.filter((k) => k !== kind) : [...new Set([...off, kind])] });
 }
 
 export function usePosPrefs(): PosPrefs {
-  return useSyncExternalStore(subscribePosPrefs, getPosPrefs, getPosPrefs);
-}
-
-/** For tests: read the stored value again. */
-export function reloadPosPrefs(): void {
-  current = load();
-  for (const listener of listeners) listener();
+  return useLocalStore(store);
 }

@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { safeStorage } from '@/app/preferences';
+import { localStore, useLocalStore } from '@/app/localStore';
 import { ignoreKey } from './lints';
 
 /*
@@ -19,7 +18,6 @@ export interface GrammarPrefs {
   ignored: Readonly<Record<string, readonly string[]>>;
 }
 
-const KEY = 'vlo:grammar';
 export const MAX_WORD = 64;
 const MAX_WORDS = 5000;
 const MAX_IGNORED = 500;
@@ -30,14 +28,8 @@ function strings(value: unknown, max: number, longest: number): string[] {
   return [...new Set(clean)].slice(-max);
 }
 
-function load(): GrammarPrefs {
-  let raw: Record<string, unknown> = {};
-  try {
-    const parsed: unknown = JSON.parse(safeStorage()?.getItem(KEY) ?? 'null');
-    if (parsed && typeof parsed === 'object') raw = parsed as Record<string, unknown>;
-  } catch {
-    // A damaged value falls back to the defaults.
-  }
+function cleanPrefs(value: unknown): GrammarPrefs {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   const ignored: Record<string, string[]> = {};
   if (raw.ignored && typeof raw.ignored === 'object')
     for (const [itemId, keys] of Object.entries(raw.ignored as Record<string, unknown>)) {
@@ -52,21 +44,13 @@ function load(): GrammarPrefs {
   };
 }
 
-let current = load();
-const listeners = new Set<() => void>();
+const store = localStore('vlo:grammar', cleanPrefs);
 
-export function getGrammarPrefs(): GrammarPrefs {
-  return current;
-}
+export const getGrammarPrefs = store.get;
+export const subscribeGrammarPrefs = store.subscribe;
 
 function set(change: Partial<GrammarPrefs>): void {
-  current = { ...current, ...change };
-  try {
-    safeStorage()?.setItem(KEY, JSON.stringify(current));
-  } catch {
-    // Private windows can refuse storage. The change still holds until the page closes.
-  }
-  for (const listener of listeners) listener();
+  store.set({ ...store.get(), ...change });
 }
 
 export function setGrammarOn(on: boolean): void {
@@ -77,34 +61,29 @@ export function setGrammarOn(on: boolean): void {
 export function addWord(word: string): boolean {
   const clean = word.trim();
   if (clean === '' || clean.length > MAX_WORD || /\s/.test(clean)) return false;
-  if (!current.words.includes(clean)) set({ words: [...current.words, clean].slice(-MAX_WORDS) });
+  const { words } = store.get();
+  if (!words.includes(clean)) set({ words: [...words, clean].slice(-MAX_WORDS) });
   return true;
 }
 
 export function removeWord(word: string): void {
-  set({ words: current.words.filter((w) => w !== word) });
+  set({ words: store.get().words.filter((w) => w !== word) });
 }
 
 export function setRuleOn(rule: string, on: boolean): void {
-  const others = current.offRules.filter((r) => r !== rule);
+  const others = store.get().offRules.filter((r) => r !== rule);
   set({ offRules: on ? others : [...others, rule] });
 }
 
 /** Keeps the rule off for these words in the item. */
 export function ignoreMark(itemId: string, rule: string, words: string): void {
   const key = ignoreKey(rule, words);
-  const list = current.ignored[itemId] ?? [];
+  const { ignored } = store.get();
+  const list = ignored[itemId] ?? [];
   if (list.includes(key)) return;
-  set({ ignored: { ...current.ignored, [itemId]: [...list, key].slice(-MAX_IGNORED) } });
-}
-
-export function subscribeGrammarPrefs(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  set({ ignored: { ...ignored, [itemId]: [...list, key].slice(-MAX_IGNORED) } });
 }
 
 export function useGrammarPrefs(): GrammarPrefs {
-  return useSyncExternalStore(subscribeGrammarPrefs, getGrammarPrefs, getGrammarPrefs);
+  return useLocalStore(store);
 }

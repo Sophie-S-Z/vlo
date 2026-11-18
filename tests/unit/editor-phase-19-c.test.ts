@@ -4,6 +4,13 @@ import { yUndoPluginKey } from '@tiptap/y-tiptap';
 import JSZip from 'jszip';
 import * as Y from 'yjs';
 import { afterEach, describe, expect, test } from 'vitest';
+import {
+  closePanel,
+  getPanelRequest,
+  runCommand,
+  setCommentCards,
+} from '@/features/editor/commands/editorBus';
+import { command } from '@/features/editor/commands/registry';
 import { commentsOf } from '@/features/editor/extensions/comment';
 import { proseExtensions } from '@/features/editor/extensions/prose';
 import { repliesOf } from '@/features/editor/format/comment';
@@ -179,5 +186,26 @@ describe('Word', () => {
       if (mark) replies = repliesOf(mark.attrs.replies).map((r) => `${r.by}: ${r.text}`);
     });
     expect(replies).toEqual(['Ana: The blue one.', 'Ben: Under the stove.']);
+  });
+});
+
+describe('the Comment tool', () => {
+  test('from any surface, it opens the card in the margin when the margin has one', () => {
+    const { editor } = withComment();
+    closePanel();
+    let shown = 0;
+    setCommentCards(editor, () => {
+      shown += 1;
+      return true;
+    });
+    runCommand(editor, command('comment'), document.body);
+    expect(shown).toBe(1);
+    expect(getPanelRequest()).toBeNull();
+    // With no card in the margin, the panel opens as before.
+    setCommentCards(editor, () => false);
+    runCommand(editor, command('comment'), document.body);
+    expect(getPanelRequest()?.panel).toBe('comment');
+    setCommentCards(editor, null);
+    closePanel();
   });
 });

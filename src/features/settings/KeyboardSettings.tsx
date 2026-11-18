@@ -53,9 +53,6 @@ export function ToolbarSettings() {
   );
 }
 
-/** One row of each tool id, in registry order: a tool that each form has once is listed once. */
-const TOOLS: readonly EditorCommand[] = [...new Map(COMMANDS.map((c) => [c.id, c])).values()];
-
 /** A key change that waits for the writer's choice. */
 interface Ask {
   cmd: EditorCommand;
@@ -100,7 +97,7 @@ export function KeyboardSettings({ onAnnounce }: { onAnnounce: (text: string) =>
       setProblem(`Vlo keeps ${shortcutLabel(keys, apple)} for ${kept[1]}. Press another key.`);
       return;
     }
-    const from = TOOLS.filter((other) => {
+    const from = COMMANDS.filter((other) => {
       const theirs = keysOf(other, own);
       return other.id !== cmd.id && theirs !== undefined && sameKeys(theirs, keys);
     });
@@ -111,7 +108,7 @@ export function KeyboardSettings({ onAnnounce }: { onAnnounce: (text: string) =>
 
   const changed = Object.keys(own).length > 0;
   const groups = new Map<CommandGroup, EditorCommand[]>();
-  for (const cmd of TOOLS) groups.set(cmd.group, [...(groups.get(cmd.group) ?? []), cmd]);
+  for (const cmd of COMMANDS) groups.set(cmd.group, [...(groups.get(cmd.group) ?? []), cmd]);
 
   return (
     <div className="grid gap-5">

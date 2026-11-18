@@ -39,7 +39,7 @@ export function ariaShortcut(keys: string): string {
   const parts = keys.split(/-(?!$)/);
   const key = parts.pop() ?? '';
   const name = key.length === 1 ? key.toUpperCase() : key;
-  const rest = parts.filter((p) => p !== 'Mod').map((p) => (p === 'Alt' ? 'Alt' : p));
+  const rest = parts.filter((p) => p !== 'Mod').map((p) => (p === 'Ctrl' ? 'Control' : p));
   if (!parts.includes('Mod')) return [...rest, name].join('+');
   return [['Control', ...rest, name].join('+'), ['Meta', ...rest, name].join('+')].join(' ');
 }
@@ -63,7 +63,8 @@ const ONLY_MODIFIER = new Set(['Control', 'Meta', 'Alt', 'Shift', 'AltGraph', 'C
 /**
  * The key that a key press makes, in TipTap's form, or null for a key that is not a shortcut. A shortcut
  * has Mod, Ctrl or Alt, or is an F key, so it never takes a letter that the writer types. A letter or a
- * digit comes from the key's place on the keyboard, because Alt changes the character on a Mac.
+ * digit is the one on the key, as the editor reads it, so AZERTY and Dvorak keys work. When Alt changes it
+ * to another character, as on a Mac, the key's place on the keyboard gives it.
  */
 export function eventKeys(
   event: Pick<KeyboardEvent, 'key' | 'code' | 'metaKey' | 'ctrlKey' | 'altKey' | 'shiftKey'>,
@@ -71,7 +72,8 @@ export function eventKeys(
 ): string | null {
   if (ONLY_MODIFIER.has(event.key)) return null;
   const place = /^(?:Key([A-Z])|Digit(\d))$/.exec(event.code);
-  const key = place ? (place[1] ?? place[2] ?? '').toLowerCase() : event.key;
+  const key =
+    place && !/^[a-z0-9]$/i.test(event.key) ? (place[1] ?? place[2] ?? '').toLowerCase() : event.key;
   const fKey = /^F\d{1,2}$/.test(key);
   const mod = apple ? event.metaKey : event.ctrlKey;
   const ctrl = apple && event.ctrlKey;

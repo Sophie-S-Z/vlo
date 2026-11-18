@@ -563,30 +563,27 @@ function wordTable(block: TableBlock, place: Place, ctx: Context): Table {
   const width = ctx.textWidth - place.left;
   const columns = block.widths.map((share) => Math.round(share * width));
   const heads = headerRows(block);
-  let column = 0;
+  // The docx package gives each cell the width of the columns that it spans.
   return new Table({
     width: { size: width, type: WidthType.DXA },
     columnWidths: columns,
     layout: TableLayoutType.FIXED,
     ...(place.left > 0 ? { indent: { size: place.left, type: WidthType.DXA } } : {}),
-    rows: block.rows.map((cells, r) => {
-      column = 0;
-      return new TableRow({
-        tableHeader: r < heads,
-        children: cells.map((cell) => {
-          const size = columns.slice(column, column + cell.colspan).reduce((sum, w) => sum + w, 0);
-          column += cell.colspan;
-          const paragraphs = blocksParagraphs(headerParagraphs(cell), { left: 0 }, ctx);
-          return new TableCell({
-            width: { size, type: WidthType.DXA },
-            ...(cell.colspan > 1 ? { columnSpan: cell.colspan } : {}),
-            ...(cell.rowspan > 1 ? { rowSpan: cell.rowspan } : {}),
-            // Word needs a paragraph in each cell.
-            children: paragraphs.length > 0 ? paragraphs : [new Paragraph({ children: [] })],
-          });
+    rows: block.rows.map(
+      (cells, r) =>
+        new TableRow({
+          tableHeader: r < heads,
+          children: cells.map((cell) => {
+            const paragraphs = blocksParagraphs(headerParagraphs(cell), { left: 0 }, ctx);
+            return new TableCell({
+              ...(cell.colspan > 1 ? { columnSpan: cell.colspan } : {}),
+              ...(cell.rowspan > 1 ? { rowSpan: cell.rowspan } : {}),
+              // Word needs a paragraph in each cell.
+              children: paragraphs.length > 0 ? paragraphs : [new Paragraph({ children: [] })],
+            });
+          }),
         }),
-      });
-    }),
+    ),
   });
 }
 

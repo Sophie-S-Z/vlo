@@ -88,10 +88,14 @@ const MESSAGES: Record<ShareErrorKind, string> = {
 };
 
 export class ShareError extends Error {
-  /** A message replaces the fixed text of the kind when it can say more, such as a size. */
+  /**
+   * A message replaces the fixed text of the kind when it can say more, such as a size. `reason` is the
+   * server's own refusal, such as "bad email", for a screen that can say more about it.
+   */
   constructor(
     readonly kind: ShareErrorKind,
     message?: string,
+    readonly reason = '',
   ) {
     super(message ?? MESSAGES[kind]);
     this.name = 'ShareError';
@@ -172,7 +176,7 @@ export async function rpc<T>(
       typeof body === 'object' && body !== null && typeof (body as { message?: unknown }).message === 'string'
         ? (body as { message: string }).message
         : '';
-    throw new ShareError(kindOf(message));
+    throw new ShareError(kindOf(message), undefined, message);
   }
   return body as T;
 }

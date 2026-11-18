@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
-import { db, type ResearchFile } from '@/lib/db';
+import { db, touchProject, type ResearchFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 
 /*
@@ -46,10 +46,6 @@ function cleanName(name: string): string {
   return clean;
 }
 
-async function touch(projectId: string): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: clock.now() });
-}
-
 export interface AddResult {
   added: ResearchFile[];
   /** The names of the files over the size limit. */
@@ -87,7 +83,7 @@ export async function addResearchFiles(projectId: string, files: readonly File[]
   );
   await db.transaction('rw', db.research, db.projects, async () => {
     await db.research.bulkAdd(added);
-    if (added.length > 0) await touch(projectId);
+    if (added.length > 0) await touchProject(projectId);
   });
   return { added, tooLarge, large: (await totalSize(projectId)) > RESEARCH_WARN };
 }
@@ -112,7 +108,7 @@ export async function addRecording(
   };
   await db.transaction('rw', db.research, db.projects, async () => {
     await db.research.add(file);
-    await touch(projectId);
+    await touchProject(projectId);
   });
   return file;
 }
@@ -141,7 +137,7 @@ export async function addClipping(
   };
   await db.transaction('rw', db.research, db.projects, async () => {
     await db.research.add(file);
-    await touch(projectId);
+    await touchProject(projectId);
   });
   return file;
 }
@@ -152,7 +148,7 @@ export async function renameResearch(id: string, name: string): Promise<void> {
     const file = await db.research.get(id);
     if (!file) return;
     await db.research.update(id, { name: clean });
-    await touch(file.projectId);
+    await touchProject(file.projectId);
   });
 }
 
@@ -161,7 +157,7 @@ export async function deleteResearch(id: string): Promise<void> {
     const file = await db.research.get(id);
     if (!file) return;
     await db.research.delete(id);
-    await touch(file.projectId);
+    await touchProject(file.projectId);
   });
 }
 

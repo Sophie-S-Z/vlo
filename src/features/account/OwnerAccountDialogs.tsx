@@ -19,8 +19,18 @@ import { addAccount, editAccount, removeAccount, type OwnerAccount } from './own
  * server does each change in the database and refuses any account that is not an owner.
  */
 
+/** What the owner's functions refuse, in the words of the owner page. */
+const REFUSALS: Readonly<Record<string, string>> = {
+  'email taken': 'Another account has this email.',
+  'bad email': 'Type a whole email address, such as name@example.com.',
+  'bad name': 'A name has at most 80 characters, on one line.',
+  'email locked': 'This account signs in with Google, so Google gives its email.',
+  'own account': 'Delete your own account on the Account page.',
+  'not owner': 'This account is not an owner. Sign in again as the owner.',
+};
+
 const errorText = (error: unknown) =>
-  error instanceof ShareError && error.kind === 'taken' ? error.message : accountErrorText(error);
+  (error instanceof ShareError ? REFUSALS[error.reason] : undefined) ?? accountErrorText(error);
 const GONE = 'This account is not on the server now. Choose Refresh.';
 
 /** Adds an account when `account` is null, or changes the email and name of `account`. */

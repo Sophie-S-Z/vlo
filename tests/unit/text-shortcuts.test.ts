@@ -73,6 +73,12 @@ describe('the typo list', () => {
     expect(off.state.doc.textContent).toBe('teh ');
   });
 
+  test('a word that is a name on every object, such as "constructor", is not a typo', () => {
+    const editor = mount({ curly: false });
+    type(editor, 'constructor Constructor toString ');
+    expect(editor.state.doc.textContent).toBe('constructor Constructor toString ');
+  });
+
   test('an apostrophe follows smart punctuation', () => {
     expect(shortcutFor('dont', WRITING_DEFAULTS, { typos: true, curly: true })).toBe('don’t');
     expect(shortcutFor('Dont', WRITING_DEFAULTS, { typos: true, curly: false })).toBe("Don't");
@@ -88,6 +94,13 @@ describe('the writer’s shortcuts', () => {
     setWritingPrefs({ shortcuts: [{ from: 'mh', to: 'Marigold Harbour', on: false }] });
     type(editor, 'mh ');
     expect(editor.state.doc.textContent).toContain('amh mh ');
+  });
+
+  test('a shortcut can start with an opening mark, such as (c)', () => {
+    setWritingPrefs({ shortcuts: [{ from: '(c)', to: '©', on: true }] });
+    const editor = mount();
+    type(editor, '(c) 2026 a(c) ');
+    expect(editor.state.doc.textContent).toBe('© 2026 a(c) ');
   });
 
   test('a poem with smart punctuation off keeps every character', () => {

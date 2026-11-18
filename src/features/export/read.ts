@@ -405,13 +405,20 @@ const MIN_COLUMN = 48;
 
 /** A table (Phase 19, Task F2), or null for a table with no cells. */
 function tableBlock(node: JSONContent, notes: NoteCounter, review: ExportReview): TableBlock | null {
-  const rows = (node.content ?? [])
+  const all = (node.content ?? [])
     .filter((row) => row.type === 'tableRow')
     .map((row) =>
       (row.content ?? []).filter((cell) => cell.type === 'tableCell' || cell.type === 'tableHeader'),
-    )
+    );
+  // A row that merged cells from above cover has no cells. It goes, and the cells above stop spanning it.
+  const rowspanOf = (cell: JSONContent, r: number) => {
+    const rowspan = span(cell.attrs?.rowspan);
+    return rowspan - all.slice(r + 1, r + rowspan).filter((cells) => cells.length === 0).length;
+  };
+  const rows = all
+    .map((cells, r) => cells.map((cell) => ({ cell, rowspan: rowspanOf(cell, r) })))
     .filter((cells) => cells.length > 0);
-  const first = rows[0];
+  const first = rows[0]?.map(({ cell }) => cell);
   if (!first) return null;
   // The first row holds every column, since no cell above it spans into it.
   const sizes = first.flatMap((cell) => {
@@ -428,11 +435,11 @@ function tableBlock(node: JSONContent, notes: NoteCounter, review: ExportReview)
   return {
     type: 'table',
     rows: rows.map((cells) =>
-      cells.map((cell): TableCell => ({
+      cells.map(({ cell, rowspan }): TableCell => ({
         paragraphs: proseBlocks(cell.content, notes, review).filter((b) => b.type === 'paragraph'),
         header: cell.type === 'tableHeader',
         colspan: span(cell.attrs?.colspan),
-        rowspan: span(cell.attrs?.rowspan),
+        rowspan,
       })),
     ),
     widths: sizes.map((w) => (w ?? share) / total),

@@ -139,5 +139,6 @@ describe('shortcut labels', () => {
     expect(ariaShortcut('Mod-b')).toBe('Control+B Meta+B');
     expect(ariaShortcut('Mod-Shift-8')).toBe('Control+Shift+8 Meta+Shift+8');
     expect(ariaShortcut('Alt-F10')).toBe('Alt+F10');
+    expect(ariaShortcut('Ctrl-Alt-m')).toBe('Control+Alt+M');
   });
 });

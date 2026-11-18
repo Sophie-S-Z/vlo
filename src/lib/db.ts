@@ -2,6 +2,7 @@ import { Dexie, type Table } from 'dexie';
 import type { PoemForm } from '@/features/craft/forms';
 import type { HeadingRef } from '@/features/editor/format/itemLink';
 import type { ParagraphStyle } from '@/features/editor/format/paragraphStyles';
+import { clock } from './clock';
 import { CLOCK_TABLE, syncClockMiddleware, type ClockEntry } from '@/features/sync/clock';
 import { LIBRARY } from './library';
 import { recountItems } from './wordcount';
@@ -751,6 +752,11 @@ export class VloDb extends Dexie {
 
 /** The library of this page: the one of the signed-in account, or the one with no account. */
 export const db = new VloDb(LIBRARY);
+
+/** Marks the project as changed, so the Library order, backups and sync see the change. */
+export function touchProject(projectId: string, now = clock.now()): Promise<number> {
+  return db.projects.update(projectId, { updatedAt: now });
+}
 
 /**
  * The view tables (Phase 3, the Codex of Phase 8 and the sources of Phase 13). Each row has an `id` and a

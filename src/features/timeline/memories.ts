@@ -1,5 +1,5 @@
 import { clock } from '@/lib/clock';
-import { db, type Item, type LifeStage } from '@/lib/db';
+import { db, touchProject, type Item, type LifeStage } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderAfterLast, orderBetween, sortByOrder } from '@/lib/order';
 import { compareDates, isDate } from './dates';
@@ -9,10 +9,6 @@ import { compareDates, isDate } from './dates';
  * life stages of a memoir. Each change also marks the project as changed, for the Library order, the
  * backup reminder and folder save.
  */
-
-async function touch(projectId: string, now: number): Promise<void> {
-  await db.projects.update(projectId, { updatedAt: now });
-}
 
 function checkDate(value: string, what: string): string {
   const trimmed = value.trim();
@@ -57,7 +53,7 @@ export async function setMemory(itemId: string, patch: MemoryPatch): Promise<voi
     else if (patch.lifeStageId !== undefined) next.lifeStageId = patch.lifeStageId;
     if (patch.themes !== undefined) next.themes = cleanThemes(patch.themes);
     await db.items.update(itemId, { memory: next, updatedAt: now });
-    await touch(item.projectId, now);
+    await touchProject(item.projectId, now);
   });
 }
 
@@ -126,7 +122,7 @@ export async function addStage(
       order: orderAfterLast(stages.map((s) => s.order)),
     };
     await db.lifeStages.add(row);
-    await touch(projectId, now);
+    await touchProject(projectId, now);
     return row;
   });
 }
@@ -147,7 +143,7 @@ export async function updateStage(
     };
     checkSpan(next.start, next.end);
     await db.lifeStages.update(id, next);
-    await touch(stage.projectId, now);
+    await touchProject(stage.projectId, now);
   });
 }
 
@@ -164,7 +160,7 @@ export async function moveStage(id: string, step: -1 | 1): Promise<void> {
     const before = step === -1 ? (stages[target - 1]?.order ?? null) : (stages[target]?.order ?? null);
     const after = step === -1 ? (stages[target]?.order ?? null) : (stages[target + 1]?.order ?? null);
     await db.lifeStages.update(id, { order: orderBetween(before, after) });
-    await touch(stage.projectId, now);
+    await touchProject(stage.projectId, now);
   });
 }
 
@@ -182,6 +178,6 @@ export async function deleteStage(id: string): Promise<void> {
         if (i.memory) delete i.memory.lifeStageId;
       });
     await db.lifeStages.delete(id);
-    await touch(stage.projectId, now);
+    await touchProject(stage.projectId, now);
   });
 }

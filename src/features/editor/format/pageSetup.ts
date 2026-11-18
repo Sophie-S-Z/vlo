@@ -9,7 +9,7 @@ export type Margins = NonNullable<PageSetup['custom']>;
 export type MarginPreset = PageSetup['margins'];
 
 /** The margins of each preset in inches, as Word names them. */
-export const MARGIN_PRESETS: Readonly<Record<Exclude<MarginPreset, 'custom'>, Margins>> = {
+const MARGIN_PRESETS: Readonly<Record<Exclude<MarginPreset, 'custom'>, Margins>> = {
   normal: { top: 1, right: 1, bottom: 1, left: 1 },
   narrow: { top: 0.5, right: 0.5, bottom: 0.5, left: 0.5 },
   wide: { top: 1, right: 2, bottom: 1, left: 2 },
@@ -23,8 +23,8 @@ export const MARGIN_LABELS: Readonly<Record<MarginPreset, string>> = {
 };
 
 /** The smallest and the largest margin in inches. Letter and A4 keep more than 2 inches of text between. */
-export const MIN_MARGIN = 0.25;
-export const MAX_MARGIN = 3;
+const MIN_MARGIN = 0.25;
+const MAX_MARGIN = 3;
 
 /** The longest own text of a page line. */
 export const MAX_PAGE_LINE = 120;
