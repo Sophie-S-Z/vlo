@@ -18,8 +18,8 @@ Last update: 2026-11-18
   - Removed the all-caps captions on the profile page. Curly quotes in the help text and the interface.
     Link underlines sit 0.2em under the text. Images in a shared reader load as they come into view.
   - `Strict-Transport-Security` on every response.
-  - Known open items: the live database does not have the index of migration 0014. Supabase Auth has
-    leaked password protection off.
+  - The live database got the index of migration 0014 on 2026-11-18, with the owner's approval. Known
+    open item: Supabase Auth has leaked password protection off.
 
 - Phase 19, Part F: links, tables and page setup (2026-11-18, `docs/plans/phase-19.md`):
   - Links between items: "[[" or Insert, Link to an item lists the items and their headings. A link shows
