@@ -20,7 +20,7 @@ export interface WriterKeysOptions {
 
 type Handler = (view: EditorView, event: KeyboardEvent) => boolean;
 
-export const writerKeysKey = new PluginKey('writerKeys');
+const writerKeysKey = new PluginKey('writerKeys');
 
 export const WriterKeys = Extension.create<WriterKeysOptions>({
   name: 'writerKeys',

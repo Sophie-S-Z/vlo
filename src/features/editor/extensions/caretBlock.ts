@@ -18,7 +18,7 @@ interface CaretBlockState {
   decorations: DecorationSet;
 }
 
-export const caretBlockKey = new PluginKey<CaretBlockState>('caretBlock');
+const caretBlockKey = new PluginKey<CaretBlockState>('caretBlock');
 
 function caretBlockAt(state: EditorState): number {
   const { $head } = state.selection;

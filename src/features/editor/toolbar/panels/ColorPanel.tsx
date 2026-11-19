@@ -30,7 +30,7 @@ function storedColor(editor: Editor, kind: SwatchKind): string | null {
 }
 
 /** The contrast of text in this color (or on this highlight) against the page of the current theme. */
-export function colorContrast(kind: SwatchKind, value: string): number | null {
+function colorContrast(kind: SwatchKind, value: string): number | null {
   const theme = currentTheme();
   const page = PAGE_COLORS[theme];
   const color = parseColor(resolveColor(value, theme));
@@ -40,7 +40,7 @@ export function colorContrast(kind: SwatchKind, value: string): number | null {
   return kind === 'text' ? contrastRatio(color, bg) : contrastRatio(text, color);
 }
 
-export function ContrastReadout({ ratio }: { ratio: number | null }) {
+function ContrastReadout({ ratio }: { ratio: number | null }) {
   if (ratio === null) return null;
   const low = ratio < AA_TEXT;
   return (

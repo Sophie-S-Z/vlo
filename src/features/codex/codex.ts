@@ -4,6 +4,7 @@ import { flattenTree } from '@/features/binder/tree';
 import { db, touchProject, type CodexChange, type CodexEntry, type CodexKind, type Item } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { orderAfterLast, sortByOrder } from '@/lib/order';
+import { requiredText } from '@/lib/problem';
 
 /*
  * The Codex of a project (roadmap F42, plan Task H5): characters, places, things and lore, each with
@@ -43,8 +44,7 @@ export function useCodex(projectId: string): CodexEntry[] | undefined {
 }
 
 function cleanName(name: string): string {
-  const clean = name.trim();
-  if (clean === '') throw new RangeError('Type a name.');
+  const clean = requiredText(name, 'Type a name.');
   if (clean.length > MAX_CODEX_NAME)
     throw new RangeError(`A name can have up to ${String(MAX_CODEX_NAME)} characters.`);
   return clean;

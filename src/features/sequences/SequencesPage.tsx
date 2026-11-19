@@ -31,6 +31,7 @@ import {
   useSequences,
 } from './sequences';
 import { ProjectMissing, WrongTemplate } from '@/features/project/ViewNotices';
+import { problemText } from '@/lib/problem';
 
 // The export dialog and its worker load only when the poet exports an order (E2).
 const ExportDialog = lazy(async () => ({
@@ -43,10 +44,6 @@ const ExportDialog = lazy(async () => ({
  */
 
 const ORDER = 'order';
-
-function problemText(problem: unknown, fallback: string): string {
-  return problem instanceof RangeError ? problem.message : fallback;
-}
 
 /** A one-field form for an order's name. */
 function NameForm({

@@ -63,7 +63,7 @@ function isLineSpacing(value: number): value is LineSpacing {
 }
 
 /** Line spacing, first-line indent, drop caps, the paragraph style and the heading anchor, as block attributes. */
-export const BlockStyle = Extension.create({
+const BlockStyle = Extension.create({
   name: 'blockStyle',
 
   addGlobalAttributes() {
@@ -205,7 +205,7 @@ export const ClearFormatting = Extension.create<{ blocks: boolean }>({
  * The font of a run of text, on the textStyle mark. It stores a Vlo font id or an installed font's name,
  * never a CSS list, so a later font list or export can map it.
  */
-export const FontChoice = Extension.create({
+const FontChoice = Extension.create({
   name: 'fontChoice',
 
   addGlobalAttributes() {

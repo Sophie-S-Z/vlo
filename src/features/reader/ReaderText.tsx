@@ -24,7 +24,7 @@ import {
  * with the allowed attributes only. The bundle passed `parseBundle` first, and this module checks again.
  */
 
-export function MathTree({ node, display }: { node: MathNode; display?: 'block' | 'inline' }) {
+function MathTree({ node, display }: { node: MathNode; display?: 'block' | 'inline' }) {
   const render = (n: MathNode, key: number | undefined, root: boolean): ReactNode => {
     if (!MATH_TAGS.has(n.tag)) return null;
     const props: Record<string, string | number> = {};
@@ -55,7 +55,7 @@ function TextRun({ run }: { run: ShareText }) {
   return <>{out}</>;
 }
 
-export function Runs({ runs }: { runs: readonly ShareRun[] }) {
+function Runs({ runs }: { runs: readonly ShareRun[] }) {
   return (
     <>
       {runs.map((run, i) => {

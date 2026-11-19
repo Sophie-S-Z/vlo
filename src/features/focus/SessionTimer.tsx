@@ -33,7 +33,7 @@ import {
 } from '@/ui/dropdown-menu';
 import { closeSession, projectTotals, startSession } from './sessions';
 
-export const SESSION_LENGTHS = [10, 15, 25, 45, 60] as const;
+const SESSION_LENGTHS = [10, 15, 25, 45, 60] as const;
 
 interface Running {
   session: Session;

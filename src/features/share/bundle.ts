@@ -117,7 +117,7 @@ export const MATH_TAGS: ReadonlySet<string> = new Set([
 ]);
 
 /** The MathML attributes that the reader view keeps. Others are dropped. */
-export const MATH_ATTRS: ReadonlySet<string> = new Set([
+const MATH_ATTRS: ReadonlySet<string> = new Set([
   'display',
   'mathvariant',
   'stretchy',
@@ -166,7 +166,7 @@ const ALIGNS: readonly Align[] = ['left', 'center', 'right', 'justify'];
 const MAX_DEPTH = 24;
 
 /** The most tab stops of a hanging poem line that the reader view shows. */
-export const MAX_HANGING = 20;
+const MAX_HANGING = 20;
 
 const hangingOf = (value: number) => Math.min(MAX_HANGING, Math.max(0, value));
 
@@ -524,7 +524,7 @@ export function parseBundle(value: unknown): ShareBundle | null {
 }
 
 /** The plain text of some runs, for a comment's quote. */
-export function runsText(runs: readonly ShareRun[]): string {
+function runsText(runs: readonly ShareRun[]): string {
   return runs
     .map((r) => ('t' in r ? r.t : 'br' in r ? ' ' : ''))
     .join('')

@@ -8,6 +8,7 @@ import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { Textarea } from '@/ui/textarea';
 import { captureNote, INBOX, sharedText } from './capture';
+import { problemText } from '@/lib/problem';
 
 /*
  * The quick note screen (roadmap F48, plan Task H8). The share sheet and the app shortcut open it with
@@ -50,9 +51,10 @@ export function CapturePage() {
             (problem: unknown) => {
               setBusy(false);
               setError(
-                problem instanceof RangeError
-                  ? problem.message
-                  : 'Vlo could not save the note on this device. Check the storage space and try again.',
+                problemText(
+                  problem,
+                  'Vlo could not save the note on this device. Check the storage space and try again.',
+                ),
               );
             },
           );

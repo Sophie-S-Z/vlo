@@ -6,7 +6,7 @@ import type { Project } from '@/lib/db';
  * the Library also asks for a backup after each change (roadmap F32).
  */
 
-export const REMIND_AFTER_DAYS = 7;
+const REMIND_AFTER_DAYS = 7;
 const DAY = 86_400_000;
 
 /** Whole calendar days from `from` to `to`, in the device's time zone. */

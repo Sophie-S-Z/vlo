@@ -15,7 +15,7 @@ export type SceneCanvas = HTMLCanvasElement | OffscreenCanvas;
 /** Schedules `run` for the next frame and returns a function that cancels it. */
 export type Schedule = (run: () => void) => () => void;
 
-export const timerSchedule: Schedule = (run) => {
+const timerSchedule: Schedule = (run) => {
   const id = setTimeout(run, 1000 / SCENE_FPS);
   return () => {
     clearTimeout(id);

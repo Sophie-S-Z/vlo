@@ -11,7 +11,7 @@ import { CardMenu, type CardActions } from './CardMenu';
 type SortKey = 'title' | 'scene' | 'threads' | 'note';
 
 /** The threads a card is on: the threads of its links, in thread order. */
-export function threadsOf(card: Card, links: readonly CardLink[], threads: readonly Thread[]): Thread[] {
+function threadsOf(card: Card, links: readonly CardLink[], threads: readonly Thread[]): Thread[] {
   const ids = new Set(
     links
       .filter((l) => (l.fromCardId === card.id || l.toCardId === card.id) && l.threadId !== undefined)

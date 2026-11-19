@@ -33,7 +33,7 @@ export type SyncTable = (typeof SYNC_TABLES)[number];
  * The project of a synced row, which groups the rows in sync blobs. A project's own row has its id. A
  * series (F59) is a group of its own: its row and its shared Codex entries have the series id.
  */
-export const scopeOf = (table: string, row: { id: string; projectId?: string }): string =>
+const scopeOf = (table: string, row: { id: string; projectId?: string }): string =>
   table === 'projects' || table === 'series' ? row.id : (row.projectId ?? '');
 
 /** When a row of a synced table last changed, and whether a delete removed it. */

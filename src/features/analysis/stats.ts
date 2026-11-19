@@ -1,4 +1,4 @@
-import { countWords } from '@/lib/wordcount';
+import { countGraphemes, countWords, READING_WPM, SPEAKING_WPM } from '@/lib/wordcount';
 import { deviation, mean, sentencesOf, wordsOf, type Sentence } from './text';
 import type { EditorForm } from '@/features/library/templates';
 
@@ -8,16 +8,12 @@ import type { EditorForm } from '@/features/library/templates';
  * syllable counter comes in as a parameter, so this file loads no package.
  */
 
-/** Silent reading speed for prose, in words a minute. */
-export const READING_WPM = 238;
-/** Speaking speed for a reading out loud, in words a minute. */
-export const SPEAKING_WPM = 150;
 /** Handwriting speed, in words a minute. */
-export const HANDWRITING_WPM = 13;
+const HANDWRITING_WPM = 13;
 /** Typing speed of an average typist, in words a minute. */
-export const TYPING_WPM = 40;
+const TYPING_WPM = 40;
 /** Words on a page: single-spaced and double-spaced, 12 pt type, 1 inch margins. */
-export const WORDS_PER_PAGE = { single: 500, double: 250 } as const;
+const WORDS_PER_PAGE = { single: 500, double: 250 } as const;
 /** A sentence with more words than this is long. */
 export const LONG_SENTENCE = 25;
 
@@ -121,15 +117,6 @@ const NOT_PASSIVE =
 
 function note(sentence: Sentence): SentenceNote {
   return { from: sentence.from, to: sentence.to, words: sentence.words.length, text: sentence.text };
-}
-
-let graphemes: Intl.Segmenter | null = null;
-
-function countGraphemes(text: string): number {
-  graphemes ??= new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-  let count = 0;
-  for (const part of graphemes.segment(text)) if (part.segment !== '\n') count += 1;
-  return count;
 }
 
 const round1 = (value: number) => Math.round(value * 10) / 10;

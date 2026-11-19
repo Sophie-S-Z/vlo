@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
 import { db, type Series, type StyleRule } from '@/lib/db';
 import { newId } from '@/lib/ids';
+import { requiredText } from '@/lib/problem';
 
 /*
  * A series of books (roadmap F59, plan Task K8, decision K6). The books share Codex entries and one style
@@ -10,7 +11,7 @@ import { newId } from '@/lib/ids';
  */
 
 export const MAX_SERIES_TITLE = 120;
-export const MAX_RULES = 200;
+const MAX_RULES = 200;
 
 /** The series of a project, or undefined. */
 export const seriesOf = (projectId: string): Promise<Series | undefined> =>
@@ -22,8 +23,7 @@ export function useSeriesOf(projectId: string): Series | null | undefined {
 }
 
 function cleanTitle(title: string): string {
-  const clean = title.trim();
-  if (clean === '') throw new RangeError('Type a title for the series.');
+  const clean = requiredText(title, 'Type a title for the series.');
   if (clean.length > MAX_SERIES_TITLE)
     throw new RangeError(`A title can have up to ${String(MAX_SERIES_TITLE)} characters.`);
   return clean;

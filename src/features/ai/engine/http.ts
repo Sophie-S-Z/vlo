@@ -33,7 +33,7 @@ function findMessage(value: unknown): string | null {
 }
 
 /** The error for an answer that is not a success. */
-export async function errorFor(preset: Preset, response: Response): Promise<EngineError> {
+async function errorFor(preset: Preset, response: Response): Promise<EngineError> {
   const said = await providerMessage(response);
   const words = said ? ` ${preset.label} says: "${said}"` : '';
   if (response.status === 401 || response.status === 403)

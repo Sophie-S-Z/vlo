@@ -2,22 +2,15 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { dayKey } from '@/features/progress/streaks';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
-import { countLines, countWords } from '@/lib/wordcount';
+import { countGraphemes, countLines, countWords, READING_WPM, SPEAKING_WPM } from '@/lib/wordcount';
 import { docBody } from '../itemText';
 import { cleanDayStart, dayStartKey, type DayStart } from './dayStart';
 import type { EditorForm } from '@/features/library/templates';
-
-export { cleanDayStart, dayStartKey };
 
 /*
  * Writing stats (plan E4): words, characters, reading time and words written today, for the details
  * panel. The counts cover the writing without its notes, as the word count above the text does.
  */
-
-/** Silent reading speed for prose, in words a minute. */
-export const READING_WPM = 238;
-/** Speaking speed for a reading out loud, in words a minute. */
-export const SPEAKING_WPM = 150;
 
 export interface TextStats {
   words: number;
@@ -34,15 +27,7 @@ export interface TextStats {
   speakingMinutes: number;
 }
 
-let graphemes: Intl.Segmenter | null = null;
 let sentenceSplitter: Intl.Segmenter | null = null;
-
-function countGraphemes(text: string): number {
-  graphemes ??= new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-  let count = 0;
-  for (const part of graphemes.segment(text)) if (part.segment !== '\n') count += 1;
-  return count;
-}
 
 function countSentences(text: string): number {
   sentenceSplitter ??= new Intl.Segmenter(undefined, { granularity: 'sentence' });

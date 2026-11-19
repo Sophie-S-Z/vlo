@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { clock } from '@/lib/clock';
 import { db, touchProject, type ResearchFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
+import { requiredText } from '@/lib/problem';
 
 /*
  * The research folder of a project (roadmap F41, plan Task H6, decision Q4). Images, PDFs, audio files and
@@ -39,8 +40,7 @@ export function useResearch(projectId: string): ResearchFile[] | undefined {
 }
 
 function cleanName(name: string): string {
-  const clean = name.trim();
-  if (clean === '') throw new RangeError('Type a name.');
+  const clean = requiredText(name, 'Type a name.');
   if (clean.length > MAX_RESEARCH_NAME)
     throw new RangeError(`A name can have up to ${String(MAX_RESEARCH_NAME)} characters.`);
   return clean;

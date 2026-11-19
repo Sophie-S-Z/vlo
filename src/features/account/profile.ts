@@ -8,7 +8,7 @@ import { db, VloDb } from '@/lib/db';
  * the copy; `profileServer.ts` talks to the server.
  */
 
-export const PROFILE_META = 'profile';
+const PROFILE_META = 'profile';
 
 /** The step after a first sign-in where the writer gives a name, and the path to open after it. */
 export const profileStep = (next: string) => `/profile/new?next=${encodeURIComponent(next)}`;

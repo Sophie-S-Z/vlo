@@ -18,7 +18,7 @@ import type { PlatformId } from '@/features/publish/platforms';
  */
 
 /** The stored update of each item that the export holds. */
-export async function readUpdates(request: Omit<ExportRequest, 'updates'>): Promise<[string, Uint8Array][]> {
+async function readUpdates(request: Omit<ExportRequest, 'updates'>): Promise<[string, Uint8Array][]> {
   // A plain text, such as a packet's cover letter, reads no item.
   if (request.text) return [];
   const ids = scopeItems(request.items, request.scope)

@@ -9,8 +9,8 @@ import { readProof, sha256 } from './ots';
  * check a record with no Vlo code.
  */
 
-export const RECORD_FORMAT = 'vlo-authorship-record';
-export const RECORD_VERSION = 1;
+const RECORD_FORMAT = 'vlo-authorship-record';
+const RECORD_VERSION = 1;
 
 /** An entry as the file holds it: no row id and no project id. */
 export type RecordEntry = Omit<AuthorshipEntry, 'id' | 'projectId'>;
@@ -69,7 +69,7 @@ export const entryText = (e: Omit<RecordEntry, 'hash' | 'sig' | 'key'>): string 
     e.prev,
   ]);
 
-export const importKey = (key: DeviceKey, usage: 'verify'): Promise<CryptoKey> =>
+const importKey = (key: DeviceKey, usage: 'verify'): Promise<CryptoKey> =>
   crypto.subtle.importKey('jwk', { ...key, ext: true }, CURVE, true, [usage]);
 
 /** The file of a record: its entries in a fixed form, with no space, so each byte counts. */

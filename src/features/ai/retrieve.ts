@@ -7,7 +7,7 @@ import { estimateTokens } from './engine/types';
  * request, within a budget of 3,000 tokens.
  */
 
-export const MAX_PASSAGES = 8;
+const MAX_PASSAGES = 8;
 export const PASSAGE_BUDGET = 3000;
 const PASSAGE_WORDS = 150;
 

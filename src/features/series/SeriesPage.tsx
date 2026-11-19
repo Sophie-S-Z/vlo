@@ -25,6 +25,7 @@ import { Label } from '@/ui/label';
 import { leaveSeries, MAX_SERIES_TITLE, moveBook, renameSeries, setStyleSheet, styleRule } from './series';
 import { seriesTimeline } from './timeline';
 import { SeriesTimeline } from './SeriesTimeline';
+import { problemText, SAVE_FAILED } from '@/lib/problem';
 
 /*
  * The Series page (roadmap F59, plan Task K8): the books in order, their words, the shared Codex with its
@@ -38,9 +39,6 @@ interface Book {
   words: number;
   unit: CountUnit;
 }
-
-const SAVE_FAILED = 'Vlo could not save that change on this device.';
-const problemText = (problem: unknown) => (problem instanceof RangeError ? problem.message : SAVE_FAILED);
 
 /** The series with its books, its shared entries, their mentions in each book and its timeline. Null when it is gone. */
 async function seriesView(seriesId: string) {

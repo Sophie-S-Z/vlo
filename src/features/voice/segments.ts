@@ -10,7 +10,7 @@ export const SPEECH_LEVEL = 0.015;
 /** The seconds of silence that end a clip. */
 export const PAUSE_SECONDS = 0.6;
 /** The seconds of speech that a clip needs. */
-export const MIN_SPEECH_SECONDS = 0.3;
+const MIN_SPEECH_SECONDS = 0.3;
 /** The longest clip, in seconds. */
 export const MAX_CLIP_SECONDS = 28;
 /** A clip at the longest stops at the quietest block of its last seconds. */

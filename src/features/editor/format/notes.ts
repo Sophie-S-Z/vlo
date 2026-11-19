@@ -4,7 +4,7 @@
  * pasted HTML or a damaged document cannot put other data into a note.
  */
 
-export const NOTE_MARKS = ['bold', 'italic', 'underline', 'strike', 'superscript', 'subscript'] as const;
+const NOTE_MARKS = ['bold', 'italic', 'underline', 'strike', 'superscript', 'subscript'] as const;
 export type NoteMark = (typeof NOTE_MARKS)[number];
 
 export interface NoteRun {
@@ -62,7 +62,7 @@ export function parseNote(value: unknown): NoteContent {
 }
 
 /** The note as plain text, for search, backups and the reference's hover text. */
-export function noteText(content: NoteContent): string {
+function noteText(content: NoteContent): string {
   return content.map((run) => run.text).join('');
 }
 

@@ -29,14 +29,8 @@ import {
 } from '@/features/editor/readAloud/reader';
 import { sentencesIn, splitSentences } from '@/features/editor/readAloud/sentences';
 import { findLocalVoice, localVoices } from '@/features/editor/readAloud/voices';
-import {
-  cleanDayStart,
-  dayStartKey,
-  localDay,
-  minutesLabel,
-  textStats,
-  wordsToday,
-} from '@/features/editor/stats/stats';
+import { cleanDayStart, dayStartKey } from '@/features/editor/stats/dayStart';
+import { localDay, minutesLabel, textStats, wordsToday } from '@/features/editor/stats/stats';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
 

@@ -1,3 +1,4 @@
+import { hash } from '@/lib/ids';
 import { matchNames } from '@/lib/privacy';
 import { STOP_WORDS } from '../stats';
 import { sentencesOf, type Span } from '../text';
@@ -16,7 +17,7 @@ import { sentencesOf, type Span } from '../text';
  * matches shorter than a number of words.
  */
 
-export const SHINGLE = 5;
+const SHINGLE = 5;
 
 export interface Source {
   id: string;
@@ -90,16 +91,6 @@ function tokens(text: string): Token[] {
   return found;
 }
 
-/** A 32-bit FNV-1a hash of a string. */
-function hash(text: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i += 1) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-}
-
 function shingleKey(list: readonly Token[], at: number): number {
   let key = '';
   for (let i = at; i < at + SHINGLE; i += 1) key += `${list[i]?.stem ?? ''} `;
@@ -136,7 +127,7 @@ function contentStems(list: readonly Token[]): Set<string> {
 }
 
 /** Prepares a source once, so many checks can reuse it. */
-export function prepareSource(source: Source): Prepared {
+function prepareSource(source: Source): Prepared {
   const list = tokens(source.text);
   const shingles = new Map<number, number[]>();
   for (let i = 0; i + SHINGLE <= list.length; i += 1) {

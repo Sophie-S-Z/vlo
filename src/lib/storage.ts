@@ -14,7 +14,7 @@ export const ASK_AGAIN_MS = 7 * 24 * 60 * 60 * 1000;
 const storageManager = () => (navigator as { storage?: Partial<StorageManager> }).storage;
 
 /** Asks the browser to keep Vlo's data when space runs low (VLO_SPEC section 9). */
-export async function requestPersistence(): Promise<PersistenceAnswer> {
+async function requestPersistence(): Promise<PersistenceAnswer> {
   const storage = storageManager();
   if (typeof storage?.persist !== 'function') return 'unsupported';
   try {

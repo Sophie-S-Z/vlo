@@ -37,7 +37,7 @@ interface FootnoteState {
   decorations: DecorationSet;
 }
 
-export const footnoteKey = new PluginKey<FootnoteState>('footnotes');
+const footnoteKey = new PluginKey<FootnoteState>('footnotes');
 
 function collect(doc: ProseMirrorNode): FootnoteState {
   const entries: FootnoteEntry[] = [];

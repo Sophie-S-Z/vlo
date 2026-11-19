@@ -7,7 +7,7 @@ import { CARD_HEIGHT } from './geometry';
  * Cards from top to bottom, then left to right, so the Tab key and the List view follow the board as
  * the writer reads it. Cards within half a card height count as one row.
  */
-export function inReadingOrder(cards: readonly Card[]): Card[] {
+function inReadingOrder(cards: readonly Card[]): Card[] {
   const row = (c: Card) => Math.round(c.y / (CARD_HEIGHT / 2));
   return [...cards].sort((a, b) => row(a) - row(b) || a.x - b.x || a.id.localeCompare(b.id));
 }

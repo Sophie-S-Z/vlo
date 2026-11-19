@@ -11,7 +11,7 @@ import type { AiRequest } from './reader';
 const numbers = new Intl.NumberFormat();
 
 /** The request as the writer reads it: the instructions, then each message. */
-export function requestText(request: AiRequest): string {
+function requestText(request: AiRequest): string {
   return [
     `Instructions:\n${request.system}`,
     ...request.messages.map((m) => `${m.role === 'user' ? 'You' : 'Assistant'}:\n${m.content}`),

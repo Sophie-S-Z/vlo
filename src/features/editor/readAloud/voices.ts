@@ -42,7 +42,7 @@ export function findLocalVoice(uri: string | null): SpeechSynthesisVoice | null 
 }
 
 /** How long to wait for a browser that lists its voices late before saying the device has none. */
-export const VOICE_WAIT_MS = 1500;
+const VOICE_WAIT_MS = 1500;
 
 export interface VoiceList {
   /** False until the browser lists its voices or the wait ends. */

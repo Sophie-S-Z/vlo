@@ -27,11 +27,11 @@ export interface SoundState {
 /** How long Play waits for the browser to start the sound, in ms. */
 const START_WAIT_MS = 3000;
 
-export const SOUND_BLOCKED =
+const SOUND_BLOCKED =
   'The browser kept the sound off. Press Play again. If the sound stays off, allow sound for this site in the browser settings.';
 
 /** How long the sleep timer fades the sound out, in seconds. */
-export const SLEEP_FADE_SECONDS = 10;
+const SLEEP_FADE_SECONDS = 10;
 
 let state: SoundState = { playing: false, sleepEndsAt: null, sleepMinutes: 0, track: null, message: null };
 const listeners = new Set<() => void>();
@@ -41,7 +41,7 @@ function setState(change: Partial<SoundState>): void {
   for (const listener of listeners) listener();
 }
 
-export function getSoundState(): SoundState {
+function getSoundState(): SoundState {
   return state;
 }
 
@@ -110,7 +110,7 @@ let played = new Set<number>();
 let fade = 1;
 
 /** The share of the volume that plays while Vlo reads aloud. */
-export const DUCK_LEVEL = 0.3;
+const DUCK_LEVEL = 0.3;
 /** 1, or DUCK_LEVEL while Vlo reads aloud. */
 let duck = 1;
 

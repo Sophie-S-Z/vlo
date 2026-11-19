@@ -5,7 +5,7 @@ import { splitSentences } from '@/features/editor/readAloud/sentences';
 import { blockText } from '@/features/editor/textMap';
 import type { DimScope } from './focusPrefs';
 
-export const focusPluginKey = new PluginKey<FocusState>('vlo-focus');
+const focusPluginKey = new PluginKey<FocusState>('vlo-focus');
 
 /** The class on every block except the writer's current one, while dimming is on. */
 export const DIM_CLASS = 'vlo-dim';
@@ -63,7 +63,7 @@ function blockCount(doc: ProseMirrorNode): number {
  * The sentence with the caret, from the same sentence rules as Read aloud. A sentence never runs across two
  * paragraphs or two poem lines. Null when the caret is in no text.
  */
-export function sentenceAt(state: EditorState): { from: number; to: number } | null {
+function sentenceAt(state: EditorState): { from: number; to: number } | null {
   const { $head, head } = state.selection;
   if (!$head.parent.isTextblock) return null;
   const { text, at } = blockText($head.parent, $head.before());

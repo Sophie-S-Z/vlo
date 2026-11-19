@@ -8,7 +8,7 @@ import type { Source } from './match';
  * pastes in, such as an article that a chapter quotes. Pasted sources stay in this device's database.
  */
 
-export const pastedKey = (projectId: string) => `originalitySources:${projectId}`;
+const pastedKey = (projectId: string) => `originalitySources:${projectId}`;
 
 export interface PastedSource {
   id: string;

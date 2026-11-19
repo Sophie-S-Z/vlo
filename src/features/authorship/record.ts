@@ -35,7 +35,7 @@ interface Pending {
 }
 
 /** A new entry after this much writing time, so a long session does not hold its counts in memory. */
-export const ENTRY_EVERY = 10 * 60_000;
+const ENTRY_EVERY = 10 * 60_000;
 
 const pending = new Map<string, Pending>();
 

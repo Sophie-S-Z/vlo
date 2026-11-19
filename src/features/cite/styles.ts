@@ -59,7 +59,7 @@ export function inText(source: Source | undefined, page: string, style: CiteStyl
 /* ------------------------------------------------------------------ Reference list */
 
 /** The heading of the reference list. */
-export const LIST_TITLES: Readonly<Record<CiteStyle, string>> = {
+const LIST_TITLES: Readonly<Record<CiteStyle, string>> = {
   apa: 'References',
   mla: 'Works Cited',
   chicago: 'References',

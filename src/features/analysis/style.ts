@@ -37,7 +37,7 @@ export function sheetMatcher(rules: readonly StyleRule[]): SheetMatcher {
 }
 
 /** A word that comes back within this many words is a repeat. */
-export const REPEAT_WINDOW = 50;
+const REPEAT_WINDOW = 50;
 
 const FILLER = phrasePattern([
   ...INTENSIFIERS,

@@ -16,7 +16,7 @@ import { flushAll, noteChange, type Source } from './record';
 export const DICTATION = 'vloDictation';
 
 /** The source of a change, or null for a change that is not new writing. */
-export function sourceOf(tr: Transaction): Source | null {
+function sourceOf(tr: Transaction): Source | null {
   if (tr.getMeta(aiInsertKey) !== undefined) return 'ai';
   if (tr.getMeta(DICTATION) !== undefined) return 'dictated';
   if (
@@ -30,7 +30,7 @@ export function sourceOf(tr: Transaction): Source | null {
 }
 
 /** The characters that a transaction adds and deletes. An equation or a note marker counts as one. */
-export function changedCharacters(tr: Transaction): { added: number; deleted: number } {
+function changedCharacters(tr: Transaction): { added: number; deleted: number } {
   let added = 0;
   let deleted = 0;
   tr.steps.forEach((step, i) => {

@@ -17,7 +17,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export const TYPE_PLAY = 'typePlay';
+const TYPE_PLAY = 'typePlay';
 
 function readPlay(element: HTMLElement): TypePlay | null {
   try {

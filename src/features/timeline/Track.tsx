@@ -38,8 +38,8 @@ import { memoryTransitionName } from './useTimeline';
  * takes its date away, and a drag from the shelf onto the track gives one.
  */
 
-export const MIN_PX_PER_DAY = 0.05;
-export const MAX_PX_PER_DAY = 64;
+const MIN_PX_PER_DAY = 0.05;
+const MAX_PX_PER_DAY = 64;
 const CARD_WIDTH = 176;
 const CARD_HEIGHT = 76;
 const GAP = 8;

@@ -13,7 +13,7 @@ export interface MathNode {
 
 const NAMED: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
-export function decodeEntities(text: string): string {
+function decodeEntities(text: string): string {
   return text.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (all, ref: string) => {
     if (ref.startsWith('#x')) return String.fromCodePoint(parseInt(ref.slice(2), 16));
     if (ref.startsWith('#')) return String.fromCodePoint(parseInt(ref.slice(1), 10));

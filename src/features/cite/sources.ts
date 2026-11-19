@@ -12,7 +12,7 @@ import { pageRange } from './styles';
 /** The letters of a key: BibTeX's own, with no space, comma or brace. */
 export const SOURCE_KEY = /^[\p{L}\p{N}_:.-]{1,64}$/u;
 /** The most characters in one field of a source. */
-export const MAX_SOURCE_TEXT = 1000;
+const MAX_SOURCE_TEXT = 1000;
 
 /** A source before it has its project and id. With no key, Vlo makes one from the author and the year. */
 export type SourceDraft = Omit<Source, 'id' | 'projectId' | 'key'> & { key?: string };
@@ -47,7 +47,7 @@ function cleanDraft(draft: RawDraft): SourceDraft {
 }
 
 /** A key from the first author's family name and the year, such as "marlow2019". */
-export function draftKey(draft: SourceDraft): string {
+function draftKey(draft: SourceDraft): string {
   const name = (draft.authors[0]?.family ?? draft.title.split(/\s+/)[0] ?? '')
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
@@ -58,7 +58,7 @@ export function draftKey(draft: SourceDraft): string {
 }
 
 /** The key, or the key with "-2", "-3" and so on when another source has it. */
-export function uniqueKey(key: string, taken: ReadonlySet<string>): string {
+function uniqueKey(key: string, taken: ReadonlySet<string>): string {
   if (!taken.has(key)) return key;
   for (let n = 2; ; n += 1) {
     const next = `${key.slice(0, 60)}-${String(n)}`;

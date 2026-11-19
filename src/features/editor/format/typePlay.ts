@@ -37,8 +37,8 @@ export interface TypePlay {
   motion?: TypeMotion;
 }
 
-export const MIN_WEIGHT = 100;
-export const MAX_WEIGHT = 1000;
+const MIN_WEIGHT = 100;
+const MAX_WEIGHT = 1000;
 export const MIN_TRACKING = -0.05;
 export const MAX_TRACKING = 0.5;
 

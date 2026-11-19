@@ -60,7 +60,7 @@ export interface HeadlineCheck {
 }
 
 /** About where a search result cuts a page title. */
-export const SEARCH_TITLE_CHARACTERS = 60;
+const SEARCH_TITLE_CHARACTERS = 60;
 
 export function checkHeadline(headline: string): HeadlineCheck {
   const text = headline.replace(/\s+/g, ' ').trim();

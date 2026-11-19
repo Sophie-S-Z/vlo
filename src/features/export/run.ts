@@ -2,7 +2,7 @@ import { appFile } from '@/lib/net';
 import { hasTemplate } from '@/features/library/templates';
 import type { NameCheck, PrivatePerson } from '@/lib/privacy';
 import { exportFileName, type BuildInput } from './build';
-import { checkOwnFonts, ownFontsOf, type FontCheck, type FontSwap } from './fontCheck';
+import { checkOwnFonts, ownFontsOf, type FontCheck } from './fontCheck';
 import type { ManuscriptDetails, ManuscriptSetup } from './manuscript';
 import type { ExportDoc, ExportImage } from './model';
 import { exportNotices, type ExportFormat } from './notices';
@@ -46,7 +46,7 @@ export interface ExportFile {
   text?: string;
 }
 
-export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; type: string }>> = {
+const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; type: string }>> = {
   docx: {
     extension: 'docx',
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -63,7 +63,7 @@ export const FORMAT_FILE: Readonly<Record<ExportFormat, { extension: string; typ
 };
 
 /** True for the formats that embed fonts, so the writer's own fonts need a check. */
-export function embedsFonts(format: ExportFormat): boolean {
+function embedsFonts(format: ExportFormat): boolean {
   return format === 'pdf' || format === 'epub';
 }
 
@@ -197,5 +197,3 @@ export async function runExport(
   const prepared = prepareExport(request);
   return makeExport(prepared, checkOwnFonts(prepared.ownFonts, ownFontBytes), options);
 }
-
-export type { FontSwap };

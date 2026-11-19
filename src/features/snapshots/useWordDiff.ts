@@ -3,7 +3,7 @@ import type { DiffRequest } from './diffWorker';
 import { wordDiff, type DiffPart } from './wordDiff';
 
 /** Past this, Vlo stops and says the changes are too many to mark. Restore still works. */
-export const DIFF_LIMIT_MS = 10_000;
+const DIFF_LIMIT_MS = 10_000;
 
 export type DiffState =
   | { status: 'working' }

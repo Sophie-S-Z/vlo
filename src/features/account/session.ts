@@ -6,7 +6,7 @@ import { ACTIVE_ACCOUNT, claimLegacy, libraryName } from '@/lib/library';
  * library, and no backup or export holds it. The app shell reads it, so this module holds no network code.
  */
 
-export const ACCOUNT_META = 'account';
+const ACCOUNT_META = 'account';
 
 export interface AccountSession {
   accessToken: string;

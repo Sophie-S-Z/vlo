@@ -21,7 +21,7 @@ export interface Preferences {
 }
 
 export const PREFERENCES_KEY = 'vlo:preferences';
-export const THEME_CHOICES: readonly ThemeChoice[] = ['system', ...RESOLVED_THEMES];
+const THEME_CHOICES: readonly ThemeChoice[] = ['system', ...RESOLVED_THEMES];
 export const DEFAULT_PREFERENCES: Preferences = { theme: 'system', calm: false };
 
 function isThemeChoice(value: unknown): value is ThemeChoice {

@@ -372,7 +372,7 @@ export function vloFont(id: string): VloFont | undefined {
 export type FontValue = string;
 
 const LOCAL = 'local:';
-export const MAX_FONT_NAME = 100;
+const MAX_FONT_NAME = 100;
 
 /** A font name as the writer typed or the browser listed it, without characters that can break CSS. */
 export function cleanFontName(name: string): string {

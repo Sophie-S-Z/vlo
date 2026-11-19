@@ -2,6 +2,7 @@ import { db, touchProject, type Card, type CardLink, type Item, type Thread } fr
 import { newId } from '@/lib/ids';
 import { orderAfterLast, orderBetween, sortByOrder } from '@/lib/order';
 import { CARD_HEIGHT, gridPlaces, snap } from './geometry';
+import { requiredText } from '@/lib/problem';
 
 /*
  * Story Board data (spec 8.1, plan Task C2): cards, threads and the links between cards. Each change also
@@ -32,11 +33,7 @@ export function threadStroke(color: string): string {
   return `color-mix(in oklab, ${hue} 70%, var(--text))`;
 }
 
-function cleanTitle(title: string): string {
-  const trimmed = title.trim();
-  if (trimmed === '') throw new Error('A card needs a title.');
-  return trimmed;
-}
+const cleanTitle = (title: string) => requiredText(title, 'A card needs a title.');
 
 export async function addCard(
   projectId: string,
@@ -181,11 +178,7 @@ export async function cardsFromScenes(projectId: string, scenesInOrder: readonly
   });
 }
 
-function cleanName(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed === '') throw new Error('A thread needs a name.');
-  return trimmed;
-}
+const cleanName = (name: string) => requiredText(name, 'A thread needs a name.');
 
 export async function addThread(projectId: string, name: string, color: string): Promise<Thread> {
   return db.transaction('rw', db.threads, db.projects, async () => {

@@ -28,7 +28,7 @@ export interface WorkshopTool {
   keywords: string[];
 }
 
-export const WORKSHOP_TOOLS: readonly WorkshopTool[] = [
+const WORKSHOP_TOOLS: readonly WorkshopTool[] = [
   {
     id: 'erasure',
     label: 'Erasure',

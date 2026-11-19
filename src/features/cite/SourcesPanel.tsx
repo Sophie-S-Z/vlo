@@ -20,6 +20,7 @@ import {
 } from './sources';
 import { useSourceState } from './sourceStore';
 import { CITE_STYLE_LABELS } from './styles';
+import { problemText } from '@/lib/problem';
 
 /*
  * "Cite a source" (roadmap 2 F64, plan Tasks M5 and M6): the sources of the project, with Cite, Edit,
@@ -188,7 +189,7 @@ function SourceForm({
             onSaved(draft.title.trim());
           },
           (problem: unknown) => {
-            setError(problem instanceof RangeError ? problem.message : SAVE_FAILED);
+            setError(problemText(problem, SAVE_FAILED));
           },
         );
       }}
@@ -272,7 +273,7 @@ export function SourcesPanel({ editor, onDone }: { editor: Editor; onDone: () =>
       announce(added.length === 1 ? 'Added 1 source.' : `Added ${String(added.length)} sources.`);
     } catch (error) {
       setMessage('');
-      setProblem(error instanceof RangeError ? error.message : SAVE_FAILED);
+      setProblem(problemText(error, SAVE_FAILED));
     }
   };
 

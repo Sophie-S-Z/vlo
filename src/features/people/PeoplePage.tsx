@@ -22,15 +22,12 @@ import {
   usePeople,
 } from './people';
 import { ProjectMissing, WrongTemplate } from '@/features/project/ViewNotices';
+import { problemText } from '@/lib/problem';
 
 /*
  * People and private names (spec 8.2, plan Task C5). The writer adds each real person with the ways the
  * text names them and an alias for each. "Mark all" marks every exact match in the project.
  */
-
-function problemText(problem: unknown, fallback: string): string {
-  return problem instanceof RangeError ? problem.message : fallback;
-}
 
 function plural(n: number, one: string, many: string): string {
   return `${String(n)} ${n === 1 ? one : many}`;

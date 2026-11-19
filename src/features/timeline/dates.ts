@@ -86,8 +86,8 @@ function partsAt(day: number): Required<DateParts> {
 }
 
 /** Pixels per day at which each unit starts. Below 1.5 the track shows years, from 16 it shows days. */
-export const MONTH_FROM = 1.5;
-export const DAY_FROM = 16;
+const MONTH_FROM = 1.5;
+const DAY_FROM = 16;
 
 export function unitOf(pxPerDay: number): Unit {
   if (pxPerDay >= DAY_FROM) return 'day';

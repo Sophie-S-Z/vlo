@@ -35,7 +35,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export { COMMENT, type CommentReply };
+export { COMMENT };
 
 export interface CommentEntry {
   id: string;

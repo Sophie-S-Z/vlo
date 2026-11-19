@@ -92,7 +92,7 @@ function forward(z: readonly number[], model: ModelData): { logit: number; hidde
 const sigmoid = (value: number) => 1 / (1 + Math.exp(-value));
 
 /** The model score of a feature vector. */
-export function scoreFeatures(x: readonly number[], model: ModelData = MODEL): number {
+function scoreFeatures(x: readonly number[], model: ModelData = MODEL): number {
   return sigmoid(forward(standardize(x, model), model).logit);
 }
 

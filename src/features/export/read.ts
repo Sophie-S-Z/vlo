@@ -40,7 +40,7 @@ import {
 const HASHED_MARK = /(.*)(--[a-zA-Z0-9+/=]{8})$/;
 
 /** The ProseMirror JSON of a Yjs XML fragment, as @tiptap/y-tiptap writes it. */
-export function fragmentToJson(fragment: Y.XmlFragment): JSONContent {
+function fragmentToJson(fragment: Y.XmlFragment): JSONContent {
   const serialize = (item: Y.XmlElement | Y.XmlText | Y.XmlHook): JSONContent[] => {
     if (item instanceof Y.XmlText) {
       return (item.toDelta() as { insert: unknown; attributes?: Record<string, Record<string, unknown>> }[])

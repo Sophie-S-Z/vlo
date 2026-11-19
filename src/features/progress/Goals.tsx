@@ -24,6 +24,7 @@ import {
   weekdayOf,
   type DayState,
 } from './streaks';
+import { problemText } from '@/lib/problem';
 
 /*
  * The daily goal and the streak (spec 8.4, plan Task C9, F21). Both are off by default. A rest day keeps
@@ -208,9 +209,7 @@ export function Goals({ project, total }: { project: Project; total: number }) {
         setError('');
       },
       (problem: unknown) => {
-        setError(
-          problem instanceof RangeError ? problem.message : 'Vlo could not save the goal on this device.',
-        );
+        setError(problemText(problem, 'Vlo could not save the goal on this device.'));
       },
     );
   };
