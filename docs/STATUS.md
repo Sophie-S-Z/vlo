@@ -1,8 +1,21 @@
 # Vlo status
 
-Last update: 2026-11-18
+Last update: 2026-11-19
 
 ## Done
+
+- Sync and storage at scale on the free plan (2026-11-19):
+  - Migration 0017: `sync_list` takes `p_seen`, the blobs of the 30-second read window that the device
+    already has, and skips them. A check with nothing new now brings no payload. Before, each check
+    downloaded the newest blob of the other devices again, twice. A read goes on only when the relay
+    stopped it at 8 MB.
+  - Migration 0017: 50 MB for each sync space (was 100 MB). New sync data stops for all spaces only when
+    the whole database passes 450 MB (was a fixed 150 MB of sync in all).
+  - A change syncs after 2 minutes (was 30 seconds). An open page checks every 60 seconds for 10 minutes
+    after news from another device, then every 5 minutes. Focus and hide still sync at once.
+  - Stored images: at most 1,600 px on the long side and JPEG at 80% (was 2,400 px and 85%, decision G2).
+  - The owner page warns when the database passes 70% of the free 500 MB.
+  - Apply migration 0017 to the live database before the app deploys. An older app still works with it.
 
 - Polish pass from the product owner's design notes (2026-11-18):
   - Interface fonts: Familjen Grotesk for the interface, Newsreader for the headings as well as the text,

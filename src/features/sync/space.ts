@@ -30,6 +30,11 @@ export interface SyncSpace {
   deviceName: string;
   /** The relay time of the newest blob that this device read, or empty before the first read. */
   cursor: string;
+  /**
+   * The blobs that this device read in the window before the cursor, which the next read starts in. The
+   * relay skips them, so they come again only when they change. Absent on a record from an older Vlo.
+   */
+  seen?: Seen[];
   /** This device's time at the start of its last push that went through, or 0. */
   pushedAt: number;
   /** This device's time at the end of its last round that went through, or 0. */
@@ -50,6 +55,13 @@ export interface SyncSpace {
   drop?: string[];
 }
 
+/** A blob of another device as the relay knows it: its device, its key and its relay time. */
+export interface Seen {
+  device: string;
+  key: string;
+  at: string;
+}
+
 export type Pairing = Pick<SyncSpace, 'spaceId' | 'key' | 'token'>;
 
 export async function readSpace(): Promise<SyncSpace | null> {
@@ -59,7 +71,9 @@ export async function readSpace(): Promise<SyncSpace | null> {
 /** Saves how far a sync got. Nothing changes when sync stopped or moved to another space meanwhile. */
 export async function updateSpace(
   spaceId: string,
-  changes: Partial<Pick<SyncSpace, 'cursor' | 'pushedAt' | 'syncedAt' | 'blocked' | 'names' | 'resend'>>,
+  changes: Partial<
+    Pick<SyncSpace, 'cursor' | 'seen' | 'pushedAt' | 'syncedAt' | 'blocked' | 'names' | 'resend'>
+  >,
 ): Promise<void> {
   await db.appMeta
     .where('key')

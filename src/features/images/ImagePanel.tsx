@@ -72,7 +72,7 @@ function ChooseImage({ editor, projectId }: { editor: Editor; projectId: string 
         }}
       />
       <p className="text-xs text-muted">
-        You can also drop an image file on the text, or paste one. Vlo keeps a copy of at most 2,400 pixels on
+        You can also drop an image file on the text, or paste one. Vlo keeps a copy of at most 1,600 pixels on
         its long side, on this device. The copy holds no camera data, such as the place of a photo.
       </p>
     </div>

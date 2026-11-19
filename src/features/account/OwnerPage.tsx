@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp, Ellipsis, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { ArrowDown, ArrowUp, Ellipsis, Pencil, Trash2, TriangleAlert, UserPlus } from 'lucide-react';
 import { AnimatePresence, domAnimation, LazyMotion, m, MotionConfig } from 'motion/react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router';
@@ -57,6 +57,8 @@ const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digi
 const mb = (bytes: number) => `${(bytes / 1_000_000).toFixed(bytes < 10_000_000 ? 1 : 0)} MB`;
 /** The database size of the Supabase free plan. */
 const FREE_DB_BYTES = 500_000_000;
+/** The share of the free database at which the owner page warns. Sync stops taking new data at 450 MB. */
+const DB_WARN = 0.7;
 
 /** A change against an earlier period, in words and an arrow, never in color alone. */
 function Delta({ now, before, period }: { now: number; before: number; period: string }) {
@@ -504,6 +506,13 @@ function Overview({
           used={summary.db_bytes}
           of={FREE_DB_BYTES}
         />
+        {summary.db_bytes >= FREE_DB_BYTES * DB_WARN && (
+          <p className="flex gap-2 text-sm">
+            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-text" />
+            The database is over {String(DB_WARN * 100)}% full. At 450 MB, sync takes no new data. Move images
+            and files out of the database, or move to a paid plan.
+          </p>
+        )}
         <dl className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
           <Tile
             label="Sealed sync copies"

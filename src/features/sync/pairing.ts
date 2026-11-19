@@ -138,7 +138,7 @@ export function syncErrorText(error: unknown): string {
   if (kind === 'not-set-up') return 'Sync is not set up in this build.';
   if (kind === 'offline') return 'Vlo could not reach the sync server. Check the connection, then try again.';
   if (kind === 'unavailable') return 'This sync stopped. Make a new pairing link on your other device.';
-  if (kind === 'limit') return 'This sync is full. It can have 5 devices and 100 MB.';
+  if (kind === 'limit') return 'This sync is full. It can have 5 devices and 50 MB.';
   if (kind === 'busy') return 'The sync server is at its limit for now. Try again in an hour.';
   return 'The sync server refused the request. Try again later.';
 }

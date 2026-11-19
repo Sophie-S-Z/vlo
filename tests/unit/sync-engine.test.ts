@@ -694,6 +694,24 @@ describe('pull', () => {
     expect((await space()).cursor).toBe('');
   });
 
+  test('a check with nothing new brings no blob again, and a changed blob comes once', async () => {
+    await fromOther('rows:p1', rows([{ table: 'cards', id: 'c1', at: 2000, row: card('c1', 'First') }]));
+    await syncOnce();
+    const call = fake.call.bind(fake);
+    const read: unknown[][] = [];
+    vi.spyOn(fake, 'call').mockImplementation(async (name, args) => {
+      const out = await call(name, args);
+      if (name === 'sync_list') read.push(out as unknown[]);
+      return out;
+    });
+    await syncOnce();
+    expect(read).toEqual([[]]);
+    await fromOther('rows:p1', rows([{ table: 'cards', id: 'c1', at: 3000, row: card('c1', 'Second') }]));
+    await syncOnce();
+    expect(read.slice(1).map((page) => page.length)).toEqual([1]);
+    expect(await db.cards.get('c1')).toMatchObject({ title: 'Second' });
+  });
+
   test('a read starts 30 seconds before the cursor, so a put that commits late still arrives', async () => {
     await fromOther('rows:p1', rows([{ table: 'cards', id: 'c1', at: 2000, row: card('c1', 'First') }]));
     await syncOnce();

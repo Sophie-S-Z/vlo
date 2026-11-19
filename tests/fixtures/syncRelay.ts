@@ -1,7 +1,7 @@
 /*
- * A fake sync relay in memory, with the rules of migration 0005 that a device relies on: a put replaces
- * its device's blob of a key, and a read gives the other devices' blobs from a time on, oldest first,
- * up to 8 MB. tests/unit/sync-relay.test.ts checks the real functions.
+ * A fake sync relay in memory, with the rules of migrations 0005 and 0017 that a device relies on: a put
+ * replaces its device's blob of a key, and a read gives the other devices' blobs from a time on, oldest
+ * first, up to 8 MB, without the blobs that the read names as seen. tests/unit/sync-relay.test.ts checks the real functions.
  */
 
 export interface RelayBlob {
@@ -55,11 +55,21 @@ export class FakeSyncRelay {
       }
       case 'sync_list': {
         const since = typeof args.p_since === 'string' ? Date.parse(args.p_since) : -Infinity;
+        const seen = new Set(
+          ((args.p_seen ?? []) as { device: string; key: string; at: string }[]).map(
+            (s) => `${s.device} ${s.key} ${s.at}`,
+          ),
+        );
         const order = (b: RelayBlob) => `${b.updated_at} ${b.device} ${b.key}`;
         const out: RelayBlob[] = [];
         let size = 0;
         for (const b of space.blobs
-          .filter((b) => !mine(b) && Date.parse(b.updated_at) >= since)
+          .filter(
+            (b) =>
+              !mine(b) &&
+              Date.parse(b.updated_at) >= since &&
+              !seen.has(`${b.device} ${b.key} ${b.updated_at}`),
+          )
           .sort((x, y) => order(x).localeCompare(order(y)))) {
           if (size >= 8_000_000) break;
           out.push(b);

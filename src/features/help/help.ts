@@ -127,7 +127,7 @@ export const HELP = {
         'Drop an image file on a scene, a memory or a page. The image goes in where you drop it. In a poem, an image goes between two stanzas. You can also paste an image, or type / and choose Image.',
         'Vlo asks for the alt text: what the image shows, for a reader who cannot see it. Choose Decorative when the image adds nothing that the words do not say.',
         'Drag the image to move it. Or select it and press Alt with the Up or Down arrow key. Press Enter on a selected image to change its alt text, caption, size or place.',
-        'Vlo keeps a copy of at most 2,400 pixels on the long side, on this device. The copy holds no camera data, such as the place of a photo. Backups keep each image.',
+        'Vlo keeps a copy of at most 1,600 pixels on the long side, on this device. The copy holds no camera data, such as the place of a photo. Backups keep each image.',
         'Word, PDF and EPUB exports hold each image with its caption, and Word and EPUB hold its alt text. Rich Text and web pages hold each image too. Markdown with images comes as a zip file. Manuscript format, plain text, web copies and scripts put a line such as “[Image: The harbour]” in its place.',
         'A share link holds each image at most 1,600 pixels on its long side, sealed like the text, up to 20 MB for the link. Sync sends each image of up to 2 MB to your other devices. A larger image stays on its device, and the other devices show its alt text.',
       ],
