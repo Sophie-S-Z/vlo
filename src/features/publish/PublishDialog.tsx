@@ -7,6 +7,7 @@ import { ExportJob } from '@/features/export/startExport';
 import { hasTemplate, projectDef } from '@/features/library/templates';
 import { privatePeople } from '@/features/people/people';
 import type { Item, Project } from '@/lib/db';
+import { aliasesOf, aliasText, type Alias } from '@/lib/privacy';
 import { downloadBytes } from '@/lib/download';
 import { clock } from '@/lib/clock';
 import { Button } from '@/ui/button';
@@ -105,21 +106,25 @@ export function PublishDialog({ open, onOpenChange, project, items, currentItemI
   // A new scope or alias choice prepares the text again in the export worker. Each result carries the
   // choices that made it, so a result for old choices never shows.
   const jobKey = `${scope}|${String(safe)}`;
-  const [prepared, setPrepared] = useState<{ key: string; job: ExportJob | null; unmarked: number } | null>(
-    null,
-  );
+  const [prepared, setPrepared] = useState<{
+    key: string;
+    job: ExportJob | null;
+    unmarked: number;
+    aliases: Alias[];
+  } | null>(null);
   useEffect(() => {
     if (!open) return;
     const run = { stopped: false, job: null as ExportJob | null };
     void (async () => {
       try {
+        // A failed read of the people fails the copy, so an alias copy never goes without aliases.
+        const people = await privatePeople(project.id);
         const request: Omit<ExportRequest, 'updates'> = {
           project,
           items: [...items],
           scope: scopeOf(scope),
           format: 'web',
-          // A failed read of the people fails the copy, so an alias copy never goes without aliases.
-          people: await privatePeople(project.id),
+          people,
           sources: await sourcesFor(project.id),
           shareSafe: safe,
         };
@@ -130,9 +135,9 @@ export function PublishDialog({ open, onOpenChange, project, items, currentItemI
           return;
         }
         const unmarked = safe ? started.names.unmarked.reduce((n, c) => n + c.count, 0) : 0;
-        setPrepared({ key: jobKey, job: started.job, unmarked });
+        setPrepared({ key: jobKey, job: started.job, unmarked, aliases: safe ? aliasesOf(people) : [] });
       } catch {
-        if (!run.stopped) setPrepared({ key: jobKey, job: null, unmarked: 0 });
+        if (!run.stopped) setPrepared({ key: jobKey, job: null, unmarked: 0, aliases: [] });
       }
     })();
     return () => {
@@ -180,7 +185,8 @@ export function PublishDialog({ open, onOpenChange, project, items, currentItemI
     return project.title;
   }
 
-  const shownTitle = title ?? titleOf(scope);
+  // The title goes out beside the text, so it gets the aliases too.
+  const shownTitle = title ?? aliasText(titleOf(scope), ownPrepared?.aliases ?? []);
   const ready = built.step === 'ready' ? built : null;
   const body = ready ? bodyCopy(platform, ready.body, shownTitle) : null;
   const warnings = ready ? overLimits(platform, ready.body, shownTitle) : [];

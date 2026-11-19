@@ -23,15 +23,16 @@ export interface StyleNote extends Span {
 export type SheetMatcher = (text: string) => StyleNote[];
 
 export function sheetMatcher(rules: readonly StyleRule[]): SheetMatcher {
+  // A phone types a curly apostrophe into a form, and `styleNotes` gives the text with straight quotes.
+  const keyOf = (form: string) => plainChars(form).toLowerCase();
   const useOf = new Map<string, string>();
   for (const rule of rules)
-    for (const form of rule.avoid)
-      if (!useOf.has(form.toLowerCase())) useOf.set(form.toLowerCase(), rule.use);
+    for (const form of rule.avoid) if (!useOf.has(keyOf(form))) useOf.set(keyOf(form), rule.use);
   if (useOf.size === 0) return () => [];
   const pattern = phrasePattern([...useOf.keys()]);
   return (text) =>
     matches(pattern, text, 'sheet').flatMap((note) => {
-      const use = useOf.get(text.slice(note.from, note.to).toLowerCase());
+      const use = useOf.get(keyOf(text.slice(note.from, note.to)));
       return use === undefined ? [] : [{ ...note, use }];
     });
 }

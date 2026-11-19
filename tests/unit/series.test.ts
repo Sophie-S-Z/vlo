@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { styleNotes, styleReason } from '@/features/analysis/style';
+import { sheetMatcher, styleNotes, styleReason } from '@/features/analysis/style';
 import { backUpProject, importBackup, readBackup } from '@/features/backup/backup';
 import { addEntry, codexFor, codexMatcher } from '@/features/codex/codex';
 import { getCodex, setStyleSheetRules } from '@/features/codex/codexStore';
@@ -135,6 +135,10 @@ describe('series', () => {
     expect(notes.map((n) => text.slice(n.from, n.to))).toEqual(['Gray', 'gray']);
     expect(notes[0]?.use).toBe('grey');
     expect(styleReason('sheet', 'Gray', 'grey')).toBe('The series style sheet uses "grey" for "Gray".');
+    // A form typed with a curly apostrophe matches both kinds of apostrophe in the text.
+    const curly = sheetMatcher([{ use: 'do not', avoid: ['don’t'] }]);
+    const said = "I don’t know. I don't care.";
+    expect(styleNotes(said, 'prose', curly).filter((n) => n.kind === 'sheet')).toHaveLength(2);
     await expect(
       setStyleSheet(
         series.id,

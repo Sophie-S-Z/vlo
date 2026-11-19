@@ -58,6 +58,17 @@ test('a signed-in device with no sync turns it on by itself', async () => {
   expect((await accountSyncState()).kind).toBe('on');
 });
 
+test('the start runs under a lock of the whole browser, so two tabs never make two spaces', async () => {
+  const request = vi.fn((_name: string, fn: () => Promise<unknown>) => fn());
+  Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
+  try {
+    await startAccountSync('Laptop');
+    expect(request.mock.calls.map(([name]) => name)).toContain('vlo-account-sync');
+  } finally {
+    Reflect.deleteProperty(navigator, 'locks');
+  }
+});
+
 test('after "Stop sync on all devices", this device does not make a new space by itself', async () => {
   await startAccountSync('Laptop');
   const space = await readSpace();

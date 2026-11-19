@@ -80,6 +80,13 @@ describe('originality matching', () => {
     ).toEqual([]);
   });
 
+  test('a quote inside a copied run never counts, so the similarity stays at 100% or less', () => {
+    const text = 'He said "no" to the plan that the board had approved last year.';
+    const report = checkOriginality(text, [{ ...SOURCE, text }]);
+    expect(report.similarity).toBeGreaterThan(0);
+    expect(report.similarity).toBeLessThanOrEqual(1);
+  });
+
   test('search phrases skip quoted text and short sentences', () => {
     const text =
       'Short one. "A quoted sentence that is long enough to search for here and now."\n\nThe migration of monarch butterflies covers thousands of miles across North America every autumn.';

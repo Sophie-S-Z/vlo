@@ -87,4 +87,40 @@ describe('Markdown export', () => {
     );
     expect(md.render(toMarkdown(doc))).toContain('<p>1. Not a list</p>');
   });
+
+  test('a list three levels deep and an item of two paragraphs keep their shape', () => {
+    const p = (text: string) => ({ type: 'paragraph', content: [{ type: 'text', text }] });
+    const list = (...items: object[][]) => ({
+      type: 'bulletList',
+      content: items.map((content) => ({ type: 'listItem', content })),
+    });
+    const doc = singleDoc(
+      { type: 'doc', content: [list([p('top'), list([p('mid'), list([p('deep')])])], [p('one'), p('two')])] },
+      'prose',
+    );
+    const html = md.render(toMarkdown(doc)).replace(/\n/g, '');
+    expect(html).toContain('<li>mid<ul><li>deep</li></ul></li>');
+    expect(html).toContain('<li><p>one</p><p>two</p></li>');
+  });
+
+  test('a rule, a list or a heading underline after a line break stays text', () => {
+    const lines = (...texts: string[]) => ({
+      type: 'paragraph',
+      content: texts.flatMap((text, i) => [
+        ...(i > 0 ? [{ type: 'hardBreak' }] : []),
+        { type: 'text', text },
+      ]),
+    });
+    const doc = singleDoc(
+      {
+        type: 'doc',
+        content: [lines('---'), lines('Shopping:', '- eggs'), lines('Title', '==='), lines('Day', '1. one')],
+      },
+      'prose',
+    );
+    const html = md.render(toMarkdown(doc));
+    expect(html).not.toMatch(/<hr>|<ul>|<ol>|<h1>Title/);
+    expect(html).toContain('<p>---</p>');
+    expect(html).toContain('- eggs');
+  });
 });

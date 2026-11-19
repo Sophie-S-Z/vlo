@@ -232,7 +232,33 @@ describe('View rows in a backup', () => {
     expect(await db.projects.get(project.id)).toBeDefined();
   });
 
-  test('refuses view rows that point outside the file', async () => {
+  test('drops each reference to a row that another device deleted', async () => {
+    const { project } = await novelWithViews();
+    const zip = await JSZip.loadAsync((await backUpProject(project.id, { music: false })).bytes);
+    const manifest = JSON.parse((await zip.file('project.json')?.async('string')) ?? '{}') as Record<
+      string,
+      Record<string, unknown>[]
+    >;
+    const first = (key: string) => {
+      const row = manifest[key]?.[0];
+      if (!row) throw new Error(`The manifest has no ${key}.`);
+      return row;
+    };
+    first('cards').itemId = 'gone';
+    first('cardLinks').threadId = 'gone';
+    manifest.cardLinks?.push({ ...first('cardLinks'), id: 'link-gone', toCardId: 'gone' });
+    first('sequences').itemIds = ['gone', ...(first('sequences').itemIds as string[])];
+    manifest.lifeStages = [];
+    zip.file('project.json', JSON.stringify(manifest));
+    const backup = await readBackup(await zip.generateAsync({ type: 'uint8array' }));
+    expect(backup.views.cards[0]).not.toHaveProperty('itemId');
+    expect(backup.views.cardLinks.map((link) => link.id)).not.toContain('link-gone');
+    expect(backup.views.cardLinks[0]).not.toHaveProperty('threadId');
+    expect(backup.views.sequences[0]?.itemIds).not.toContain('gone');
+    expect(backup.items.every((item) => item.memory?.lifeStageId === undefined)).toBe(true);
+  });
+
+  test('refuses view rows that are damaged', async () => {
     const { project } = await novelWithViews();
     const bytes = (await backUpProject(project.id, { music: false })).bytes;
     type Rows = Record<string, Record<string, unknown>[]>;
@@ -245,19 +271,9 @@ describe('View rows in a backup', () => {
         first[field] = value;
       };
     const cases: [(m: Rows) => void, RegExp][] = [
-      [set('cardLinks', 'toCardId', 'gone'), /A card link has no card/],
-      [set('cardLinks', 'threadId', 'gone'), /A card link has no thread/],
-      [set('cards', 'itemId', 'gone'), /links to an item that is not in it/],
       [set('cards', 'x', 'left'), /has a wrong x/],
-      [set('sequences', 'itemIds', ['gone']), /holds a poem that is not in it/],
       [set('submissions', 'status', 'lost'), /has a wrong status/],
       [set('people', 'variants', [{ real: 'Rosa' }]), /A person has wrong names/],
-      [
-        (m) => {
-          m.lifeStages = [];
-        },
-        /names a life stage that is not in it/,
-      ],
       [set('threads', 'projectId', 'other'), /belongs to another project/],
     ];
     for (const [change, message] of cases) {

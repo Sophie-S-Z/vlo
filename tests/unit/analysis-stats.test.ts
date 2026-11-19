@@ -98,6 +98,7 @@ describe('labels', () => {
     expect(gradeLevel(8.2)).toBe('8th grade');
     expect(gradeLevel(2)).toBe('2nd grade');
     expect(gradeLevel(14)).toBe('college');
+    expect(gradeLevel(12.6)).toBe('college');
     expect(easeLabel(65)).toBe('plain English');
   });
 

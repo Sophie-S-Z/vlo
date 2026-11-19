@@ -11,6 +11,8 @@ export interface StreakRules {
   restDays: readonly number[];
   /** A goal to cut a draft down: a day counts the words that it removed, not the words that it added. */
   cut?: boolean;
+  /** The days before a deadline that the writer set on `day`, which count against the daily goal of then. */
+  before?: { day: string; goal: number } | undefined;
 }
 
 export interface Streak {
@@ -111,6 +113,19 @@ function metOn(words: number, goal: number): boolean {
   return words >= Math.max(goal, 1);
 }
 
+/** The goal and the way to count words that apply to a day. */
+function ruleOn(rules: StreakRules, day: string): { goal: number; cut: boolean } {
+  return rules.before && day < rules.before.day
+    ? { goal: rules.before.goal, cut: false }
+    : { goal: rules.goal, cut: rules.cut === true };
+}
+
+/** True when the day met the goal that applied to it. */
+function metDay(record: Readonly<Record<string, number>>, rules: StreakRules, day: string): boolean {
+  const { goal, cut } = ruleOn(rules, day);
+  return metOn(wordsOn(record, day, cut), goal);
+}
+
 /** The streak up to `today`. Days after today, from a time zone further east, do not count. */
 export function streakOf(
   record: Readonly<Record<string, number>>,
@@ -121,15 +136,14 @@ export function streakOf(
   const days = Object.keys(record)
     .map(dayNumber)
     .filter((n) => Number.isFinite(n) && n <= end);
-  const cut = rules.cut === true;
-  const todayWords = wordsOn(record, today, cut);
+  const todayWords = wordsOn(record, today, rules.cut === true);
   const todayMet = metOn(todayWords, rules.goal);
   if (days.length === 0) return { current: 0, best: 0, today: todayWords, todayMet };
   const first = Math.min(...days);
   const rest = new Set(rules.restDays);
   const stateOf = (n: number): 'met' | 'keep' | 'break' => {
     const day = fromNumber(n);
-    if (metOn(wordsOn(record, day, cut), rules.goal)) return 'met';
+    if (metDay(record, rules, day)) return 'met';
     // Today is not over, and a rest day is allowed off.
     return n === end || rest.has(weekdayOf(day)) ? 'keep' : 'break';
   };
@@ -154,8 +168,8 @@ export function lastDays(
   const rest = new Set(rules.restDays);
   return Array.from({ length: count }, (_, i) => {
     const day = addDays(today, i - count + 1);
-    const words = wordsOn(record, day, rules.cut === true);
-    const state: DayState = metOn(words, rules.goal)
+    const words = wordsOn(record, day, ruleOn(rules, day).cut);
+    const state: DayState = metDay(record, rules, day)
       ? 'met'
       : day === today
         ? 'today'

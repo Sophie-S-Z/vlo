@@ -231,11 +231,14 @@ const PoemLine = Node.create<PoemOptions>({
 
   addKeyboardShortcuts() {
     return {
+      // Tab in one line types spaces. Tab over more lines indents each line, as Shift-Tab outdents each.
       Tab: ({ editor }) =>
-        editor.commands.command(({ tr }) => {
-          tr.insertText(' '.repeat(this.options.tabSpaces));
-          return true;
-        }),
+        selectedLines(editor.state).length > 1
+          ? editor.commands.indentLine()
+          : editor.commands.command(({ tr }) => {
+              tr.insertText(' '.repeat(this.options.tabSpaces));
+              return true;
+            }),
       'Shift-Tab': ({ editor }) => editor.commands.outdentLine(),
       Enter: ({ editor }) => {
         const { $from, empty } = editor.state.selection;

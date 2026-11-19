@@ -171,17 +171,21 @@ export function Track({ memories, stages, pxPerDay, onPxPerDay, actions, onDate,
     },
     [onPxPerDay, origin],
   );
+  // The track starts earlier or later when its first memory moves, so the days on screen keep their place.
+  const start = useRef(origin);
   useLayoutEffect(() => {
     const el = scroller.current;
     const before = scale.current;
+    const was = start.current;
     scale.current = pxPerDay;
+    start.current = origin;
     if (!el) return;
     // A scale from the Years, Months or Days buttons keeps the middle of the track in place.
     const keep =
       anchor.current ??
-      (before === pxPerDay
+      (before === pxPerDay && was === origin
         ? null
-        : { day: origin + (el.scrollLeft + el.clientWidth / 2) / before, at: el.clientWidth / 2 });
+        : { day: was + (el.scrollLeft + el.clientWidth / 2) / before, at: el.clientWidth / 2 });
     anchor.current = null;
     if (keep) el.scrollLeft = (keep.day - origin) * pxPerDay - keep.at;
   }, [pxPerDay, origin]);

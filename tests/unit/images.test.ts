@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { collectBackup, importBackup, readBackup } from '@/features/backup/backup';
 import { BackupError, writeBackup } from '@/features/backup/file';
 import { DOC_SCHEMA } from '@/features/editor/docSchema';
@@ -7,6 +7,7 @@ import { imageAttrs } from '@/features/editor/extensions/image';
 import { updateToJson } from '@/features/export/read';
 import {
   IMAGE_GRACE_MS,
+  imageAddress,
   imageIdsIn,
   imagesInUse,
   remapImageIds,
@@ -197,6 +198,27 @@ describe('Backups with images (Task G1)', () => {
       first(m).projectId = 'someone-else';
     });
     await expect(readBackup(otherProject)).rejects.toThrow(BackupError);
+  });
+});
+
+describe('The address of an image', () => {
+  test('a second read of the same row keeps its address, and a changed row gets a new one', () => {
+    const urls = ['blob:a', 'blob:b'];
+    const create = vi.fn(() => urls.shift() ?? '');
+    vi.stubGlobal(
+      'URL',
+      Object.assign(class extends URL {}, { createObjectURL: create, revokeObjectURL: vi.fn() }),
+    );
+    try {
+      const row = imageRow('img-address', 'p1');
+      expect(imageAddress(row)).toBe('blob:a');
+      // Each read of the database gives new bytes.
+      expect(imageAddress({ ...row, data: new Uint8Array([1, 2]).buffer })).toBe('blob:a');
+      expect(imageAddress({ ...row, addedAt: 2 })).toBe('blob:b');
+      expect(create).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

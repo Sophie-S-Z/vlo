@@ -84,6 +84,17 @@ describe('Manuscript helpers', () => {
     }
     expect(paragraph.runs.some((r) => r.type === 'footnote')).toBe(true);
   });
+
+  test('a reference entry keeps its hanging indent', () => {
+    const doc = singleDoc(RICH_PROSE, 'prose');
+    const blocks = doc.sections[0]?.blocks ?? [];
+    const entry = blocks.findIndex((b) => b.type === 'paragraph');
+    const first = blocks[entry];
+    if (first?.type !== 'paragraph') throw new Error('The text has no paragraph.');
+    blocks[entry] = { ...first, hanging: true };
+    const plain = plainDoc(doc, 'courier-prime').sections[0]?.blocks[entry];
+    expect(plain?.type === 'paragraph' && plain.hanging).toBe(true);
+  });
 });
 
 describe('Standard manuscript format in Word', () => {

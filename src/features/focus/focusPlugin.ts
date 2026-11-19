@@ -1,6 +1,7 @@
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
+import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import { splitSentences } from '@/features/editor/readAloud/sentences';
 import { blockText } from '@/features/editor/textMap';
 import type { DimScope } from './focusPrefs';
@@ -154,8 +155,9 @@ export function focusPlugin({ dim, typewriter }: FocusOptions): Plugin<FocusStat
         const sameBlock = old.current !== -1 && current === tr.mapping.map(old.current);
         if (!refresh && sameBlock) {
           if (!tr.docChanged) return old;
-          // Typing inside the same block keeps the block list, so the marks only move.
-          if (blockCount(tr.before) === blockCount(state.doc)) {
+          // Typing inside the same block keeps the block list, so the marks only move. A change from another
+          // tab or Yjs undo replaces whole blocks, and a replaced block loses its mark, so it builds again.
+          if (blockCount(tr.before) === blockCount(state.doc) && tr.getMeta(ySyncPluginKey) === undefined) {
             return { current, decorations: old.decorations.map(tr.mapping, tr.doc) };
           }
         }

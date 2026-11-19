@@ -6,7 +6,7 @@ import { hasTemplate, holdsText } from '@/features/library/templates';
 import { clock } from '@/lib/clock';
 import { newOwnerToken, newShareKey, sealBytes, sealJson } from '@/lib/crypto';
 import { db, type Item, type Project, type ShareRecord, type Source } from '@/lib/db';
-import type { NameCheck, PrivatePerson } from '@/lib/privacy';
+import { aliasesOf, aliasText, type NameCheck, type PrivatePerson } from '@/lib/privacy';
 import { readItemUpdates } from '@/lib/ydocs';
 import { readImages } from '@/features/images/images';
 import { imageNames, type ExportImage } from '@/features/export/model';
@@ -116,6 +116,7 @@ export async function prepareShare(input: ShareInput): Promise<PreparedShare> {
   const scope: ExportScope =
     picked.length === 1 ? { kind: 'item', itemId: first.id } : { kind: 'sequence', name: '', itemIds };
   const updates = await readItemUpdates(itemIds);
+  const memoir = hasTemplate(input.project, 'memoir');
   const { doc, names } = safeExportTree({
     project: input.project,
     items: [...input.items],
@@ -124,9 +125,11 @@ export async function prepareShare(input: ShareInput): Promise<PreparedShare> {
     images: await readImages(updates),
     people: [...input.people],
     sources: input.sources,
-    shareSafe: hasTemplate(input.project, 'memoir'),
+    shareSafe: memoir,
   });
-  const questions = (input.questions ?? []).map((q) => q.trim()).filter((q) => q !== '');
+  // A question beside the aliased text gets the aliases too, so it cannot give a real name away.
+  const aliases = memoir ? aliasesOf(input.people) : [];
+  const questions = (input.questions ?? []).map((q) => aliasText(q.trim(), aliases)).filter((q) => q !== '');
   // Each image on this device goes with the link as a file of its own, in reading order (decision G6).
   const shared = new Map<string, { n: number; width: number; height: number }>();
   const images: ExportImage[] = [];

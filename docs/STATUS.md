@@ -4,6 +4,29 @@ Last update: 2026-11-18
 
 ## Done
 
+- Full code review (2026-11-18): the fixes, each with a test.
+  - Backups: a reference to a row that another device deleted no longer makes a backup fail to import. An
+    item of a deleted folder, or of two folders that two devices moved into each other, goes to the top.
+    The binder shows such a loop, and a delete of it ends. A snapshot row cannot set `packed`.
+  - AI: the in-browser model does not reload for another model while it writes an answer or runs the
+    deep check. Stop in the deep check also stops a model download. The model list cannot land on another
+    provider. The originality score stays at 100% or less when a quote sits inside a copied run.
+  - Text checks: a style sheet form typed with a curly apostrophe matches. Parts of speech keep their
+    colors in text with mixed quotes. The hidden text check passes emoji, flags and Persian joiners.
+    A grade of 12.5 reads as college.
+  - Editor: Tab over two poem lines indents both. The Body text key takes the paragraph style off. The
+    footnote panel shows a note that another tab changed. The / menu and the writer's keys follow a change
+    of the project templates.
+  - Export and import: Markdown keeps a list three levels deep, an item of two paragraphs, and text such
+    as "---" or "- eggs" after a line break. Plain text indents a nested list. Word in manuscript format
+    keeps the hanging indent of a reference list. An OpenDocument span adds its marks to the paragraph's.
+  - Privacy: the Publish title and the reader questions of a memoir link get the aliases. A reply that
+    quotes an alias becomes a comment on the real words.
+  - Other: one start of account sync at a time in the browser, so two tabs make one space. A deadline keeps
+    the streak of the days before it. Focus dimming stays on a block that another tab changed. The sleep
+    timer shows its own minutes at once. The timeline keeps its place when its first year changes. An image
+    keeps its blob address on a second read.
+
 - Polish pass from the product owner's design notes (2026-11-18):
   - Interface fonts: Familjen Grotesk for the interface, Newsreader for the headings as well as the text,
     and IBM Plex Mono 400 for code and keys. Inter, Fraunces and JetBrains Mono stay as writing fonts that
@@ -1289,6 +1312,17 @@ Last update: 2026-11-18
     same second can miss its mark. The name check before each export finds it, and Mark all again marks it.
   - Show aliases hides each real name with a decoration. The caret can still move into the hidden text,
     and typing there changes the real name. The switch is a preview, so turn it off to edit names.
+
+- Known after the full code review of 2026-11-18, left for later:
+  - Word review import: a paragraph with a citation, an item link or a checklist box never matches its
+    Word paragraph, so the editor's changes there come back as unplaced.
+  - Accepting a tracked delete across two paragraphs keeps the paragraph break.
+  - Delete my account on one device leaves the works of the other signed-in devices in a library that
+    no list shows.
+  - Feedback guards (migration 0012): the address key is an unsalted MD5 of the address, and Unblock can
+    take away the block of another sender at the same address. Both need a new migration.
+  - Show in text on a reply that quotes an alias does not find the real words. A link that holds the
+    References page of a project with no sources puts the replies of the next item on the References item.
 
 ## Blocked
 

@@ -87,6 +87,23 @@ test('makeComment puts the reply on its words with the reader name, once', async
   }
 });
 
+test('makeComment finds the real words of a quote that names an alias', async () => {
+  await db.open();
+  try {
+    const target = { item: { id: 'i-alias', projectId: 'p-alias' }, form: 'prose' as const };
+    await db.people.add({
+      id: 'rosa',
+      projectId: 'p-alias',
+      label: 'Rosa',
+      variants: [{ real: 'Rosa', alias: 'Maria' }],
+    });
+    await writeItemUpdate(target.item.id, proseUpdate(['Rosa walked in at dawn.']), 1);
+    expect(await makeComment(target, reply('r1', 0, 1, { quote: 'Maria walked in' }))).toBe('made');
+  } finally {
+    await db.delete();
+  }
+});
+
 test('makeComment puts a reply on the place of its words nearest to its block (code review)', async () => {
   await db.open();
   try {

@@ -228,7 +228,9 @@ export function Goals({ project, total }: { project: Project; total: number }) {
   const goal = plan?.perDay ?? goals.goalWordsPerDay;
   // A goal to cut counts the words that each day removed, until its date or its target.
   const cut = plan !== null && deadline !== undefined && isCut(deadline);
-  const rules = { goal, restDays, cut };
+  // The days before the deadline keep the daily goal that they had, so a new deadline keeps the streak.
+  const before = plan && deadline?.since ? { day: deadline.since, goal: goals.goalWordsPerDay } : undefined;
+  const rules = { goal, restDays, cut, before };
   const streak = streakOf(record, rules, today);
   // Whole weeks, Monday first, ending with the week of today.
   const count = (WEEKS_SHOWN - 1) * 7 + WEEK.indexOf(weekdayOf(today)) + 1;

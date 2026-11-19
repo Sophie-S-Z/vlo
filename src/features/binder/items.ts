@@ -160,9 +160,14 @@ export async function deleteItem(id: string): Promise<void> {
     if (!root) return [];
     const all = await db.items.where('projectId').equals(root.projectId).toArray();
     const gone = [id];
-    // The loop also visits ids it adds, so it reaches every depth.
+    // The loop also visits ids it adds, so it reaches every depth. The set stops at a loop of folders.
+    const seen = new Set(gone);
     for (const parentId of gone) {
-      for (const child of all) if (child.parentId === parentId) gone.push(child.id);
+      for (const child of all)
+        if (child.parentId === parentId && !seen.has(child.id)) {
+          seen.add(child.id);
+          gone.push(child.id);
+        }
     }
     await db.items.bulkDelete(gone);
     await db.snapshots.where('itemId').anyOf(gone).delete();

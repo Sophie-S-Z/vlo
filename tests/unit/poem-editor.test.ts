@@ -75,6 +75,13 @@ describe('poem editor', () => {
     expect(lines()).toEqual([['    Salt', 'Tide']]);
   });
 
+  test('Tab over two lines indents both lines and keeps their text', () => {
+    // From inside "Salt" to inside "Tide".
+    editor.commands.setTextSelection({ from: 3, to: 10 });
+    press('Tab');
+    expect(lines()).toEqual([['    Salt', '    Tide']]);
+  });
+
   test('Shift-Tab removes up to 4 leading spaces and never other text', () => {
     editor.commands.setContent(poemDataToJSON(parsePoemText('      Salt\n  Tide\n')));
     cursorAt(0, 0);

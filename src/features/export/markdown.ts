@@ -31,9 +31,12 @@ export function escapeMarkdown(text: string): string {
   return text.replace(/([\\`*_{}[\]<>#+!|~$])/g, '\\$1');
 }
 
-/** A line must not start with characters that open a block: a heading, a list, a quote or a rule. */
-function guardLineStart(line: string): string {
-  return line.replace(/^(\s*)(\d+)([.)])(\s)/, '$1$2\\$3$4').replace(/^(\s*)([-=])(?=\s|$)/, '$1\\$2');
+/**
+ * No line may start with characters that open a block: a list, a rule or a heading underline. That holds
+ * for each line after a hard break too.
+ */
+function guardLineStart(text: string): string {
+  return text.replace(/^(\s*)(\d+)([.)])(\s)/gm, '$1$2\\$3$4').replace(/^(\s*)([-=])/gm, '$1\\$2');
 }
 
 function wrap(text: string, style: RunStyle): string {
@@ -99,8 +102,7 @@ function pipeTable(block: TableBlock): string {
     : [line(block.widths.map(() => '')), rule, ...grid.map(line)].join('\n');
 }
 
-function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth = 0, shift = 0): string {
-  const indent = '   '.repeat(depth);
+function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, shift = 0): string {
   switch (block.type) {
     case 'paragraph':
       return guardLineStart(inline(block.runs, { poem: false }));
@@ -124,7 +126,7 @@ function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth =
       return pipeTable(block);
     case 'quote':
       return block.blocks
-        .map((b) => blockMarkdown(b, paths, 0, shift))
+        .map((b) => blockMarkdown(b, paths, shift))
         .join('\n\n')
         .split('\n')
         .map((line) => (line === '' ? '>' : `> ${line}`))
@@ -138,10 +140,17 @@ function blockMarkdown(block: Block, paths: ReadonlyMap<string, string>, depth =
             : done === undefined
               ? '- '
               : `- [${done ? 'x' : ' '}] `;
-          const body = item.map((b) => blockMarkdown(b, paths, depth + 1, shift)).join('\n\n');
+          // Each line of the item goes under its marker, so a nested list and a second paragraph stay in it.
+          // A blank line goes before a paragraph only, so a list with a nested list stays tight.
+          const body = item
+            .map(
+              (b, j) =>
+                `${j === 0 ? '' : b.type === 'list' ? '\n' : '\n\n'}${blockMarkdown(b, paths, shift)}`,
+            )
+            .join('');
           const [first = '', ...rest] = body.split('\n');
           const pad = ' '.repeat(marker.length);
-          return `${indent}${marker}${first.trimStart()}${rest.map((l) => (l === '' ? '' : `\n${indent}${pad}${l.trimStart()}`)).join('')}`;
+          return `${marker}${first}${rest.map((l) => (l === '' ? '\n' : `\n${pad}${l}`)).join('')}`;
         })
         .join('\n');
     case 'stanza': {
@@ -207,7 +216,7 @@ export function toMarkdownBody(doc: ExportDoc, notes: 'gfm' | 'list'): string {
   for (const section of doc.sections) {
     for (const block of section.blocks) {
       if (repeatsTitle(doc, section, block)) continue;
-      parts.push(blockMarkdown(block, new Map(), 0, 1));
+      parts.push(blockMarkdown(block, new Map(), 1));
     }
   }
   const list = footnotesOf(doc);

@@ -18,9 +18,11 @@ export function App() {
     if (!syncing) return;
     let stop: (() => void) | undefined;
     let ended = false;
-    void import('@/features/sync/engine').then(({ startSync }) => {
-      if (!ended) stop = startSync();
-    });
+    void import('@/features/sync/engine')
+      .then(({ startSync }) => {
+        if (!ended) stop = startSync();
+      })
+      .catch(() => undefined);
     return () => {
       ended = true;
       stop?.();
@@ -44,9 +46,11 @@ export function App() {
       .catch(() => undefined);
     let stop: (() => void) | undefined;
     let ended = false;
-    void import('@/features/account/writerToolsServer').then(({ followWriterTools }) => {
-      if (!ended) stop = followWriterTools();
-    });
+    void import('@/features/account/writerToolsServer')
+      .then(({ followWriterTools }) => {
+        if (!ended) stop = followWriterTools();
+      })
+      .catch(() => undefined);
     return () => {
       ended = true;
       stop?.();

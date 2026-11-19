@@ -96,9 +96,10 @@ describe('share links', () => {
       sources: [],
       itemIds: ids,
       people: PEOPLE,
-      questions: ['Is the ending clear?'],
+      questions: ['Is Rosa clear at the end?'],
     });
     expect(JSON.stringify(prepared.bundle)).not.toContain('Rosa');
+    expect(prepared.bundle.questions).toEqual(['Is Maria clear at the end?']);
     expect(prepared.bundle.title).toBe('Summers with Maria');
     expect(prepared.names.unmarked.map((n) => n.name)).toEqual(['Rosa']);
 
@@ -126,7 +127,7 @@ describe('share links', () => {
       id: SHARE_ID,
       projectId: project.id,
       revoked: false,
-      questions: ['Is the ending clear?'],
+      questions: ['Is Maria clear at the end?'],
       comments: [],
     });
     expect(record.expiresAt - record.createdAt).toBe(14 * 86_400_000);

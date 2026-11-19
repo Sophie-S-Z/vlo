@@ -262,7 +262,8 @@ export function Editor({
         scrollMargin: { top: 56, bottom: 72, left: 0, right: 0 },
       },
     },
-    [doc, kind, smart, language, projectId],
+    // The / menu and the writer's keys keep the templates of the editor that they came with.
+    [doc, kind, smart, language, projectId, templates?.join(' ')],
   );
 
   // A rename changes the editor's accessible name at once, without reopening the item.

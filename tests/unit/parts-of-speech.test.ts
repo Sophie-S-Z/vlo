@@ -60,6 +60,12 @@ describe('the tagger', () => {
     expect(kindOf('MD')).toBe('verb');
     expect(kindOf('DT')).toBeNull();
   });
+
+  test('a mix of curly and straight quotes keeps every word in place', () => {
+    const text = "She said ‘run home’ and the dog's owner laughed.";
+    const words = tag(text).map((m) => text.slice(m.from, m.to));
+    expect(words).toEqual(['said', 'run', 'and', 'dog', 'owner', 'laughed']);
+  });
 });
 
 describe('the colors in the text', () => {

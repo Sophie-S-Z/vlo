@@ -18,7 +18,10 @@ export interface Placement {
   depth: number;
 }
 
-/** Depth-first list: each parent, then its children by order. Rows with a missing parent stay at the top. */
+/**
+ * Depth-first list: each parent, then its children by order. Rows with a missing parent stay at the top.
+ * So does the first row of a loop, which two devices make when each moves one folder into the other.
+ */
 export function flattenTree(items: readonly Item[]): FlatNode[] {
   const ids = new Set(items.map((i) => i.id));
   const children = new Map<string | null, Item[]>();
@@ -29,13 +32,15 @@ export function flattenTree(items: readonly Item[]): FlatNode[] {
     children.set(parent, list);
   }
   const out: FlatNode[] = [];
-  const visit = (parentId: string | null, depth: number) => {
-    for (const item of sortByOrder(children.get(parentId) ?? [])) {
-      out.push({ item, depth, parentId });
-      visit(item.id, depth + 1);
-    }
+  const placed = new Set<string>();
+  const place = (item: Item, depth: number, parentId: string | null) => {
+    if (placed.has(item.id)) return;
+    placed.add(item.id);
+    out.push({ item, depth, parentId });
+    for (const child of sortByOrder(children.get(item.id) ?? [])) place(child, depth + 1, item.id);
   };
-  visit(null, 0);
+  for (const item of sortByOrder(children.get(null) ?? [])) place(item, 0, null);
+  if (out.length < items.length) for (const item of sortByOrder(items)) place(item, 0, null);
   return out;
 }
 

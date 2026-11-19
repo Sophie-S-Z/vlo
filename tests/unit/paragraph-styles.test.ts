@@ -135,6 +135,15 @@ describe('in the editor', () => {
     expect(command('paragraph').isActive?.(editor)).toBe(false);
   });
 
+  test('the Body text key takes the style off, as the menu does', () => {
+    const editor = proseEditor('<p data-style="letter">Salt</p>');
+    editor.commands.setTextSelection(2);
+    editor.view.dom.dispatchEvent(
+      new KeyboardEvent('keydown', { key: '0', code: 'Digit0', ctrlKey: true, altKey: true, bubbles: true }),
+    );
+    expect(editor.getHTML()).toBe('<p>Salt</p>');
+  });
+
   test('Update the style to match takes the paragraph’s own formats into its style', () => {
     openParagraphStyles(null, undefined);
     const editor = proseEditor(

@@ -168,3 +168,28 @@ test('the command menu finds Publish by a platform name, and a novel publishes o
   await expect(dialog.getByRole('heading', { name: 'In Royal Road' })).toBeVisible();
   expect(await seriousIssues(page)).toEqual([]);
 });
+
+test('a memoir post takes the alias in its title too', async ({ page }) => {
+  await skipOnboarding(page);
+  await page.getByRole('button', { name: 'New project' }).click();
+  const create = page.getByRole('dialog', { name: 'New project' });
+  await create.getByRole('checkbox', { name: /Memoir/ }).click();
+  await create.getByLabel('Title', { exact: true }).fill('Summers with Rosa');
+  await create.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('textbox', { name: 'Memory 1' })).toBeFocused();
+  await page.getByRole('navigation', { name: 'Project views' }).getByRole('link', { name: 'People' }).click();
+  const person = page.getByRole('form', { name: 'Add a person' });
+  await person.getByLabel('Real name').fill('Rosa');
+  await person.getByLabel('Alias').fill('Maria');
+  await person.getByRole('button', { name: 'Add person' }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Rosa' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Project views' }).getByRole('link', { name: 'Write' }).click();
+
+  await page.getByRole('button', { name: 'Publish', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Publish' });
+  await dialog.getByLabel('What', { exact: true }).selectOption('project');
+  await expect(dialog.getByRole('switch', { name: 'Use the aliases' })).toBeChecked();
+  await expect(dialog.getByLabel('Title', { exact: true })).toHaveValue('Summers with Maria');
+  await dialog.getByRole('switch', { name: 'Use the aliases' }).click();
+  await expect(dialog.getByLabel('Title', { exact: true })).toHaveValue('Summers with Rosa');
+});

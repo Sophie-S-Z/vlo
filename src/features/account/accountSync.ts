@@ -2,6 +2,7 @@ import { ShareError } from '@/features/share/rpc';
 import { forgetSpace, joinSpace, leaveSync, listDevices, startSpace } from '@/features/sync/pairing';
 import { ACCOUNT_SYNC_PAUSED as PAUSED, readSpace, type SyncSpace } from '@/features/sync/space';
 import { db, type VloDb } from '@/lib/db';
+import { withLock } from '@/lib/lock';
 import { accountRpc } from './auth';
 
 /*
@@ -133,16 +134,16 @@ let starting: Promise<AccountSyncState> | null = null;
 
 /**
  * Turns sync on when the state allows it with no question: after a sign-in, and at each start of a
- * signed-in device with no sync. One run at a time in this tab, so two callers never make two spaces.
- * Resolves with the state before the run.
+ * signed-in device with no sync. One run at a time in this browser, so two tabs never make two spaces. A
+ * run reads the state after the run before it. Resolves with the state before the run.
  */
 export function startAccountSync(deviceName: string): Promise<AccountSyncState> {
-  starting ??= (async () => {
+  starting ??= withLock('vlo-account-sync', async () => {
     const state = await accountSyncState();
     if (state.kind === 'join') await joinAccountSync(state.vault, deviceName);
     else if (AUTOMATIC.includes(state.kind)) await turnOnAccountSync(deviceName);
     return state;
-  })().finally(() => {
+  }).finally(() => {
     starting = null;
   });
   return starting;

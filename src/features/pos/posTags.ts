@@ -48,10 +48,12 @@ export function plainQuotes(text: string): string {
  * one is found after the one before it. A piece such as "n't" or "'s" gets no mark of its own.
  */
 export function marksOf(text: string, tokens: readonly TaggedToken[]): PosMark[] {
+  // The tokens come from the text with straight quotes, so the search reads that text too.
+  const plain = plainQuotes(text);
   const marks: PosMark[] = [];
   let cursor = 0;
   for (const token of tokens) {
-    const at = text.indexOf(token.value, cursor);
+    const at = plain.indexOf(token.value, cursor);
     if (at === -1) continue;
     cursor = at + token.value.length;
     const kind = token.tag === 'word' && !token.value.includes("'") ? kindOf(token.pos) : null;

@@ -1,4 +1,4 @@
-import type { CodexEntry, CodexKind, SourceType, SubmissionStatus, ViewRows } from '@/lib/db';
+import type { CardLink, CodexEntry, CodexKind, SourceType, SubmissionStatus, ViewRows } from '@/lib/db';
 import { emptyViewRows, SOURCE_TYPES } from '@/lib/db';
 import { SOURCE_KEY } from '@/features/cite/sources';
 import { newId } from '@/lib/ids';
@@ -18,8 +18,9 @@ import {
 
 /*
  * The view rows in a backup file (plan Tasks C1, H5 and M5): board cards, threads and links, life stages,
- * poem orders, people, submissions, Codex entries and sources. A version 1 file has none of them. Each reference must point to a
- * row of the same file, except a submission, which may name a piece that the writer deleted.
+ * poem orders, people, submissions, Codex entries and sources. A version 1 file has none of them. Sync can
+ * keep a reference to a row that another device deleted, so a reference to a row that is not in the file
+ * goes, as `deleteItem` takes it away. A submission keeps its ids, so the tracker can show "Deleted piece".
  */
 
 const CODEX_KINDS: readonly CodexKind[] = ['character', 'place', 'thing', 'lore'];
@@ -67,8 +68,7 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
   const cardRows = rowsOf(manifest, 'cards');
   const cardIds = unique(cardRows, 'the board cards');
   views.cards = checkRows(cardRows, projectId, 'A board card', (row) => {
-    if (row.itemId !== undefined && !itemIds.has(id(row, 'itemId', 'A board card')))
-      fail(`${DAMAGED} A board card links to an item that is not in it.`);
+    if (row.itemId !== undefined && !itemIds.has(id(row, 'itemId', 'A board card'))) delete row.itemId;
     text(row, 'title', 'A board card');
     optionalText(row, 'note', 'A board card');
     coordinate(row, 'x', 'A board card');
@@ -86,12 +86,10 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
 
   const linkRows = rowsOf(manifest, 'cardLinks');
   unique(linkRows, 'the card links');
-  views.cardLinks = checkRows(linkRows, projectId, 'A card link', (row) => {
-    for (const key of ['fromCardId', 'toCardId'])
-      if (!cardIds.has(id(row, key, 'A card link'))) fail(`${DAMAGED} A card link has no card.`);
-    if (row.threadId !== undefined && !threadIds.has(id(row, 'threadId', 'A card link')))
-      fail(`${DAMAGED} A card link has no thread.`);
-  });
+  views.cardLinks = checkRows<CardLink>(linkRows, projectId, 'A card link', (row) => {
+    for (const key of ['fromCardId', 'toCardId']) id(row, key, 'A card link');
+    if (row.threadId !== undefined && !threadIds.has(id(row, 'threadId', 'A card link'))) delete row.threadId;
+  }).filter((link) => cardIds.has(link.fromCardId) && cardIds.has(link.toCardId));
 
   const stageRows = rowsOf(manifest, 'lifeStages');
   unique(stageRows, 'the life stages');
@@ -104,8 +102,7 @@ export function checkViews(manifest: Json, projectId: string, itemIds: ReadonlyS
   unique(sequenceRows, 'the poem orders');
   views.sequences = checkRows(sequenceRows, projectId, 'A poem order', (row) => {
     text(row, 'name', 'A poem order');
-    if (!ids(row, 'itemIds', 'A poem order').every((itemId) => itemIds.has(itemId)))
-      fail(`${DAMAGED} A poem order holds a poem that is not in it.`);
+    row.itemIds = ids(row, 'itemIds', 'A poem order').filter((itemId) => itemIds.has(itemId));
     count(row, 'createdAt', 'A poem order');
   });
 

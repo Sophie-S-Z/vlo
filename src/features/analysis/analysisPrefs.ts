@@ -54,8 +54,6 @@ export function cleanPrefs(raw: unknown): AnalysisPrefs {
 
 const store = localStore('vlo:analysis', cleanPrefs);
 
-export const getAnalysisPrefs = store.get;
-
 export function setAnalysisPrefs(change: Partial<AnalysisPrefs>): void {
   store.set(cleanPrefs({ ...store.get(), ...change }));
 }

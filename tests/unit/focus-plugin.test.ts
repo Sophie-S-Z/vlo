@@ -55,6 +55,28 @@ describe('focus-line dimming', () => {
     expect(dimmed('p')).toEqual([false, true, true]);
   });
 
+  test('a block that another tab changes stays dim', () => {
+    setFocusPrefs({ dim: true });
+    const here = new Y.Doc();
+    const there = new Y.Doc();
+    here.on('update', (update: Uint8Array, origin: unknown) => {
+      if (origin !== 'there') Y.applyUpdate(there, update, 'here');
+    });
+    there.on('update', (update: Uint8Array, origin: unknown) => {
+      if (origin !== 'here') Y.applyUpdate(here, update, 'there');
+    });
+    const host = document.createElement('div');
+    document.body.append(host);
+    editor = new Editor({ element: host, extensions: [...proseExtensions(here), FocusTools] });
+    const other = new Editor({ element: document.createElement('div'), extensions: proseExtensions(there) });
+    editor.commands.setContent('<p>One</p><p>Two</p><p>Three</p>');
+    editor.commands.setTextSelection(7); // inside "Two"
+    other.commands.insertContentAt(other.state.doc.content.size - 1, ' more');
+    expect(editor.state.doc.textContent).toBe('OneTwoThree more');
+    expect(dimmed('p')).toEqual([true, false, true]);
+    other.destroy();
+  });
+
   test('typing in the bright block keeps the others dim, and Enter moves the light to the new block', () => {
     setFocusPrefs({ dim: true });
     mount('prose');

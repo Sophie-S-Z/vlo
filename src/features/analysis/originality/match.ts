@@ -135,8 +135,8 @@ function contentStems(list: readonly Token[]): Set<string> {
   return new Set(list.map((t) => t.stem).filter((s) => s.length > 2 && !STOP_WORDS.has(s)));
 }
 
-/** Prepares a source once, so many checks can reuse it. */
-export function prepareSource(source: Source): Prepared {
+/** The words, shingles and sentences of a source. */
+function prepareSource(source: Source): Prepared {
   const list = tokens(source.text);
   const shingles = new Map<number, number[]>();
   for (let i = 0; i + SHINGLE <= list.length; i += 1) {
@@ -163,7 +163,8 @@ function copiedRuns(
   let i = 0;
   while (i + SHINGLE <= list.length) {
     const places = prepared.shingles.get(shingleKey(list, i));
-    if (!places || !keep[i]) {
+    // A run holds only checked words, so a quote inside it never counts.
+    if (!places || keep.slice(i, i + SHINGLE).includes(false)) {
       i += 1;
       continue;
     }
@@ -200,7 +201,7 @@ function overlap(a: ReadonlySet<string>, b: ReadonlySet<string>): number {
 /** The checked text against each source. */
 export function checkOriginality(
   text: string,
-  sources: readonly (Source | Prepared)[],
+  sources: readonly Source[],
   options: MatchOptions = DEFAULT_OPTIONS,
 ): OriginalityReport {
   const excluded = excludedSpans(text, options);
@@ -210,7 +211,7 @@ export function checkOriginality(
   const covered = new Array<boolean>(list.length).fill(false);
   const matches: Match[] = [];
   const perSource = new Map<string, Set<number>>();
-  const prepared = sources.map((s) => ('shingles' in s ? s : prepareSource(s)));
+  const prepared = sources.map(prepareSource);
 
   for (const source of prepared) {
     const own = new Set<number>();

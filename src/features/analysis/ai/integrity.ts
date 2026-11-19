@@ -35,6 +35,10 @@ const INVISIBLE =
   /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]|[\u{E0000}-\u{E007F}]/gu;
 /** Spaces other than the normal space, the tab and the no-break space that smart punctuation can type. */
 const SPACE = /[\u2000-\u2006\u2008-\u200A\u205F\u3000]/g;
+/** An emoji, which joins its pictures with U+200D and spells a flag with tag characters. */
+const EMOJI =
+  /\p{Extended_Pictographic}(?:\uFE0F|[\u{1F3FB}-\u{1F3FF}]|[\u{E0020}-\u{E007F}]|\u200D\p{Extended_Pictographic})*/gu;
+const JOINER = /[\u200C\u200D]/;
 const WORD = /[\p{L}\p{M}]+/gu;
 const LATIN = /\p{Script=Latin}/u;
 const OTHER = /[\p{Script=Cyrillic}\p{Script=Greek}]/u;
@@ -46,13 +50,19 @@ const codes = (text: string) =>
 
 export function integrityFlags(text: string): IntegrityFlag[] {
   const found: IntegrityFlag[] = [];
-  for (const match of text.matchAll(INVISIBLE))
+  const emoji = [...text.matchAll(EMOJI)].map((m) => [m.index, m.index + m[0].length] as const);
+  for (const match of text.matchAll(INVISIBLE)) {
+    // Emoji, and Persian or Indic words, use the joiners and tag characters as part of their text.
+    if (emoji.some(([from, to]) => match.index > from && match.index < to)) continue;
+    const before = text.charAt(match.index - 1);
+    if (JOINER.test(match[0]) && /\p{L}/u.test(before) && !LATIN.test(before)) continue;
     found.push({
       kind: 'invisible',
       from: match.index,
       to: match.index + match[0].length,
       detail: codes(match[0]),
     });
+  }
   for (const match of text.matchAll(SPACE))
     found.push({
       kind: 'space',

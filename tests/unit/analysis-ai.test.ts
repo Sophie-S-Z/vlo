@@ -115,4 +115,11 @@ describe('hidden text tricks', () => {
   test('plain text and real Cyrillic words have no flags', () => {
     expect(integrityFlags('Plain text with a  no-break space. Москва.')).toEqual([]);
   });
+
+  test('an emoji and a Persian word keep their joiners, and a joiner in a Latin word is flagged', () => {
+    const coder = '\u{1F469}\u200D\u{1F4BB}';
+    const scotland = '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}';
+    expect(integrityFlags(`She sent ${coder} and ${scotland}. می\u200Cخواهم.`)).toEqual([]);
+    expect(integrityFlags('pl\u200Dain').map((f) => f.detail)).toEqual(['U+200D']);
+  });
 });

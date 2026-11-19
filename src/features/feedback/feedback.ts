@@ -6,6 +6,8 @@ import { changeStoredDoc, type StoredTarget } from '@/features/editor/storedDoc'
 import { REACTION_LABELS } from '@/features/share/comments';
 import type { Item, ShareRecord, StoredComment } from '@/lib/db';
 import { newId } from '@/lib/ids';
+import { aliasesOf, aliasText } from '@/lib/privacy';
+import { privatePeople } from '@/features/people/people';
 
 /*
  * The Feedback tab (F50, decision R4): the replies of every link of a project, by item. A reply on words
@@ -62,11 +64,17 @@ export type MadeComment = 'made' | 'missing' | 'taken' | 'newer';
  * when a newer Vlo saved the item.
  */
 export async function makeComment(target: StoredTarget, reply: StoredComment): Promise<MadeComment> {
+  // A memoir link shows each private name as its alias, so the reader can quote an alias.
+  const people = await privatePeople(target.item.projectId);
+  const real = aliasText(
+    reply.quote,
+    aliasesOf(people).map(({ name, alias }) => ({ name: alias, alias: name })),
+  );
   let result: MadeComment = 'newer';
   const made = await changeStoredDoc(target, (doc) => {
     const tr = new Transform(doc);
     const mark = doc.type.schema.marks[COMMENT];
-    const at = findWords(doc, reply.quote, reply.block);
+    const at = findWords(doc, reply.quote, reply.block) ?? findWords(doc, real, reply.block);
     result = 'missing';
     if (!mark || !at) return tr;
     result = 'taken';

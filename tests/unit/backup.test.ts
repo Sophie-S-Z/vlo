@@ -505,25 +505,30 @@ describe('Reading a backup', () => {
     }
   });
 
+  test('puts an item with a deleted parent, or in a loop of folders, at the top', async () => {
+    // A device kept an item of a folder that another device deleted.
+    const orphan = await reads(
+      await withManifest(await backupZip(), (m) => {
+        row(m, 'items').parentId = 'nowhere';
+        (m.snapshots as Record<string, unknown>[]).forEach((snapshot) => (snapshot.packed = true));
+      }),
+    );
+    expect(orphan.items[0]?.parentId).toBeNull();
+    expect(orphan.snapshots.every((snapshot) => snapshot.packed === undefined)).toBe(true);
+    // Two devices moved two folders into each other.
+    const loop = await reads(
+      await withManifest(await backupZip(), (m) => {
+        const [a, b] = m.items as Item[];
+        if (!a || !b) throw new Error('The backup needs two items.');
+        a.parentId = b.id;
+        b.parentId = a.id;
+      }),
+    );
+    expect(loop.items.filter((item) => item.parentId === null)).toHaveLength(1);
+  });
+
   test('refuses rows that do not fit together', async () => {
     const cases: [string, (m: Record<string, unknown>) => void, RegExp][] = [
-      [
-        'a missing parent',
-        (m) => ((m.items as Item[])[1] = { ...(m.items as Item[])[1], parentId: 'nowhere' } as Item),
-        /parent that is not in it/,
-      ],
-      [
-        'a loop',
-        (m) => {
-          const items = m.items as Item[];
-          const [a, b] = items;
-          if (a && b) {
-            a.parentId = b.id;
-            b.parentId = a.id;
-          }
-        },
-        /form a loop/,
-      ],
       ['another project', (m) => (row(m, 'sessions').projectId = 'other'), /belongs to another project/],
       ['an unsafe id', (m) => (row(m, 'items').id = '../../etc'), /has a wrong id/],
       ['a wrong order', (m) => (row(m, 'items').order = ''), /has a wrong order/],

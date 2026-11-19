@@ -73,7 +73,6 @@ function quoteOf(change: ReviewChange, paragraph: ReviewParagraph): string {
   return change.kind === 'delete' ? paragraph.original.slice(change.from, change.to) : change.text;
 }
 
-/** True when every text node from `from` to `to` has a mark that `has` accepts. */
 /** The first mark of `type` on the text from `from` to `to`, or null. */
 function firstMark(doc: ProseMirrorNode, from: number, to: number, type: MarkType): Mark | null {
   let found: Mark | null = null;
@@ -84,6 +83,7 @@ function firstMark(doc: ProseMirrorNode, from: number, to: number, type: MarkTyp
   return found;
 }
 
+/** True when every text node from `from` to `to` has a mark that `has` accepts. */
 function everyText(doc: ProseMirrorNode, from: number, to: number, has: (marks: readonly Mark[]) => boolean) {
   let all = true;
   doc.nodesBetween(from, to, (node) => {

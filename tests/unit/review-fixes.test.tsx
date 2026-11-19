@@ -65,6 +65,28 @@ test('the note panel stays open on its footnote when another tab edits the same 
   expect(selectedFootnote(a.state)).toBe(footnotesOf(a.state)[0]?.pos);
 });
 
+test('the note panel shows a note that another tab changed, so the next key keeps it', () => {
+  const here = new Y.Doc();
+  const there = new Y.Doc();
+  there.on('update', (update: Uint8Array, origin: unknown) => {
+    if (origin !== 'here') Y.applyUpdate(here, update, 'there');
+  });
+  here.on('update', (update: Uint8Array, origin: unknown) => {
+    if (origin !== 'there') Y.applyUpdate(there, update, 'here');
+  });
+  const a = mount(here);
+  const b = mount(there);
+  a.commands.setContent('<p>Tide.</p>');
+  a.commands.setTextSelection(6);
+  a.commands.insertFootnote();
+  openPanel({ editor: a, panel: 'footnote', anchor: 'caret' });
+  render(<FootnotePanel editor={a} />);
+  act(() => {
+    b.commands.setFootnoteContent(footnotesOf(b.state)[0]?.pos ?? -1, [{ type: 'text', text: 'From there' }]);
+  });
+  expect(screen.getByRole('textbox', { name: 'Footnote 1' }).textContent).toBe('From there');
+});
+
 test('a gradient stop moved past its neighbour keeps its color and its focus', () => {
   const e = mount();
   e.commands.setContent('<p>gold leaf</p>');

@@ -113,8 +113,13 @@ function plainBlocks(blocks: readonly Block[]): Block[] {
   return blocks.map((block): Block => {
     switch (block.type) {
       case 'paragraph':
-        // One alignment, one spacing, an indent on every first line and no drop caps.
-        return { type: 'paragraph', runs: plainRuns(block.runs) };
+        // One alignment, one spacing, an indent on every first line and no drop caps. A reference entry keeps
+        // its hanging indent, as in the manuscript PDF.
+        return {
+          type: 'paragraph',
+          runs: plainRuns(block.runs),
+          ...(block.hanging ? { hanging: true } : {}),
+        };
       case 'heading':
         return { type: 'heading', level: block.level, runs: plainRuns(block.runs) };
       case 'list':

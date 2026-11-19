@@ -26,18 +26,21 @@ interface Marks {
 
 const PLAIN: Marks = { bold: false, italic: false, underline: false, strike: false, script: null };
 
-/** The marks of each text and paragraph style, with the marks of its parent style. */
-function styleMarks(docs: readonly Document[]): Map<string, Marks> {
+/**
+ * The marks that each text and paragraph style sets, with the marks of its parent style. A mark that a style
+ * does not set comes from the text around it, so a span that only sets italic keeps the bold of its paragraph.
+ */
+function styleMarks(docs: readonly Document[]): Map<string, Partial<Marks>> {
   const styles = docs.flatMap((doc) => Array.from(doc.getElementsByTagNameNS(STYLE, 'style')));
   const byName = new Map(styles.map((s) => [s.getAttributeNS(STYLE, 'name') ?? '', s]));
-  const out = new Map<string, Marks>();
-  const marksOf = (name: string, depth = 0): Marks => {
+  const out = new Map<string, Partial<Marks>>();
+  const marksOf = (name: string, depth = 0): Partial<Marks> => {
     const known = out.get(name);
     if (known) return known;
     const style = byName.get(name);
-    if (!style || depth > 20) return PLAIN;
+    if (!style || depth > 20) return {};
     const parent = style.getAttributeNS(STYLE, 'parent-style-name');
-    const marks = { ...(parent ? marksOf(parent, depth + 1) : PLAIN) };
+    const marks = { ...(parent ? marksOf(parent, depth + 1) : {}) };
     const props = style.getElementsByTagNameNS(STYLE, 'text-properties')[0];
     if (props) {
       const weight = props.getAttributeNS(FO, 'font-weight');
@@ -78,7 +81,7 @@ function numberedLists(docs: readonly Document[]): Set<string> {
 }
 
 interface Context {
-  marks: ReadonlyMap<string, Marks>;
+  marks: ReadonlyMap<string, Partial<Marks>>;
   numbered: ReadonlySet<string>;
   skipped: Skipped;
 }
@@ -112,7 +115,7 @@ function inline(parent: Element, marks: Marks, ctx: Context): string {
     }
     switch (node.localName) {
       case 'span':
-        out += inline(node, ctx.marks.get(styleOf(node)) ?? marks, ctx);
+        out += inline(node, { ...marks, ...ctx.marks.get(styleOf(node)) }, ctx);
         break;
       case 's':
         out += ' '.repeat(Number(node.getAttributeNS(TEXT, 'c') ?? '1') || 1);
@@ -149,7 +152,7 @@ function blocks(parent: Element, ctx: Context): string {
       const level = Math.min(Number(node.getAttributeNS(TEXT, 'outline-level') ?? '1') || 1, 3);
       out += `<h${String(level)}>${inline(node, PLAIN, ctx)}</h${String(level)}>`;
     } else if (node.localName === 'p') {
-      out += `<p>${inline(node, ctx.marks.get(styleOf(node)) ?? PLAIN, ctx)}</p>`;
+      out += `<p>${inline(node, { ...PLAIN, ...ctx.marks.get(styleOf(node)) }, ctx)}</p>`;
     } else if (node.localName === 'list') {
       const items = Array.from(node.children)
         .filter((item) => item.localName === 'list-item' || item.localName === 'list-header')

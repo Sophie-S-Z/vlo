@@ -101,6 +101,9 @@ function switchTo(modelId: string, onProgress: (share: number, text: string) => 
       onProgress(report.progress, report.text);
     };
     if (loaded) {
+      // A reload in the middle of an answer or a deep check would break it.
+      if (generating > 0 || scoring)
+        throw new EngineError('server', 'The in-browser model is busy. Wait for it to end, or stop it.');
       const engine = loaded.engine;
       // No caller may use the engine while it reloads.
       loaded = null;

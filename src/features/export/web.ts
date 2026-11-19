@@ -227,7 +227,10 @@ function blockText(block: Block, nbsp: boolean): string {
             : done === undefined
               ? '-'
               : checkBox(done);
-          return `${marker} ${item.map((b) => blockText(b, nbsp)).join(' ')}`;
+          // Each block of the item starts a line under the item's text, so a nested list stays nested.
+          const pad = ' '.repeat(marker.length + 1);
+          const lines = item.flatMap((b) => blockText(b, nbsp).split('\n'));
+          return `${marker} ${lines.map((line, j) => (j === 0 || line === '' ? line : pad + line)).join('\n')}`;
         })
         .join('\n');
     case 'stanza':

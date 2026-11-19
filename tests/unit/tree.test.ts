@@ -45,6 +45,15 @@ describe('flattenTree', () => {
   test('keeps rows whose parent is missing at the top level, so nothing disappears', () => {
     expect(ids(flattenTree([item('lost', 'scene', 'gone', 'a0')]))).toEqual(['lost']);
   });
+
+  test('shows two folders that sync moved into each other, with what is under them', () => {
+    const loop = [
+      item('f1', 'part', 'f2', 'a0'),
+      item('f2', 'part', 'f1', 'a1'),
+      item('page', 'scene', 'f2', 'a0'),
+    ];
+    expect(ids(flattenTree(loop))).toEqual(['f1', '-f2', '--page']);
+  });
 });
 
 describe('projectDrop', () => {

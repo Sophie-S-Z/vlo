@@ -91,6 +91,19 @@ describe('plain text export', () => {
     expect(text).toContain('Mira counted the coins twice.\n\nThe tide turned at noon.');
     expect(file.notices[0]).toContain('Plain text has no bold');
   });
+
+  test('a nested list stays under its item, and each block of an item starts a line', () => {
+    const p = (text: string) => ({ type: 'paragraph', content: [{ type: 'text', text }] });
+    const list = (...items: object[][]) => ({
+      type: 'bulletList',
+      content: items.map((content) => ({ type: 'listItem', content })),
+    });
+    const doc = singleDoc(
+      { type: 'doc', content: [list([p('top'), list([p('mid')], [p('x')])], [p('next')])] },
+      'prose',
+    );
+    expect(toPlainText(doc)).toContain('- top\n  - mid\n  - x\n- next');
+  });
 });
 
 describe('RTF export', () => {
@@ -257,6 +270,18 @@ describe('OpenDocument import', () => {
     );
     expect(skipped).toEqual(['1 picture', '1 table']);
     expect(JSON.stringify(nodes)).not.toMatch(/gone|A comment/);
+  });
+
+  test('a span adds its marks to the marks of its paragraph', async () => {
+    const bold = `<office:document-content xmlns:office="${O}" xmlns:text="${T}" xmlns:style="${S}" xmlns:fo="${F}">
+<office:automatic-styles>
+<style:style style:name="P1" style:family="paragraph"><style:text-properties fo:font-weight="bold"/></style:style>
+<style:style style:name="T1" style:family="text"><style:text-properties fo:font-style="italic"/></style:style>
+</office:automatic-styles>
+<office:body><office:text><text:p text:style-name="P1">Salt <text:span text:style-name="T1">tide</text:span></text:p></office:text></office:body>
+</office:document-content>`;
+    const { nodes } = await readOdt('Bold.odt', await zipOf({ 'content.xml': bold }));
+    expect(nodes[0]?.text?.html).toBe('<p><strong>Salt </strong><strong><em>tide</em></strong></p>');
   });
 
   test('a file that is not an OpenDocument file gives a message for the writer', async () => {

@@ -149,6 +149,8 @@ export function EngineSettings({
             id={`${id}-source`}
             className={selectClass}
             value={source}
+            // The model list that loads now belongs to this source.
+            disabled={listing}
             onChange={(event) => {
               pick(event.target.value as Source);
             }}

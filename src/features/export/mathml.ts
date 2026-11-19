@@ -57,7 +57,7 @@ export function parseMathml(xml: string): MathNode {
 }
 
 /** The invisible operators MathLive places between parts: function application and times. */
-const INVISIBLE = /[\u2061-\u2064]/g;
+export const INVISIBLE = /[\u2061-\u2064]/g;
 
 /**
  * A plain-text form of an equation, for a format or a part that cannot draw it: x², a/b, √x.

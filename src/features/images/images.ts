@@ -1,7 +1,7 @@
 import { liveQuery } from 'dexie';
 import * as Y from 'yjs';
 import { clock } from '@/lib/clock';
-import { bytesBlob, bytesBuffer, db, type FileBytes, type ImageFile } from '@/lib/db';
+import { bytesBlob, bytesBuffer, db, type ImageFile } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { readItemUpdates, remapNodeAttribute, YFRAGMENT } from '@/lib/ydocs';
 import { clockKey, remoteTransaction } from '@/features/sync/clock';
@@ -64,15 +64,19 @@ export function onImageFailed(listener: () => void): () => void {
 
 // One blob: address for each image row, made when its node first shows. The address lives as long as
 // the tab, so an image that moves or comes back with Undo shows at once.
-const addresses = new Map<string, { data: FileBytes; url: string }>();
+const addresses = new Map<string, { stamp: string; url: string }>();
 
-/** The blob: address of an image row's bytes. A changed row gets a new address. */
+/**
+ * The blob: address of an image row's bytes. Each read of the database gives new bytes of the same row,
+ * so the row's type, size and time tell a changed row apart. A changed row gets a new address.
+ */
 export function imageAddress(row: ImageFile): string {
+  const stamp = `${row.type} ${String(row.size)} ${String(row.addedAt)}`;
   const known = addresses.get(row.id);
-  if (known?.data === row.data) return known.url;
+  if (known?.stamp === stamp) return known.url;
   if (known) URL.revokeObjectURL(known.url);
   const url = URL.createObjectURL(bytesBlob(row.data, row.type));
-  addresses.set(row.id, { data: row.data, url });
+  addresses.set(row.id, { stamp, url });
   return url;
 }
 

@@ -128,10 +128,13 @@ export function FootnotePanel({ editor }: { editor: Editor }) {
     focusText(editor);
   };
 
+  const [first] = useState(() => noteAt(editor, target?.pos ?? null));
+  // The note this panel wrote last, so a change from elsewhere (undo, another tab) can be told apart.
+  const written = useRef(JSON.stringify(first));
   const note = useEditor(
     {
       extensions: noteExtensions(),
-      content: noteDoc(noteAt(editor, target?.pos ?? null)),
+      content: noteDoc(first),
       editorProps: {
         attributes: {
           role: 'textbox',
@@ -152,11 +155,29 @@ export function FootnotePanel({ editor }: { editor: Editor }) {
       onUpdate: ({ editor: noteEditor }) => {
         const pos = posRef.current;
         if (pos === null) return;
-        editor.commands.setFootnoteContent(pos, parseNote(noteEditor.getJSON().content[0]?.content ?? []));
+        const content = parseNote(noteEditor.getJSON().content[0]?.content ?? []);
+        written.current = JSON.stringify(content);
+        editor.commands.setFootnoteContent(pos, content);
       },
     },
     [],
   );
+
+  // A note that changes elsewhere shows here, so the next key does not write the old note back.
+  useEffect(() => {
+    const onTransaction = ({ transaction }: { transaction: Transaction }) => {
+      if (!transaction.docChanged || posRef.current === null || note.isDestroyed) return;
+      const now = noteAt(editor, posRef.current);
+      const text = JSON.stringify(now);
+      if (text === written.current) return;
+      written.current = text;
+      note.commands.setContent(noteDoc(now), { emitUpdate: false });
+    };
+    editor.on('transaction', onTransaction);
+    return () => {
+      editor.off('transaction', onTransaction);
+    };
+  }, [editor, note]);
 
   // The note editor takes focus with the caret at the end, so the writer types the note at once.
   useEffect(() => {

@@ -240,3 +240,16 @@ describe('a goal to cut a draft down (Ellipsus October 2026 comparison)', () => 
     });
   });
 });
+
+describe('a deadline set after a streak', () => {
+  // Five days of 600 words against a goal of 500, then a deadline set today with a goal to cut.
+  const record = Object.fromEntries(
+    ['2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08'].map((day) => [day, 600]),
+  );
+  const deadline = { goal: 228, restDays: [], cut: true, before: { day: '2026-11-09', goal: 500 } };
+
+  it('keeps the days before it under the daily goal of then', () => {
+    expect(streakOf(record, deadline, '2026-11-09')).toMatchObject({ current: 5, best: 5 });
+    expect(lastDays(record, deadline, '2026-11-09', 2).map((d) => d.state)).toEqual(['met', 'today']);
+  });
+});

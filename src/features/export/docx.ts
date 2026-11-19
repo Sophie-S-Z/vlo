@@ -95,8 +95,6 @@ const INCH = 1440;
 /** The indent of each list level and each quote. */
 const STEP = 720;
 
-/** Converts LaTeX to MathML. The export loads MathLive's converter only when the export has math. */
-
 export interface DocxOptions {
   /** A converter for tests. By default the export loads MathLive's converter, which needs no DOM. */
   toMathml?: LatexToMathml;
@@ -186,16 +184,10 @@ function italicRun(text: string, size?: number): IRunOptions {
   return { text, italics: true, ...(size === undefined ? {} : { size }) };
 }
 
-const ALIGNS = {
-  left: AlignmentType.LEFT,
-  center: AlignmentType.CENTER,
-  right: AlignmentType.RIGHT,
-} as const;
-
 /** An image at its share of the text width, with its alt text, and its caption below it (decision G5). */
 function imageParagraphs(block: ImageBlock, place: Place, ctx: Context): Paragraph[] {
   const image = ctx.images[block.id];
-  const alignment = ALIGNS[block.align];
+  const alignment = ALIGNMENT[block.align];
   const caption = block.caption
     ? [
         new Paragraph({

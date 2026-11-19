@@ -136,10 +136,10 @@ const round1 = (value: number) => Math.round(value * 10) / 10;
 
 /** "8th grade", "college", from a US school grade. */
 export function gradeLevel(grade: number): string {
-  if (grade < 1) return 'kindergarten';
-  if (grade >= 17) return 'college graduate';
-  if (grade >= 13) return 'college';
   const whole = Math.round(grade);
+  if (whole < 1) return 'kindergarten';
+  if (whole >= 17) return 'college graduate';
+  if (whole >= 13) return 'college';
   const suffix = whole === 1 ? 'st' : whole === 2 ? 'nd' : whole === 3 ? 'rd' : 'th';
   return `${String(whole)}${suffix} grade`;
 }

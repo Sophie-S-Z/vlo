@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { EngineError, isAbort } from '@/features/ai/engine/types';
-import { hasWebGpu, loadWebLlmScorer, WEBLLM_MODELS } from '@/features/ai/engine/webllm';
+import { cancelWebLlmLoad, hasWebGpu, loadWebLlmScorer, WEBLLM_MODELS } from '@/features/ai/engine/webllm';
 import { loadEngineChoice } from '@/features/ai/settings';
 import { Button } from '@/ui/button';
 import { LOW_SHARE } from '../ai/detect';
@@ -167,6 +167,8 @@ export function DeepCheck({
             variant="ghost"
             onClick={() => {
               stop.current?.abort();
+              // A download that runs now ends its file, and then Vlo frees the model.
+              if (status.kind === 'loading') cancelWebLlmLoad();
             }}
           >
             Stop

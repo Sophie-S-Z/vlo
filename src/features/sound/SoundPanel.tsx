@@ -96,14 +96,18 @@ function Volume({
 }
 
 /** Minutes until the sleep timer ends, rounded up, updated each half minute. */
-function useMinutesLeft(endsAt: number | null): number | null {
+export function useMinutesLeft(endsAt: number | null): number | null {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (endsAt === null) return;
-    const id = setInterval(() => {
+    const tick = () => {
       setNow(Date.now());
-    }, 30_000);
+    };
+    // A new timer reads the time at once, so it never shows minutes from when the panel opened.
+    const first = setTimeout(tick, 0);
+    const id = setInterval(tick, 30_000);
     return () => {
+      clearTimeout(first);
       clearInterval(id);
     };
   }, [endsAt]);

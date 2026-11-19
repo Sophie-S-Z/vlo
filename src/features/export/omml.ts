@@ -11,16 +11,13 @@ import {
   MathSuperScript,
   type MathComponent,
 } from 'docx';
-import { linearMath, type MathNode } from './mathml';
+import { INVISIBLE, linearMath, type MathNode } from './mathml';
 
 /*
  * Word equations (OMML) from MathLive's MathML, built with the docx math parts. Word can then edit each
  * equation as an equation. A part that docx has no class for, such as a matrix, becomes its plain-text form
  * inside the equation.
  */
-
-/** The invisible operators MathLive places between parts: function application and times. */
-const INVISIBLE = /[⁡-⁤]/g;
 
 /** Wrappers that only group or style their children. */
 const GROUPS = new Set(['math', 'mrow', 'mstyle', 'mpadded', 'menclose', 'merror', 'mfenced']);

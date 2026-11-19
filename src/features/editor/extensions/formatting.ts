@@ -65,6 +65,15 @@ function isLineSpacing(value: number): value is LineSpacing {
 /** Line spacing, first-line indent, drop caps, the paragraph style and the heading anchor, as block attributes. */
 export const BlockStyle = Extension.create({
   name: 'blockStyle',
+  // Above the paragraph of StarterKit, so its Body text key also takes the paragraph style off.
+  priority: 1001,
+
+  addKeyboardShortcuts() {
+    return {
+      'Mod-Alt-0': () =>
+        this.editor.chain().setParagraph().updateAttributes('paragraph', { styleId: null }).run(),
+    };
+  },
 
   addGlobalAttributes() {
     return [

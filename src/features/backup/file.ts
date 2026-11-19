@@ -481,15 +481,22 @@ function checkItems(rows: Json[], projectId: string): Item[] {
       for (const key of ['date', 'dateEnd', 'lifeStageId']) optionalText(memory, key, what);
     }
   }
-  // Every parent is an item of the backup, and no item is its own ancestor.
+  // Sync can leave an item under a folder that another device deleted, or two folders that two devices
+  // moved into each other. The binder shows such an item at the top, so the backup puts it there.
+  for (const row of rows) if (row.parentId !== null && !ids.has(row.parentId as string)) row.parentId = null;
   const parents = new Map(rows.map((row) => [row.id as string, row.parentId as string | null]));
-  for (const [itemId, parentId] of parents) {
-    if (parentId !== null && !parents.has(parentId))
-      fail(`${DAMAGED} An item has a parent that is not in it.`);
-    let step: string | null = parentId;
-    for (let depth = 0; step !== null; depth += 1) {
-      if (step === itemId || depth > parents.size) fail(`${DAMAGED} Its items form a loop.`);
-      step = parents.get(step) ?? null;
+  for (const row of rows) {
+    const itemId = row.id as string;
+    const seen = new Set<string>();
+    for (let step = parents.get(itemId) ?? null; step !== null; step = parents.get(step) ?? null) {
+      if (step === itemId) {
+        row.parentId = null;
+        parents.set(itemId, null);
+        break;
+      }
+      // A loop above this item. The walk from an item of that loop breaks it.
+      if (seen.has(step)) break;
+      seen.add(step);
     }
   }
   return rows as unknown as Item[];
@@ -552,6 +559,8 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
     (row) => {
       id(row, 'id', 'A snapshot');
       if (!itemIds.has(id(row, 'itemId', 'A snapshot'))) fail(`${DAMAGED} A snapshot has no item.`);
+      // The file holds each snapshot unpacked. A `packed` switch would make History unzip plain bytes.
+      delete row.packed;
       optionalText(row, 'label', 'A snapshot');
       count(row, 'createdAt', 'A snapshot');
       text(row, 'text', 'A snapshot');
@@ -599,11 +608,9 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
   });
   const views = checkViews(manifest, project.id, itemIds);
   const stageIds = new Set(views.lifeStages.map((stage) => stage.id));
-  for (const item of items) {
-    const stage = item.memory?.lifeStageId;
-    if (stage !== undefined && !stageIds.has(stage))
-      fail(`${DAMAGED} A memory names a life stage that is not in it.`);
-  }
+  for (const item of items)
+    if (item.memory?.lifeStageId !== undefined && !stageIds.has(item.memory.lifeStageId))
+      delete item.memory.lifeStageId;
   const musicRows = manifest.music === undefined ? [] : list(manifest, 'music');
   for (const row of musicRows) {
     id(row, 'id', 'A music file');
