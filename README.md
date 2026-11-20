@@ -49,6 +49,7 @@ Before a push, run `typecheck`, `lint`, `format:check`, `test`, `build` and `siz
 
 ## Documents
 
+- `AGENTS.md`: the rules and facts for coding agents (Codex and Claude Code). `CLAUDE.md` loads it.
 - `docs/VLO_SPEC.md`: the product spec.
 - `docs/plans/`: the plan of each phase.
 - `docs/adr/`: the architecture decisions.
