@@ -15,6 +15,7 @@ const MIGRATIONS = [
   '0003_cleanup.sql',
   '0004_limits.sql',
   '0005_sync.sql',
+  '0017_sync_scale.sql',
 ];
 const IV = 'AAAAAAAAAAAAAAAA';
 /** A token, device id or key of the shape that Vlo makes. */
@@ -66,10 +67,16 @@ const put = (space: string, device: string, key: string, payload = 'cipher', tok
     IV,
   ]);
 
-const list = (space: string, device: string | null, since: Date | null = null, token = T('space-token')) =>
+const list = (
+  space: string,
+  device: string | null,
+  since: Date | null = null,
+  token = T('space-token'),
+  seen: { device: string; key: string; at: string }[] | null = null,
+) =>
   asAnon<{ device: string; key: string; payload: string; updated_at: Date }>(
-    'select * from public.sync_list($1, $2, $3, $4)',
-    [space, token, device, since],
+    'select * from public.sync_list($1, $2, $3, $4, $5)',
+    [space, token, device, since, seen === null ? null : JSON.stringify(seen)],
   );
 
 const blobs = async () =>
@@ -152,6 +159,27 @@ describe('0005_sync', () => {
     expect(recent.map((b) => b.key)).not.toContain(T('k1'));
   });
 
+  test('sync_list skips the blobs that the read names as seen, until they change', async () => {
+    const space = await newSpace();
+    await put(space, DEVICE('a'), T('k1'), 'one');
+    await put(space, DEVICE('a'), T('k2'), 'two');
+    expect(await list(space, DEVICE('b'))).toHaveLength(2);
+    // The relay keeps microseconds, and a JavaScript Date keeps milliseconds, so the test reads the relay's text.
+    const exact = (
+      await db.query<{ device: string; key: string; at: string }>(
+        `select device, key, to_char(updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as at
+         from sync_blobs`,
+      )
+    ).rows;
+    expect(await list(space, DEVICE('b'), null, T('space-token'), exact)).toEqual([]);
+    await put(space, DEVICE('a'), T('k2'), 'two again');
+    const next = await list(space, DEVICE('b'), null, T('space-token'), exact);
+    expect(next.map((b) => b.payload)).toEqual(['two again']);
+    await expect(
+      list(space, DEVICE('b'), null, T('space-token'), Array(1001).fill(exact[0])),
+    ).rejects.toThrow('bad seen');
+  });
+
   test('a sixth device, a blob over the limit, a full space and a full server fail with their own errors', async () => {
     const space = await newSpace();
     for (const name of ['a', 'b', 'c', 'd', 'e']) await put(space, DEVICE(name), T('k'));
@@ -164,11 +192,30 @@ describe('0005_sync', () => {
       T('k'),
     ]);
     await expect(put(space, DEVICE('a'), T('k3'), 'xx')).rejects.toThrow('space full');
+    await db.query('update sync_blobs set size = 49999999 where device = $1 and key = $2', [
+      DEVICE('b'),
+      T('k'),
+    ]);
+    await expect(put(space, DEVICE('a'), T('k3'), 'xx')).rejects.toThrow('space full');
     // A replacement counts the new size in place of the old one.
     await expect(put(space, DEVICE('b'), T('k'), 'small')).resolves.toHaveLength(1);
+    // Other spaces' data alone stops nothing. The size of the whole database does.
     const other = await newSpace(T('other'));
-    await db.query('update sync_blobs set size = 30000000');
-    await expect(put(other, DEVICE('z'), T('k'), 'x'.repeat(10), T('other'))).rejects.toThrow('server full');
+    await db.query('update sync_blobs set size = 40000000');
+    await put(other, DEVICE('z'), T('k'), 'x'.repeat(10), T('other'));
+    const [original] = (
+      await db.query<{ def: string }>("select pg_get_functiondef('public.sync_server_full'::regproc) as def")
+    ).rows;
+    await db.exec(
+      'create or replace function public.sync_server_full(p_more bigint) returns boolean language sql as $$ select true $$',
+    );
+    try {
+      await expect(put(other, DEVICE('z'), T('k2'), 'x', T('other'))).rejects.toThrow('server full');
+      // A put that makes a blob smaller still goes through.
+      await expect(put(other, DEVICE('z'), T('k'), 'x', T('other'))).resolves.toHaveLength(1);
+    } finally {
+      await db.exec(original?.def ?? '');
+    }
     await expect(put(space, 'bad id', T('k'))).rejects.toThrow('bad device');
     await expect(put(space, DEVICE('a'), 'bad key')).rejects.toThrow('bad key');
   });
@@ -221,7 +268,7 @@ describe('0005_sync', () => {
         "select p.proconfig as config from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and (p.proname like '%sync%')",
       )
     ).rows;
-    expect(rows).toHaveLength(9);
+    expect(rows).toHaveLength(10);
     for (const row of rows) expect(row.config?.find((c) => c.startsWith('search_path='))).toMatch(/pg_temp$/);
   });
 });

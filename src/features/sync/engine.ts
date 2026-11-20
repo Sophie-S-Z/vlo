@@ -35,6 +35,7 @@ import {
   SYNC_META,
   updateSpace,
   withSyncLock,
+  type Seen,
   type SyncSpace,
 } from './space';
 import type { EditorForm } from '@/features/library/templates';
@@ -48,8 +49,13 @@ export const BEFORE_SYNC = 'Before sync';
 
 /** A put that commits late can carry an earlier relay time than one already read, so a read starts back. */
 const OVERLAP = 30_000;
-const CHANGE_DELAY = 30_000;
+/** A change waits this long, so a typing session sends a text a few times and not each half minute. */
+const CHANGE_DELAY = 120_000;
+/** A check runs this often while another device sent something lately, and every `QUIET_EVERY` after. */
 const EVERY = 60_000;
+const QUIET_EVERY = 5 * 60_000;
+/** How long after the last news from another device the checks stay at `EVERY`. */
+const QUIET_AFTER = 10 * 60_000;
 
 export interface SyncResult {
   pushed: number;
@@ -214,20 +220,40 @@ async function push(sync: Sync, started: number): Promise<number> {
   return pushed;
 }
 
-/** The other devices' blobs from the cursor on, read until a page brings nothing new. */
-async function listNew(space: SyncSpace): Promise<Listed[]> {
+/** The relay's largest read. A read with less than this holds every blob from its time on. */
+const PAGE = 8_000_000;
+/** The most blobs that a read names as seen, as the relay allows. */
+const MAX_SEEN = 1000;
+
+const seenOf = (b: Listed): Seen => ({ device: b.device, key: b.key, at: b.updated_at });
+const seenId = (b: Seen) => `${b.device} ${b.key} ${b.at}`;
+
+/**
+ * The other devices' blobs from the cursor on, and the blobs of the window before the new cursor that this
+ * device has. The relay skips the blobs that the read names as seen, so a check with nothing new brings no
+ * payload. A read goes on only when the relay stopped it at its limit.
+ */
+async function listNew(space: SyncSpace): Promise<{ listed: Listed[]; seen: Seen[] }> {
   let since = space.cursor === '' ? null : new Date(Date.parse(space.cursor) - OVERLAP).toISOString();
-  const out: Listed[] = [];
-  const seen = new Set<string>();
+  // A device with no cursor reads everything again, so it names nothing as seen.
+  const seen = new Map((space.cursor === '' ? [] : (space.seen ?? [])).map((b) => [seenId(b), b]));
+  const listed: Listed[] = [];
   for (;;) {
-    const page = await call<Listed[]>('sync_list', space, { p_device: space.deviceId, p_since: since });
-    const fresh = page.filter((b) => !seen.has(`${b.device} ${b.key} ${b.updated_at}`));
+    const page = await call<Listed[]>('sync_list', space, {
+      p_device: space.deviceId,
+      p_since: since,
+      p_seen: [...seen.values()].slice(-MAX_SEEN),
+    });
+    const fresh = page.filter((b) => !seen.has(seenId(seenOf(b))));
+    for (const b of fresh) seen.set(seenId(seenOf(b)), seenOf(b));
+    listed.push(...fresh);
     const last = page.at(-1);
-    if (fresh.length === 0 || !last) return out;
-    for (const b of fresh) seen.add(`${b.device} ${b.key} ${b.updated_at}`);
-    out.push(...fresh);
+    if (fresh.length === 0 || !last || page.reduce((sum, b) => sum + b.payload.length, 0) < PAGE) break;
     since = last.updated_at;
   }
+  const cursor = listed.at(-1)?.updated_at ?? space.cursor;
+  const from = cursor === '' ? Infinity : Date.parse(cursor) - OVERLAP;
+  return { listed, seen: [...seen.values()].filter((b) => Date.parse(b.at) >= from) };
 }
 
 /**
@@ -406,7 +432,7 @@ async function applyText(blob: TextBlob): Promise<boolean> {
  * `since` is the time that the round started.
  */
 async function pull(sync: Sync, since: number): Promise<Omit<SyncResult, 'pushed'>> {
-  const listed = await listNew(sync.space);
+  const { listed, seen } = await listNew(sync.space);
   const rows: RowsBlob[] = [];
   const texts: TextBlob[] = [];
   const names = { ...sync.space.names };
@@ -431,6 +457,7 @@ async function pull(sync: Sync, since: number): Promise<Omit<SyncResult, 'pushed
   // The push of this round cleared the list, so the list holds only this pull's blobs.
   await updateSpace(sync.space.spaceId, {
     ...(last ? { cursor: last.updated_at } : {}),
+    seen,
     names,
     resend: [...new Set(resend)],
   });
@@ -473,22 +500,37 @@ export function syncOnce(): Promise<SyncResult> {
 }
 
 /**
- * Syncs now, when the window gets focus, 30 seconds after a change on this device, every 60 seconds while
- * the page shows, and when it hides. Gives the function that stops it.
+ * Syncs now, when the window gets focus, two minutes after a change on this device, and when the page
+ * hides. While the page shows, it checks every 60 seconds for ten minutes after the last news from another
+ * device, and every five minutes after that. Gives the function that stops it.
  */
 export function startSync(): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let ranAt = 0;
+  let newsAt = clock.now();
   const run = () => {
     clearTimeout(timer);
     timer = undefined;
+    ranAt = clock.now();
     // A failed round, such as one with no connection, tries again at the next trigger.
-    syncOnce().catch(() => undefined);
+    syncOnce().then(
+      (result) => {
+        if (result.pulled > 0) newsAt = clock.now();
+      },
+      () => undefined,
+    );
   };
   const onVisibility = () => {
     if (document.visibilityState === 'hidden') run();
   };
   const tick = setInterval(() => {
-    if (document.visibilityState === 'visible') run();
+    const now = clock.now();
+    if (
+      document.visibilityState === 'visible' &&
+      // Half a tick of slack, as a tick can fire a little before a whole period has passed.
+      (now - newsAt < QUIET_AFTER || now - ranAt >= QUIET_EVERY - EVERY / 2)
+    )
+      run();
   }, EVERY);
   onLocalChange(() => {
     timer ??= setTimeout(run, CHANGE_DELAY);

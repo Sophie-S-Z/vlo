@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 /*
  * Images in the text (Phase 16, Tasks G1 and G2). A file dropped on the text goes in at the pointer, a
  * pasted image goes in at the caret, a drag moves an image and Undo puts it back. The image panel asks
- * for the alt text. Vlo stores each image at most 2,400 pixels on its long side. Each export reads the
+ * for the alt text. Vlo stores each image at most 1,600 pixels on its long side. Each export reads the
  * stored image (Task G3).
  */
 
@@ -136,10 +136,10 @@ test('a file dropped on the second paragraph goes after it, and the panel asks f
   const image = scene.getByRole('img', { name: 'Fishing boats at the harbour wall' });
   await expect(image).toBeVisible();
   await expect(scene.locator('figcaption')).toHaveText('Port Isaac, 1962');
-  // Vlo keeps the shape and makes the long side 2,400 pixels. The opaque PNG becomes a JPEG.
+  // Vlo keeps the shape and makes the long side 1,600 pixels. The opaque PNG becomes a JPEG.
   await expect
     .poll(() => storedImages(page))
-    .toEqual([expect.objectContaining({ type: 'image/jpeg', width: 2400, height: 1200 })]);
+    .toEqual([expect.objectContaining({ type: 'image/jpeg', width: 1600, height: 800 })]);
   // The words and their count stay the same.
   await expect(page.getByText('13 words', { exact: true })).toBeVisible();
 

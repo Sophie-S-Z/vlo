@@ -82,10 +82,10 @@ async function bytesOf(data: FileBytes): Promise<number[]> {
 }
 
 describe('The stored size (decision G2)', () => {
-  test('keeps the shape and makes the long side 2,400 pixels', () => {
-    expect(fitSize(4032, 3024)).toEqual({ width: MAX_IMAGE_SIDE, height: 1800 });
-    expect(fitSize(3024, 4032)).toEqual({ width: 1800, height: MAX_IMAGE_SIDE });
-    expect(fitSize(9000, 100)).toEqual({ width: MAX_IMAGE_SIDE, height: 27 });
+  test('keeps the shape and makes the long side 1,600 pixels', () => {
+    expect(fitSize(4032, 3024)).toEqual({ width: MAX_IMAGE_SIDE, height: 1200 });
+    expect(fitSize(3024, 4032)).toEqual({ width: 1200, height: MAX_IMAGE_SIDE });
+    expect(fitSize(9000, 100)).toEqual({ width: MAX_IMAGE_SIDE, height: 18 });
   });
 
   test('keeps a small image as it is', () => {

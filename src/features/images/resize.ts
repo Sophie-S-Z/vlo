@@ -1,13 +1,13 @@
 /*
  * Image size on the device (Phase 16, decision G2). The browser decodes the file, Vlo draws it at most
- * `MAX_IMAGE_SIDE` pixels on its long side, and stores a JPEG at 85% quality. An image with transparent
+ * `MAX_IMAGE_SIDE` pixels on its long side, and stores a JPEG at 80% quality. An image with transparent
  * pixels stays a PNG. The new file holds no camera data, so a photo's place and time never travel in it.
  */
 
 /** The long side of a stored image, in pixels. */
-export const MAX_IMAGE_SIDE = 2400;
+export const MAX_IMAGE_SIDE = 1600;
 /** The JPEG quality of a stored image. */
-export const JPEG_QUALITY = 0.85;
+export const JPEG_QUALITY = 0.8;
 /** The largest file that Vlo reads. A larger file is too big to decode on a phone. */
 export const MAX_IMAGE_INPUT = 50 * 1024 * 1024;
 
