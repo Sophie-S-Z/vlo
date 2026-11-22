@@ -1,6 +1,6 @@
 # Vlo privacy
 
-Version 21, 18 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
+Version 22, 22 November 2026. The app shows these words at `/privacy` (`src/features/policy/privacy.ts`). A unit test keeps this file and the page the same. The page also lists the hosts that the network module allows for each purpose (`HOSTS` in `src/lib/net.ts`).
 
 ## What stays on this device
 
@@ -52,7 +52,7 @@ Up to 6 short phrases from the open item. A phrase that holds a private name sta
 
 Only after you turn on sync, on the Account page or in Settings, and only between the devices that you sign in on or pair.
 
-Your projects, encrypted in the browser: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. With a pairing link, only your devices have the key, and the server sees sizes, times and a random id for each device, never a title or a word. With an account, your account keeps the key on the server too.
+Your projects, encrypted in the browser: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. With a pairing link, only your devices have the key, and the server sees sizes, times and a random id for each device, never a title or a word. With an account, your account keeps the key on the server too. The encrypted research files, images and saved versions go to Cloudflare R2 through a Cloudflare Worker of Vlo, and the sync server keeps only their ids and sizes. A copy that no device uses leaves R2 within about 2 days.
 
 ### Sprint rooms
 

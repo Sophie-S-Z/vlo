@@ -32,6 +32,29 @@ vi.mock('@/features/share/rpc', async (original) => ({
     Promise.resolve().then(() => relay.fake?.call(name, args)),
 }));
 
+/** The file store (scaling fix 5): off unless a test turns it on, and full when a test says so. */
+const store = vi.hoisted(() => ({ on: false, full: false }));
+vi.mock('@/features/sync/files', async (original) => {
+  const real = await original<typeof import('@/features/sync/files')>();
+  const { ShareError } = await import('@/features/share/rpc');
+  return {
+    ...real,
+    filesReady: () => store.on,
+    putFile: (space: SyncSpace, key: string, sealed: { payload: string; iv: string }) =>
+      Promise.resolve().then(() => {
+        if (store.full) throw new ShareError('limit');
+        relay.fake?.putFile({
+          p_space: space.spaceId,
+          p_token: space.token,
+          p_device: space.deviceId,
+          p_key: key,
+          ...sealed,
+        });
+      }),
+    getFile: (_space: SyncSpace, id: string) => Promise.resolve(relay.fake?.files.get(id) ?? null),
+  };
+});
+
 const OTHER = 'device-other-0000000';
 const TOKEN = 'space-token'.padEnd(43, '0');
 let now = 1000;
@@ -132,6 +155,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  store.on = false;
+  store.full = false;
   await db.delete();
   for (const d of await indexedDB.databases())
     if (d.name?.startsWith('vlo-item-')) indexedDB.deleteDatabase(d.name);
@@ -732,5 +757,85 @@ describe('pull', () => {
     await syncOnce();
     expect(await db.cards.get('c2')).toBeDefined();
     expect(await db.cards.get('c3')).toBeUndefined();
+  });
+});
+
+describe('the file store (scaling fix 5, ADR 0014)', () => {
+  const image = (id: string) => ({
+    id,
+    projectId: 'p1',
+    type: 'image/jpeg',
+    size: 4,
+    width: 40,
+    height: 30,
+    addedAt: 0,
+    data: new Blob(['jpeg'], { type: 'image/jpeg' }),
+  });
+  const relayBlob = async (name: string) => {
+    const key = await blobKey(keys, name);
+    return [...fake.spaces.values()][0]?.blobs.find((b) => b.key === key);
+  };
+  const imageFromOther = async () => {
+    const { data, ...info } = image('g1');
+    const sealed = await sealBlob(
+      rows([
+        {
+          table: 'images',
+          id: 'g1',
+          at: 1500,
+          row: { ...info, data: toBase64(new Uint8Array(await data.arrayBuffer())) },
+        },
+      ]),
+      keys,
+    );
+    fake.putFile({
+      p_space: spaceId,
+      p_token: TOKEN,
+      p_device: OTHER,
+      p_key: await blobKey(keys, 'image:g1'),
+      ...sealed,
+    });
+  };
+
+  test('an image goes to the store, and the relay keeps only its id and the rows', async () => {
+    store.on = true;
+    await db.images.add(image('g1'));
+    now = 2000;
+    await syncOnce();
+    const row = await relayBlob('image:g1');
+    expect(row?.payload).toMatch(/^[0-9a-f-]{36}$/);
+    const sealed = fake.files.get(row?.payload ?? '');
+    expect(sealed).toBeDefined();
+    const own = (await openBlob({ payload: sealed ?? '', iv: row?.iv ?? '' }, keys)) as RowsBlob;
+    expect(own.rows[0]).toMatchObject({ table: 'images', id: 'g1' });
+    expect(await mine('rows:p1')).toMatchObject({ projectId: 'p1' });
+    expect(fake.files.size).toBe(1);
+  });
+
+  test('the other device gets a file from the store', async () => {
+    store.on = true;
+    await imageFromOther();
+    now = 2000;
+    await syncOnce();
+    expect(new TextDecoder().decode((await db.images.get('g1'))?.data as ArrayBuffer)).toBe('jpeg');
+  });
+
+  test('a build with no store skips a file in the store, and the rest still syncs', async () => {
+    await imageFromOther();
+    await fromOther('rows:p1', rows([{ table: 'cards', id: 'c1', at: 1500, row: card('c1', 'Storm') }]));
+    now = 2000;
+    await syncOnce();
+    expect(await db.images.get('g1')).toBeUndefined();
+    expect(await db.cards.get('c1')).toBeDefined();
+  });
+
+  test('a full store keeps the image on this device, and the text still syncs', async () => {
+    store.on = true;
+    store.full = true;
+    await db.images.add(image('g1'));
+    now = 2000;
+    await expect(syncOnce()).resolves.toMatchObject({ pulled: 0 });
+    expect(await relayBlob('image:g1')).toBeUndefined();
+    expect(await mine('text:s1')).toMatchObject({ itemId: 's1' });
   });
 });

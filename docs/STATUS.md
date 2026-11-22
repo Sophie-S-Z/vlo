@@ -1,8 +1,20 @@
 # Vlo status
 
-Last update: 2026-11-19
+Last update: 2026-11-22
 
 ## Done
+
+- Sync files in Cloudflare R2, scaling fix 5 (2026-11-22, ADR 0014, `docs/files-setup.md`):
+  - Research files, images and saved versions of sync go to an R2 bucket through a Cloudflare Worker
+    (`workers/files`). Supabase keeps a short row for each, whose payload is the file's id. Rows blobs and
+    chapter text stay in Supabase.
+  - Migration 0018: `sync_put_file`, `sync_check` and `sync_files_known`. Each space has 200 MB of files,
+    and all files stop at 9 GB. The 50 MB of a space and the 450 MB stop now count only data in Postgres.
+  - The Worker deletes each hour the files that no row used for a day. A full store keeps a file on its
+    device, and the text still syncs.
+  - The app uses the store only when the build sets `VITE_FILES_URL`. Privacy page version 22.
+  - Open: the owner runs migration 0018, then deploys the Worker. Then the Worker's address goes in `.env`
+    and in the CSP. Files that are on the relay already stay there until they change.
 
 - Sync and storage at scale on the free plan (2026-11-19):
   - Migration 0017: `sync_list` takes `p_seen`, the blobs of the 30-second read window that the device

@@ -79,8 +79,8 @@ an anonymous daily count that Settings can turn off.
 - Storage: Dexie 4 on IndexedDB (`src/lib/db.ts`).
 - In the browser: Transformers.js and WebLLM (AI and voices), harper.js (grammar), pdf-lib, pdfjs, docx,
   jszip, MathLive, MiniSearch.
-- Server: Supabase (Postgres functions called over REST, Auth with an email code or Google) and one Vercel
-  function (`api/geo.ts`).
+- Server: Supabase (Postgres functions called over REST, Auth with an email code or Google), one Vercel
+  function (`api/geo.ts`) and one Cloudflare Worker with an R2 bucket (`workers/files`).
 - Tests: Vitest with jsdom and `fake-indexeddb`, PGlite for the SQL, Playwright with axe-core.
 
 ## 4. Where things are
@@ -92,6 +92,8 @@ an anonymous daily count that Settings can turn off.
   module, `privacy.ts` the private names, `workerCall.ts` the worker helper.
 - `src/ui`: shared interface parts (Radix wrappers, buttons, dialogs).
 - `api/geo.ts`: the Vercel function that gives a rough place for the daily count.
+- `workers/files`: the Cloudflare Worker of the sync file store in R2 (ADR 0014). The owner deploys it with
+  Wrangler (`docs/files-setup.md`).
 - `supabase/migrations`: the SQL, numbered `NNNN_name.sql`.
 - `tests/unit`: Vitest tests. `tests/e2e`: Playwright tests, named after a user story where one exists.
   `tests/fixtures`: the poem, memoir and novel fixtures and the 100,000-word generator.
@@ -149,11 +151,12 @@ Notes on the test runs:
 | `VITE_SUPABASE_ANON_KEY` | `.env` (committed)         | The publishable key. It is public by design.                    |
 | `VITE_AUTH_GOOGLE`       | `.env` (committed)         | `1` shows "Continue with Google".                               |
 | `VITE_WPCOM_CLIENT_ID`   | build setting, optional    | The WordPress.com app id for Publish (`docs/publish-setup.md`). |
+| `VITE_FILES_URL`         | `.env` (committed)         | The Worker of the sync file store (`docs/files-setup.md`).      |
 | `SUPABASE_URL`           | GitHub repository variable | The keepalive job.                                              |
 | `SUPABASE_ANON_KEY`      | GitHub repository secret   | The keepalive job.                                              |
 
 `.env.example` shows each value with a placeholder. The setup guides are `docs/sharing-setup.md`,
-`docs/accounts-setup.md` and `docs/publish-setup.md`.
+`docs/accounts-setup.md`, `docs/publish-setup.md` and `docs/files-setup.md`.
 
 ## 7. Supabase
 
@@ -162,7 +165,8 @@ Notes on the test runs:
   tables. Each function checks the shape of its input and has a fixed `search_path`.
 - The server stores only cipher text for share links and sync. It never sees a word of a writer's text.
 - The free plan limits matter: a 500 MB database and 5 GB of egress each month. Migration 0017 and
-  ADR 0008 give the sync limits. The owner page warns at 70% of 500 MB.
+  ADR 0008 give the sync limits. Migration 0018 and ADR 0014 move sync files to Cloudflare R2. The owner
+  page warns at 70% of 500 MB.
 - `pg_cron` runs the daily cleanups (migrations 0003 and 0005).
 
 | Migration                  | What it adds                                                           |
@@ -184,8 +188,10 @@ Notes on the test runs:
 | `0015_writer_settings.sql` | The writer's toolbar and keys, kept with the account.                  |
 | `0016_owner_accounts.sql`  | The owner adds, changes and deletes accounts.                          |
 | `0017_sync_scale.sql`      | `sync_list` skips seen blobs, 50 MB for each space, a 450 MB stop.     |
+| `0018_sync_files.sql`      | Sync files in Cloudflare R2: file rows, 200 MB of files for a space.   |
 
-All 17 migrations are on the live project (0017 since 2026-11-20). A new migration takes the next number.
+Migrations 0001 to 0017 are on the live project (0017 since 2026-11-20). 0018 waits for the owner. A new
+migration takes the next number.
 Never edit a migration that is live. Write a new one.
 
 ## 8. Rules for every change
@@ -262,7 +268,9 @@ each pull request, and only when the owner asks for it:
 
 Other open items:
 
-- Scaling fix 5: move images and files to Cloudflare R2 when the database passes about 150 MB.
+- Scaling fix 5 (file store in R2): the owner runs migration 0018 and deploys the Worker. Then the Worker's
+  address goes in `.env` (`VITE_FILES_URL`) and in the CSP of `vercel.json`.
+
 - Supabase Auth has leaked password protection off.
 - Checks by hand: OpenRouter and Groq with a key, the in-browser model on WebGPU, real Safari
   (`docs/safari-storage-test.md`), folder save in a Chrome Incognito window.

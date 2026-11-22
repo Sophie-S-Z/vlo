@@ -1,7 +1,9 @@
 /*
- * A fake sync relay in memory, with the rules of migrations 0005 and 0017 that a device relies on: a put
- * replaces its device's blob of a key, and a read gives the other devices' blobs from a time on, oldest
- * first, up to 8 MB, without the blobs that the read names as seen. tests/unit/sync-relay.test.ts checks the real functions.
+ * A fake sync relay in memory, with the rules of migrations 0005, 0017 and 0018 that a device relies on: a
+ * put replaces its device's blob of a key, and a read gives the other devices' blobs from a time on, oldest
+ * first, up to 8 MB, without the blobs that the read names as seen. It holds the file store of the Worker
+ * too: a file row's payload is the id of its file. tests/unit/sync-relay.test.ts checks the real functions,
+ * and tests/unit/files-worker.test.ts the Worker.
  */
 
 export interface RelayBlob {
@@ -19,7 +21,16 @@ interface Space {
 
 export class FakeSyncRelay {
   readonly spaces = new Map<string, Space>();
+  /** The sealed payloads of the file store, by file id. */
+  readonly files = new Map<string, string>();
   private last = 0;
+
+  /** Stores a sealed blob in the file store and registers it, as the Worker does. */
+  putFile(args: { p_space: string; p_token: string; p_device: string; p_key: string; payload: string; iv: string }) {
+    const id = crypto.randomUUID();
+    this.files.set(id, args.payload);
+    return this.call('sync_put', { ...args, p_payload: id, p_iv: args.iv });
+  }
 
   /** A relay time after every earlier one, as an ISO string. */
   now(): string {

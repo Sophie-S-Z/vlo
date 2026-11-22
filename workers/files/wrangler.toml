@@ -1,0 +1,17 @@
+# The file store of sync (scaling fix 5, ADR 0014). docs/files-setup.md gives the steps to deploy it.
+name = "vlo-files"
+main = "index.ts"
+compatibility_date = "2026-11-01"
+
+# The public values of the app's .env. The publishable key reaches only the functions of the anon role.
+[vars]
+SUPABASE_URL = "https://dcfpdiyxfweyuhdkktau.supabase.co"
+SUPABASE_KEY = "sb_publishable_26IPzCnymjsPCuIyO37yIQ_-ELS6RaV"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "vlo-files"
+
+# The sweep of unused files, each hour.
+[triggers]
+crons = ["17 * * * *"]
