@@ -112,7 +112,7 @@ export function anonKey(): string {
 }
 
 /** The ShareError kind of a refusal, from the message that the migration raises. */
-function kindOf(message: string): ShareErrorKind {
+export function kindOf(message: string): ShareErrorKind {
   if (message.includes('too large')) return 'too-large';
   if (message.includes('share unavailable')) return 'unavailable';
   if (message.includes('comment limit reached')) return 'limit';
@@ -120,6 +120,8 @@ function kindOf(message: string): ShareErrorKind {
   // Sync (migration 0005): a wrong space or token, and a space at its limits.
   if (message.includes('unknown space')) return 'unavailable';
   if (message.includes('device limit') || message.includes('space full')) return 'limit';
+  // The file store of sync (migration 0018).
+  if (message.includes('files full')) return 'limit';
   // Sprint rooms (migration 0006): an old or wrong code, and a full room.
   if (message.includes('unknown room')) return 'unavailable';
   if (message.includes('room full')) return 'limit';

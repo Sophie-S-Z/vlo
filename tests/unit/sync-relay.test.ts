@@ -16,6 +16,7 @@ const MIGRATIONS = [
   '0004_limits.sql',
   '0005_sync.sql',
   '0017_sync_scale.sql',
+  '0018_sync_files.sql',
 ];
 const IV = 'AAAAAAAAAAAAAAAA';
 /** A token, device id or key of the shape that Vlo makes. */
@@ -78,6 +79,29 @@ const list = (
     'select * from public.sync_list($1, $2, $3, $4, $5)',
     [space, token, device, since, seen === null ? null : JSON.stringify(seen)],
   );
+
+const FILE = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
+const putFile = (
+  space: string,
+  device: string,
+  key: string,
+  file: string,
+  size: number,
+  token = T('space-token'),
+) =>
+  asAnon<{ at: Date }>('select public.sync_put_file($1, $2, $3, $4, $5, $6, $7) as at', [
+    space,
+    token,
+    device,
+    key,
+    IV,
+    file,
+    size,
+  ]);
+
+const known = (files: { space: string; id: string; size: number }[]) =>
+  asAnon<{ space: string; id: string }>('select * from public.sync_files_known($1)', [JSON.stringify(files)]);
 
 const blobs = async () =>
   (
@@ -268,7 +292,77 @@ describe('0005_sync', () => {
         "select p.proconfig as config from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and (p.proname like '%sync%')",
       )
     ).rows;
-    expect(rows).toHaveLength(10);
+    expect(rows).toHaveLength(14);
     for (const row of rows) expect(row.config?.find((c) => c.startsWith('search_path='))).toMatch(/pg_temp$/);
+  });
+});
+
+describe('0018_sync_files', () => {
+  test('a file row sends its id, and a put of text in its place makes it a row in Postgres again', async () => {
+    const space = await newSpace();
+    await putFile(space, DEVICE('a'), T('k1'), FILE(1), 1000);
+    expect((await list(space, DEVICE('b'))).map((b) => b.payload)).toEqual([FILE(1)]);
+    const file = async () =>
+      (await db.query<{ file: boolean }>('select file from sync_blobs where key = $1', [T('k1')])).rows[0]
+        ?.file;
+    expect(await file()).toBe(true);
+    await put(space, DEVICE('a'), T('k1'), 'cipher');
+    expect(await file()).toBe(false);
+    await expect(putFile(space, DEVICE('a'), T('k2'), FILE(2), 1, T('wrong'))).rejects.toThrow(
+      'unknown space',
+    );
+    await expect(putFile(space, DEVICE('a'), T('k2'), FILE(2), 3_000_001)).rejects.toThrow('blob too large');
+    await expect(putFile(space, DEVICE('a'), 'bad key', FILE(2), 1)).rejects.toThrow('bad key');
+  });
+
+  test('files have their own limits, and do not count for the limits of the rows in Postgres', async () => {
+    const space = await newSpace();
+    await putFile(space, DEVICE('a'), T('k1'), FILE(1), 3_000_000);
+    await db.query('update sync_blobs set size = 199999999');
+    await expect(putFile(space, DEVICE('a'), T('k2'), FILE(2), 2)).rejects.toThrow('files full');
+    // A replacement counts the new size in place of the old one.
+    await expect(putFile(space, DEVICE('a'), T('k1'), FILE(3), 5)).resolves.toHaveLength(1);
+    await db.query('update sync_blobs set size = 199999999');
+    // 200 MB of files leave the 50 MB of text free, and a read of the text does not stop at the files.
+    await put(space, DEVICE('a'), T('k2'), 'x'.repeat(2_800_000));
+    expect((await list(space, DEVICE('b'))).map((b) => b.key)).toEqual([T('k1'), T('k2')]);
+    // All files together stop at 9 GB.
+    const other = await newSpace(T('other'));
+    for (let i = 0; i < 45; i++)
+      await db.query(
+        `insert into sync_blobs (space_id, device, key, payload, iv, size, file)
+         values ($1, $2, $3, $4, $5, 199999999, true)`,
+        [other, DEVICE('z'), T(`f${String(i)}x`), FILE(100 + i), IV],
+      );
+    await expect(putFile(space, DEVICE('b'), T('k9'), FILE(9), 1)).rejects.toThrow('files full');
+  });
+
+  test('sync_check answers for a token, and sync_files_known names only the files that a row uses with their size', async () => {
+    const space = await newSpace();
+    const check = (token: string) =>
+      asAnon<{ ok: boolean }>('select public.sync_check($1, $2) as ok', [space, token]);
+    expect(await check(T('space-token'))).toEqual([{ ok: true }]);
+    expect(await check(T('wrong'))).toEqual([{ ok: false }]);
+    await putFile(space, DEVICE('a'), T('k1'), FILE(1), 100);
+    await putFile(space, DEVICE('a'), T('k2'), FILE(2), 200);
+    expect(
+      await known([
+        { space, id: FILE(1), size: 100 },
+        { space, id: FILE(2), size: 999 },
+        { space, id: FILE(3), size: 1 },
+      ]),
+    ).toEqual([{ space, id: FILE(1) }]);
+    await asAnon('select public.sync_drop($1, $2, $3, $4)', [space, T('space-token'), DEVICE('a'), T('k1')]);
+    expect(await known([{ space, id: FILE(1), size: 100 }])).toEqual([]);
+    await expect(
+      known(Array.from({ length: 1001 }, () => ({ space, id: FILE(1), size: 1 }))),
+    ).rejects.toThrow('bad files');
+  });
+
+  test('the anon role cannot run the checks of a put by themselves', async () => {
+    const space = await newSpace();
+    await expect(
+      asAnon('select public.sync_put_checks($1, $2, $3, $4)', [space, DEVICE('a'), T('k'), IV]),
+    ).rejects.toThrow(/permission denied/);
   });
 });

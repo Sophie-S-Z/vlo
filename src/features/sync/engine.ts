@@ -27,6 +27,7 @@ import {
   type TextBlob,
 } from './blobs';
 import { clockKey, onLocalChange, remoteTransaction, SYNC_TABLES } from './clock';
+import { filesReady, getFile, inFileStore, putFile, storedFile } from './files';
 import { mergeRows, type Version } from './merge';
 import {
   ACCOUNT_SYNC_PAUSED,
@@ -173,18 +174,24 @@ async function push(sync: Sync, started: number): Promise<number> {
   /** `own` is true for a file or an image, which may stay on this device when the relay has no room. */
   const put = async (name: string, blob: RowsBlob | TextBlob, own = false) => {
     const sealed = await sealBlob(blob, keys);
+    const key = await blobKey(keys, name);
+    const toStore = filesReady() && inFileStore(name);
     try {
-      await call('sync_put', space, {
-        p_device: space.deviceId,
-        p_key: await blobKey(keys, name),
-        p_payload: sealed.payload,
-        p_iv: sealed.iv,
-      });
+      if (toStore) await putFile(space, key, sealed);
+      else
+        await call('sync_put', space, {
+          p_device: space.deviceId,
+          p_key: key,
+          p_payload: sealed.payload,
+          p_iv: sealed.iv,
+        });
       pushed += 1;
     } catch (error) {
       // A text too large for the relay stays on this device, and the rest still syncs. So does a file or
-      // an image when the space is full: the other devices show its alt text or its name.
-      if (!(error instanceof ShareError && (error.kind === 'too-large' || (own && error.kind === 'limit'))))
+      // an image when the space is full: the other devices show its alt text or its name. A full file
+      // store keeps each blob of its own on the device too, so the text still syncs.
+      const skip = own || toStore;
+      if (!(error instanceof ShareError && (error.kind === 'too-large' || (skip && error.kind === 'limit'))))
         throw error;
     }
   };
@@ -436,7 +443,15 @@ async function pull(sync: Sync, since: number): Promise<Omit<SyncResult, 'pushed
   const rows: RowsBlob[] = [];
   const texts: TextBlob[] = [];
   const names = { ...sync.space.names };
-  for (const sealed of listed) {
+  for (const listing of listed) {
+    // A build with no file store skips the blobs in one, as an older Vlo does.
+    const payload = storedFile(listing.payload)
+      ? filesReady()
+        ? await getFile(sync.space, listing.payload)
+        : null
+      : listing.payload;
+    if (payload === null) continue;
+    const sealed = { ...listing, payload };
     const blob = await openBlob(sealed, sync.keys);
     if (blob === 'newer') return { pulled: 0, blocked: 'newer-schema' };
     if (blob) names[sealed.device] = blob.from;

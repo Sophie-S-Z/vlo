@@ -8,8 +8,8 @@ import type { NetPurpose } from '@/lib/db';
  */
 
 export const PRIVACY = {
-  version: 21,
-  date: '2026-11-18',
+  version: 22,
+  date: '2026-11-22',
   stays: [
     'Your text, titles, notes, board cards, timelines, orders and submissions stay in this browser. When you turn on sync, an encrypted copy goes to your other devices through the sync server.',
     'The real names and aliases on the People screen stay in this browser. When you turn on sync, they go encrypted to your other devices too.',
@@ -57,7 +57,7 @@ export const PRIVACY = {
       title: 'Sync between your devices',
       when: 'Only after you turn on sync, on the Account page or in Settings, and only between the devices that you sign in on or pair.',
       sends:
-        'Your projects, encrypted in the browser: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. With a pairing link, only your devices have the key, and the server sees sizes, times and a random id for each device, never a title or a word. With an account, your account keeps the key on the server too.',
+        'Your projects, encrypted in the browser: the text, the binder, the planning tables, and research files and images up to 2 MB each. Snapshots, sound files, the recordings of a memory, the network log and share links stay on each device. With a pairing link, only your devices have the key, and the server sees sizes, times and a random id for each device, never a title or a word. With an account, your account keeps the key on the server too. The encrypted research files, images and saved versions go to Cloudflare R2 through a Cloudflare Worker of Vlo, and the sync server keeps only their ids and sizes. A copy that no device uses leaves R2 within about 2 days.',
     },
     room: {
       title: 'Sprint rooms',

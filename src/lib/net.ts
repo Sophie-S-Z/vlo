@@ -47,21 +47,28 @@ export async function appPlace(): Promise<Place | null> {
   }
 }
 
-/** The Supabase project of this build (spec section 11), or '' when the build has none. */
-export function supabaseUrl(): string {
-  const value = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ?? '';
+/** The https origin in a build setting, or '' when the setting is empty or has another shape. */
+function originOf(value: string | undefined): string {
   try {
-    const url = new URL(value);
+    const url = new URL(value?.trim() ?? '');
     return url.protocol === 'https:' && url.pathname === '/' ? url.origin : '';
   } catch {
     return '';
   }
 }
 
-const supabaseHosts = (): string[] => {
-  const url = supabaseUrl();
-  return url === '' ? [] : [new URL(url).host];
-};
+/** The Supabase project of this build (spec section 11), or '' when the build has none. */
+export function supabaseUrl(): string {
+  return originOf(import.meta.env.VITE_SUPABASE_URL as string | undefined);
+}
+
+/** The file store of sync (scaling fix 5, ADR 0014), or '' when the build has none. */
+export function filesUrl(): string {
+  return originOf(import.meta.env.VITE_FILES_URL as string | undefined);
+}
+
+const hostOf = (url: string): string[] => (url === '' ? [] : [new URL(url).host]);
+const supabaseHosts = (): string[] => hostOf(supabaseUrl());
 
 /**
  * The hosts that each purpose may reach, with the port when it is not the default. A leading "*." allows
@@ -81,7 +88,8 @@ export const HOSTS: Readonly<Record<NetPurpose, readonly string[]>> = {
   'model-download': ['huggingface.co', '*.huggingface.co', '*.hf.co', 'raw.githubusercontent.com'],
   share: supabaseHosts(),
   usage: supabaseHosts(),
-  sync: supabaseHosts(),
+  // The images, research files and saved versions of sync go to the file store of the build, if it has one.
+  sync: [...supabaseHosts(), ...hostOf(filesUrl())],
   room: supabaseHosts(),
   // Phase 18: the account (Supabase Auth), the anonymous daily count and feedback to the owner reach only
   // the Supabase project of this build too.
