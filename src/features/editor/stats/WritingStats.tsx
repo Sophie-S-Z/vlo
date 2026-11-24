@@ -3,7 +3,8 @@ import { useEffect, useId, useState } from 'react';
 import { formatWords } from '@/features/library/format';
 import { countUnit } from '@/lib/wordcount';
 import { useActiveEditor } from '../commands/editorBus';
-import { docStats, minutesLabel, rangeWords, wordsToday, type TextStats } from './stats';
+import { durationLabel } from '@/lib/wordcount';
+import { docStats, rangeWords, wordsToday, type TextStats } from './stats';
 
 /*
  * The writing stats in the details panel (plan E4). They follow the open item and update after a short
@@ -106,11 +107,8 @@ export function WritingStats({
             <Row term="Without spaces" value={numbers.format(stats.charactersNoSpaces)} />
             <Row term={poem ? 'Lines' : 'Paragraphs'} value={numbers.format(stats.blocks)} />
             <Row term="Sentences" value={numbers.format(stats.sentences)} />
-            <Row
-              term="Reading time"
-              value={stats.words === 0 ? 'none' : minutesLabel(stats.readingMinutes)}
-            />
-            <Row term="Read aloud" value={stats.words === 0 ? 'none' : minutesLabel(stats.speakingMinutes)} />
+            <Row term="Reading time" value={durationLabel(stats.readingMinutes)} />
+            <Row term="Read aloud" value={durationLabel(stats.speakingMinutes)} />
           </>
         )}
       </dl>

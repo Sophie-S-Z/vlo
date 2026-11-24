@@ -335,14 +335,3 @@ export function fullStats(
     phrases3: topKeywords(threes, n, 3, 10),
   };
 }
-
-/** "45 sec", "about 3 min", "about 1 h 20 min". */
-export function durationLabel(minutes: number): string {
-  if (minutes <= 0) return 'none';
-  if (minutes < 1) return `${String(Math.max(1, Math.round(minutes * 60)))} sec`;
-  const whole = Math.round(minutes);
-  if (whole < 60) return `about ${String(whole)} min`;
-  const hours = Math.floor(whole / 60);
-  const rest = whole % 60;
-  return rest === 0 ? `about ${String(hours)} h` : `about ${String(hours)} h ${String(rest)} min`;
-}

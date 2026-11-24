@@ -2,8 +2,9 @@ import { syllable } from 'syllable';
 import { describe, expect, test } from 'vitest';
 import { cleanPrefs, ANALYSIS_DEFAULTS } from '@/features/analysis/analysisPrefs';
 import { metricText } from '@/features/analysis/StatsBar';
-import { durationLabel, easeLabel, fullStats, gradeLevel } from '@/features/analysis/stats';
+import { easeLabel, fullStats, gradeLevel } from '@/features/analysis/stats';
 import { paragraphsOf, plainChars, sentencesOf, wordsOf } from '@/features/analysis/text';
+import { durationLabel } from '@/lib/wordcount';
 
 const SAMPLE =
   'The cat sat on the mat. It was a sunny day, and the cat was happy.\n\n' +
@@ -92,7 +93,7 @@ describe('fullStats', () => {
 describe('labels', () => {
   test('durations, grades and ease', () => {
     expect(durationLabel(0)).toBe('none');
-    expect(durationLabel(0.5)).toBe('30 sec');
+    expect(durationLabel(0.5)).toBe('under 1 min');
     expect(durationLabel(3.4)).toBe('about 3 min');
     expect(durationLabel(80)).toBe('about 1 h 20 min');
     expect(gradeLevel(8.2)).toBe('8th grade');
@@ -105,7 +106,7 @@ describe('labels', () => {
     const stats = fullStats(SAMPLE, 'prose', syllable);
     expect(metricText('words', stats, 'prose')).toBe('34 words');
     expect(metricText('paragraphs', stats, 'poem')).toBe('2 lines');
-    expect(metricText('reading', stats, 'prose')).toBe('9 sec to read');
+    expect(metricText('reading', stats, 'prose')).toBe('under 1 min to read');
     expect(metricText('grade', stats, 'prose')).toMatch(/^grade \d/);
   });
 
