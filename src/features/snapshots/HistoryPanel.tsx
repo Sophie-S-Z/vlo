@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { Pin } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import type * as Y from 'yjs';
 import type { Item, Snapshot } from '@/lib/db';
@@ -8,7 +9,19 @@ import { countUnit, countWords } from '@/lib/wordcount';
 import { useManuscript } from '@/features/editor/manuscript';
 import { formatWords } from '@/features/library/format';
 import { Button } from '@/ui/button';
-import { restoreSnapshot, snapshotsOf, takeSnapshot } from './snapshots';
+import { cn } from '@/ui/cn';
+import { keepSnapshotAsVersion } from '@/features/versions/versions';
+import { clock } from '@/lib/clock';
+import { entryTime, HistoryError } from './entries';
+import { EntryForm, formatTime, NameForm } from './EntryForms';
+import {
+  deleteSnapshot,
+  editSnapshot,
+  restoreSnapshot,
+  snapshotsOf,
+  takeSnapshot,
+  undoDeleteSnapshot,
+} from './snapshots';
 import { useWordDiff } from './useWordDiff';
 import type { DiffPart } from './wordDiff';
 import { recordFeature } from '@/features/usage/usage';
@@ -17,14 +30,38 @@ import type { EditorForm } from '@/features/library/templates';
 const CURRENT = 'current';
 const MANUAL = 'Saved by you';
 
-// Seconds are shown, so two snapshots in the same minute get different names.
-const formatTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
+const formatDay = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' });
 
 /** "Saved by you, 2 Nov 2026, 21:40:12" or "2 Nov 2026, 21:40:12" for an automatic snapshot. */
 export function snapshotName(snapshot: Snapshot): string {
-  const time = formatTime.format(snapshot.createdAt);
+  const time = formatTime.format(entryTime(snapshot));
   return snapshot.label ? `${snapshot.label}, ${time}` : time;
 }
+
+/** "Today", "Yesterday" or the full date of a time, on the device's calendar. */
+function dayName(time: number, now: number): string {
+  const day = new Date(time).toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (day === new Date(now).toDateString()) return 'Today';
+  if (day === yesterday.toDateString()) return 'Yesterday';
+  return formatDay.format(time);
+}
+
+/** The snapshots in groups of one day each, newest first, by the date that History shows. */
+function byDay(snapshots: readonly Snapshot[], now: number): { day: string; rows: Snapshot[] }[] {
+  const groups: { day: string; rows: Snapshot[] }[] = [];
+  for (const snapshot of snapshots) {
+    const day = dayName(entryTime(snapshot), now);
+    const last = groups.at(-1);
+    if (last?.day === day) last.rows.push(snapshot);
+    else groups.push({ day, rows: [snapshot] });
+  }
+  return groups;
+}
+
+const errorText = (error: unknown, fallback: string) =>
+  error instanceof HistoryError ? error.message : fallback;
 
 interface HistoryPanelProps {
   item: Item;
@@ -84,7 +121,9 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
   const [compareId, setCompareId] = useState(CURRENT);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [deleted, setDeleted] = useState<Snapshot | null>(null);
   const compareLabelId = useId();
+  const detailsId = useId();
   // The text when the panel opened. The dialog is modal, so only another tab can change it meanwhile.
   const [nowText, setNowText] = useState(currentText);
   // The counts use the unit of the project's language (F38).
@@ -100,19 +139,34 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
   const diff = useWordDiff(picked ? picked.text : null, otherText ?? nowText);
   const diffLabelId = useId();
 
-  async function saveNow() {
+  const run = async (action: () => Promise<void>, fallback: string) => {
     setBusy(true);
+    setDeleted(null);
+    setMessage('');
     try {
+      await action();
+    } catch (error) {
+      setMessage(errorText(error, fallback));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveNow = () =>
+    run(async () => {
       const text = currentText();
       setNowText(text);
       await takeSnapshot(item, doc, text, MANUAL);
       setMessage('Snapshot saved.');
-    } catch {
-      setMessage('Vlo could not save the snapshot. Try again.');
-    } finally {
-      setBusy(false);
-    }
-  }
+    }, 'Vlo could not save the snapshot. Try again.');
+
+  const remove = (snapshot: Snapshot) =>
+    run(async () => {
+      const row = await deleteSnapshot(snapshot.id);
+      setPickedId(null);
+      setMessage(`Deleted the snapshot from ${snapshotName(snapshot)}.`);
+      setDeleted(row ?? null);
+    }, 'Vlo could not delete the snapshot. Try again.');
 
   async function restore() {
     if (!picked) return;
@@ -131,13 +185,10 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
 
   return (
     <div className="grid gap-5">
-      <div className="flex flex-wrap items-center gap-3">
+      <div>
         <Button variant="outline" disabled={busy} onClick={() => void saveNow()}>
           Save a snapshot now
         </Button>
-        <p role="status" className="text-sm text-muted">
-          {message}
-        </p>
       </div>
 
       {snapshots === undefined ? (
@@ -147,38 +198,54 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
       ) : (
         <fieldset className="grid gap-1">
           <legend className="mb-2 text-sm font-medium">Snapshots, newest first</legend>
-          {snapshots.map((snapshot) => (
-            <label
-              key={snapshot.id}
-              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-transparent px-3 py-2 hover:border-rule has-[:checked]:border-accent has-[:checked]:bg-bg"
-            >
-              <input
-                type="radio"
-                name={`snapshot-${item.id}`}
-                value={snapshot.id}
-                checked={snapshot.id === pickedId}
-                onChange={() => {
-                  setPickedId(snapshot.id);
-                  // A snapshot never compares with itself, so the compare goes back to the current text.
-                  if (snapshot.id === compareId) setCompareId(CURRENT);
-                  setMessage('');
-                }}
-                className="size-4 accent-[var(--color-accent)]"
-              />
-              <span className="grid">
-                {snapshotName(snapshot)}
-                <span className="text-xs text-muted">
-                  {formatWords(wordCounts.get(snapshot.id) ?? 0, countUnit(language))}
-                </span>
-              </span>
-            </label>
+          {byDay(snapshots, clock.now()).map(({ day, rows }) => (
+            <div key={day} className="grid gap-1">
+              <p className="mt-2 text-xs font-medium text-muted">{day}</p>
+              {rows.map((snapshot) => (
+                <label
+                  key={snapshot.id}
+                  className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-transparent px-3 py-2 hover:border-rule has-[:checked]:border-accent has-[:checked]:bg-bg"
+                >
+                  <input
+                    type="radio"
+                    name={`snapshot-${item.id}`}
+                    value={snapshot.id}
+                    checked={snapshot.id === pickedId}
+                    onChange={() => {
+                      setPickedId(snapshot.id);
+                      // A snapshot never compares with itself, so the compare goes back to the current text.
+                      if (snapshot.id === compareId) setCompareId(CURRENT);
+                      setMessage('');
+                      setDeleted(null);
+                    }}
+                    className="size-4 accent-[var(--color-accent)]"
+                  />
+                  <span className="grid min-w-0">
+                    <span className="flex items-center gap-1">
+                      {snapshotName(snapshot)}
+                      {snapshot.pinned && (
+                        <>
+                          <Pin aria-hidden className="size-3.5 text-accent" />
+                          <span className="sr-only">, pinned</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {formatWords(wordCounts.get(snapshot.id) ?? 0, countUnit(language))}
+                      {snapshot.shownAt !== undefined && `. Saved ${formatTime.format(snapshot.createdAt)}`}
+                    </span>
+                    {snapshot.note && <span className="truncate text-sm text-muted">{snapshot.note}</span>}
+                  </span>
+                </label>
+              ))}
+            </div>
           ))}
         </fieldset>
       )}
       <p className="text-sm text-muted">
         Vlo keeps all automatic snapshots of the last day. After that, it keeps the newest one of each day for
-        30 days, then the newest one of each week. The snapshots that you save, and those from before a
-        restore, always stay.
+        30 days, then the newest one of each week. The snapshots that you save, name or pin, and those from
+        before a restore, always stay.
       </p>
 
       {picked && (
@@ -229,13 +296,70 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
               <DiffView parts={diff.parts} />
             </div>
           )}
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Button disabled={busy} onClick={() => void restore()}>
               Restore this snapshot
+            </Button>
+            <Button variant="ghost" disabled={busy} onClick={() => void remove(picked)}>
+              Delete this snapshot
             </Button>
           </div>
         </section>
       )}
+
+      {picked && (
+        <section aria-labelledby={detailsId} className="grid gap-4 border-t border-rule pt-4">
+          <h3 id={detailsId} className="font-display text-lg font-semibold">
+            Details
+          </h3>
+          <EntryForm
+            key={picked.id}
+            entry={picked}
+            name={picked.label ?? ''}
+            pinned={picked.pinned ?? false}
+            submit={(edit) =>
+              run(async () => {
+                await editSnapshot(picked.id, edit);
+                setMessage('Details saved.');
+              }, 'Vlo could not save the details. Try again.')
+            }
+          />
+          <NameForm
+            key={`keep-${picked.id}`}
+            label="Keep this snapshot as a version named"
+            initial=""
+            submit={(name) =>
+              run(async () => {
+                const kept = await keepSnapshotAsVersion(item, picked.id, name);
+                setMessage(`Kept the snapshot as the version “${kept}”. Versions shows it.`);
+              }, 'Vlo could not keep the snapshot as a version. Try again.')
+            }
+          />
+        </section>
+      )}
+      {/* At the foot of the panel, so a message shows near a form far down a long list. */}
+      <div
+        role="status"
+        className={cn(
+          'sticky -bottom-6 flex flex-wrap items-center gap-2 bg-surface text-sm text-muted',
+          (message || deleted) && 'border-t border-rule pt-3 pb-6',
+        )}
+      >
+        {message}
+        {deleted && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void run(async () => {
+                await undoDeleteSnapshot(deleted);
+                setMessage('The snapshot is back.');
+              }, 'Vlo could not bring the snapshot back. Try again.');
+            }}
+          >
+            Undo
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

@@ -104,3 +104,45 @@ test('the history panel has no serious axe issues', async ({ page }) => {
     .check();
   expect(await seriousIssues(page)).toEqual([]);
 });
+
+test('edit the details of a snapshot, keep it as a version, and delete it with Undo', async ({ page }) => {
+  await newPoetry(page);
+  await page.keyboard.type('The tide goes out');
+  await saveSnapshotNow(page);
+
+  await page.getByRole('button', { name: 'History' }).click();
+  await history(page)
+    .getByRole('radio', { name: /^Saved by you/ })
+    .check();
+  await history(page).getByLabel('Name', { exact: true }).fill('Low tide');
+  await history(page).getByLabel('Note').fill('Before the storm.');
+  await history(page).getByLabel('Date and time').fill('2026-01-02T08:30');
+  await history(page)
+    .getByRole('checkbox', { name: /Pin it/ })
+    .check();
+  await history(page).getByRole('button', { name: 'Save details' }).click();
+  await expect(history(page).getByRole('status')).toHaveText('Details saved.');
+  const picked = history(page).getByRole('radio', { name: /^Low tide, .*, pinned/ });
+  await expect(picked).toBeChecked();
+  await expect(picked).toHaveAccessibleName(/Before the storm\./);
+  // The list groups the snapshot under the date that the writer gave, not under today.
+  await expect(history(page).getByText('Today', { exact: true })).toHaveCount(0);
+  expect(await seriousIssues(page)).toEqual([]);
+
+  await history(page).getByLabel('Keep this snapshot as a version named').fill('Calm');
+  await history(page).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(history(page).getByRole('status')).toContainText('Kept the snapshot as the version “Calm”.');
+
+  await history(page).getByRole('button', { name: 'Delete this snapshot' }).click();
+  await expect(history(page).getByRole('radio')).toHaveCount(0);
+  await history(page).getByRole('button', { name: 'Undo' }).click();
+  await expect(history(page).getByRole('radio', { name: /^Low tide/ })).toHaveCount(1);
+
+  await history(page).getByRole('button', { name: 'Versions' }).click();
+  const versions = history(page).getByRole('list', { name: 'Other versions' });
+  await expect(versions).toContainText('Calm');
+  await versions.getByRole('button', { name: 'Edit details' }).click();
+  await versions.getByLabel('Note').fill('The quiet one.');
+  await versions.getByRole('button', { name: 'Save details' }).click();
+  await expect(versions).toContainText('The quiet one.');
+});

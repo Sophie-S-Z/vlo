@@ -12,7 +12,8 @@ import {
   BEFORE_TAKE,
   compare,
   deleteVersion,
-  renameVersion,
+  editVersion,
+  renameActive,
   saveVersion,
   switchVersion,
   takeBlock,
@@ -162,11 +163,16 @@ describe('versions', () => {
   test('rename works for the active version and the others', async () => {
     setParagraphs('One.');
     await saveVersion(item, editor, doc, 'prose', 'B');
-    await renameVersion(item.id, null, 'First draft');
+    await renameActive(item.id, 'First draft');
     expect((await db.items.get(item.id))?.versionName).toBe('First draft');
+    await expect(renameActive(item.id, 'b')).rejects.toThrow(/has a version named/);
     const [b] = await versionsOf(item.id);
-    await expect(renameVersion(item.id, b?.id ?? '', 'first draft')).rejects.toThrow(/has a version named/);
-    await renameVersion(item.id, b?.id ?? '', 'Second draft');
+    const edit = { note: '', at: b?.createdAt ?? 0 };
+    await expect(editVersion(item.id, b?.id ?? '', { ...edit, name: 'first draft' })).rejects.toThrow(
+      /has a version named/,
+    );
+    await editVersion(item.id, b?.id ?? '', { ...edit, name: ' B ' });
+    await editVersion(item.id, b?.id ?? '', { ...edit, name: 'Second draft' });
     expect((await versionsOf(item.id))[0]?.name).toBe('Second draft');
   });
 

@@ -18,8 +18,8 @@ export interface SupportLine {
 }
 
 export const HELP = {
-  version: 34,
-  date: '2026-11-18',
+  version: 35,
+  date: '2026-11-24',
   guide: [
     {
       title: 'Start a project',
@@ -255,10 +255,18 @@ export const HELP = {
       title: 'Go back to an earlier draft',
       steps: [
         'Vlo saves a snapshot after every 10 minutes of writing.',
-        'Vlo keeps all automatic snapshots of the last day. After that, it keeps the newest one of each day for 30 days, then the newest one of each week. Your own snapshots always stay.',
+        'Vlo keeps all automatic snapshots of the last day. After that, it keeps the newest one of each day for 30 days, then the newest one of each week. The snapshots that you save, name or pin always stay.',
         'Choose History, then Save a snapshot now before a bold edit.',
         'Pick a snapshot in History to see its changes from the current text.',
         'Choose Restore this snapshot. Vlo saves the current text as a snapshot first.',
+      ],
+    },
+    {
+      title: 'Name, date and pin your snapshots',
+      steps: [
+        'Pick a snapshot in History. Under Details, give it a name, a note or a different date and time, or pin it. Its text does not change.',
+        'History sorts by the date that you give. Vlo also shows the time when it saved the snapshot.',
+        'Keep this snapshot as a version makes a named version from it. Delete this snapshot removes it, and Undo puts it back.',
       ],
     },
     {
@@ -267,6 +275,7 @@ export const HELP = {
         'To try a new direction, choose History, then Versions, and save the text as a named version.',
         'Switch to this puts a version in the editor and keeps the text it replaces as a version.',
         'Compare shows each paragraph that differs. Use this takes one paragraph of the other version into your text.',
+        'Edit details changes the name, the note and the date of a version.',
         'Versions go in backups and sync. Exports and word counts use the version in the editor.',
       ],
     },

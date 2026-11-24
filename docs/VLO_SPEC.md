@@ -256,7 +256,7 @@ interface Item {
 
 interface LifeStage { id: string; projectId: string; name: string; start: string; end: string; color: string; order: string }
 interface Sequence { id: string; projectId: string; name: string; itemIds: string[]; createdAt: number }
-interface Snapshot { id: string; projectId: string; itemId: string; label?: string; createdAt: number; state: Uint8Array; packed?: true; text: string } // packed: state is in gzip; a backup holds the plain state
+interface Snapshot { id: string; projectId: string; itemId: string; label?: string; note?: string; pinned?: true; createdAt: number; shownAt?: number; state: Uint8Array; packed?: true; text: string } // packed: state is in gzip; a backup holds the plain state. shownAt: the writer's date (ADR 0017)
 interface Card { id: string; projectId: string; itemId?: string; title: string; note?: string; x: number; y: number; color: string }
 interface Thread { id: string; projectId: string; name: string; color: string; order: string }
 interface CardLink { id: string; projectId: string; fromCardId: string; toCardId: string; threadId?: string }
@@ -339,6 +339,9 @@ Binder on the left, manuscript in the center, side panel on the right (Notes, AI
   thins the older automatic ones of its item. All of the last day stay, then the newest of each day for 30
   days, then the newest of each week. A snapshot that the writer saved, or one from before a step of the
   writer, stays.
+- History entries (ADR 0017): the writer gives a snapshot a name, a note, a date and a pin, and gives a
+  version a name, a note and a date. The text never changes. History sorts by the writer's date, and
+  thinning uses the true save time. A snapshot can become a named version, and a delete has Undo.
 - Session timer: a ring fills over the chosen time. At the end it asks "Close the session?". No penalty applies.
 - Command menu (Mod-K): jump to any item, run any action, search text (MiniSearch).
 

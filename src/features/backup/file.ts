@@ -35,6 +35,7 @@ import {
   MAX_ITEM_TARGET,
   MAX_LABELS,
   MAX_PACKET_TEXT,
+  MAX_NOTE,
   MAX_VERSION_NAME,
   SCENE_BREAKS,
   SCRIPT_STYLES,
@@ -88,6 +89,8 @@ import type {
  * (`settings.paragraphStyles`, Phase 19, Task E2). Version 17 adds the links between items in the text and
  * the `links` and `headings` of each text copy (Phase 19, Task F1). A version 17 file can also hold the
  * page setup (`settings.pageSetup`, Phase 19, Task F3); an older build keeps it and shows its own pages.
+ * It can also hold the note and the date that the writer gave to a snapshot or a version, and the pin of a
+ * snapshot (ADR 0017). An older build keeps them and shows the true save time.
  * Vlo still reads versions 1 to 16.
  * The reader trusts nothing in the file: it checks each row and each update before Vlo stores them.
  */
@@ -495,6 +498,14 @@ function checkItems(rows: Json[], projectId: string): Item[] {
   return rows as unknown as Item[];
 }
 
+/** Checks the note and the date that the writer gave to a snapshot or a version (ADR 0017). */
+function checkEntry(row: Json, what: string): void {
+  optionalText(row, 'note', what);
+  if (typeof row.note === 'string' && row.note.length > MAX_NOTE)
+    fail(`${DAMAGED} ${what} has a wrong note.`);
+  if (row.shownAt !== undefined) count(row, 'shownAt', what);
+}
+
 /** Applies an update to a new document, and checks that this build can show it. */
 function checkUpdate(update: Uint8Array, what: string): void {
   const doc = new Y.Doc();
@@ -555,6 +566,8 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
       optionalText(row, 'label', 'A snapshot');
       count(row, 'createdAt', 'A snapshot');
       text(row, 'text', 'A snapshot');
+      checkEntry(row, 'A snapshot');
+      if (row.pinned !== undefined && row.pinned !== true) fail(`${DAMAGED} A snapshot has a wrong pin.`);
     },
   );
   const versionRows = checkRows<Omit<ItemVersion, 'state'>>(
@@ -570,6 +583,7 @@ export async function readBackup(bytes: Uint8Array): Promise<Backup> {
       count(row, 'createdAt', 'A version');
       count(row, 'updatedAt', 'A version');
       text(row, 'text', 'A version');
+      checkEntry(row, 'A version');
     },
   );
   const sessions = checkRows<Session>(list(manifest, 'sessions'), project.id, 'A writing session', (row) => {

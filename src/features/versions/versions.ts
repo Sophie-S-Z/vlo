@@ -5,10 +5,18 @@ import type * as Y from 'yjs';
 import { KEEP_AI_MARKS } from '@/features/editor/extensions/aiOrigin';
 import { SKIP_TRACKING } from '@/features/editor/format/suggestion';
 import { docText } from '@/features/editor/itemText';
-import { contentState } from '@/features/snapshots/packing';
+import {
+  applyEntry,
+  cleanName,
+  cleanNote,
+  cleanTime,
+  entryTime,
+  HistoryError,
+} from '@/features/snapshots/entries';
+import { contentState, snapshotState } from '@/features/snapshots/packing';
 import { applyState, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
-import { db, MAX_VERSION_NAME, MAX_VERSIONS, type Item, type ItemVersion } from '@/lib/db';
+import { db, MAX_VERSIONS, type Item, type ItemVersion } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { docFromUpdate, YFRAGMENT } from '@/lib/ydocs';
 import { paragraphDiff, type ParagraphRow } from './paragraphDiff';
@@ -28,24 +36,22 @@ export const BEFORE_TAKE = 'Before Use this';
 type Kind = EditorForm;
 type ItemRef = Pick<Item, 'id' | 'projectId'>;
 
-export class VersionError extends Error {}
+export class VersionError extends HistoryError {}
 
 export function activeName(item: Pick<Item, 'versionName'>): string {
   return item.versionName ?? MAIN;
 }
 
-/** The item's other versions, oldest first. */
+/** The item's other versions, oldest first by the date that History shows. */
 export async function versionsOf(itemId: string): Promise<ItemVersion[]> {
   const rows = await db.itemVersions.where('itemId').equals(itemId).toArray();
-  return rows.sort((a, b) => a.createdAt - b.createdAt);
+  return rows.sort((a, b) => entryTime(a) - entryTime(b));
 }
 
 /** The name, trimmed, or an error that the writer can read. Names are unique for each item. */
 function checkName(name: string, taken: readonly string[]): string {
-  const clean = name.trim().replace(/\s+/g, ' ');
+  const clean = cleanName(name);
   if (clean === '') throw new VersionError('Give the version a name.');
-  if (clean.length > MAX_VERSION_NAME)
-    throw new VersionError(`Use ${String(MAX_VERSION_NAME)} characters or fewer.`);
   if (taken.some((t) => t.toLocaleLowerCase() === clean.toLocaleLowerCase()))
     throw new VersionError(`This item has a version named “${clean}”.`);
   return clean;
@@ -57,14 +63,8 @@ async function freshItem(itemId: string): Promise<Item> {
   return item;
 }
 
-/** Keeps a copy of the text in the editor as a new version, and gives its name. The editor keeps its text. */
-export async function saveVersion(
-  item: ItemRef,
-  editor: Editor,
-  doc: Y.Doc,
-  kind: Kind,
-  name: string,
-): Promise<string> {
+/** Adds a version of the item with a unique name, within the limit, and gives the name. */
+async function addVersion(item: ItemRef, name: string, state: Uint8Array, text: string): Promise<string> {
   const now = clock.now();
   return db.transaction('rw', db.items, db.itemVersions, async () => {
     const fresh = await freshItem(item.id);
@@ -79,10 +79,57 @@ export async function saveVersion(
       name: clean,
       createdAt: now,
       updatedAt: now,
-      state: contentState(doc),
-      text: docText(editor.state.doc, kind),
+      state,
+      text,
     });
     return clean;
+  });
+}
+
+/** Keeps a copy of the text in the editor as a new version, and gives its name. The editor keeps its text. */
+export function saveVersion(
+  item: ItemRef,
+  editor: Editor,
+  doc: Y.Doc,
+  kind: Kind,
+  name: string,
+): Promise<string> {
+  return addVersion(item, name, contentState(doc), docText(editor.state.doc, kind));
+}
+
+/** Keeps the text of a snapshot as a new version, and gives its name. The snapshot stays. */
+export async function keepSnapshotAsVersion(
+  item: ItemRef,
+  snapshotId: string,
+  name: string,
+): Promise<string> {
+  const snapshot = await db.snapshots.get(snapshotId);
+  if (snapshot?.itemId !== item.id) throw new VersionError('Vlo could not find that snapshot.');
+  return addVersion(item, name, await snapshotState(snapshot), snapshot.text);
+}
+
+export interface VersionEdit {
+  name: string;
+  note: string;
+  /** The date and time that History shows. The true save time gives no date of the writer. */
+  at: number;
+}
+
+/** Changes the name, the note and the date of a version that is not in the editor. Its text never changes. */
+export async function editVersion(itemId: string, versionId: string, edit: VersionEdit): Promise<void> {
+  const now = clock.now();
+  const note = cleanNote(edit.note);
+  const at = cleanTime(edit.at, now);
+  await db.transaction('rw', db.items, db.itemVersions, async () => {
+    const fresh = await freshItem(itemId);
+    const others = await versionsOf(itemId);
+    const row = others.find((v) => v.id === versionId);
+    if (!row) throw new VersionError('Vlo could not find that version.');
+    const taken = [activeName(fresh), ...others.filter((v) => v !== row).map((v) => v.name)];
+    row.name = checkName(edit.name, taken);
+    row.updatedAt = now;
+    applyEntry(row, note, at);
+    await db.itemVersions.put(row);
   });
 }
 
@@ -126,23 +173,21 @@ export async function switchVersion(
   });
 }
 
-/** Renames a version, or the active one when `versionId` is null. */
-export async function renameVersion(itemId: string, versionId: string | null, name: string): Promise<void> {
+/** Renames the version in the editor. */
+export async function renameActive(itemId: string, name: string): Promise<void> {
   await db.transaction('rw', db.items, db.itemVersions, async () => {
-    const fresh = await freshItem(itemId);
-    const others = await versionsOf(itemId);
-    const current = versionId === null ? activeName(fresh) : others.find((v) => v.id === versionId)?.name;
-    const taken = [activeName(fresh), ...others.map((v) => v.name)].filter((n) => n !== current);
-    const clean = checkName(name, taken);
-    if (versionId === null) {
-      await db.items
-        .where('id')
-        .equals(itemId)
-        .modify((row) => {
-          if (clean === MAIN) delete row.versionName;
-          else row.versionName = clean;
-        });
-    } else await db.itemVersions.update(versionId, { name: clean, updatedAt: clock.now() });
+    await freshItem(itemId);
+    const clean = checkName(
+      name,
+      (await versionsOf(itemId)).map((v) => v.name),
+    );
+    await db.items
+      .where('id')
+      .equals(itemId)
+      .modify((row) => {
+        if (clean === MAIN) delete row.versionName;
+        else row.versionName = clean;
+      });
   });
 }
 

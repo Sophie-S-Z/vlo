@@ -4,6 +4,17 @@ Last update: 2026-11-24
 
 ## Done
 
+- Editable History (2026-11-24, ADR 0017), the owner's choice "Manage entries only":
+  - Under Details in History, the writer gives a snapshot a name, a note, a date and time, and a pin.
+    "Edit details" in Versions changes the name, the note and the date of a version. The text of an entry
+    never changes.
+  - History sorts and groups the snapshots by day, by the writer's date. An entry with a date of the writer
+    also shows its true save time. Thinning uses the true save time, and a named or pinned snapshot stays.
+  - "Keep this snapshot as a version" makes a named version from a snapshot. "Delete this snapshot" has
+    Undo. The messages of History and Versions stay at the foot of the panel.
+  - The backup import checks the new fields. No migration, no new package, no change to the Dexie schema,
+    the document schema or `BACKUP_VERSION`.
+
 - Snapshot keeping and a safer save (2026-11-24, ADR 0015):
   - Each new automatic snapshot thins the older automatic snapshots of its item, as Time Machine does. All
     of the last day stay, then the newest of each day for 30 days, then the newest of each week. Only the
@@ -486,3 +497,4 @@ Last update: 2026-11-24
 | 2026-11-07 | A usage report covers the last full ISO week, in local time, and the Library asks only when that week has writing or counts.                                                                                                                                                                 | A report of an empty week tells nothing, and the prompt would come every week.                                                                                                                                      |
 | 2026-11-17 | The natural voices are Supertonic 2 in Transformers.js, not Kokoro or Piper.                                                                                                                                                                                                                 | It reads the letters of the text, so it needs no eSpeak NG phonemizer (GPL-3.0), and invented names do not break it.                                                                                                |
 | 2026-11-17 | Live dictation does not end a clip at a pause while an earlier clip turns into text.                                                                                                                                                                                                         | A slow device then gets fewer, longer clips, so it never falls behind the writer.                                                                                                                                   |
+| 2026-11-24 | A writer's date of a History entry goes in `shownAt`. `createdAt` stays the true save time, and thinning uses only `createdAt` (ADR 0017).                                                                                                                                                   | A date of the writer then cannot save or delete an automatic snapshot, and History can still show when Vlo saved it.                                                                                                |
