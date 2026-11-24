@@ -97,7 +97,7 @@ Anyone can read the anon key from the app, so migration 0004 puts limits on the 
 - At most 120 new links in an hour, and at most 300 MB of sealed text in all.
 - At most 600 new comments in an hour, and 500 comments on one link.
 - At most 2,000 usage reports in 7 days.
-- Sync (migration 0005): at most 20 new sync spaces in an hour, 5 devices and 50 MB for each space (migration 0017), and 2.8 MB for each blob. Migration 0017 also refuses new sync data when the whole database passes 450 MB, so the free 500 MB keeps room for accounts and share links. With the file store of migration 0018, the 50 MB and the 450 MB count only data in Postgres, and each space has 200 MB of files in Cloudflare R2 (`docs/files-setup.md`).
+- Sync (migration 0005): at most 20 new sync spaces in an hour, 5 devices and 50 MB for each space (migration 0017), and 2.8 MB for each blob. Migration 0017 also refuses new sync data when the whole database passes 450 MB, so the free 500 MB keeps room for accounts and share links. With the file store of migration 0018, the 50 MB and the 450 MB count only data in Postgres, and each space has 200 MB of files in Cloudflare R2 (`docs/files-setup.md`). Migration 0019 stores sync and share data as bytes, 25% less space for the same limits, and stops new share links and images too when the database passes 450 MB.
 - Each function checks the length and the characters of the IV and the owner token.
 
 When a limit stops a request, the writer or reader sees "The share server is at its limit for now. Try again in an hour." To change a limit, write a new migration with the new number. The daily cleanup frees space 30 days after each link expires.

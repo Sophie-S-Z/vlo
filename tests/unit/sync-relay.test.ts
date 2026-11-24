@@ -15,10 +15,14 @@ const MIGRATIONS = [
   '0003_cleanup.sql',
   '0004_limits.sql',
   '0005_sync.sql',
+  '0007_share_images.sql',
   '0017_sync_scale.sql',
   '0018_sync_files.sql',
+  '0019_sealed_bytes.sql',
 ];
 const IV = 'AAAAAAAAAAAAAAAA';
+/** A payload as the app sends it: base64. */
+const B = (text: string) => btoa(text);
 /** A token, device id or key of the shape that Vlo makes. */
 const T = (name: string) => name.padEnd(43, '0');
 const DEVICE = (name: string) => name.padEnd(22, '0');
@@ -58,7 +62,7 @@ async function newSpace(token = T('space-token')): Promise<string> {
   return row.id;
 }
 
-const put = (space: string, device: string, key: string, payload = 'cipher', token = T('space-token')) =>
+const put = (space: string, device: string, key: string, payload = B('cipher'), token = T('space-token')) =>
   asAnon<{ at: Date }>('select public.sync_put($1, $2, $3, $4, $5, $6) as at', [
     space,
     token,
@@ -106,7 +110,7 @@ const known = (files: { space: string; id: string; size: number }[]) =>
 const blobs = async () =>
   (
     await db.query<{ device: string; key: string; payload: string }>(
-      'select device, key, payload from sync_blobs',
+      'select device, key, public.vlo_b64(payload) as payload from sync_blobs',
     )
   ).rows;
 
@@ -135,7 +139,7 @@ describe('0005_sync', () => {
     const space = await newSpace();
     await put(space, DEVICE('a'), T('k1'));
     const wrong = T('not-the-token');
-    await expect(put(space, DEVICE('b'), T('k2'), 'x', wrong)).rejects.toThrow('unknown space');
+    await expect(put(space, DEVICE('b'), T('k2'), B('x'), wrong)).rejects.toThrow('unknown space');
     await expect(list(space, null, null, wrong)).rejects.toThrow('unknown space');
     for (const call of [
       'select public.sync_drop($1, $2, $3, $4)',
@@ -146,25 +150,25 @@ describe('0005_sync', () => {
       const args = [space, wrong, DEVICE('a'), T('k1')].slice(0, (call.match(/\$/g) ?? []).length);
       await expect(asAnon(call, args)).rejects.toThrow('unknown space');
     }
-    expect(await blobs()).toEqual([{ device: DEVICE('a'), key: T('k1'), payload: 'cipher' }]);
+    expect(await blobs()).toEqual([{ device: DEVICE('a'), key: T('k1'), payload: B('cipher') }]);
   });
 
   test('a put replaces the blob of its device and key, and a read skips the own device', async () => {
     const space = await newSpace();
-    const [first] = await put(space, DEVICE('a'), T('k1'), 'one');
-    await put(space, DEVICE('a'), T('k1'), 'two');
-    await put(space, DEVICE('b'), T('k1'), 'other');
-    expect((await blobs()).map((b) => b.payload).sort()).toEqual(['other', 'two']);
-    expect((await list(space, DEVICE('a'))).map((b) => b.payload)).toEqual(['other']);
-    expect((await list(space, DEVICE('b'))).map((b) => b.payload)).toEqual(['two']);
+    const [first] = await put(space, DEVICE('a'), T('k1'), B('one'));
+    await put(space, DEVICE('a'), T('k1'), B('two'));
+    await put(space, DEVICE('b'), T('k1'), B('other'));
+    expect((await blobs()).map((b) => b.payload).sort()).toEqual([B('other'), B('two')]);
+    expect((await list(space, DEVICE('a'))).map((b) => b.payload)).toEqual([B('other')]);
+    expect((await list(space, DEVICE('b'))).map((b) => b.payload)).toEqual([B('two')]);
     expect(first?.at).toBeInstanceOf(Date);
     const devices = await asAnon<{ device: string; size: bigint | number }>(
       'select * from public.sync_devices($1, $2)',
       [space, T('space-token')],
     );
     expect(devices.map((d) => [d.device, Number(d.size)])).toEqual([
-      [DEVICE('a'), 3],
-      [DEVICE('b'), 5],
+      [DEVICE('a'), 4],
+      [DEVICE('b'), 8],
     ]);
   });
 
@@ -185,8 +189,8 @@ describe('0005_sync', () => {
 
   test('sync_list skips the blobs that the read names as seen, until they change', async () => {
     const space = await newSpace();
-    await put(space, DEVICE('a'), T('k1'), 'one');
-    await put(space, DEVICE('a'), T('k2'), 'two');
+    await put(space, DEVICE('a'), T('k1'), B('one'));
+    await put(space, DEVICE('a'), T('k2'), B('two'));
     expect(await list(space, DEVICE('b'))).toHaveLength(2);
     // The relay keeps microseconds, and a JavaScript Date keeps milliseconds, so the test reads the relay's text.
     const exact = (
@@ -196,9 +200,9 @@ describe('0005_sync', () => {
       )
     ).rows;
     expect(await list(space, DEVICE('b'), null, T('space-token'), exact)).toEqual([]);
-    await put(space, DEVICE('a'), T('k2'), 'two again');
+    await put(space, DEVICE('a'), T('k2'), B('two again'));
     const next = await list(space, DEVICE('b'), null, T('space-token'), exact);
-    expect(next.map((b) => b.payload)).toEqual(['two again']);
+    expect(next.map((b) => b.payload)).toEqual([B('two again')]);
     await expect(
       list(space, DEVICE('b'), null, T('space-token'), Array(1001).fill(exact[0])),
     ).rejects.toThrow('bad seen');
@@ -215,18 +219,18 @@ describe('0005_sync', () => {
       DEVICE('b'),
       T('k'),
     ]);
-    await expect(put(space, DEVICE('a'), T('k3'), 'xx')).rejects.toThrow('space full');
+    await expect(put(space, DEVICE('a'), T('k3'), B('xx'))).rejects.toThrow('space full');
     await db.query('update sync_blobs set size = 49999999 where device = $1 and key = $2', [
       DEVICE('b'),
       T('k'),
     ]);
-    await expect(put(space, DEVICE('a'), T('k3'), 'xx')).rejects.toThrow('space full');
+    await expect(put(space, DEVICE('a'), T('k3'), B('xx'))).rejects.toThrow('space full');
     // A replacement counts the new size in place of the old one.
-    await expect(put(space, DEVICE('b'), T('k'), 'small')).resolves.toHaveLength(1);
+    await expect(put(space, DEVICE('b'), T('k'), B('small'))).resolves.toHaveLength(1);
     // Other spaces' data alone stops nothing. The size of the whole database does.
     const other = await newSpace(T('other'));
     await db.query('update sync_blobs set size = 40000000');
-    await put(other, DEVICE('z'), T('k'), 'x'.repeat(10), T('other'));
+    await put(other, DEVICE('z'), T('k'), 'x'.repeat(12), T('other'));
     const [original] = (
       await db.query<{ def: string }>("select pg_get_functiondef('public.sync_server_full'::regproc) as def")
     ).rows;
@@ -234,9 +238,9 @@ describe('0005_sync', () => {
       'create or replace function public.sync_server_full(p_more bigint) returns boolean language sql as $$ select true $$',
     );
     try {
-      await expect(put(other, DEVICE('z'), T('k2'), 'x', T('other'))).rejects.toThrow('server full');
+      await expect(put(other, DEVICE('z'), T('k2'), B('x'), T('other'))).rejects.toThrow('server full');
       // A put that makes a blob smaller still goes through.
-      await expect(put(other, DEVICE('z'), T('k'), 'x', T('other'))).resolves.toHaveLength(1);
+      await expect(put(other, DEVICE('z'), T('k'), B('x'), T('other'))).resolves.toHaveLength(1);
     } finally {
       await db.exec(original?.def ?? '');
     }
@@ -264,7 +268,7 @@ describe('0005_sync', () => {
   test('the cleanup deletes a space with no use for 90 days, with its blobs, and keeps a space in use', async () => {
     const old = await newSpace(T('old'));
     const used = await newSpace(T('used'));
-    await put(old, DEVICE('a'), T('k'), 'cipher', T('old'));
+    await put(old, DEVICE('a'), T('k'), B('cipher'), T('old'));
     await db.query("update sync_spaces set used_at = now() - interval '91 days'");
     // A use marks the space again.
     await list(used, null, null, T('used'));
@@ -306,7 +310,7 @@ describe('0018_sync_files', () => {
       (await db.query<{ file: boolean }>('select file from sync_blobs where key = $1', [T('k1')])).rows[0]
         ?.file;
     expect(await file()).toBe(true);
-    await put(space, DEVICE('a'), T('k1'), 'cipher');
+    await put(space, DEVICE('a'), T('k1'), B('cipher'));
     expect(await file()).toBe(false);
     await expect(putFile(space, DEVICE('a'), T('k2'), FILE(2), 1, T('wrong'))).rejects.toThrow(
       'unknown space',
@@ -331,7 +335,7 @@ describe('0018_sync_files', () => {
     for (let i = 0; i < 45; i++)
       await db.query(
         `insert into sync_blobs (space_id, device, key, payload, iv, size, file)
-         values ($1, $2, $3, $4, $5, 199999999, true)`,
+         values ($1, $2, $3, uuid_send($4::uuid), $5, 199999999, true)`,
         [other, DEVICE('z'), T(`f${String(i)}x`), FILE(100 + i), IV],
       );
     await expect(putFile(space, DEVICE('b'), T('k9'), FILE(9), 1)).rejects.toThrow('files full');
