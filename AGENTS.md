@@ -165,33 +165,35 @@ Notes on the test runs:
   tables. Each function checks the shape of its input and has a fixed `search_path`.
 - The server stores only cipher text for share links and sync. It never sees a word of a writer's text.
 - The free plan limits matter: a 500 MB database and 5 GB of egress each month. Migration 0017 and
-  ADR 0008 give the sync limits. Migration 0018 and ADR 0014 move sync files to Cloudflare R2. The owner
-  page warns at 70% of 500 MB.
+  ADR 0008 give the sync limits. Migration 0018 and ADR 0014 move sync files to Cloudflare R2. ADR 0016
+  stores sealed data as bytes and sends leaderboard photos once. The owner page warns at 70% of 500 MB.
 - `pg_cron` runs the daily cleanups (migrations 0003 and 0005).
 
-| Migration                  | What it adds                                                           |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `0001_shares.sql`          | Sealed share links and their comments.                                 |
-| `0002_usage.sql`           | Opt-in usage reports (counts and bands only).                          |
-| `0003_cleanup.sql`         | The daily cleanup of old shares.                                       |
-| `0004_limits.sql`          | Input checks and caps for a public key.                                |
-| `0005_sync.sql`            | Sealed sync between a writer's devices.                                |
-| `0006_rooms.sql`           | Sprint rooms with a six-letter code.                                   |
-| `0007_share_images.sql`    | The sealed images of a share link.                                     |
-| `0008_accounts.sql`        | Accounts, sync with an account, the daily count, feedback, owner page. |
-| `0009_live_owner.sql`      | Word counts from each device on the owner page.                        |
-| `0010_places.sql`          | Rough places and signed-out visitors on the owner page.                |
-| `0011_profiles.sql`        | The writer's profile.                                                  |
-| `0012_feedback_guards.sql` | Spam guards for feedback, and a note to the owner.                     |
-| `0013_leaderboard.sql`     | The writing leaderboard.                                               |
-| `0014_comment_index.sql`   | An index for the comments of a share link.                             |
-| `0015_writer_settings.sql` | The writer's toolbar and keys, kept with the account.                  |
-| `0016_owner_accounts.sql`  | The owner adds, changes and deletes accounts.                          |
-| `0017_sync_scale.sql`      | `sync_list` skips seen blobs, 50 MB for each space, a 450 MB stop.     |
-| `0018_sync_files.sql`      | Sync files in Cloudflare R2: file rows, 200 MB of files for a space.   |
+| Migration                     | What it adds                                                           |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `0001_shares.sql`             | Sealed share links and their comments.                                 |
+| `0002_usage.sql`              | Opt-in usage reports (counts and bands only).                          |
+| `0003_cleanup.sql`            | The daily cleanup of old shares.                                       |
+| `0004_limits.sql`             | Input checks and caps for a public key.                                |
+| `0005_sync.sql`               | Sealed sync between a writer's devices.                                |
+| `0006_rooms.sql`              | Sprint rooms with a six-letter code.                                   |
+| `0007_share_images.sql`       | The sealed images of a share link.                                     |
+| `0008_accounts.sql`           | Accounts, sync with an account, the daily count, feedback, owner page. |
+| `0009_live_owner.sql`         | Word counts from each device on the owner page.                        |
+| `0010_places.sql`             | Rough places and signed-out visitors on the owner page.                |
+| `0011_profiles.sql`           | The writer's profile.                                                  |
+| `0012_feedback_guards.sql`    | Spam guards for feedback, and a note to the owner.                     |
+| `0013_leaderboard.sql`        | The writing leaderboard.                                               |
+| `0014_comment_index.sql`      | An index for the comments of a share link.                             |
+| `0015_writer_settings.sql`    | The writer's toolbar and keys, kept with the account.                  |
+| `0016_owner_accounts.sql`     | The owner adds, changes and deletes accounts.                          |
+| `0017_sync_scale.sql`         | `sync_list` skips seen blobs, 50 MB for each space, a 450 MB stop.     |
+| `0018_sync_files.sql`         | Sync files in Cloudflare R2: file rows, 200 MB of files for a space.   |
+| `0019_sealed_bytes.sql`       | Sync and share data stored as bytes, not base64. Shares obey 450 MB.   |
+| `0020_leaderboard_photos.sql` | The leaderboard sends each photo once (`photo_id`, `p_have`).          |
 
-Migrations 0001 to 0017 are on the live project (0017 since 2026-11-20). 0018 waits for the owner. A new
-migration takes the next number.
+Migrations 0001 to 0017 are on the live project (0017 since 2026-11-20). 0018, 0019 and 0020 wait for the
+owner, in that order. A new migration takes the next number.
 Never edit a migration that is live. Write a new one.
 
 ## 8. Rules for every change

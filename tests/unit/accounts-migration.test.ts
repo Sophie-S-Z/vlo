@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
@@ -29,6 +30,10 @@ const MIGRATIONS = [
   '0014_comment_index.sql',
   '0015_writer_settings.sql',
   '0016_owner_accounts.sql',
+  '0017_sync_scale.sql',
+  '0018_sync_files.sql',
+  '0019_sealed_bytes.sql',
+  '0020_leaderboard_photos.sql',
 ];
 const T = (name: string) => name.padEnd(43, '0');
 const INSTALL = (name: string) => name.padEnd(22, '0');
@@ -388,6 +393,7 @@ describe('the owner page (decision A6)', () => {
 });
 
 const PHOTO = `data:image/webp;base64,${'A'.repeat(100)}==`;
+const md5 = (text: string) => createHash('md5').update(text).digest('hex');
 const putProfile = (who: string, name: string, photo: string | null = null, bio = '') =>
   as(who, "select public.profile_put($1, ' Ada ', '', $2, $3)", [name, bio, photo]);
 
@@ -634,11 +640,14 @@ describe('the leaderboard (migration 0013)', () => {
     );
 
   const board = (who: string, period: string) =>
-    as<{ place: number; name: string; photo: string | null; words: number; me: boolean }>(
-      who,
-      `select * from public.leaderboard($1, ${TODAY})`,
-      [period],
-    );
+    as<{
+      place: number;
+      name: string;
+      photo: string | null;
+      photo_id: string | null;
+      words: number;
+      me: boolean;
+    }>(who, `select * from public.leaderboard($1, ${TODAY})`, [period]);
 
   test('ranks the writers of a period by their words, and counts the devices of an account once', async () => {
     await as(ALICE, "select public.profile_put('Alice Lovelace', '', 'A. L. Quill', '', $1)", [PHOTO]);
@@ -654,8 +663,8 @@ describe('the leaderboard (migration 0013)', () => {
     await ping(null, INSTALL('d'), 800);
 
     expect(await board(ALICE, 'day')).toEqual([
-      { place: 1, name: 'Bobby', photo: null, words: 500, me: false },
-      { place: 2, name: 'A. L. Quill', photo: PHOTO, words: 300, me: true },
+      { place: 1, name: 'Bobby', photo: null, photo_id: null, words: 500, me: false },
+      { place: 2, name: 'A. L. Quill', photo: PHOTO, photo_id: md5(PHOTO), words: 300, me: true },
     ]);
     expect((await board(BOB, 'year')).map((r) => [r.name, r.words, r.me])).toEqual([
       ['Bobby', 500, true],
@@ -673,6 +682,20 @@ describe('the leaderboard (migration 0013)', () => {
     expect((await board(BOB, 'month')).map((r) => r.name)).toEqual(['Alice']);
     // An account with no profile is never on the board.
     expect(await as(CAROL, 'select public.leaderboard_show(true) as on')).toEqual([{ on: false }]);
+  });
+
+  test('a load brings a photo only when the device does not name its id (migration 0020)', async () => {
+    await as(ALICE, "select public.profile_put('Alice', '', '', '', $1)", [PHOTO]);
+    await ping(ALICE, INSTALL('a'), 100);
+    const load = (have: string[]) =>
+      as<{ photo: string | null; photo_id: string | null }>(
+        BOB,
+        `select photo, photo_id from public.leaderboard('day', ${TODAY}, $1)`,
+        [have],
+      );
+    expect(await load([])).toEqual([{ photo: PHOTO, photo_id: md5(PHOTO) }]);
+    expect(await load([md5(PHOTO)])).toEqual([{ photo: null, photo_id: md5(PHOTO) }]);
+    await expect(load(Array.from({ length: 52 }, (_, i) => String(i)))).rejects.toThrow('bad photos');
   });
 
   test('refuses the anon role and a period that is not a day, a week, a month or a year', async () => {
