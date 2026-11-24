@@ -257,7 +257,10 @@ export interface Snapshot {
   itemId: string;
   label?: string;
   createdAt: number;
-  /** The item's whole Yjs state. When `packed` is true, it is in gzip, which takes about half the space. */
+  /**
+   * The item's text as a Yjs state. Since 2026-11-24 it holds no edit history. When `packed` is true, it is
+   * in gzip, which takes about half the space.
+   */
   state: Uint8Array;
   packed?: true;
   text: string;
@@ -274,7 +277,7 @@ export interface ItemVersion {
   name: string;
   createdAt: number;
   updatedAt: number;
-  /** The whole Yjs state, so a switch keeps every mark. */
+  /** The text as a Yjs state, so a switch keeps every mark. Since 2026-11-24 it holds no edit history. */
   state: Uint8Array;
   text: string;
 }

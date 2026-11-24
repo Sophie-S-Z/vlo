@@ -175,6 +175,11 @@ export function HistoryPanel({ item, kind, editor, doc, currentText, onRestored 
           ))}
         </fieldset>
       )}
+      <p className="text-sm text-muted">
+        Vlo keeps all automatic snapshots of the last day. After that, it keeps the newest one of each day for
+        30 days, then the newest one of each week. The snapshots that you save, and those from before a
+        restore, always stay.
+      </p>
 
       {picked && (
         <section aria-labelledby={compareLabelId} className="grid gap-3 border-t border-rule pt-4">

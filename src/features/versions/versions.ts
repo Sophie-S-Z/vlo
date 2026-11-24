@@ -1,10 +1,11 @@
 import type { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
-import * as Y from 'yjs';
+import type * as Y from 'yjs';
 import { KEEP_AI_MARKS } from '@/features/editor/extensions/aiOrigin';
 import { SKIP_TRACKING } from '@/features/editor/format/suggestion';
 import { docText } from '@/features/editor/itemText';
+import { contentState } from '@/features/snapshots/packing';
 import { applyState, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
 import { db, MAX_VERSION_NAME, MAX_VERSIONS, type Item, type ItemVersion } from '@/lib/db';
@@ -15,8 +16,8 @@ import type { EditorForm } from '@/features/library/templates';
 
 /*
  * Named versions of a scene, memory, poem or page (roadmap F55, plan Task K2). The text in the editor is
- * the active version, and `Item.versionName` names it. The other versions are rows with their whole Yjs
- * state. A switch and a "Use this" change the live text through the editor in one transaction, as a
+ * the active version, and `Item.versionName` names it. The other versions are rows with the Yjs state of
+ * their text. A switch and a "Use this" change the live text through the editor in one transaction, as a
  * snapshot restore does, so every mark stays and a snapshot holds the text from before.
  */
 
@@ -78,7 +79,7 @@ export async function saveVersion(
       name: clean,
       createdAt: now,
       updatedAt: now,
-      state: Y.encodeStateAsUpdate(doc),
+      state: contentState(doc),
       text: docText(editor.state.doc, kind),
     });
     return clean;
@@ -109,7 +110,7 @@ export async function switchVersion(
     name: activeName(fresh),
     createdAt: now,
     updatedAt: now,
-    state: Y.encodeStateAsUpdate(doc),
+    state: contentState(doc),
     text: docText(editor.state.doc, kind),
   });
   applyState(editor, target.state);
