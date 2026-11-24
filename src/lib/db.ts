@@ -264,6 +264,12 @@ export interface Snapshot {
   state: Uint8Array;
   packed?: true;
   text: string;
+  /** The writer's note. */
+  note?: string;
+  /** A pinned snapshot never thins. */
+  pinned?: true;
+  /** The date and time that the writer gave. `createdAt` stays the true save time. */
+  shownAt?: number;
 }
 
 /**
@@ -280,6 +286,10 @@ export interface ItemVersion {
   /** The text as a Yjs state, so a switch keeps every mark. Since 2026-11-24 it holds no edit history. */
   state: Uint8Array;
   text: string;
+  /** The writer's note. */
+  note?: string;
+  /** The date and time that the writer gave. `createdAt` stays the true save time. */
+  shownAt?: number;
 }
 
 /** The public key of a device, as the JWK fields that ECDSA P-256 needs. */
@@ -323,8 +333,10 @@ export interface AuthorshipEntry {
 
 /** The most versions of one item, so a slip of the button cannot fill the device. */
 export const MAX_VERSIONS = 20;
-/** The longest name of a version. */
+/** The longest name of a version or a snapshot. */
 export const MAX_VERSION_NAME = 60;
+/** The longest note of a version or a snapshot. */
+export const MAX_NOTE = 1000;
 
 export interface Session {
   id: string;

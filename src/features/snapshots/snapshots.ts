@@ -10,6 +10,7 @@ import { db, type Item, type Snapshot } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { YFRAGMENT, docFromUpdate } from '@/lib/ydocs';
 import type { EditorForm } from '@/features/library/templates';
+import { applyEntry, cleanName, cleanNote, cleanTime, entryTime, HistoryError } from './entries';
 import { contentState, pack, snapshotState } from './packing';
 
 export const BEFORE_RESTORE = 'Before restore';
@@ -32,15 +33,16 @@ function bucketOf(createdAt: number, now: number): string {
 /** True for a snapshot that Vlo took with no step of the writer: the timer's, and one before a sync. */
 const automatic = (label: string | undefined) => label === undefined || label === BEFORE_SYNC;
 
-type Dated = Pick<Snapshot, 'id' | 'label' | 'createdAt'>;
+type Dated = Pick<Snapshot, 'id' | 'label' | 'createdAt' | 'pinned'>;
 
 /**
  * The automatic snapshots to delete, as Time Machine thins its backups. Every snapshot of the last day
  * stays, then the newest of each day for 30 days, then the newest of each week. A snapshot that the
- * writer saved, or one from before a step of the writer such as a restore, always stays.
+ * writer saved, named or pinned, or one from before a step of the writer such as a restore, always
+ * stays. The true save time counts, not a date that the writer gave.
  */
 export function thinnedIds(snapshots: readonly Dated[], now: number): string[] {
-  const old = snapshots.filter((s) => automatic(s.label) && now - s.createdAt >= DAY_MS);
+  const old = snapshots.filter((s) => automatic(s.label) && !s.pinned && now - s.createdAt >= DAY_MS);
   const newest = new Map<string, Pick<Snapshot, 'id' | 'createdAt'>>();
   for (const s of old) {
     const key = bucketOf(s.createdAt, now);
@@ -59,8 +61,8 @@ async function thinSnapshots(itemId: string, now: number): Promise<void> {
     await db.snapshots
       .where('[itemId+createdAt]')
       .between([itemId, Dexie.minKey], [itemId, now - DAY_MS], true, true)
-      .each(({ id, label, createdAt }) => {
-        old.push({ id, createdAt, ...(label === undefined ? {} : { label }) });
+      .each(({ id, label, createdAt, pinned }) => {
+        old.push({ id, createdAt, ...(label === undefined ? {} : { label }), ...(pinned ? { pinned } : {}) });
       });
     await db.snapshots.bulkDelete(thinnedIds(old, now));
   });
@@ -105,13 +107,53 @@ export async function latestSnapshotText(itemId: string): Promise<string | null>
   return last?.text ?? null;
 }
 
-/** An item's snapshots, newest first. */
-export function snapshotsOf(itemId: string): Promise<Snapshot[]> {
-  return db.snapshots
+/** An item's snapshots, newest first by the date that History shows. */
+export async function snapshotsOf(itemId: string): Promise<Snapshot[]> {
+  const rows = await db.snapshots
     .where('[itemId+createdAt]')
     .between([itemId, Dexie.minKey], [itemId, Dexie.maxKey])
     .reverse()
     .toArray();
+  return rows.sort((a, b) => entryTime(b) - entryTime(a));
+}
+
+export interface SnapshotEdit {
+  /** An empty name takes the name away. */
+  name: string;
+  note: string;
+  /** The date and time that History shows. The true save time gives no date of the writer. */
+  at: number;
+  pinned: boolean;
+}
+
+/** Changes the name, the note, the date and the pin of a snapshot. Its text never changes. */
+export async function editSnapshot(id: string, edit: SnapshotEdit): Promise<void> {
+  const name = cleanName(edit.name);
+  const note = cleanNote(edit.note);
+  const at = cleanTime(edit.at, clock.now());
+  const found = await db.snapshots
+    .where('id')
+    .equals(id)
+    .modify((row) => {
+      if (name === '') delete row.label;
+      else row.label = name;
+      if (edit.pinned) row.pinned = true;
+      else delete row.pinned;
+      applyEntry(row, note, at);
+    });
+  if (found === 0) throw new HistoryError('Vlo could not find that snapshot.');
+}
+
+/** Deletes a snapshot, and gives it back for an Undo. */
+export async function deleteSnapshot(id: string): Promise<Snapshot | undefined> {
+  const row = await db.snapshots.get(id);
+  if (row) await db.snapshots.delete(id);
+  return row;
+}
+
+/** Puts a deleted snapshot back, as it was. */
+export async function undoDeleteSnapshot(row: Snapshot): Promise<void> {
+  await db.snapshots.put(row);
 }
 
 /**

@@ -4,21 +4,23 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import type * as Y from 'yjs';
 import { formatWords } from '@/features/library/format';
 import { useManuscript } from '@/features/editor/manuscript';
-import { db, MAX_VERSION_NAME, type Item, type ItemVersion } from '@/lib/db';
+import { db, type Item, type ItemVersion } from '@/lib/db';
+import { entryTime, HistoryError } from '@/features/snapshots/entries';
+import { EntryForm, NameForm } from '@/features/snapshots/EntryForms';
 import { withoutNotes } from '@/features/editor/format/notes';
 import { countUnit, countWords } from '@/lib/wordcount';
 import { Button } from '@/ui/button';
-import { Input } from '@/ui/input';
+import { cn } from '@/ui/cn';
 import {
   activeName,
   compare,
   deleteVersion,
-  renameVersion,
+  editVersion,
+  renameActive,
   saveVersion,
   switchVersion,
   takeBlock,
   undoDelete,
-  VersionError,
   versionDoc,
   versionsOf,
 } from './versions';
@@ -41,57 +43,7 @@ interface VersionsPanelProps {
 const formatTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 const errorText = (error: unknown, fallback: string) =>
-  error instanceof VersionError ? error.message : fallback;
-
-/** One name field with Save and Cancel, for a new version or a rename. */
-function NameForm({
-  label,
-  initial,
-  submit,
-  onCancel,
-}: {
-  label: string;
-  initial: string;
-  submit: (name: string) => Promise<void>;
-  onCancel?: () => void;
-}) {
-  const id = useId();
-  const [name, setName] = useState(initial);
-  const [busy, setBusy] = useState(false);
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        setBusy(true);
-        void submit(name).finally(() => {
-          setBusy(false);
-        });
-      }}
-      className="flex flex-wrap items-end gap-2"
-    >
-      <label htmlFor={id} className="grid gap-1 text-sm">
-        {label}
-        <Input
-          id={id}
-          value={name}
-          maxLength={MAX_VERSION_NAME}
-          onChange={(event) => {
-            setName(event.target.value);
-          }}
-          className="w-64 max-w-full"
-        />
-      </label>
-      <Button type="submit" variant="outline" disabled={busy}>
-        Save
-      </Button>
-      {onCancel && (
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-      )}
-    </form>
-  );
-}
+  error instanceof HistoryError ? error.message : fallback;
 
 /** The paragraphs that differ between the text now and one version, each with "Use this". */
 function Comparison({
@@ -188,7 +140,7 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
   const fresh = useLiveQuery(() => db.items.get(item.id), [item.id]) ?? item;
   const [message, setMessage] = useState('');
   const [deleted, setDeleted] = useState<ItemVersion | null>(null);
-  const [renaming, setRenaming] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const [comparing, setComparing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const language = useManuscript()?.language;
@@ -224,18 +176,18 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
 
   return (
     <div className="grid gap-5">
-      {renaming === 'active' ? (
+      {editing === 'active' ? (
         <NameForm
           label="Name of the version in the editor"
           initial={active}
           submit={(name) =>
             run(async () => {
-              await renameVersion(item.id, null, name);
-              setRenaming(null);
+              await renameActive(item.id, name);
+              setEditing(null);
             }, 'Vlo could not rename the version. Try again.')
           }
           onCancel={() => {
-            setRenaming(null);
+            setEditing(null);
           }}
         />
       ) : (
@@ -246,7 +198,7 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
           <Button
             variant="ghost"
             onClick={() => {
-              setRenaming('active');
+              setEditing('active');
             }}
           >
             Rename
@@ -266,23 +218,6 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
         }
       />
 
-      <div role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted">
-        {message}
-        {deleted && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              void run(async () => {
-                await undoDelete(deleted);
-                setMessage(`“${deleted.name}” is back.`);
-              }, 'Vlo could not bring the version back. Try again.');
-            }}
-          >
-            Undo
-          </Button>
-        )}
-      </div>
-
       {versions === undefined ? (
         <p className="text-muted">Loading versions.</p>
       ) : versions.length === 0 ? (
@@ -291,27 +226,31 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
         <ul aria-label="Other versions" className="grid gap-2">
           {versions.map((version) => (
             <li key={version.id} className="grid gap-2 rounded-md border border-rule p-3">
-              {renaming === version.id ? (
-                <NameForm
-                  label="New name"
-                  initial={version.name}
-                  submit={(name) =>
+              {editing === version.id ? (
+                <EntryForm
+                  entry={version}
+                  name={version.name}
+                  submit={({ name, note, at }) =>
                     run(async () => {
-                      await renameVersion(item.id, version.id, name);
-                      setRenaming(null);
-                    }, 'Vlo could not rename the version. Try again.')
+                      await editVersion(item.id, version.id, { name, note, at });
+                      setEditing(null);
+                    }, 'Vlo could not save the details. Try again.')
                   }
                   onCancel={() => {
-                    setRenaming(null);
+                    setEditing(null);
                   }}
                 />
               ) : (
                 <p className="grid">
                   <span className="font-medium">{version.name}</span>
                   <span className="text-xs text-muted tabular-nums">
-                    {formatWords(countWords(withoutNotes(version.text), language), countUnit(language))},
-                    saved {formatTime.format(version.updatedAt)}
+                    {formatWords(countWords(withoutNotes(version.text), language), countUnit(language))},{' '}
+                    {formatTime.format(entryTime(version))}
+                    {version.shownAt !== undefined && `. Saved ${formatTime.format(version.createdAt)}`}
                   </span>
+                  {version.note && (
+                    <span className="text-sm whitespace-pre-wrap text-muted">{version.note}</span>
+                  )}
                 </p>
               )}
               <div className="flex flex-wrap gap-1">
@@ -329,11 +268,12 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
                 </Button>
                 <Button
                   variant="ghost"
+                  aria-expanded={editing === version.id}
                   onClick={() => {
-                    setRenaming(version.id);
+                    setEditing(editing === version.id ? null : version.id);
                   }}
                 >
-                  Rename
+                  Edit details
                 </Button>
                 <Button variant="ghost" disabled={busy} onClick={() => void doDelete(version)}>
                   Delete
@@ -345,6 +285,29 @@ export function VersionsPanel({ item, kind, editor, doc, onSwitched }: VersionsP
       )}
 
       {compared && <Comparison item={item} kind={kind} editor={editor} doc={doc} version={compared} />}
+      {/* At the foot of the panel, so a message shows near a form far down a long list. */}
+      <div
+        role="status"
+        className={cn(
+          'sticky -bottom-6 flex flex-wrap items-center gap-2 bg-surface text-sm text-muted',
+          (message || deleted) && 'border-t border-rule pt-3 pb-6',
+        )}
+      >
+        {message}
+        {deleted && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void run(async () => {
+                await undoDelete(deleted);
+                setMessage(`“${deleted.name}” is back.`);
+              }, 'Vlo could not bring the version back. Try again.');
+            }}
+          >
+            Undo
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
