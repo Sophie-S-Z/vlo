@@ -30,9 +30,10 @@ import {
 import { sentencesIn, splitSentences } from '@/features/editor/readAloud/sentences';
 import { findLocalVoice, localVoices } from '@/features/editor/readAloud/voices';
 import { cleanDayStart, dayStartKey } from '@/features/editor/stats/dayStart';
-import { localDay, minutesLabel, textStats, wordsToday } from '@/features/editor/stats/stats';
+import { localDay, textStats, wordsToday } from '@/features/editor/stats/stats';
 import { clock } from '@/lib/clock';
 import { db } from '@/lib/db';
+import { durationLabel } from '@/lib/wordcount';
 
 // jsdom has no layout, so scrolling a mark into view does nothing here.
 beforeAll(() => {
@@ -398,10 +399,10 @@ describe('writing stats (E4)', () => {
   });
 
   test('time labels', () => {
-    expect(minutesLabel(1)).toBe('under 1 min');
-    expect(minutesLabel(12)).toBe('about 12 min');
-    expect(minutesLabel(60)).toBe('about 1 h');
-    expect(minutesLabel(135)).toBe('about 2 h 15 min');
+    expect(durationLabel(1)).toBe('under 1 min');
+    expect(durationLabel(12)).toBe('about 12 min');
+    expect(durationLabel(60)).toBe('about 1 h');
+    expect(durationLabel(135)).toBe('about 2 h 15 min');
   });
 
   test('words today count from the first look each day, net of deletions, never below 0', async () => {

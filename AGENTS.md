@@ -98,7 +98,7 @@ an anonymous daily count that Settings can turn off.
 - `tests/unit`: Vitest tests. `tests/e2e`: Playwright tests, named after a user story where one exists.
   `tests/fixtures`: the poem, memoir and novel fixtures and the 100,000-word generator.
 - `scripts`: the bundle size check, the license check, the icon and data builders.
-- `docs`: the spec, `STATUS.md`, the plans (`docs/plans/phase-N.md`), the ADRs (`docs/adr/NNNN-title.md`),
+- `docs`: the spec, `STATUS.md` (with the older entries in `history.md`), the plans (`docs/plans/phase-N.md`), the ADRs (`docs/adr/NNNN-title.md`),
   the setup guides and the policy texts.
 
 ## 5. Commands
@@ -254,19 +254,16 @@ Phases 0 to 19 are done and merged. The newest pull requests:
 
 ### Open work
 
-The third code review (2026-11-18) found these larger changes. The owner did not choose yet. Do one change in
-each pull request, and only when the owner asks for it:
+The third code review (2026-11-18) found these larger changes. D and F are done. The owner did not choose the
+others yet. Do one change in each pull request, and only when the owner asks for it:
 
 - A. Move the two speech workers (`voice/speech.ts`, `voice/naturalSpeech.ts`) to `workerCaller`
   (`src/lib/workerCall.ts`). It needs a transfer list and an "end on error" option first. Medium risk.
 - B. One hook for the timed refresh of the leaderboard and the owner page. Low risk.
 - C. One hook for the export job of the export dialog and the packet dialog. Medium risk: a stopped job must
   still end its worker.
-- D. One label for short reading times. The details panel says "under 1 min", and Insights says "45 sec".
-  The owner must choose the words.
 - E. Split the files over 1,100 lines (`export/pdf/pdf.ts`, `editor/commands/registry.ts`,
   `project/ProjectPage.tsx`, `export/docx.ts`), one file for each pull request. Leave `OwnerPage.tsx`.
-- F. Move the old entries of `docs/STATUS.md` to `docs/history.md`. The owner must agree.
 
 Other open items:
 

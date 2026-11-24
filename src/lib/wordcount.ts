@@ -64,6 +64,17 @@ export const READING_WPM = 238;
 /** Speaking speed for a reading out loud, in words a minute. */
 export const SPEAKING_WPM = 150;
 
+/** "none", "under 1 min", "about 3 min" or "about 1 h 20 min", for a reading time in minutes. */
+export function durationLabel(minutes: number): string {
+  if (minutes <= 0) return 'none';
+  if (minutes <= 1) return 'under 1 min';
+  const whole = Math.round(minutes);
+  if (whole < 60) return `about ${String(whole)} min`;
+  const hours = Math.floor(whole / 60);
+  const rest = whole % 60;
+  return rest === 0 ? `about ${String(hours)} h` : `about ${String(hours)} h ${String(rest)} min`;
+}
+
 let graphemes: Intl.Segmenter | undefined;
 
 /** Counts characters as a reader sees them (grapheme clusters), without line breaks. */

@@ -10,7 +10,8 @@ import { Switch } from '@/ui/switch';
 import { METRIC_LABEL, METRICS, setAnalysisPrefs, useAnalysisPrefs, type Metric } from './analysisPrefs';
 import { statsInWorker } from './analysisClient';
 import { mappedText } from './editorText';
-import { durationLabel, type FullStats } from './stats';
+import { durationLabel } from '@/lib/wordcount';
+import type { FullStats } from './stats';
 import type { EditorForm } from '@/features/library/templates';
 
 /*
