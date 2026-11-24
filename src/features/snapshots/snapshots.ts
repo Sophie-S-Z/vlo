@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import { Dexie } from 'dexie';
-import * as Y from 'yjs';
+import type * as Y from 'yjs';
 import { KEEP_AI_MARKS } from '@/features/editor/extensions/aiOrigin';
 import { SKIP_TRACKING } from '@/features/editor/format/suggestion';
 import { docText } from '@/features/editor/itemText';
@@ -10,13 +10,69 @@ import { db, type Item, type Snapshot } from '@/lib/db';
 import { newId } from '@/lib/ids';
 import { YFRAGMENT, docFromUpdate } from '@/lib/ydocs';
 import type { EditorForm } from '@/features/library/templates';
-import { pack, snapshotState } from './packing';
+import { contentState, pack, snapshotState } from './packing';
 
 export const BEFORE_RESTORE = 'Before restore';
+export const BEFORE_SYNC = 'Before sync';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** After this age, a week keeps one automatic snapshot, not each day. */
+const DAILY_FOR_MS = 30 * DAY_MS;
+
+/** The time bucket of an automatic snapshot older than a day: its day on the device, or later its week. */
+function bucketOf(createdAt: number, now: number): string {
+  const start = new Date(createdAt);
+  start.setHours(0, 0, 0, 0);
+  if (now - createdAt < DAILY_FOR_MS) return `day ${String(start.getTime())}`;
+  // A week starts on Monday.
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return `week ${String(start.getTime())}`;
+}
+
+/** True for a snapshot that Vlo took with no step of the writer: the timer's, and one before a sync. */
+const automatic = (label: string | undefined) => label === undefined || label === BEFORE_SYNC;
+
+type Dated = Pick<Snapshot, 'id' | 'label' | 'createdAt'>;
+
+/**
+ * The automatic snapshots to delete, as Time Machine thins its backups. Every snapshot of the last day
+ * stays, then the newest of each day for 30 days, then the newest of each week. A snapshot that the
+ * writer saved, or one from before a step of the writer such as a restore, always stays.
+ */
+export function thinnedIds(snapshots: readonly Dated[], now: number): string[] {
+  const old = snapshots.filter((s) => automatic(s.label) && now - s.createdAt >= DAY_MS);
+  const newest = new Map<string, Pick<Snapshot, 'id' | 'createdAt'>>();
+  for (const s of old) {
+    const key = bucketOf(s.createdAt, now);
+    const kept = newest.get(key);
+    if (!kept || s.createdAt > kept.createdAt) newest.set(key, s);
+  }
+  const keep = new Set([...newest.values()].map((s) => s.id));
+  return old.filter((s) => !keep.has(s.id)).map((s) => s.id);
+}
+
+/** Deletes the automatic snapshots of an item that `thinnedIds` gives. */
+async function thinSnapshots(itemId: string, now: number): Promise<void> {
+  await db.transaction('rw', db.snapshots, async () => {
+    // Only the dates stay in memory, not the states, so an item with thousands of snapshots is safe.
+    const old: Dated[] = [];
+    await db.snapshots
+      .where('[itemId+createdAt]')
+      .between([itemId, Dexie.minKey], [itemId, now - DAY_MS], true, true)
+      .each(({ id, label, createdAt }) => {
+        old.push({ id, createdAt, ...(label === undefined ? {} : { label }) });
+      });
+    await db.snapshots.bulkDelete(thinnedIds(old, now));
+  });
+}
 
 type ItemRef = Pick<Item, 'id' | 'projectId'>;
 
-/** Saves the item's whole Yjs state, in gzip, and its plain text. */
+/**
+ * Saves the item's text as a Yjs state with no edit history, in gzip, and its plain text. An automatic
+ * snapshot then thins the item's older automatic snapshots. A step of the writer never thins, so a
+ * restore keeps the snapshot that it restored.
+ */
 export async function takeSnapshot(
   item: ItemRef,
   doc: Y.Doc,
@@ -24,7 +80,7 @@ export async function takeSnapshot(
   label?: string,
 ): Promise<Snapshot> {
   // The state is read before the first await, so it matches `text`.
-  const state = Y.encodeStateAsUpdate(doc);
+  const state = contentState(doc);
   const snapshot: Snapshot = {
     id: newId(),
     projectId: item.projectId,
@@ -35,6 +91,8 @@ export async function takeSnapshot(
     text,
   };
   await db.snapshots.add(snapshot);
+  // The snapshot is safe. A thinning that fails tries again at the next automatic snapshot.
+  if (automatic(label)) await thinSnapshots(item.id, snapshot.createdAt).catch(() => undefined);
   return snapshot;
 }
 

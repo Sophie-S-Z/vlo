@@ -1,8 +1,21 @@
 # Vlo status
 
-Last update: 2026-11-22
+Last update: 2026-11-24
 
 ## Done
+
+- Snapshot keeping and a safer save (2026-11-24, ADR 0015):
+  - Each new automatic snapshot thins the older automatic snapshots of its item, as Time Machine does. All
+    of the last day stay, then the newest of each day for 30 days, then the newest of each week. Only the
+    timer's snapshots and the "Before sync" ones thin. The writer's own snapshots and the ones from before
+    a restore, a switch, "Use this", Replace all or Word changes always stay. History and Help say so.
+  - An item that gets no new automatic snapshot keeps its old ones. A sweep of every item is open, if the
+    owner wants one.
+  - Snapshots and versions store the text with no edit history (`contentState` in
+    `src/features/snapshots/packing.ts`). New ones take about half the space, and a version sync sends
+    less. The stored format is still one Yjs update, so backups, sync and older builds need no change.
+  - From a failed save until a save works, the browser asks before the tab closes.
+  - No migration, no new package, no change to the Dexie schema, the document schema or the backup.
 
 - Sync files in Cloudflare R2, scaling fix 5 (2026-11-22, ADR 0014, `docs/files-setup.md`):
   - Research files, images and saved versions of sync go to an R2 bucket through a Cloudflare Worker

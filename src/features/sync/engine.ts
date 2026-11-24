@@ -9,7 +9,7 @@ import { editorSchemas } from '@/features/import/tree';
 import { noteLinkIndex } from '@/features/links/linkStore';
 import { holdsText, projectDef } from '@/features/library/templates';
 import { rpc, ShareError, type RpcName } from '@/features/share/rpc';
-import { takeSnapshot } from '@/features/snapshots/snapshots';
+import { BEFORE_SYNC, takeSnapshot } from '@/features/snapshots/snapshots';
 import { clock } from '@/lib/clock';
 import { fromBase64, toBase64, type Sealed } from '@/lib/crypto';
 import { db, type ItemKind, type Project } from '@/lib/db';
@@ -45,8 +45,6 @@ import type { EditorForm } from '@/features/library/templates';
  * Sync on the device (plan Task I6, ADR 0008). A round pushes what changed on this device, then pulls
  * the blobs of the other devices: rows merge by time in one transaction, and texts merge by Yjs.
  */
-
-export const BEFORE_SYNC = 'Before sync';
 
 /** A put that commits late can carry an earlier relay time than one already read, so a read starts back. */
 const OVERLAP = 30_000;

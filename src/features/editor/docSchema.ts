@@ -21,6 +21,12 @@ export function docSchema(doc: Y.Doc): number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 1;
 }
 
+/** Puts the schema version that `from` stores in `to`, for a copy of the content. */
+export function copyDocSchema(from: Y.Doc, to: Y.Doc): void {
+  const value: unknown = from.getMap(META).get(KEY);
+  if (value !== undefined) to.getMap(META).set(KEY, value);
+}
+
 /** Records this build's schema version in the document, once, when the writer changes it. */
 export function stampDocSchema(doc: Y.Doc): void {
   if (docSchema(doc) < DOC_SCHEMA) doc.getMap(META).set(KEY, DOC_SCHEMA);

@@ -335,6 +335,10 @@ Binder on the left, manuscript in the center, side panel on the right (Notes, AI
 - Word count in the footer updates after a 600 ms pause, with an odometer roll.
 - Typewriter scrolling (current line at the vertical center) and focus-line dimming (other blocks at 40% opacity) use ProseMirror decorations.
 - Snapshots: automatic every 10 minutes of active editing, and on demand with a label. The history panel shows a word-level diff (jsdiff) and a Restore button.
+- Snapshot keeping (ADR 0015): a snapshot stores the text with no edit history. Each new automatic snapshot
+  thins the older automatic ones of its item. All of the last day stay, then the newest of each day for 30
+  days, then the newest of each week. A snapshot that the writer saved, or one from before a step of the
+  writer, stays.
 - Session timer: a ring fills over the chosen time. At the end it asks "Close the session?". No penalty applies.
 - Command menu (Mod-K): jump to any item, run any action, search text (MiniSearch).
 

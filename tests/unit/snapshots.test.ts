@@ -68,8 +68,8 @@ test('a backup copy of a snapshot holds the plain Yjs state', async () => {
   const stored = await takeSnapshot(item, doc, 'Salt on the glass.');
   const plain = await unpackSnapshot(stored);
   expect(plain.packed).toBeUndefined();
-  expect(plain.state).toEqual(Y.encodeStateAsUpdate(doc));
-  expect(plain.state.length).toBeGreaterThan(0);
+  const copy = docFromUpdate(plain.state);
+  expect(copy.getXmlFragment(YFRAGMENT).toJSON()).toBe(doc.getXmlFragment(YFRAGMENT).toJSON());
 });
 
 test('a snapshot from before packing still restores', async () => {

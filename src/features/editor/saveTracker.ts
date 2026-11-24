@@ -27,20 +27,33 @@ function isQuota(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'QuotaExceededError';
 }
 
-/** Watches a document. "Saving" on each change, "Saved" once the writer pauses and IndexedDB confirms. */
+/**
+ * Watches a document. "Saving" on each change, "Saved" once the writer pauses and IndexedDB confirms. From
+ * a failed save until a save works, the browser asks before the tab closes.
+ */
 export function trackSaves(options: SaveTrackerOptions): () => void {
   const { doc, ignoreOrigins, confirm, onPause, onState, pauseMs = SAVE_PAUSE_MS } = options;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let generation = 0;
   let stopped = false;
 
+  // While a save fails, the browser asks before the tab closes, as the words are only in memory.
+  const askBeforeClose = (event: BeforeUnloadEvent) => {
+    event.preventDefault();
+  };
+  const report = (state: SaveState) => {
+    if (state === 'saved') window.removeEventListener('beforeunload', askBeforeClose);
+    else if (state !== 'saving') window.addEventListener('beforeunload', askBeforeClose);
+    onState(state);
+  };
+
   const settle = async (mine: number) => {
     try {
       await onPause?.();
       await confirm();
-      if (!stopped && mine === generation) onState('saved');
+      if (!stopped && mine === generation) report('saved');
     } catch (error) {
-      if (!stopped && mine === generation) onState(isQuota(error) ? 'error-quota' : 'error');
+      if (!stopped && mine === generation) report(isQuota(error) ? 'error-quota' : 'error');
     }
   };
 
@@ -69,6 +82,7 @@ export function trackSaves(options: SaveTrackerOptions): () => void {
   window.addEventListener('pagehide', flush);
   return () => {
     stopped = true;
+    window.removeEventListener('beforeunload', askBeforeClose);
     document.removeEventListener('visibilitychange', flush);
     window.removeEventListener('pagehide', flush);
     doc.off('update', onUpdate);

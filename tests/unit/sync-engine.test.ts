@@ -12,7 +12,8 @@ import {
   type SyncKeys,
   type TextBlob,
 } from '@/features/sync/blobs';
-import { BEFORE_SYNC, syncOnce } from '@/features/sync/engine';
+import { BEFORE_SYNC } from '@/features/snapshots/snapshots';
+import { syncOnce } from '@/features/sync/engine';
 import type { Version } from '@/features/sync/merge';
 import { readSpace, SYNC_META, type SyncSpace } from '@/features/sync/space';
 import { clock } from '@/lib/clock';

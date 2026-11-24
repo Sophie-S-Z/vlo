@@ -255,6 +255,7 @@ export const HELP = {
       title: 'Go back to an earlier draft',
       steps: [
         'Vlo saves a snapshot after every 10 minutes of writing.',
+        'Vlo keeps all automatic snapshots of the last day. After that, it keeps the newest one of each day for 30 days, then the newest one of each week. Your own snapshots always stay.',
         'Choose History, then Save a snapshot now before a bold edit.',
         'Pick a snapshot in History to see its changes from the current text.',
         'Choose Restore this snapshot. Vlo saves the current text as a snapshot first.',

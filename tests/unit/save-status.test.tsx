@@ -46,7 +46,7 @@ test('saving on each change, saved 600 ms after the last one once storage confir
 test('a write rejected with QuotaExceededError gives error-quota', async () => {
   const doc = new Y.Doc();
   let state: SaveState = 'saved';
-  trackSaves({
+  const stop = trackSaves({
     doc,
     ignoreOrigins: [],
     confirm: () => Promise.reject(new DOMException('full', 'QuotaExceededError')),
@@ -56,13 +56,14 @@ test('a write rejected with QuotaExceededError gives error-quota', async () => {
   vi.advanceTimersByTime(600);
   await flush();
   expect(state).toBe('error-quota');
+  stop();
   expect(doc.getText('t').toJSON()).toBe('a');
 });
 
 test('another failure gives error', async () => {
   const doc = new Y.Doc();
   let state: SaveState = 'saved';
-  trackSaves({
+  const stop = trackSaves({
     doc,
     ignoreOrigins: [],
     confirm: () => Promise.reject(new Error('x')),
@@ -72,6 +73,38 @@ test('another failure gives error', async () => {
   vi.advanceTimersByTime(600);
   await flush();
   expect(state).toBe('error');
+  stop();
+});
+
+test('the browser asks before the tab closes while a save fails, until a save works', async () => {
+  const doc = new Y.Doc();
+  let fail = true;
+  const stop = trackSaves({
+    doc,
+    ignoreOrigins: [],
+    confirm: () => (fail ? Promise.reject(new Error('x')) : Promise.resolve()),
+    onState: () => undefined,
+  });
+  // True when the page asks the browser to confirm the close.
+  const asks = () => !window.dispatchEvent(new Event('beforeunload', { cancelable: true }));
+  type(doc, 'a');
+  expect(asks()).toBe(false);
+  vi.advanceTimersByTime(600);
+  await flush();
+  expect(asks()).toBe(true);
+  // Typing again does not end the risk. Only a save that works does.
+  type(doc, 'b');
+  expect(asks()).toBe(true);
+  fail = false;
+  vi.advanceTimersByTime(600);
+  await flush();
+  expect(asks()).toBe(false);
+  fail = true;
+  type(doc, 'c');
+  vi.advanceTimersByTime(600);
+  await flush();
+  stop();
+  expect(asks()).toBe(false);
 });
 
 test('updates from the database load or another tab do not count as typing', () => {
