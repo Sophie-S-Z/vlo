@@ -63,15 +63,6 @@ export function rangeWords(doc: ProseMirrorNode, from: number, to: number, langu
   return countWords(doc.textBetween(from, to, '\n\n', ' '), language);
 }
 
-/** "about 3 min", or "under 1 min" for a short text. */
-export function minutesLabel(minutes: number): string {
-  if (minutes <= 1) return 'under 1 min';
-  if (minutes < 60) return `about ${String(minutes)} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `about ${String(hours)} h` : `about ${String(hours)} h ${String(rest)} min`;
-}
-
 /* Words written today: the project total now, less the total at the first look today. */
 
 export function localDay(time = clock.now()): string {

@@ -3,7 +3,8 @@ import { Button } from '@/ui/button';
 import { Switch } from '@/ui/switch';
 import { setAnalysisPrefs, useAnalysisPrefs } from '../analysisPrefs';
 import { statsInWorker } from '../analysisClient';
-import { durationLabel, LONG_SENTENCE, type FullStats, type Keyword } from '../stats';
+import { durationLabel } from '@/lib/wordcount';
+import { LONG_SENTENCE, type FullStats, type Keyword } from '../stats';
 import type { EditorForm } from '@/features/library/templates';
 
 /*

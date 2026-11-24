@@ -54,6 +54,7 @@ Before a push, run `typecheck`, `lint`, `format:check`, `test`, `build` and `siz
 - `docs/plans/`: the plan of each phase.
 - `docs/adr/`: the architecture decisions.
 - `docs/STATUS.md`: what is done, what is open, and each decision with its date.
+- `docs/history.md`: the older entries of `docs/STATUS.md`, from before 2026-11-17.
 - `docs/ai-policy.md`, `docs/privacy.md`: the words of the two policy pages.
 - `docs/safari-storage-test.md`: the 14-day Safari check by hand.
 
