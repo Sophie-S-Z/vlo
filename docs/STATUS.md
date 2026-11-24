@@ -17,6 +17,16 @@ Last update: 2026-11-24
   - From a failed save until a save works, the browser asks before the tab closes.
   - No migration, no new package, no change to the Dexie schema, the document schema or the backup.
 
+- Less storage and egress on the server (2026-11-24, ADR 0016):
+  - Migration 0019: sync blobs, share links and share images keep bytes, not base64 text. They use 25% less
+    database space. The functions give base64 as before, and the limits still count base64 characters, so
+    the app and an older Vlo do not change. New share links and images stop when the database passes
+    450 MB, as sync does.
+  - Migration 0020: each leaderboard row has a `photo_id`, and a load leaves out the photos that the device
+    names in `p_have`. An open leaderboard costs about 5 KB a minute in place of about 150 KB.
+  - Open: the owner runs 0018, 0019 and 0020, in that order. The R2 file store still waits for the Worker
+    deploy (`docs/files-setup.md`).
+
 - Sync files in Cloudflare R2, scaling fix 5 (2026-11-22, ADR 0014, `docs/files-setup.md`):
   - Research files, images and saved versions of sync go to an R2 bucket through a Cloudflare Worker
     (`workers/files`). Supabase keeps a short row for each, whose payload is the file's id. Rows blobs and
